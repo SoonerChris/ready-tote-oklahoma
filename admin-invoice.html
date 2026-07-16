@@ -70,7 +70,7 @@
     </div>
     <div>
       <label>Drop-off time</label>
-      <input type="text" id="dropoffTime" placeholder="10:00 AM">
+      <input type="time" id="dropoffTime" value="10:00">
     </div>
   </div>
 
@@ -81,12 +81,29 @@
     </div>
     <div>
       <label>Pickup time</label>
-      <input type="text" id="pickupTime" placeholder="10:00 AM">
+      <input type="time" id="pickupTime" value="10:00">
     </div>
   </div>
 
-  <label>Delivery address</label>
-  <input type="text" id="address" placeholder="123 Main St, Oklahoma City, OK 73102">
+  <label>Street address</label>
+  <input type="text" id="street" placeholder="123 Main St">
+
+  <div class="grid2">
+    <div>
+      <label>City</label>
+      <input type="text" id="city" placeholder="Oklahoma City">
+    </div>
+    <div class="grid2">
+      <div>
+        <label>State</label>
+        <input type="text" id="state" value="OK">
+      </div>
+      <div>
+        <label>Zip</label>
+        <input type="text" id="zip" placeholder="73102" inputmode="numeric" maxlength="10">
+      </div>
+    </div>
+  </div>
 
   <label>Stripe payment link</label>
   <input type="url" id="stripeUrl" placeholder="https://buy.stripe.com/...">
@@ -107,12 +124,20 @@
   });
 
   $('sendBtn').addEventListener('click', async () => {
-    const fields = ['secret','name','email','package','price','duration','dropoffDate','dropoffTime','pickupDate','pickupTime','address','stripeUrl'];
+    const fields = ['secret','name','email','package','price','duration','dropoffDate','dropoffTime','pickupDate','pickupTime','street','city','state','zip','stripeUrl'];
     const payload = {};
     for (const f of fields) {
       payload[f] = $(f).value.trim();
       if (!payload[f]) return showStatus('err', 'Missing: ' + f);
     }
+
+    // Compose the address parts into the single field the function expects
+    payload.address = payload.street + ', ' + payload.city + ', ' + payload.state + ' ' + payload.zip;
+    delete payload.street; delete payload.city; delete payload.state; delete payload.zip;
+
+    // Convert 24h picker values ("14:30") to 12h display ("2:30 PM")
+    payload.dropoffTime = to12Hour(payload.dropoffTime);
+    payload.pickupTime = to12Hour(payload.pickupTime);
 
     const btn = $('sendBtn');
     btn.disabled = true; btn.textContent = 'Sending...';
@@ -140,6 +165,15 @@
     const s = $('status');
     s.className = 'status ' + kind;
     s.textContent = msg;
+  }
+
+  // "14:30" -> "2:30 PM", "09:00" -> "9:00 AM"
+  function to12Hour(t) {
+    const [h, m] = t.split(':').map(Number);
+    if (isNaN(h) || isNaN(m)) return t;
+    const period = h >= 12 ? 'PM' : 'AM';
+    const hour = h % 12 || 12;
+    return hour + ':' + String(m).padStart(2, '0') + ' ' + period;
   }
 </script>
 </body>
