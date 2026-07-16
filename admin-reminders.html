@@ -38,6 +38,10 @@
   <div class="status" id="status"></div>
 
   <div id="results" style="display:none;">
+    <h2>💰 Sales</h2>
+    <div class="rem" id="salesSummary" style="display:flex; gap:24px; flex-wrap:wrap;"></div>
+    <button type="button" id="csvBtn" style="background:var(--ink); color:#fff;">Download rental log (CSV)</button>
+
     <h2>🚚 Delivery tomorrow</h2>
     <div id="delivery"></div>
     <h2>📦 Pickup in 2 days</h2>
@@ -65,6 +69,8 @@
       else if (!resp.ok) { showErr('Load failed (' + resp.status + ').'); }
       else {
         const data = await resp.json();
+        ALL_RENTALS = data.rentals || [];
+        renderSales(ALL_RENTALS);
         render('delivery', data.reminders.delivery);
         render('pickup', data.reminders.pickup);
         render('review', data.reminders.review);
@@ -89,6 +95,40 @@
 
   function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML;}
   function showErr(m){const s=$('status');s.className='status err';s.textContent=m;}
+
+  // ---- Sales summary + CSV export ----
+  let ALL_RENTALS = [];
+
+  function priceNum(p){ const m = String(p||'').replace(/[^0-9.]/g,''); return m ? parseFloat(m) : 0; }
+
+  function renderSales(rentals){
+    const now = new Date();
+    const thisMonth = now.toISOString().slice(0,7); // YYYY-MM
+    const inMonth = rentals.filter(r => (r.invoicedAt||'').slice(0,7) === thisMonth);
+    const sum = arr => arr.reduce((t,r) => t + priceNum(r.price), 0);
+    const fmt = n => '$' + n.toLocaleString('en-US', {maximumFractionDigits:0});
+    $('salesSummary').innerHTML = `
+      <div><div style="font-size:1.3rem;font-weight:bold;">${rentals.length}</div><div style="font-size:0.78rem;color:var(--steel);">Total rentals</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;">${fmt(sum(rentals))}</div><div style="font-size:0.78rem;color:var(--steel);">Total invoiced</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;">${inMonth.length}</div><div style="font-size:0.78rem;color:var(--steel);">Rentals this month</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;">${fmt(sum(inMonth))}</div><div style="font-size:0.78rem;color:var(--steel);">Invoiced this month</div></div>`;
+  }
+
+  $('csvBtn').addEventListener('click', () => {
+    if (!ALL_RENTALS.length) return showErr('No rentals to export yet.');
+    const cols = ['invoicedAt','name','email','phone','package','price','duration','dropoffDate','dropoffTime','pickupDate','pickupTime','address'];
+    const csvCell = v => '"' + String(v ?? '').replaceAll('"','""') + '"';
+    const lines = [cols.join(',')];
+    // newest first
+    const sorted = [...ALL_RENTALS].sort((a,b) => (b.invoicedAt||'').localeCompare(a.invoicedAt||''));
+    for (const r of sorted) lines.push(cols.map(c => csvCell(r[c])).join(','));
+    const blob = new Blob([lines.join('\r\n')], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'ready-tote-rentals-' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
 </script>
 </body>
 </html>
