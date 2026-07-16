@@ -48,6 +48,10 @@
     <div id="pickup"></div>
     <h2>⭐ Review requests (picked up 3 days ago)</h2>
     <div id="review"></div>
+
+    <h2>📋 All rentals</h2>
+    <p class="empty" style="margin:0 0 10px;">Delete an entry to remove a cancellation or to re-add one with corrected details.</p>
+    <div id="allRentals"></div>
   </div>
 </div>
 
@@ -74,6 +78,7 @@
         render('delivery', data.reminders.delivery);
         render('pickup', data.reminders.pickup);
         render('review', data.reminders.review);
+        renderAll(ALL_RENTALS);
         $('results').style.display = 'block';
         $('status').style.display = 'none';
       }
@@ -92,6 +97,37 @@
         <a class="sms-btn" href="${r.sms}">Text ${esc(r.name.split(' ')[0])} →</a>
       </div>`).join('');
   }
+
+  // ---- All rentals management ----
+  function renderAll(rentals){
+    const el = $('allRentals');
+    if (!rentals.length) { el.innerHTML = '<p class="empty">No rentals logged yet.</p>'; return; }
+    const sorted = [...rentals].sort((a,b) => (b.dropoffDate||'').localeCompare(a.dropoffDate||''));
+    el.innerHTML = sorted.map(r => `
+      <div class="rem">
+        <div class="who">${esc(r.name)} — ${esc(r.price || '')}</div>
+        <div class="meta">${esc(r.package)} · Drop-off ${esc(r.dropoffDate)} · Pickup ${esc(r.pickupDate)}${r.address ? ' · ' + esc(r.address) : ' · <em>no address</em>'}</div>
+        <button type="button" style="width:auto; margin-top:4px; padding:8px 16px; font-size:0.8rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
+          onclick="deleteRental('${esc(r.key)}', '${esc(r.name)}')">Delete</button>
+      </div>`).join('');
+  }
+
+  window.deleteRental = async (key, name) => {
+    if (!confirm('Delete the rental for ' + name + '? This cannot be undone.')) return;
+    const secret = $('secret').value.trim();
+    try {
+      const resp = await fetch('/.netlify/functions/delete-rental', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key }),
+      });
+      if (resp.ok) {
+        $('loadBtn').click(); // reload everything
+      } else {
+        showErr('Delete failed (' + resp.status + ').');
+      }
+    } catch { showErr('Network error.'); }
+  };
 
   function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML;}
   function showErr(m){const s=$('status');s.className='status err';s.textContent=m;}
