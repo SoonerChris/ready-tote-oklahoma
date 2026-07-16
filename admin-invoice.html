@@ -47,6 +47,9 @@
     </div>
   </div>
 
+  <label>Customer phone</label>
+  <input type="tel" id="phone" placeholder="405-555-0123">
+
   <label>Paste booking email (optional)</label>
   <textarea id="pasteBox" rows="4" placeholder="Paste the Netlify booking notification email here, then click Parse to auto-fill name, email, package, and dates." style="width:100%;padding:11px 12px;font-size:0.9rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);font-family:inherit;resize:vertical;"></textarea>
   <button type="button" id="parseBtn" style="margin-top:8px;width:auto;padding:9px 18px;font-size:0.85rem;background:var(--ink);color:#fff;">Parse booking email</button>
@@ -171,6 +174,7 @@
 
     const name = grab(['^name', 'full name']);
     const email = (text.match(/[\w.+-]+@[\w-]+\.[\w.]+/) || [''])[0];
+    const phone = grab(['phone']);
     const pkgText = grab(['package']);
     const dropDate = grab(['delivery[_ ]?date']);
     const pickDate = grab(['pickup[_ ]?date']);
@@ -178,6 +182,7 @@
     let filled = [];
     if (name) { $('name').value = name; filled.push('name'); }
     if (email) { $('email').value = email; filled.push('email'); }
+    if (phone) { $('phone').value = phone; filled.push('phone'); }
     if (dropDate && /^\d{4}-\d{2}-\d{2}/.test(dropDate)) { $('dropoffDate').value = dropDate.slice(0,10); filled.push('drop-off date'); }
     if (pickDate && /^\d{4}-\d{2}-\d{2}/.test(pickDate)) { $('pickupDate').value = pickDate.slice(0,10); filled.push('pickup date'); }
 
@@ -201,7 +206,7 @@
   });
 
   $('sendBtn').addEventListener('click', async () => {
-    const fields = ['secret','name','email','price','duration','dropoffDate','dropoffTime','pickupDate','pickupTime','street','city','state','zip','stripeUrl'];
+    const fields = ['secret','name','email','phone','price','duration','dropoffDate','dropoffTime','pickupDate','pickupTime','street','city','state','zip','stripeUrl'];
     const payload = {};
     for (const f of fields) {
       payload[f] = $(f).value.trim();
