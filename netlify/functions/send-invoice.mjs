@@ -188,6 +188,8 @@ export default async (request) => {
       email: body.email,
       phone: body.phone,
       package: body.package,
+      price: body.price,
+      duration: body.duration,
       dropoffDate: body.dropoffDate,
       dropoffTime: body.dropoffTime,
       pickupDate: body.pickupDate,
