@@ -7,6 +7,8 @@
 //   RESEND_FROM    - verified sender
 //   INVOICE_SECRET - a password you choose; the admin page asks for it
 
+import { getStore } from "@netlify/blobs";
+
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
 const SITE_URL = "https://readytoteokc.com";
@@ -31,7 +33,7 @@ export default async (request) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const required = ["email", "name", "package", "duration", "price", "dropoffDate", "dropoffTime", "pickupDate", "pickupTime", "address", "stripeUrl"];
+  const required = ["email", "name", "phone", "package", "duration", "price", "dropoffDate", "dropoffTime", "pickupDate", "pickupTime", "address", "stripeUrl"];
   for (const f of required) {
     if (!body[f]) return new Response(`Missing field: ${f}`, { status: 400 });
   }
@@ -175,6 +177,26 @@ export default async (request) => {
     const errText = await resp.text();
     console.error("Resend API error:", resp.status, errText);
     return new Response(JSON.stringify({ ok: false, error: errText }), { status: 502 });
+  }
+
+  // Log the rental so reminders and review requests can find it
+  try {
+    const store = getStore("rentals");
+    const key = `${body.dropoffDate}_${body.email.replace(/[^a-zA-Z0-9@.]/g, "")}_${Date.now()}`;
+    await store.setJSON(key, {
+      name: body.name,
+      email: body.email,
+      phone: body.phone,
+      package: body.package,
+      dropoffDate: body.dropoffDate,
+      dropoffTime: body.dropoffTime,
+      pickupDate: body.pickupDate,
+      pickupTime: body.pickupTime,
+      address: body.address,
+      invoicedAt: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.error("Rental log failed (invoice still sent):", e.message);
   }
 
   return new Response(JSON.stringify({ ok: true }), { status: 200 });
