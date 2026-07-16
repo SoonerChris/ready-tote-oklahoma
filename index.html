@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tote Rental OKC & Ada, OK | Ready Tote Oklahoma — $99 for 20 Totes</title>
+<meta name="description" content="Heavy-duty plastic moving totes delivered across OKC metro and the Ada area. 20 totes + dolly for $99/2 weeks. Free drop-off & pickup. Family-owned.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root{
+    --ink:#1E1B18;
+    --ink-2:#2B2620;
+    --yellow:#C99A32;
+    --yellow-2:#D9AE4E;
+    --cream:#F5F1E7;
+    --white:#FFFFFF;
+    --steel:#6B6259;
+    --crate-red:#B3481D;
+    --line: rgba(255,255,255,0.14);
+    --line-dark: rgba(30,27,24,0.12);
+    --radius: 4px;
+    --max: 1120px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    font-family:'Barlow', sans-serif;
+    color:var(--ink);
+    background:var(--cream);
+    line-height:1.5;
+  }
+  h1,h2,h3{
+    font-family:'Archivo Black', sans-serif;
+    font-weight:400;
+    letter-spacing:-0.01em;
+    line-height:1.05;
+    margin:0;
+  }
+  .mono{
+    font-family:'JetBrains Mono', monospace;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.72rem;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--crate-red);
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:18px;
+    height:2px;
+    background:var(--crate-red);
+    display:inline-block;
+  }
+  .wrap{max-width:var(--max); margin:0 auto; padding:0 24px;}
+  a{color:inherit; text-decoration:none;}
+  img,svg{display:block; max-width:100%;}
+  button{font-family:inherit;}
+
+  /* Skip link */
+  .skip-link{
+    position:absolute; left:-999px; top:0; background:var(--ink); color:var(--white);
+    padding:10px 16px; z-index:200; border-radius:var(--radius);
+  }
+  .skip-link:focus{left:16px; top:16px;}
+
+  /* NAV */
+  header{
+    position:sticky; top:0; z-index:100;
+    background:var(--ink);
+    border-bottom:1px solid var(--line);
+  }
+  .nav-inner{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 24px;
+  }
+  .logo{
+    display:flex; align-items:center; gap:10px;
+    font-family:'Archivo Black', sans-serif;
+    color:var(--white);
+    font-size:1.05rem;
+    letter-spacing:-0.01em;
+  }
+  .logo .tag-icon{
+    width:26px; height:26px; flex:none;
+  }
+  .logo img{
+    height:104px; width:auto; flex:none;
+  }
+  .logo.footer-logo img{
+    height:64px;
+  }
+  nav.links{
+    display:flex; gap:28px; align-items:center;
+  }
+  nav.links a{
+    color:var(--white); opacity:0.82; font-size:0.92rem; font-weight:500;
+    transition:opacity 0.15s;
+  }
+  nav.links a:hover, nav.links a:focus-visible{opacity:1; outline:none; text-decoration:underline; text-underline-offset:4px;}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    font-weight:700; font-size:0.92rem;
+    padding:12px 22px;
+    border-radius:var(--radius);
+    border:2px solid var(--ink);
+    cursor:pointer;
+    transition:transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .btn:focus-visible{outline:3px solid var(--yellow); outline-offset:2px;}
+  .btn-primary{
+    background:var(--yellow); color:var(--ink); border-color:var(--yellow);
+  }
+  .btn-primary:hover{transform:translateY(-2px);}
+  .btn-ghost{
+    background:transparent; color:var(--white); border-color:var(--line);
+  }
+  .btn-ghost:hover{border-color:var(--white);}
+  .nav-cta{display:none;}
+  @media(min-width:900px){.nav-cta{display:inline-flex;}}
+  .mobile-toggle{
+    display:inline-flex; background:none; border:none; color:var(--white);
+    font-size:1.4rem; cursor:pointer; padding:6px;
+  }
+  @media(min-width:900px){.mobile-toggle{display:none;}}
+  nav.links{display:none;}
+  @media(min-width:900px){nav.links{display:flex;}}
+  .mobile-menu{
+    display:none; flex-direction:column; background:var(--ink-2); padding:8px 24px 20px;
+    border-top:1px solid var(--line);
+  }
+  .mobile-menu.open{display:flex;}
+  .mobile-menu a{color:var(--white); padding:10px 0; border-bottom:1px solid var(--line); font-weight:500;}
+
+  /* Alert strip */
+  .strip{
+    background:var(--crate-red); color:var(--white);
+    text-align:center; font-family:'JetBrains Mono', monospace;
+    font-size:0.78rem; letter-spacing:0.04em;
+    padding:8px 16px;
+  }
+
+  /* HERO */
+  .hero{
+    background:var(--ink); color:var(--white);
+    padding:64px 0 56px;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero .wrap{
+    display:block; max-width:860px; margin:0 auto;
+  }
+  .hero-copy{text-align:center;}
+  .hero h1{
+    font-size:clamp(3.1rem, 7.4vw, 5.4rem);
+    color:var(--white);
+    text-transform:uppercase;
+  }
+  .hero h1 .hl{color:var(--yellow);}
+  .hero p.lede{
+    font-size:1.35rem; color:rgba(255,255,255,0.78); max-width:58ch;
+    margin:24px auto 32px;
+  }
+  .hero p.lede em{
+    font-style:italic; color:rgba(255,255,255,0.5); font-size:0.85em;
+  }
+  .price-tag{
+    display:inline-flex; align-items:center; gap:14px;
+    background:var(--yellow-2); color:var(--ink);
+    padding:16px 24px; border-radius:var(--radius);
+    font-weight:700; margin-bottom:32px;
+    font-size:1.15rem;
+    position:relative;
+  }
+  .price-tag .hole{
+    width:14px; height:14px; border-radius:50%; background:var(--ink);
+    flex:none;
+  }
+  .price-tag .num{font-family:'Archivo Black', sans-serif; font-size:1.55rem;}
+  .cta-row{display:flex; flex-wrap:wrap; gap:14px; justify-content:center;}
+  .hero-photo-row{
+    display:flex; flex-wrap:wrap; gap:20px; justify-content:center;
+    margin-top:44px;
+  }
+  .hero-photo-row img{
+    width:380px; height:460px; object-fit:cover;
+    border-radius:18px; flex:none;
+    box-shadow:0 20px 44px -18px rgba(0,0,0,0.5);
+  }
+  @media(max-width:850px){
+    .hero-photo-row img{width:100%; max-width:380px; height:400px;}
+  }
+  .trust-band{
+    background:var(--yellow); width:100%; overflow-x:auto;
+  }
+  .trust-row{
+    display:flex; flex-wrap:nowrap; align-items:center; justify-content:center;
+    gap:10px clamp(10px, 3vw, 28px);
+    font-size:clamp(0.72rem, 1.6vw, 0.95rem);
+    font-weight:700;
+    color:var(--ink);
+    white-space:nowrap;
+    padding:14px 20px;
+    width:max-content;
+    min-width:100%;
+    margin:0 auto;
+  }
+  .trust-row span{display:flex; align-items:center; gap:6px;}
+  .trust-row span::before{content:"✓"; color:var(--ink); font-weight:900;}
+
+  /* SECTION shared */
+  section{padding:88px 0;}
+  #how{padding-top:40px;}
+  #serve{padding-top:40px;}
+  #compare{padding-top:40px;}
+  #pricing{padding-top:40px;}
+  #totes{padding-top:40px;}
+  #area{padding-top:40px;}
+  #about{padding-top:40px;}
+  #book{padding-top:40px;}
+  #contact{padding-top:40px;}
+  .section-head{max-width:640px; margin-bottom:48px;}
+  .section-head h2{font-size:clamp(1.6rem, 3.4vw, 2.3rem);}
+  .section-head p{color:var(--steel); font-size:1.02rem; margin-top:14px;}
+  .section-alt{background:var(--white);}
+
+  /* Steps */
+  .steps{display:grid; gap:28px; position:relative;}
+  @media(min-width:800px){
+    .steps{grid-template-columns:repeat(3,1fr);}
+    .steps::before{
+      content:'';
+      position:absolute; top:45px;
+      left:calc((100% - 56px) / 6);
+      right:calc((100% - 56px) / 6);
+      height:2px; background:var(--yellow); z-index:0;
+    }
+  }
+  .step{
+    display:flex; flex-direction:column; align-items:center; text-align:center;
+    position:relative; z-index:1;
+  }
+  .step .step-num{
+    font-family:'Archivo Black', sans-serif; font-size:1.7rem;
+    color:var(--yellow); background:var(--ink); width:90px; height:90px;
+    border:3px solid var(--yellow);
+    border-radius:50%; display:flex; align-items:center; justify-content:center;
+    margin-bottom:20px; position:relative; z-index:2; flex:none;
+  }
+  .step h3{font-size:1.2rem; margin-bottom:10px;}
+  .step p{color:var(--steel); font-size:0.95rem; margin:0; max-width:28ch;}
+
+  /* Who we serve */
+  .cards-4{display:grid; gap:16px; grid-template-columns:repeat(2,1fr);}
+  @media(min-width:900px){.cards-4{grid-template-columns:repeat(5,1fr);}}
+  .card-audience{
+    background:var(--white); color:var(--ink); border:2px solid var(--ink);
+    padding:20px 16px; border-radius:var(--radius);
+    display:flex; flex-direction:column; align-items:center; text-align:center;
+  }
+  .card-audience .icon{font-size:1.4rem; margin-bottom:12px;}
+  .card-audience h3{font-size:0.92rem; margin-bottom:6px;}
+  .card-audience p{font-size:0.8rem; color:var(--steel); margin:0;}
+
+  /* Comparison */
+  .compare{
+    display:grid; gap:28px;
+  }
+  @media(min-width:800px){.compare{grid-template-columns:1fr 1fr;}}
+  .compare-col{
+    padding:36px 32px; border-radius:20px; text-align:left;
+  }
+  .compare-col.us{
+    background:rgba(34,160,90,0.07);
+    border:1.5px solid rgba(34,160,90,0.45);
+  }
+  .compare-col.them{
+    background:rgba(200,60,50,0.06);
+    border:1.5px solid rgba(200,60,50,0.35);
+  }
+  .compare-col h3{
+    font-size:1.05rem; margin-bottom:6px; text-transform:uppercase;
+    letter-spacing:0.04em; text-align:center;
+  }
+  .compare-col.us h3{color:#1E8E52;}
+  .compare-col.them h3{color:#C0392B;}
+  .compare-col .price{
+    font-family:'Archivo Black', sans-serif; font-size:1.3rem;
+    margin-bottom:26px; text-align:center; text-transform:uppercase;
+  }
+  .compare-col.us .price{color:var(--yellow);}
+  .compare-col.them .price{color:var(--steel);}
+  .compare-col ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:14px;}
+  .compare-col li{display:flex; gap:12px; font-size:0.95rem; color:var(--ink);}
+  .compare-col.us li::before{content:"✅"; font-size:0.9rem;}
+  .compare-col.them li::before{content:"❌"; font-size:0.9rem;}
+
+  /* Pricing */
+  .price-grid{display:grid; gap:24px;}
+  @media(min-width:900px){.price-grid{grid-template-columns:repeat(3,1fr);}}
+  .price-card{
+    background:var(--white); border:1px solid var(--line-dark); border-radius:var(--radius);
+    padding:34px 28px; position:relative; display:flex; flex-direction:column;
+  }
+  .price-card.popular{
+    border:2px solid var(--yellow); box-shadow:0 18px 40px -20px rgba(30,27,24,0.35);
+    transform:translateY(-6px);
+  }
+  .popular-flag{
+    position:absolute; top:-14px; left:28px;
+    background:var(--crate-red); color:var(--white);
+    font-family:'JetBrains Mono', monospace; font-size:0.7rem; letter-spacing:0.08em;
+    padding:6px 12px; border-radius:2px; text-transform:uppercase;
+  }
+  .price-card .plan-name{font-size:0.85rem; color:var(--steel); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;}
+  .price-card .plan-amount{font-family:'Archivo Black', sans-serif; font-size:2.4rem; margin:10px 0 2px;}
+  .price-card .plan-period{color:var(--steel); font-size:0.85rem; margin-bottom:22px;}
+  .price-card ul{list-style:none; margin:0 0 26px; padding:0; display:flex; flex-direction:column; gap:10px; flex:1;}
+  .price-card li{font-size:0.92rem; display:flex; gap:8px;}
+  .price-card li::before{content:"•"; color:var(--yellow-2); font-weight:900;}
+  .price-note{margin-top:22px; font-size:0.9rem; color:var(--steel);}
+
+  /* Feature highlight */
+  .feature-split{display:grid; gap:44px; align-items:center;}
+  @media(min-width:900px){.feature-split{grid-template-columns:1fr 1fr;}}
+  .feature-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:18px;}
+  .feature-list li{display:flex; gap:14px; align-items:flex-start; font-size:1rem;}
+  .feature-list .icon{font-size:1.3rem; flex:none;}
+  .tote-graphic{
+    width:100%; max-width:440px; margin:0 auto; border-radius:18px;
+    background:var(--white); border:1.5px solid var(--line-dark); padding:14px;
+    box-shadow:0 24px 50px -20px rgba(30,27,24,0.4);
+  }
+
+  /* Photo band */
+  .photo-band{position:relative; height:340px; overflow:hidden;}
+  .photo-band img{
+    width:100%; height:100%; object-fit:cover; object-position:center 20%;
+  }
+  .photo-band-overlay{
+    position:absolute; inset:0;
+    background:linear-gradient(0deg, rgba(30,27,24,0.85) 0%, rgba(30,27,24,0.15) 55%, rgba(30,27,24,0.35) 100%);
+    display:flex; align-items:flex-end;
+  }
+  .photo-band-caption{
+    color:var(--white); padding:28px 24px; max-width:var(--max); margin:0 auto; width:100%;
+  }
+  .photo-band-caption .eyebrow{color:var(--yellow-2);}
+  .photo-band-caption .eyebrow::before{background:var(--yellow-2);}
+  .photo-band-caption h3{font-size:1.4rem; color:var(--white);}
+
+  .about-photo{
+    width:100%; max-width:400px; border-radius:18px; height:auto;
+    box-shadow:0 20px 44px -18px rgba(30,27,24,0.4); margin-bottom:20px;
+    display:block;
+  }
+
+  /* About */
+  .about-grid{display:grid; gap:44px; align-items:stretch;}
+  @media(min-width:900px){.about-grid{grid-template-columns:1.1fr 0.9fr;}}
+  .about-copy p{color:var(--steel); font-size:1.02rem; max-width:56ch;}
+  .stat-grid{
+    display:grid; grid-template-columns:repeat(2,1fr);
+    grid-auto-rows:1fr; gap:18px; height:100%;
+  }
+  .stat-card{
+    background:var(--ink); color:var(--white); padding:22px 20px; border-radius:18px;
+    display:flex; flex-direction:column; justify-content:center;
+  }
+  .stat-card .num{font-family:'Archivo Black', sans-serif; font-size:1.5rem; color:var(--yellow);}
+  .stat-card .lbl{font-size:0.82rem; color:rgba(255,255,255,0.7); margin-top:4px;}
+
+  /* Service area */
+  .area-list{
+    display:flex; flex-wrap:wrap; gap:12px; font-family:'JetBrains Mono', monospace;
+    font-size:0.9rem; padding:0; margin:0; list-style:none;
+  }
+  .area-list li{
+    display:flex; gap:8px; align-items:baseline;
+    background:var(--white); border:1.5px solid var(--ink);
+    border-radius:12px; padding:10px 18px;
+  }
+  .area-list li .zip{color:var(--steel);}
+  .map-grid{
+    display:grid; gap:24px;
+  }
+  @media(min-width:900px){.map-grid{grid-template-columns:1fr 1fr;}}
+  .map-title{font-size:1.05rem; margin-bottom:12px;}
+  .delivery-map{
+    height:400px; border-radius:18px;
+    border:2px solid var(--ink); z-index:1;
+  }
+  .map-grid + .area-list{margin-top:32px;}
+
+  /* Form */
+  .form-wrap{
+    background:var(--white); border:1px solid var(--line-dark); border-radius:var(--radius);
+    padding:36px; max-width:640px;
+  }
+  .form-grid{display:grid; gap:18px;}
+  @media(min-width:640px){.form-grid.two{grid-template-columns:1fr 1fr;}}
+  label{display:flex; flex-direction:column; gap:6px; font-size:0.88rem; font-weight:600;}
+  input, select{
+    font-family:inherit; font-size:0.95rem; padding:11px 12px;
+    border:1px solid var(--line-dark); border-radius:var(--radius); background:var(--cream);
+  }
+  input:focus, select:focus{outline:2px solid var(--yellow); outline-offset:1px;}
+  .hp{position:absolute; left:-9999px;}
+  .form-submit{margin-top:8px;}
+  .form-note{font-size:0.82rem; color:var(--steel); margin-top:14px;}
+
+  /* Contact */
+  .contact-row{display:flex; flex-wrap:wrap; gap:18px;}
+  .contact-pill{
+    display:flex; align-items:center; gap:10px;
+    background:var(--ink); color:var(--white); padding:14px 22px; border-radius:var(--radius);
+    font-weight:600;
+  }
+
+  /* Footer */
+  footer{background:var(--ink); color:rgba(255,255,255,0.7); padding:44px 0 26px;}
+  .footer-top{
+    display:flex; flex-wrap:wrap; justify-content:space-between; gap:20px; align-items:center;
+    border-bottom:1px solid var(--line); padding-bottom:26px; margin-bottom:20px;
+  }
+  .footer-links{display:flex; gap:20px; flex-wrap:wrap; font-size:0.86rem;}
+  .footer-links a:hover{color:var(--white);}
+  .footer-bottom{font-size:0.8rem; display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to main content</a>
+
+<header>
+  <div class="nav-inner wrap">
+    <a href="#" class="logo">
+      <img src="images/logo.png" alt="Ready Tote Oklahoma logo">
+    </a>
+    <nav class="links">
+      <a href="#how">How It Works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#compare">Why Totes?</a>
+      <a href="#about">About</a>
+      <a href="#area">Area</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <a href="#book" class="btn btn-primary nav-cta">Reserve Now</a>
+    <button class="mobile-toggle" aria-expanded="false" aria-controls="mobileMenu" id="mobileToggle" aria-label="Toggle menu">☰</button>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#how">How It Works</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#compare">Why Totes?</a>
+    <a href="#about">About</a>
+    <a href="#area">Area</a>
+    <a href="#contact">Contact</a>
+    <a href="#book" class="btn btn-primary" style="margin-top:14px; text-align:center; justify-content:center;">Reserve Now</a>
+  </div>
+</header>
+
+<div class="strip">⚡ LIMITED SETS AVAILABLE EACH WEEK — RESERVE EARLY</div>
+
+<main id="main">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-copy">
+        <h1>We Drop Off.<br>You Pack.<br><span class="hl">We Pick Up.</span></h1>
+        <p class="lede">Heavy-duty moving totes delivered to your door in the Oklahoma City metro and Ada area. No tape, no broken boxes, far less waste. Just pack, move, and we handle the rest. <em>Tote rental service — not a moving company.</em></p>
+        <div class="price-tag">
+          <span class="hole"></span>
+          <span class="num">$99</span>
+          <span>· 20 Totes + Tote Dolly · 2 Weeks · Free Delivery</span>
+        </div>
+        <div class="cta-row">
+          <a href="#book" class="btn btn-primary">Reserve in 2 Minutes →</a>
+          <a href="#pricing" class="btn btn-ghost">See All Packages</a>
+        </div>
+        <div class="hero-photo-row">
+          <img src="images/totes-delivery-door.jpg" alt="Ready Tote Oklahoma tote delivered to a front porch">
+          <img src="images/totes-stack-large.jpg" alt="Ten Ready Tote Oklahoma bins stacked in a driveway">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST BAND -->
+  <div class="trust-band">
+    <div class="trust-row">
+      <span>Free delivery & pickup</span>
+      <span>Stackable & durable</span>
+      <span>No tape needed</span>
+      <span>Cleaned & sanitized</span>
+      <span>Family owned</span>
+    </div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <section id="how">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Simple as 1&ndash;2&ndash;3</span>
+        <h2>How It Works</h2>
+        <p>We drop off the totes and pick them up. You handle the packing and moving.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <h3>Reserve</h3>
+          <p>Pick your package and your drop-off date. Takes less than 2 minutes.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <h3>Pack & Move</h3>
+          <p>We drop off clean totes and a tote dolly at your door. Pack up and move at your own pace for 2 full weeks.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <h3>We Pick Them Up</h3>
+          <p>When you're done unpacking, schedule a pickup. We come collect the empty totes, no drop-off needed.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHO WE SERVE -->
+  <section id="serve" class="section-alt">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Perfect For</span>
+        <h2>Who We Serve</h2>
+        <p>Local moves across OKC metro and the Ada area, made simple.</p>
+      </div>
+      <div class="cards-4">
+        <div class="card-audience">
+          <div class="icon">🏢</div>
+          <h3>Apartment Movers</h3>
+          <p>Studio and 1-bedroom renters making a local move.</p>
+        </div>
+        <div class="card-audience">
+          <div class="icon">🏡</div>
+          <h3>Growing Families</h3>
+          <p>Families relocating to a bigger home across the metro.</p>
+        </div>
+        <div class="card-audience">
+          <div class="icon">⏰</div>
+          <h3>Busy Households</h3>
+          <p>No time to hunt for boxes or wrestle with tape.</p>
+        </div>
+        <div class="card-audience">
+          <div class="icon">🌿</div>
+          <h3>Eco-Conscious Movers</h3>
+          <p>Families who want a low-waste alternative to cardboard.</p>
+        </div>
+        <div class="card-audience">
+          <div class="icon">🎓</div>
+          <h3>College Students</h3>
+          <p>Dorm and apartment moves for OU, UCO, and ECU students.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARISON -->
+  <section id="compare">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">The Smarter Choice</span>
+        <h2>Same Price as Boxes. Way Easier.</h2>
+        <p>Here's how we stack up against a store-bought box kit.</p>
+      </div>
+      <div class="compare">
+        <div class="compare-col us">
+          <h3>Ready Tote Oklahoma</h3>
+          <div class="price">$99 — 1 Bedroom</div>
+          <ul>
+            <li>20 heavy-duty reusable totes</li>
+            <li>Tote dolly included</li>
+            <li>No tape needed — lids snap shut</li>
+            <li>Stackable & uniform size</li>
+            <li>Waterproof & crush-proof</li>
+            <li>Dropped off & picked up for free</li>
+            <li>Cleaned & sanitized after every use</li>
+            <li>Reusable hundreds of times — less waste</li>
+            <li>Faster packing & unpacking</li>
+          </ul>
+        </div>
+        <div class="compare-col them">
+          <h3>Store-Bought Box Kit</h3>
+          <div class="price">$99 — Apartment Kit</div>
+          <ul>
+            <li>30 mismatched cardboard boxes</li>
+            <li>No tote dolly</li>
+            <li>Requires tape, tape, and more tape</li>
+            <li>Different sizes = unstackable mess</li>
+            <li>Wet box? Ruined stuff</li>
+            <li>You have to go pick them up</li>
+            <li>Straight to the landfill after</li>
+            <li>Assembling boxes takes forever</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing" class="section-alt">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Packages</span>
+        <h2>Choose Your Pack Size</h2>
+        <p>Every package includes a tote dolly, free drop-off, and free pickup across the service area.</p>
+      </div>
+      <div class="price-grid">
+        <div class="price-card">
+          <div class="plan-name">1 Bedroom</div>
+          <div class="plan-amount">$99</div>
+          <div class="plan-period">for 2 weeks</div>
+          <ul>
+            <li>20 clean, durable totes</li>
+            <li>1 tote dolly included</li>
+            <li>Delivery and pickup</li>
+            <li>Cleaned & sanitized after every use</li>
+          </ul>
+          <a href="#book" class="btn btn-primary">Reserve — $99</a>
+        </div>
+        <div class="price-card popular">
+          <div class="popular-flag">Most Popular</div>
+          <div class="plan-name">2–3 Bedrooms</div>
+          <div class="plan-amount">$149</div>
+          <div class="plan-period">for 2 weeks</div>
+          <ul>
+            <li>40 clean, durable totes</li>
+            <li>2 tote dollies included</li>
+            <li>Delivery and pickup</li>
+            <li>Cleaned & sanitized after every use</li>
+          </ul>
+          <a href="#book" class="btn btn-primary">Reserve — $149</a>
+        </div>
+        <div class="price-card">
+          <div class="plan-name">4+ Bedrooms</div>
+          <div class="plan-amount">$199</div>
+          <div class="plan-period">for 2 weeks</div>
+          <ul>
+            <li>60 clean, durable totes</li>
+            <li>3 tote dollies included</li>
+            <li>Delivery and pickup</li>
+            <li>Cleaned & sanitized after every use</li>
+          </ul>
+          <a href="#book" class="btn btn-primary">Reserve — $199</a>
+        </div>
+      </div>
+      <p class="price-note">Need extra time or extra totes? <a href="#contact" style="text-decoration:underline;">Message us</a> for custom bundles.</p>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="totes">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">The Totes</span>
+        <h2>Built Tough. Made to Stack.</h2>
+      </div>
+      <div class="feature-split">
+        <div>
+          <ul class="feature-list">
+            <li><span class="icon">🔒</span> Snap-tight lids, no tape needed</li>
+            <li><span class="icon">📐</span> Recessed lid for easy stacking</li>
+            <li><span class="icon">💪</span> Reinforced construction, holds up to 65 lbs</li>
+            <li><span class="icon">💧</span> Waterproof, your stuff stays dry</li>
+            <li><span class="icon">🧼</span> Cleaned and sanitized after every rental</li>
+            <li><span class="icon">♻️</span> Reused hundreds of times, far less waste</li>
+          </ul>
+        </div>
+        <div>
+          <img class="tote-graphic" src="images/tote-features.jpg" alt="Diagram of tote features: snap-tight lid, padlock holes, recessed stacking lid, reinforced heavy-duty NSF-certified construction">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about" class="section-alt">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">About Us</span>
+        <h2>A Local Family Business on a Green Mission</h2>
+      </div>
+      <div class="about-grid">
+        <div class="about-copy">
+          <img class="about-photo" src="images/totes-stacked-stock.jpg" alt="Stack of black and yellow heavy-duty moving totes">
+          <p>We're an Oklahoma family who got tired of the cardboard waste every time we moved. So we built a better way, and now we're sharing it with our neighbors across the metro and the Ada area.</p>
+          <p>Every rental keeps hundreds of cardboard boxes out of landfills. Better for you, better for the state.</p>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="num">🌱</div>
+            <div class="lbl">Each tote replaces dozens of cardboard boxes over its lifetime</div>
+          </div>
+          <div class="stat-card">
+            <div class="num">🤝</div>
+            <div class="lbl">Proudly serving OKC metro and the Ada area</div>
+          </div>
+          <div class="stat-card">
+            <div class="num">💪</div>
+            <div class="lbl">Industrial-strength totes, up to 65 lbs each</div>
+          </div>
+          <div class="stat-card">
+            <div class="num">🚚</div>
+            <div class="lbl">We drop off and pick up, you handle the move</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICE AREA -->
+  <section id="area">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Where We Deliver</span>
+        <h2>Our Delivery Area</h2>
+        <p>Free drop-off and pickup across OKC metro and the Ada area. Outside this zone? Message us, we may still be able to help for a small fee.</p>
+      </div>
+      <div class="map-grid">
+        <div class="map-block">
+          <h3 class="map-title">OKC Metro — 30-Mile Zone</h3>
+          <div id="deliveryMap" class="delivery-map" aria-label="Map showing 30-mile delivery radius around Oklahoma City"></div>
+        </div>
+        <div class="map-block">
+          <h3 class="map-title">Ada Area — 15-Mile Zone</h3>
+          <div id="adaMap" class="delivery-map" aria-label="Map showing 15-mile delivery radius around Ada"></div>
+        </div>
+      </div>
+      <ul class="area-list">
+        <li>Oklahoma City <span class="zip">73102</span></li>
+        <li>Moore <span class="zip">73160</span></li>
+        <li>Norman <span class="zip">73069</span></li>
+        <li>Edmond <span class="zip">73003</span></li>
+        <li>Midwest City <span class="zip">73110</span></li>
+        <li>Del City <span class="zip">73115</span></li>
+        <li>Yukon <span class="zip">73099</span></li>
+        <li>Ada <span class="zip">74820</span></li>
+        <li>+ all of OKC metro & the Ada area</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- BOOKING FORM -->
+  <section id="book" class="section-alt">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Reserve Your Totes</span>
+        <h2>Book Your Totes</h2>
+        <p>Tell us a bit about your move, we'll follow up to confirm dates and send your invoice. No commitment yet.</p>
+      </div>
+      <form
+        class="form-wrap"
+        id="bookingForm"
+        name="booking"
+        method="POST"
+        data-netlify="true"
+        netlify-honeypot="hp_field"
+      >
+        <input type="hidden" name="form-name" value="booking">
+        <input class="hp" type="text" name="hp_field" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <div class="form-grid two">
+          <label>Full Name*
+            <input type="text" name="name" required>
+          </label>
+          <label>Phone Number*
+            <input type="tel" name="phone" required>
+          </label>
+        </div>
+        <div class="form-grid two" style="margin-top:18px;">
+          <label>Email Address*
+            <input type="email" name="email" required>
+          </label>
+          <label>Rental Package*
+            <select name="package" required>
+              <option value="">Choose a package...</option>
+              <option>1 Bedroom — 20 Totes + Dolly — $99</option>
+              <option>2–3 Bedrooms — 40 Totes + 2 Dollies — $149</option>
+              <option>4+ Bedrooms — 60 Totes + 3 Dollies — $199</option>
+              <option>Not sure yet — let's discuss</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-grid two" style="margin-top:18px;">
+          <label>Estimated Delivery Date*
+            <input type="date" name="delivery_date" required>
+          </label>
+          <label>Estimated Pickup Date*
+            <input type="date" name="pickup_date" required>
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary form-submit">Request Booking</button>
+        <p class="form-note">We'll follow up to confirm your dates and send your invoice. No payment due now.</p>
+      </form>
+      <div class="form-wrap form-success" id="formSuccess" style="display:none;" role="status" tabindex="-1">
+        <h3 style="margin-bottom:10px;">Thanks, request received!</h3>
+        <p style="color:var(--steel); margin:0;">We'll reach out shortly to confirm your dates and send your invoice.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Got Questions?</span>
+        <h2>Get in Touch</h2>
+        <p>Already know what you need? Use the booking form above. Have a question first? Call or email and we'll get right back to you.</p>
+      </div>
+      <div class="contact-row">
+        <a class="contact-pill" href="tel:+15803993202">📞 580.399.3202</a>
+        <a class="contact-pill" href="mailto:readytoteok@gmail.com">✉️ readytoteok@gmail.com</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-top">
+      <a href="#" class="logo footer-logo">
+        <img src="images/logo.png" alt="Ready Tote Oklahoma logo">
+      </a>
+      <div class="footer-links">
+        <a href="#pricing">Pricing</a>
+        <a href="#how">How It Works</a>
+        <a href="#contact">Contact</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Ready Tote Oklahoma. All rights reserved. Proudly family-owned in Oklahoma.</span>
+      <span class="footer-links">
+        <a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms of Service</a> · <a href="accessibility.html">Accessibility</a>
+      </span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const toggle = document.getElementById('mobileToggle');
+  const menu = document.getElementById('mobileMenu');
+  toggle.addEventListener('click', () => {
+    const isOpen = menu.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', isOpen);
+  });
+  menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    menu.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+  }));
+
+  const form = document.getElementById('bookingForm');
+  const formSuccess = document.getElementById('formSuccess');
+
+  function encodeForNetlify(formEl) {
+    const data = new FormData(formEl);
+    return new URLSearchParams(data).toString();
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (form.hp_field.value) return; // honeypot triggered, silently ignore
+
+    const submitBtn = form.querySelector('.form-submit');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+
+    fetch('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: encodeForNetlify(form),
+    })
+      .then((resp) => {
+        if (!resp.ok) throw new Error('Form endpoint returned ' + resp.status);
+        form.style.display = 'none';
+        formSuccess.style.display = 'block';
+        formSuccess.focus();
+      })
+      .catch(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Request Booking';
+        alert('Something went wrong sending your request. Please call or email us directly, or try again.');
+      });
+  });
+</script>
+
+<!--
+  Hidden static form so Netlify's build-time bot detects this form and
+  provisions it, since the visible form above is submitted via JS/fetch.
+  Do not remove: field names must exactly match the visible form.
+-->
+<form name="booking" data-netlify="true" netlify-honeypot="hp_field" hidden>
+  <input type="text" name="name">
+  <input type="tel" name="phone">
+  <input type="email" name="email">
+  <select name="package"><option>1 Bedroom — 20 Totes + Dolly — $99</option></select>
+  <input type="date" name="delivery_date">
+  <input type="date" name="pickup_date">
+  <input type="text" name="hp_field">
+</form>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+  // Shared map builder: center, radius (meters), popup text
+  function buildDeliveryMap(elId, center, radiusMeters, popupHtml, zoom) {
+    const m = L.map(elId, { scrollWheelZoom: false }).setView(center, zoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(m);
+    L.circle(center, {
+      radius: radiusMeters,
+      color: '#1E8E52',
+      weight: 3,
+      fillColor: '#1E8E52',
+      fillOpacity: 0.18
+    }).addTo(m);
+    L.marker(center).addTo(m).bindPopup(popupHtml);
+    m.on('click', () => m.scrollWheelZoom.enable());
+    return m;
+  }
+
+  // OKC metro: 30 miles = 48,280 m
+  buildDeliveryMap(
+    'deliveryMap',
+    [35.3036, -97.5196],
+    48280,
+    '<strong>Ready Tote Oklahoma</strong><br>Free delivery within 30 miles',
+    8
+  );
+
+  // Ada area (74820): 15 miles = 24,140 m
+  buildDeliveryMap(
+    'adaMap',
+    [34.8101, -96.7066],
+    24140,
+    '<strong>Ada Area</strong><br>Free delivery within 15 miles',
+    9
+  );
+</script>
+
+</body>
+</html>
