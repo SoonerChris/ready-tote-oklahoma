@@ -93,6 +93,13 @@
     </div>
   </div>
 
+  <label>Service type</label>
+  <select id="serviceType">
+    <option value="delivery">We deliver & pick up (standard)</option>
+    <option value="self">Customer picks up & returns totes</option>
+  </select>
+
+  <div id="addressSection">
   <label>Drop-off street address</label>
   <input type="text" id="street" placeholder="123 Main St">
 
@@ -138,6 +145,8 @@
     </div>
   </div>
 
+  </div><!-- /addressSection -->
+
   <label>Stripe payment link</label>
   <input type="url" id="stripeUrl" placeholder="https://buy.stripe.com/...">
   <p class="note">Paste the Stripe Payment Link for this package. Tip: edit this file to hard-code your three links in the package dropdown (data-stripe attributes) so this auto-fills.</p>
@@ -152,6 +161,11 @@
   // Toggle pickup address block
   $('sameAddress').addEventListener('change', (e) => {
     $('pickupAddressBlock').style.display = e.target.checked ? 'none' : 'block';
+  });
+
+  // Hide address section entirely for customer self pickup/return
+  $('serviceType').addEventListener('change', (e) => {
+    $('addressSection').style.display = e.target.value === 'self' ? 'none' : 'block';
   });
 
   // ---- Load packages from packages.json ----
@@ -236,7 +250,8 @@
   });
 
   $('sendBtn').addEventListener('click', async () => {
-    const fields = ['secret','name','email','phone','price','duration','dropoffDate','dropoffTime','pickupDate','pickupTime','street','city','state','zip','stripeUrl'];
+    const fields = ['secret','name','email','phone','price','duration','dropoffDate','dropoffTime','pickupDate','pickupTime','stripeUrl'];
+    if ($('serviceType').value !== 'self') fields.push('street','city','state','zip');
     const payload = {};
     for (const f of fields) {
       payload[f] = $(f).value.trim();
@@ -250,17 +265,20 @@
       ? 'Custom Package'
       : (PACKAGES[Number(pkgVal)]?.name || 'Package');
 
-    // Compose the drop-off address
-    payload.dropoffAddress = payload.street + ', ' + payload.city + ', ' + payload.state + ' ' + payload.zip;
-
-    // Pickup address: same as drop-off, or from its own fields
-    if ($('sameAddress').checked) {
-      payload.pickupAddress = payload.dropoffAddress;
+    payload.serviceType = $('serviceType').value;
+    if (payload.serviceType === 'self') {
+      payload.dropoffAddress = 'Customer pickup';
+      payload.pickupAddress = 'Customer return';
     } else {
-      const ps = $('pstreet').value.trim(), pc = $('pcity').value.trim(),
-            pst = $('pstate').value.trim(), pz = $('pzip').value.trim();
-      if (!ps || !pc || !pst || !pz) return showStatus('err', 'Missing: pickup address fields');
-      payload.pickupAddress = ps + ', ' + pc + ', ' + pst + ' ' + pz;
+      payload.dropoffAddress = payload.street + ', ' + payload.city + ', ' + payload.state + ' ' + payload.zip;
+      if ($('sameAddress').checked) {
+        payload.pickupAddress = payload.dropoffAddress;
+      } else {
+        const ps = $('pstreet').value.trim(), pc = $('pcity').value.trim(),
+              pst = $('pstate').value.trim(), pz = $('pzip').value.trim();
+        if (!ps || !pc || !pst || !pz) return showStatus('err', 'Missing: pickup address fields');
+        payload.pickupAddress = ps + ', ' + pc + ', ' + pst + ' ' + pz;
+      }
     }
     delete payload.street; delete payload.city; delete payload.state; delete payload.zip;
 

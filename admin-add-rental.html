@@ -80,6 +80,12 @@
     </div>
   </div>
 
+  <label>Service type</label>
+  <select id="serviceType" style="width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);font-family:inherit;">
+    <option value="delivery">We deliver & pick up (standard)</option>
+    <option value="self">Customer picks up & returns totes</option>
+  </select>
+
   <label>Drop-off address (optional)</label>
   <input type="text" id="dropoffAddress" placeholder="123 Main St, Oklahoma City, OK 73102">
 
@@ -102,6 +108,7 @@
     }
     payload.dropoffTime = to12Hour($('dropoffTime').value || '10:00');
     payload.pickupTime = to12Hour($('pickupTime').value || '10:00');
+    payload.serviceType = $('serviceType').value;
     payload.dropoffAddress = $('dropoffAddress').value.trim();
     payload.pickupAddress = $('pickupAddress').value.trim();
     payload.email = $('email').value.trim();
