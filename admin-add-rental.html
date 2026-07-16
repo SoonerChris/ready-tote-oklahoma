@@ -39,7 +39,7 @@
       <input type="text" id="name" placeholder="Jane Smith">
     </div>
     <div>
-      <label>Customer email</label>
+      <label>Customer email (optional)</label>
       <input type="email" id="email" placeholder="jane@example.com">
     </div>
   </div>
@@ -80,8 +80,11 @@
     </div>
   </div>
 
-  <label>Address (optional for past rentals)</label>
-  <input type="text" id="address" placeholder="123 Main St, Oklahoma City, OK 73102">
+  <label>Drop-off address (optional)</label>
+  <input type="text" id="dropoffAddress" placeholder="123 Main St, Oklahoma City, OK 73102">
+
+  <label>Pickup address (optional)</label>
+  <input type="text" id="pickupAddress" placeholder="456 Oak Ave, Moore, OK 73160">
 
   <button id="addBtn">Add to Rental Log</button>
   <div class="status" id="status"></div>
@@ -91,7 +94,7 @@
   const $ = (id) => document.getElementById(id);
 
   $('addBtn').addEventListener('click', async () => {
-    const req = ['secret','name','email','phone','package','price','dropoffDate','pickupDate'];
+    const req = ['secret','name','phone','package','price','dropoffDate','pickupDate'];
     const payload = {};
     for (const f of req) {
       payload[f] = $(f).value.trim();
@@ -99,7 +102,9 @@
     }
     payload.dropoffTime = to12Hour($('dropoffTime').value || '10:00');
     payload.pickupTime = to12Hour($('pickupTime').value || '10:00');
-    payload.address = $('address').value.trim();
+    payload.dropoffAddress = $('dropoffAddress').value.trim();
+    payload.pickupAddress = $('pickupAddress').value.trim();
+    payload.email = $('email').value.trim();
 
     const btn = $('addBtn');
     btn.disabled = true; btn.textContent = 'Adding…';
@@ -111,7 +116,7 @@
       });
       if (resp.ok) {
         showStatus('ok', 'Added ' + payload.name + '. Form cleared for the next one.');
-        ['name','email','phone','package','price','dropoffDate','pickupDate','address'].forEach(f => $(f).value = '');
+        ['name','email','phone','package','price','dropoffDate','pickupDate','dropoffAddress','pickupAddress'].forEach(f => $(f).value = '');
       } else if (resp.status === 401) {
         showStatus('err', 'Wrong admin secret.');
       } else {

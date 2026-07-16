@@ -93,7 +93,7 @@
     </div>
   </div>
 
-  <label>Street address</label>
+  <label>Drop-off street address</label>
   <input type="text" id="street" placeholder="123 Main St">
 
   <div class="grid2">
@@ -113,6 +113,31 @@
     </div>
   </div>
 
+  <label style="display:flex; align-items:center; gap:8px; font-weight:normal; margin-top:18px;">
+    <input type="checkbox" id="sameAddress" checked style="width:auto;"> Pickup address is the same as drop-off
+  </label>
+
+  <div id="pickupAddressBlock" style="display:none;">
+    <label>Pickup street address</label>
+    <input type="text" id="pstreet" placeholder="456 Oak Ave">
+    <div class="grid2">
+      <div>
+        <label>City</label>
+        <input type="text" id="pcity" placeholder="Moore">
+      </div>
+      <div class="grid2">
+        <div>
+          <label>State</label>
+          <input type="text" id="pstate" value="OK">
+        </div>
+        <div>
+          <label>Zip</label>
+          <input type="text" id="pzip" placeholder="73160" inputmode="numeric" maxlength="10">
+        </div>
+      </div>
+    </div>
+  </div>
+
   <label>Stripe payment link</label>
   <input type="url" id="stripeUrl" placeholder="https://buy.stripe.com/...">
   <p class="note">Paste the Stripe Payment Link for this package. Tip: edit this file to hard-code your three links in the package dropdown (data-stripe attributes) so this auto-fills.</p>
@@ -123,6 +148,11 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
+
+  // Toggle pickup address block
+  $('sameAddress').addEventListener('change', (e) => {
+    $('pickupAddressBlock').style.display = e.target.checked ? 'none' : 'block';
+  });
 
   // ---- Load packages from packages.json ----
   let PACKAGES = [];
@@ -220,8 +250,18 @@
       ? 'Custom Package'
       : (PACKAGES[Number(pkgVal)]?.name || 'Package');
 
-    // Compose the address parts into the single field the function expects
-    payload.address = payload.street + ', ' + payload.city + ', ' + payload.state + ' ' + payload.zip;
+    // Compose the drop-off address
+    payload.dropoffAddress = payload.street + ', ' + payload.city + ', ' + payload.state + ' ' + payload.zip;
+
+    // Pickup address: same as drop-off, or from its own fields
+    if ($('sameAddress').checked) {
+      payload.pickupAddress = payload.dropoffAddress;
+    } else {
+      const ps = $('pstreet').value.trim(), pc = $('pcity').value.trim(),
+            pst = $('pstate').value.trim(), pz = $('pzip').value.trim();
+      if (!ps || !pc || !pst || !pz) return showStatus('err', 'Missing: pickup address fields');
+      payload.pickupAddress = ps + ', ' + pc + ', ' + pst + ' ' + pz;
+    }
     delete payload.street; delete payload.city; delete payload.state; delete payload.zip;
 
     // Convert 24h picker values ("14:30") to 12h display ("2:30 PM")

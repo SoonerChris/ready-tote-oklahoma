@@ -106,7 +106,7 @@
     el.innerHTML = sorted.map(r => `
       <div class="rem">
         <div class="who">${esc(r.name)} — ${esc(r.price || '')}</div>
-        <div class="meta">${esc(r.package)} · Drop-off ${esc(r.dropoffDate)} · Pickup ${esc(r.pickupDate)}${r.address ? ' · ' + esc(r.address) : ' · <em>no address</em>'}</div>
+        <div class="meta">${esc(r.package)} · Drop-off ${esc(r.dropoffDate)}${(r.dropoffAddress||r.address) ? ' @ ' + esc(r.dropoffAddress||r.address) : ''} · Pickup ${esc(r.pickupDate)}${(r.pickupAddress||r.address) ? ' @ ' + esc(r.pickupAddress||r.address) : ''}</div>
         <button type="button" style="width:auto; margin-top:4px; padding:8px 16px; font-size:0.8rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
           onclick="deleteRental('${esc(r.key)}', '${esc(r.name)}')">Delete</button>
       </div>`).join('');
@@ -152,7 +152,7 @@
 
   $('csvBtn').addEventListener('click', () => {
     if (!ALL_RENTALS.length) return showErr('No rentals to export yet.');
-    const cols = ['invoicedAt','name','email','phone','package','price','duration','dropoffDate','dropoffTime','pickupDate','pickupTime','address'];
+    const cols = ['invoicedAt','name','email','phone','package','price','duration','dropoffDate','dropoffTime','dropoffAddress','pickupDate','pickupTime','pickupAddress'];
     const csvCell = v => '"' + String(v ?? '').replaceAll('"','""') + '"';
     const lines = [cols.join(',')];
     // newest first
