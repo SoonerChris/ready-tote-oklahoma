@@ -1,0 +1,22 @@
+{
+  "packages": [
+    {
+      "name": "1 Bedroom — 20 Totes + Dolly",
+      "price": "$99",
+      "duration": "2 Weeks",
+      "stripeUrl": "PASTE_STRIPE_LINK_HERE"
+    },
+    {
+      "name": "2–3 Bedrooms — 40 Totes + 2 Dollies",
+      "price": "$149",
+      "duration": "2 Weeks",
+      "stripeUrl": "PASTE_STRIPE_LINK_HERE"
+    },
+    {
+      "name": "4+ Bedrooms — 60 Totes + 3 Dollies",
+      "price": "$199",
+      "duration": "2 Weeks",
+      "stripeUrl": "PASTE_STRIPE_LINK_HERE"
+    }
+  ]
+}

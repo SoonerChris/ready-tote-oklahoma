@@ -47,13 +47,15 @@
     </div>
   </div>
 
+  <label>Paste booking email (optional)</label>
+  <textarea id="pasteBox" rows="4" placeholder="Paste the Netlify booking notification email here, then click Parse to auto-fill name, email, package, and dates." style="width:100%;padding:11px 12px;font-size:0.9rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);font-family:inherit;resize:vertical;"></textarea>
+  <button type="button" id="parseBtn" style="margin-top:8px;width:auto;padding:9px 18px;font-size:0.85rem;background:var(--ink);color:#fff;">Parse booking email</button>
+
   <label>Package</label>
   <select id="package">
-    <option value="1 Bedroom — 20 Totes + Dolly" data-price="$99" data-stripe="">1 Bedroom — 20 Totes + Dolly — $99</option>
-    <option value="2–3 Bedrooms — 40 Totes + 2 Dollies" data-price="$149" data-stripe="">2–3 Bedrooms — 40 Totes + 2 Dollies — $149</option>
-    <option value="4+ Bedrooms — 60 Totes + 3 Dollies" data-price="$199" data-stripe="">4+ Bedrooms — 60 Totes + 3 Dollies — $199</option>
-    <option value="Custom">Custom package</option>
+    <option value="">Loading packages…</option>
   </select>
+  <p class="note">Packages load from <strong>packages.json</strong> in the site repo — edit that file on GitHub to add or update packages and Stripe links. Choose "Custom package" for ad-hoc rentals.</p>
 
   <div class="grid2">
     <div>
@@ -119,20 +121,99 @@
 <script>
   const $ = (id) => document.getElementById(id);
 
-  // Auto-fill price + stripe link when a package is chosen
+  // ---- Load packages from packages.json ----
+  let PACKAGES = [];
+  fetch('/packages.json')
+    .then(r => r.json())
+    .then(data => {
+      PACKAGES = data.packages || [];
+      const sel = $('package');
+      sel.innerHTML = '<option value="">Choose a package…</option>';
+      PACKAGES.forEach((p, i) => {
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = p.name + ' — ' + p.price;
+        sel.appendChild(opt);
+      });
+      const custom = document.createElement('option');
+      custom.value = 'custom';
+      custom.textContent = 'Custom package';
+      sel.appendChild(custom);
+    })
+    .catch(() => {
+      $('package').innerHTML = '<option value="custom">Custom package (packages.json failed to load)</option>';
+    });
+
+  // Auto-fill price/duration/stripe when a package is chosen
   $('package').addEventListener('change', (e) => {
-    const opt = e.target.selectedOptions[0];
-    if (opt.dataset.price) $('price').value = opt.dataset.price;
-    if (opt.dataset.stripe) $('stripeUrl').value = opt.dataset.stripe;
+    const v = e.target.value;
+    if (v === '' || v === 'custom') return;
+    const p = PACKAGES[Number(v)];
+    if (!p) return;
+    $('price').value = p.price || '';
+    $('duration').value = p.duration || '2 Weeks';
+    $('stripeUrl').value = (p.stripeUrl && !p.stripeUrl.startsWith('PASTE')) ? p.stripeUrl : '';
+  });
+
+  // ---- Parse a pasted Netlify booking notification email ----
+  $('parseBtn').addEventListener('click', () => {
+    const text = $('pasteBox').value;
+    if (!text.trim()) return showStatus('err', 'Paste the booking email first.');
+
+    const grab = (keys) => {
+      for (const key of keys) {
+        const re = new RegExp(key + '\\s*[:\\-]?\\s*(.+)', 'i');
+        const m = text.match(re);
+        if (m) return m[1].trim();
+      }
+      return '';
+    };
+
+    const name = grab(['^name', 'full name']);
+    const email = (text.match(/[\w.+-]+@[\w-]+\.[\w.]+/) || [''])[0];
+    const pkgText = grab(['package']);
+    const dropDate = grab(['delivery[_ ]?date']);
+    const pickDate = grab(['pickup[_ ]?date']);
+
+    let filled = [];
+    if (name) { $('name').value = name; filled.push('name'); }
+    if (email) { $('email').value = email; filled.push('email'); }
+    if (dropDate && /^\d{4}-\d{2}-\d{2}/.test(dropDate)) { $('dropoffDate').value = dropDate.slice(0,10); filled.push('drop-off date'); }
+    if (pickDate && /^\d{4}-\d{2}-\d{2}/.test(pickDate)) { $('pickupDate').value = pickDate.slice(0,10); filled.push('pickup date'); }
+
+    // Match package text against loaded packages
+    if (pkgText) {
+      const idx = PACKAGES.findIndex(p =>
+        pkgText.toLowerCase().includes(p.name.toLowerCase().slice(0, 12)) ||
+        (p.price && pkgText.includes(p.price)));
+      if (idx >= 0) {
+        $('package').value = String(idx);
+        $('package').dispatchEvent(new Event('change'));
+        filled.push('package');
+      }
+    }
+
+    if (filled.length) {
+      showStatus('ok', 'Filled: ' + filled.join(', ') + '. Add address, times, and verify before sending.');
+    } else {
+      showStatus('err', 'Could not find booking fields in that text — fill the form manually.');
+    }
   });
 
   $('sendBtn').addEventListener('click', async () => {
-    const fields = ['secret','name','email','package','price','duration','dropoffDate','dropoffTime','pickupDate','pickupTime','street','city','state','zip','stripeUrl'];
+    const fields = ['secret','name','email','price','duration','dropoffDate','dropoffTime','pickupDate','pickupTime','street','city','state','zip','stripeUrl'];
     const payload = {};
     for (const f of fields) {
       payload[f] = $(f).value.trim();
       if (!payload[f]) return showStatus('err', 'Missing: ' + f);
     }
+
+    // Resolve package display name from the dropdown selection
+    const pkgVal = $('package').value;
+    if (!pkgVal) return showStatus('err', 'Missing: package');
+    payload.package = pkgVal === 'custom'
+      ? 'Custom Package'
+      : (PACKAGES[Number(pkgVal)]?.name || 'Package');
 
     // Compose the address parts into the single field the function expects
     payload.address = payload.street + ', ' + payload.city + ', ' + payload.state + ' ' + payload.zip;
