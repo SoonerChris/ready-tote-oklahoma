@@ -33,7 +33,7 @@ export default async (request) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const required = ["email", "name", "phone", "package", "duration", "price", "dropoffDate", "dropoffTime", "pickupDate", "pickupTime", "address", "stripeUrl"];
+  const required = ["email", "name", "phone", "package", "duration", "price", "dropoffDate", "dropoffTime", "pickupDate", "pickupTime", "dropoffAddress", "pickupAddress", "stripeUrl"];
   for (const f of required) {
     if (!body[f]) return new Response(`Missing field: ${f}`, { status: 400 });
   }
@@ -45,7 +45,9 @@ export default async (request) => {
   const price = escapeHtml(body.price);
   const dropoff = `${formatDate(body.dropoffDate)} at ${escapeHtml(body.dropoffTime)}`;
   const pickup = `${formatDate(body.pickupDate)} at ${escapeHtml(body.pickupTime)}`;
-  const address = escapeHtml(body.address);
+  const dropoffAddress = escapeHtml(body.dropoffAddress);
+  const pickupAddress = escapeHtml(body.pickupAddress);
+  const sameAddress = body.dropoffAddress === body.pickupAddress;
   const stripeUrl = String(body.stripeUrl);
   if (!/^https:\/\/([a-z0-9-]+\.)?stripe\.com\//.test(stripeUrl)) {
     return new Response("stripeUrl must be a stripe.com link", { status: 400 });
@@ -102,7 +104,7 @@ export default async (request) => {
                     ${row("Duration", duration)}
                     ${row("Drop-off", dropoff)}
                     ${row("Pickup", pickup)}
-                    ${row("Address", address)}
+                    ${sameAddress ? row("Address", dropoffAddress) : row("Drop-off address", dropoffAddress) + row("Pickup address", pickupAddress)}
                   </table>
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px; border-top:2px solid #C99A32;">
                     <tr>
@@ -194,7 +196,8 @@ export default async (request) => {
       dropoffTime: body.dropoffTime,
       pickupDate: body.pickupDate,
       pickupTime: body.pickupTime,
-      address: body.address,
+      dropoffAddress: body.dropoffAddress,
+      pickupAddress: body.pickupAddress,
       invoicedAt: new Date().toISOString(),
     });
   } catch (e) {

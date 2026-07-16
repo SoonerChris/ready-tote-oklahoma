@@ -15,17 +15,18 @@ export default async (request) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const required = ["name", "email", "phone", "package", "price", "dropoffDate", "pickupDate"];
+  const required = ["name", "phone", "package", "price", "dropoffDate", "pickupDate"];
   for (const f of required) {
     if (!body[f]) return new Response(`Missing field: ${f}`, { status: 400 });
   }
 
   try {
     const store = getStore("rentals");
-    const key = `${body.dropoffDate}_${body.email.replace(/[^a-zA-Z0-9@.]/g, "")}_${Date.now()}`;
+    const emailPart = (body.email || "no-email").replace(/[^a-zA-Z0-9@.]/g, "");
+    const key = `${body.dropoffDate}_${emailPart}_${Date.now()}`;
     await store.setJSON(key, {
       name: body.name,
-      email: body.email,
+      email: body.email || "",
       phone: body.phone,
       package: body.package,
       price: body.price,
@@ -34,7 +35,8 @@ export default async (request) => {
       dropoffTime: body.dropoffTime || "10:00 AM",
       pickupDate: body.pickupDate,
       pickupTime: body.pickupTime || "10:00 AM",
-      address: body.address || "",
+      dropoffAddress: body.dropoffAddress || "",
+      pickupAddress: body.pickupAddress || "",
       invoicedAt: new Date().toISOString(),
       backfilled: true,
     });
