@@ -36,24 +36,29 @@ export function computeReminders(rentals, reviewLink) {
     const first = (r.name || "there").split(" ")[0];
     const dropAddr = r.dropoffAddress || r.address || "";
     const pickAddr = r.pickupAddress || r.address || "";
+    const self = r.serviceType === "self";
 
     // Delivery reminder: drop-off is tomorrow
     if (r.dropoffDate === shiftDate(today, 1)) {
-      const msg = `Hi ${first}, it's Ready Tote Oklahoma! Friendly reminder: your totes arrive tomorrow (${friendlyDate(r.dropoffDate)}) around ${r.dropoffTime}. Reply here with any questions!`;
-      out.delivery.push({ ...r, address: dropAddr, message: msg, sms: smsLink(r.phone, msg) });
+      const msg = self
+        ? `Hi ${first}, it's Ready Tote Oklahoma! Reminder: your totes are ready for pickup tomorrow (${friendlyDate(r.dropoffDate)}) around ${r.dropoffTime}. See you then!`
+        : `Hi ${first}, it's Ready Tote Oklahoma! Friendly reminder: your totes arrive tomorrow (${friendlyDate(r.dropoffDate)}) around ${r.dropoffTime}. Reply here with any questions!`;
+      out.delivery.push({ ...r, address: self ? "Customer pickup" : dropAddr, message: msg, sms: smsLink(r.phone, msg) });
     }
 
     // Pickup reminder: pickup is in 2 days
     if (r.pickupDate === shiftDate(today, 2)) {
-      const msg = `Hi ${first}, Ready Tote Oklahoma here. We'll pick up your totes on ${friendlyDate(r.pickupDate)} around ${r.pickupTime}. Please have them empty and accessible. Thanks!`;
-      out.pickup.push({ ...r, address: pickAddr, message: msg, sms: smsLink(r.phone, msg) });
+      const msg = self
+        ? `Hi ${first}, Ready Tote Oklahoma here. Friendly reminder to return your totes on ${friendlyDate(r.pickupDate)} around ${r.pickupTime}. Thanks!`
+        : `Hi ${first}, Ready Tote Oklahoma here. We'll pick up your totes on ${friendlyDate(r.pickupDate)} around ${r.pickupTime}. Please have them empty and accessible. Thanks!`;
+      out.pickup.push({ ...r, address: self ? "Customer return" : pickAddr, message: msg, sms: smsLink(r.phone, msg) });
     }
 
     // Review request: pickup was 3 days ago
     if (r.pickupDate === shiftDate(today, -3)) {
       const link = reviewLink || "[ADD GOOGLE_REVIEW_LINK ENV VAR]";
       const msg = `Hi ${first}, thanks for renting with Ready Tote Oklahoma! If we made your move easier, we'd love a quick Google review: ${link}`;
-      out.review.push({ ...r, address: pickAddr, message: msg, sms: smsLink(r.phone, msg) });
+      out.review.push({ ...r, address: self ? "" : pickAddr, message: msg, sms: smsLink(r.phone, msg) });
     }
   }
   return out;

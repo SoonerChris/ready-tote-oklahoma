@@ -37,6 +37,7 @@ export default async (request) => {
       pickupTime: body.pickupTime || "10:00 AM",
       dropoffAddress: body.dropoffAddress || "",
       pickupAddress: body.pickupAddress || "",
+      serviceType: body.serviceType || "delivery",
       invoicedAt: new Date().toISOString(),
       backfilled: true,
     });

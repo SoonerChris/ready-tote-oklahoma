@@ -48,6 +48,7 @@ export default async (request) => {
   const dropoffAddress = escapeHtml(body.dropoffAddress);
   const pickupAddress = escapeHtml(body.pickupAddress);
   const sameAddress = body.dropoffAddress === body.pickupAddress;
+  const selfService = body.serviceType === "self";
   const stripeUrl = String(body.stripeUrl);
   if (!/^https:\/\/([a-z0-9-]+\.)?stripe\.com\//.test(stripeUrl)) {
     return new Response("stripeUrl must be a stripe.com link", { status: 400 });
@@ -102,9 +103,9 @@ export default async (request) => {
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family: Arial, Helvetica, sans-serif;">
                     ${row("Package", pkg)}
                     ${row("Duration", duration)}
-                    ${row("Drop-off", dropoff)}
-                    ${row("Pickup", pickup)}
-                    ${sameAddress ? row("Address", dropoffAddress) : row("Drop-off address", dropoffAddress) + row("Pickup address", pickupAddress)}
+                    ${selfService
+                      ? row("Service", "You pick up &amp; return the totes") + row("Pick up totes", dropoff) + row("Return totes", pickup)
+                      : row("Drop-off", dropoff) + row("Pickup", pickup) + (sameAddress ? row("Address", dropoffAddress) : row("Drop-off address", dropoffAddress) + row("Pickup address", pickupAddress))}
                   </table>
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px; border-top:2px solid #C99A32;">
                     <tr>
@@ -198,6 +199,7 @@ export default async (request) => {
       pickupTime: body.pickupTime,
       dropoffAddress: body.dropoffAddress,
       pickupAddress: body.pickupAddress,
+      serviceType: body.serviceType || "delivery",
       invoicedAt: new Date().toISOString(),
     });
   } catch (e) {
