@@ -42,6 +42,9 @@
     <div class="rem" id="salesSummary" style="display:flex; gap:24px; flex-wrap:wrap;"></div>
     <button type="button" id="csvBtn" style="background:var(--ink); color:#fff;">Download rental log (CSV)</button>
 
+    <h2>📅 This week</h2>
+    <div id="thisWeek"></div>
+
     <h2>🚚 Delivery tomorrow</h2>
     <div id="delivery"></div>
     <h2>📦 Pickup in 2 days</h2>
@@ -52,6 +55,38 @@
     <h2>📋 All rentals</h2>
     <p class="empty" style="margin:0 0 10px;">Delete an entry to remove a cancellation or to re-add one with corrected details.</p>
     <div id="allRentals"></div>
+
+    <h2>💵 Expenses</h2>
+    <div class="rem" id="expTotals" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
+    <div class="rem">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <input type="date" id="expDate">
+        <select id="expCategory" style="width:100%;padding:11px 12px;font-size:0.9rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);">
+          <option>Equipment</option><option>Supplies</option><option>Fuel</option>
+          <option>Software &amp; Fees</option><option>Insurance</option><option>Marketing</option><option>Other</option>
+        </select>
+        <input type="text" id="expDesc" placeholder="Description (optional)">
+        <input type="number" id="expAmount" placeholder="Amount ($)" step="0.01" min="0">
+      </div>
+      <button type="button" id="expAddBtn" style="margin-top:10px;">Add expense</button>
+    </div>
+    <div id="expList"></div>
+    <button type="button" id="expCsvBtn" style="background:var(--ink); color:#fff;">Download expenses (CSV)</button>
+
+    <h2>🚗 Mileage</h2>
+    <div class="rem" id="mileTotals" style="display:flex; gap:20px; flex-wrap:wrap; align-items:center;"></div>
+    <div class="rem">
+      <p class="empty" style="margin:0 0 8px;">Quick-fill from recent trips:</p>
+      <div id="tripChips" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <input type="date" id="mileDate">
+        <input type="number" id="mileMiles" placeholder="Miles" step="0.1" min="0">
+      </div>
+      <input type="text" id="milePurpose" placeholder="Purpose (e.g., Deliver — Jane Smith, Moore)" style="margin-top:10px;">
+      <button type="button" id="mileAddBtn" style="margin-top:10px;">Add trip</button>
+    </div>
+    <div id="mileList"></div>
+    <button type="button" id="mileCsvBtn" style="background:var(--ink); color:#fff;">Download mileage (CSV)</button>
   </div>
 </div>
 
@@ -78,7 +113,9 @@
         render('delivery', data.reminders.delivery);
         render('pickup', data.reminders.pickup);
         render('review', data.reminders.review);
+        renderWeek(ALL_RENTALS);
         renderAll(ALL_RENTALS);
+        loadFinance();
         $('results').style.display = 'block';
         $('status').style.display = 'none';
       }
@@ -95,7 +132,52 @@
         <div class="meta">${esc(r.package)} · ${esc(r.address)}</div>
         <div class="msg">${esc(r.message)}</div>
         <a class="sms-btn" href="${r.sms}">Text ${esc(r.name.split(' ')[0])} →</a>
+        <button type="button" style="width:auto; margin-left:10px; padding:10px 16px; font-size:0.82rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px;"
+          onclick="markSent('${esc(r.flagId)}')">✓ Mark sent</button>
       </div>`).join('');
+  }
+
+  window.markSent = async (flagId) => {
+    const secret = $('secret').value.trim();
+    try {
+      const resp = await fetch('/.netlify/functions/mark-sent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, flagId }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else { showErr('Mark sent failed (' + resp.status + ').'); }
+    } catch { showErr('Network error.'); }
+  };
+
+  // ---- This Week lookahead: deliveries and pickups in the next 7 days ----
+  function renderWeek(rentals){
+    const el = $('thisWeek');
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+    const end = new Date(today + 'T12:00:00Z'); end.setUTCDate(end.getUTCDate() + 7);
+    const endStr = end.toISOString().slice(0,10);
+    const events = [];
+    for (const r of rentals) {
+      const self = r.serviceType === 'self';
+      if (r.dropoffDate >= today && r.dropoffDate <= endStr)
+        events.push({ date: r.dropoffDate, time: r.dropoffTime, label: self ? 'Customer pickup' : 'Deliver', r,
+                      addr: self ? '' : (r.dropoffAddress || r.address || '') });
+      if (r.pickupDate >= today && r.pickupDate <= endStr)
+        events.push({ date: r.pickupDate, time: r.pickupTime, label: self ? 'Customer return' : 'Pick up', r,
+                      addr: self ? '' : (r.pickupAddress || r.address || '') });
+    }
+    if (!events.length) { el.innerHTML = '<p class="empty">Nothing scheduled in the next 7 days.</p>'; return; }
+    events.sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time));
+    el.innerHTML = events.map(e => `
+      <div class="rem" style="padding:10px 14px;">
+        <div class="who" style="font-size:0.9rem;">${esc(fmtDay(e.date))} · <span style="color:var(--gold);">${esc(e.label)}</span> — ${esc(e.r.name)}</div>
+        <div class="meta" style="margin:2px 0 0;">${esc(e.time)}${e.addr ? ' · ' + esc(e.addr) : ''} · ${esc(e.r.package)}</div>
+      </div>`).join('');
+  }
+
+  function fmtDay(iso){
+    const d = new Date(iso + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   }
 
   // ---- All rentals management ----
@@ -107,6 +189,7 @@
       <div class="rem">
         <div class="who">${esc(r.name)} — ${esc(r.price || '')}</div>
         <div class="meta">${esc(r.package)} · Drop-off ${esc(r.dropoffDate)}${(r.dropoffAddress||r.address) ? ' @ ' + esc(r.dropoffAddress||r.address) : ''} · Pickup ${esc(r.pickupDate)}${(r.pickupAddress||r.address) ? ' @ ' + esc(r.pickupAddress||r.address) : ''}</div>
+        <a class="sms-btn" style="padding:8px 16px; font-size:0.8rem; margin-right:8px;" href="${r.reviewSms}">⭐ Send review text</a>
         <button type="button" style="width:auto; margin-top:4px; padding:8px 16px; font-size:0.8rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
           onclick="deleteRental('${esc(r.key)}', '${esc(r.name)}')">Delete</button>
       </div>`).join('');
@@ -165,6 +248,143 @@
     a.click();
     URL.revokeObjectURL(a.href);
   });
+
+  // ================= Expenses & Mileage =================
+  let FIN = { expenses: [], mileage: [], mileageRate: null };
+  const finCall = (payload) => fetch('/.netlify/functions/finance', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ secret: $('secret').value.trim(), ...payload }),
+  });
+
+  async function loadFinance() {
+    try {
+      const resp = await finCall({ action: 'list' });
+      if (!resp.ok) return;
+      FIN = await resp.json();
+      renderFinance();
+    } catch {}
+  }
+
+  function thisYear(d){ return (d||'').slice(0,4) === String(new Date().getFullYear()); }
+  const money = n => '$' + Number(n||0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  function renderFinance() {
+    // Expense totals by category (YTD)
+    const ytdExp = FIN.expenses.filter(e => thisYear(e.date));
+    const byCat = {};
+    let expTotal = 0;
+    for (const e of ytdExp) { byCat[e.category] = (byCat[e.category]||0) + e.amount; expTotal += e.amount; }
+    $('expTotals').innerHTML =
+      `<div><div style="font-size:1.2rem;font-weight:bold;">${money(expTotal)}</div><div style="font-size:0.75rem;color:var(--steel);">YTD expenses</div></div>` +
+      Object.entries(byCat).map(([cat,amt]) =>
+        `<div><div style="font-size:0.95rem;font-weight:bold;">${money(amt)}</div><div style="font-size:0.72rem;color:var(--steel);">${esc(cat)}</div></div>`).join('');
+
+    // Expense list (newest first, latest 15)
+    const expSorted = [...FIN.expenses].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    $('expList').innerHTML = expSorted.slice(0,15).map(e => `
+      <div class="rem" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <div>
+          <div style="font-weight:bold; font-size:0.9rem;">${money(e.amount)} — ${esc(e.category)}</div>
+          <div class="meta" style="margin:0;">${esc(e.date)}${e.description ? ' · ' + esc(e.description) : ''}</div>
+        </div>
+        <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
+          onclick="finDelete('${esc(e.key)}')">Delete</button>
+      </div>`).join('') || '<p class="empty">No expenses logged yet.</p>';
+
+    // Mileage totals + rate
+    const ytdMiles = FIN.mileage.filter(m => thisYear(m.date)).reduce((t,m)=>t+m.miles,0);
+    const rate = FIN.mileageRate;
+    $('mileTotals').innerHTML =
+      `<div><div style="font-size:1.2rem;font-weight:bold;">${ytdMiles.toLocaleString('en-US',{maximumFractionDigits:1})} mi</div><div style="font-size:0.75rem;color:var(--steel);">YTD business miles</div></div>` +
+      (rate ? `<div><div style="font-size:1.2rem;font-weight:bold;">${money(ytdMiles*rate)}</div><div style="font-size:0.75rem;color:var(--steel);">Est. deduction @ $${rate}/mi</div></div>` : '') +
+      `<div style="display:flex; align-items:center; gap:6px;">
+        <input type="number" id="rateInput" step="0.005" min="0" placeholder="Rate $/mi" value="${rate ?? ''}" style="width:110px; padding:8px 10px;">
+        <button type="button" onclick="saveRate()" style="width:auto; margin:0; padding:8px 14px; font-size:0.8rem;">Save rate</button>
+      </div>`;
+
+    // Trip quick-fill chips: recent + upcoming rental trips
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+    const lo = new Date(today+'T12:00:00Z'); lo.setUTCDate(lo.getUTCDate()-7);
+    const hi = new Date(today+'T12:00:00Z'); hi.setUTCDate(hi.getUTCDate()+7);
+    const loS = lo.toISOString().slice(0,10), hiS = hi.toISOString().slice(0,10);
+    const trips = [];
+    for (const r of ALL_RENTALS) {
+      if (r.serviceType === 'self') continue;
+      if (r.dropoffDate >= loS && r.dropoffDate <= hiS)
+        trips.push({ date: r.dropoffDate, purpose: 'Deliver — ' + r.name + (r.dropoffAddress||r.address ? ', ' + (r.dropoffAddress||r.address) : '') });
+      if (r.pickupDate >= loS && r.pickupDate <= hiS)
+        trips.push({ date: r.pickupDate, purpose: 'Pick up — ' + r.name + (r.pickupAddress||r.address ? ', ' + (r.pickupAddress||r.address) : '') });
+    }
+    trips.sort((a,b)=>b.date.localeCompare(a.date));
+    $('tripChips').innerHTML = trips.slice(0,8).map((t,i) => `
+      <button type="button" style="width:auto; margin:0; padding:7px 12px; font-size:0.75rem; background:var(--cream); color:var(--ink); border:1px solid var(--line); border-radius:999px;"
+        onclick="fillTrip('${esc(t.date)}', '${esc(t.purpose).replaceAll("'","&#39;")}')">${esc(t.date.slice(5))} · ${esc(t.purpose.slice(0,34))}${t.purpose.length>34?'…':''}</button>`).join('')
+      || '<span class="empty">No rental trips in the last/next 7 days.</span>';
+
+    // Mileage list (latest 15)
+    const mileSorted = [...FIN.mileage].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    $('mileList').innerHTML = mileSorted.slice(0,15).map(m => `
+      <div class="rem" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <div>
+          <div style="font-weight:bold; font-size:0.9rem;">${m.miles} mi</div>
+          <div class="meta" style="margin:0;">${esc(m.date)} · ${esc(m.purpose)}</div>
+        </div>
+        <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
+          onclick="finDelete('${esc(m.key)}')">Delete</button>
+      </div>`).join('') || '<p class="empty">No trips logged yet.</p>';
+  }
+
+  window.fillTrip = (date, purpose) => {
+    $('mileDate').value = date;
+    $('milePurpose').value = purpose;
+    $('mileMiles').focus();
+  };
+
+  window.finDelete = async (key) => {
+    if (!confirm('Delete this entry?')) return;
+    const resp = await finCall({ action: 'delete', key });
+    if (resp.ok) loadFinance(); else showErr('Delete failed.');
+  };
+
+  window.saveRate = async () => {
+    const rate = document.getElementById('rateInput').value;
+    const resp = await finCall({ action: 'setRate', rate });
+    if (resp.ok) loadFinance(); else showErr('Rate must be $/mile, like 0.70.');
+  };
+
+  $('expAddBtn').addEventListener('click', async () => {
+    const date = $('expDate').value, category = $('expCategory').value,
+          description = $('expDesc').value.trim(), amount = $('expAmount').value;
+    if (!date || !amount) return showErr('Expense needs a date and amount.');
+    const resp = await finCall({ action: 'addExpense', date, category, description, amount });
+    if (resp.ok) { $('expDesc').value=''; $('expAmount').value=''; loadFinance(); }
+    else showErr('Add expense failed.');
+  });
+
+  $('mileAddBtn').addEventListener('click', async () => {
+    const date = $('mileDate').value, purpose = $('milePurpose').value.trim(), miles = $('mileMiles').value;
+    if (!date || !purpose || !miles) return showErr('Trip needs date, purpose, and miles.');
+    const resp = await finCall({ action: 'addMileage', date, purpose, miles });
+    if (resp.ok) { $('milePurpose').value=''; $('mileMiles').value=''; loadFinance(); }
+    else showErr('Add trip failed.');
+  });
+
+  function dlCsv(name, cols, rows){
+    const cell = v => '"' + String(v ?? '').replaceAll('"','""') + '"';
+    const lines = [cols.join(',')].concat(rows.map(r => cols.map(cc => cell(r[cc])).join(',')));
+    const blob = new Blob([lines.join('\r\n')], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name + '-' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click(); URL.revokeObjectURL(a.href);
+  }
+  $('expCsvBtn').addEventListener('click', () =>
+    dlCsv('ready-tote-expenses', ['date','category','description','amount'],
+      [...FIN.expenses].sort((a,b)=>(a.date||'').localeCompare(b.date||''))));
+  $('mileCsvBtn').addEventListener('click', () =>
+    dlCsv('ready-tote-mileage', ['date','purpose','miles'],
+      [...FIN.mileage].sort((a,b)=>(a.date||'').localeCompare(b.date||''))));
+
 </script>
 </body>
 </html>
