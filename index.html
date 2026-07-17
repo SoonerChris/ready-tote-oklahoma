@@ -816,6 +816,29 @@
             <input type="date" name="pickup_date" required>
           </label>
         </div>
+        <div class="form-grid two" style="margin-top:18px;">
+          <label>Preferred Delivery Window
+            <select name="delivery_window">
+              <option value="No preference">No preference</option>
+              <option>Morning (8 AM – 12 PM)</option>
+              <option>Afternoon (12 – 5 PM)</option>
+              <option>Evening (5 – 8 PM)</option>
+            </select>
+          </label>
+          <label>Preferred Pickup Window
+            <select name="pickup_window">
+              <option value="No preference">No preference</option>
+              <option>Morning (8 AM – 12 PM)</option>
+              <option>Afternoon (12 – 5 PM)</option>
+              <option>Evening (5 – 8 PM)</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-grid" style="margin-top:18px;">
+          <label>Delivery Address*
+            <input type="text" name="delivery_address" placeholder="Street, City, Zip" required>
+          </label>
+        </div>
         <button type="submit" class="btn btn-primary form-submit">Request Booking</button>
         <p class="form-note">We'll follow up to confirm your dates and send your invoice. No payment due now.</p>
       </form>
@@ -923,6 +946,9 @@
   <select name="package"><option>1 Bedroom — 20 Totes + Dolly — $99</option></select>
   <input type="date" name="delivery_date">
   <input type="date" name="pickup_date">
+  <select name="delivery_window"><option>No preference</option></select>
+  <select name="pickup_window"><option>No preference</option></select>
+  <input type="text" name="delivery_address">
   <input type="text" name="hp_field">
 </form>
 

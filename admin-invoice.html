@@ -222,6 +222,9 @@
     const pkgText = grab(['package']);
     const dropDate = grab(['delivery[_ ]?date']);
     const pickDate = grab(['pickup[_ ]?date']);
+    const addr = grab(['delivery[_ ]?address']);
+    const dropWin = grab(['delivery[_ ]?window']);
+    const pickWin = grab(['pickup[_ ]?window']);
 
     let filled = [];
     if (name) { $('name').value = name; filled.push('name'); }
@@ -229,6 +232,30 @@
     if (phone) { $('phone').value = phone; filled.push('phone'); }
     if (dropDate && /^\d{4}-\d{2}-\d{2}/.test(dropDate)) { $('dropoffDate').value = dropDate.slice(0,10); filled.push('drop-off date'); }
     if (pickDate && /^\d{4}-\d{2}-\d{2}/.test(pickDate)) { $('pickupDate').value = pickDate.slice(0,10); filled.push('pickup date'); }
+
+    // Address: split "Street, City, Zip"-style input into the form fields
+    if (addr) {
+      const parts = addr.split(',').map(s => s.trim());
+      if (parts.length >= 2) {
+        $('street').value = parts[0];
+        const last = parts[parts.length - 1];
+        const zipMatch = last.match(/\b(\d{5})(?:-\d{4})?\b/);
+        const stateMatch = last.match(/\b([A-Za-z]{2})\b/);
+        $('city').value = parts.length >= 3 ? parts[1] : last.replace(zipMatch ? zipMatch[0] : '', '').replace(stateMatch ? stateMatch[0] : '', '').trim() || parts[1] || '';
+        if (parts.length >= 3) {
+          if (zipMatch) $('zip').value = zipMatch[1];
+          if (stateMatch && stateMatch[1].toUpperCase() !== $('city').value.toUpperCase()) $('state').value = stateMatch[1].toUpperCase();
+        } else if (zipMatch) { $('zip').value = zipMatch[1]; }
+        filled.push('address');
+      } else {
+        $('street').value = addr; filled.push('address (street only — add city/zip)');
+      }
+    }
+    // Preferred windows: note them in the status so you pick times accordingly
+    let winNote = '';
+    if (dropWin && !/no preference/i.test(dropWin)) winNote += ' Delivery pref: ' + dropWin + '.';
+    if (pickWin && !/no preference/i.test(pickWin)) winNote += ' Pickup pref: ' + pickWin + '.';
+    if (winNote) filled.push('(' + winNote.trim() + ')');
 
     // Match package text against loaded packages
     if (pkgText) {
