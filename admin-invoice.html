@@ -29,6 +29,7 @@
 </style>
 </head>
 <body>
+<div class="top" style="max-width:640px;margin:0 auto 10px;font-size:0.85rem;"><a href="admin.html" style="color:var(--gold);text-decoration:none;">← Admin dashboard</a></div>
 <div class="card">
   <h1>Send Customer Invoice</h1>
   <p class="sub">Internal tool — fills out and sends the branded invoice email with a Stripe payment button.</p>
@@ -157,6 +158,8 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
+  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
+  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
 
   // Toggle pickup address block
   $('sameAddress').addEventListener('change', (e) => {

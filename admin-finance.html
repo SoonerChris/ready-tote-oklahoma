@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Finance — Ready Tote Oklahoma (Internal)</title>
+<style>
+  :root{--ink:#1E1B18;--gold:#C99A32;--cream:#F5F1E7;--steel:#6B6259;--line:rgba(30,27,24,0.15);}
+  *{box-sizing:border-box;}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--cream);color:var(--ink);margin:0;padding:24px 14px;}
+  .top{max-width:640px;margin:0 auto 10px;font-size:0.85rem;}
+  .top a{color:var(--gold);text-decoration:none;}
+  .card{max-width:640px;margin:0 auto;background:#fff;border-radius:16px;border:1px solid var(--line);padding:26px;}
+  h1{font-size:1.3rem;margin:0 0 4px;}
+  .sub{color:var(--steel);font-size:0.88rem;margin:0 0 20px;}
+  label{display:block;font-size:0.85rem;font-weight:bold;margin:14px 0 6px;}
+  input, select{width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);font-family:inherit;}
+  button{margin-top:14px;width:100%;padding:13px;font-size:0.95rem;font-weight:bold;background:var(--gold);color:var(--ink);border:none;border-radius:10px;cursor:pointer;}
+  button:disabled{opacity:0.6;}
+  h2{font-size:1rem;margin:26px 0 10px;}
+  .rem{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;}
+  .empty{color:var(--steel);font-size:0.88rem;}
+  .status{margin-top:12px;padding:10px 14px;border-radius:8px;font-size:0.88rem;display:none;}
+  .status.err{display:block;background:rgba(200,60,50,0.08);border:1px solid rgba(200,60,50,0.35);color:#C0392B;}
+</style>
+</head>
+<body>
+<div class="top"><a href="admin.html">← Admin dashboard</a></div>
+<div class="card">
+  <h1>Finance</h1>
+  <p class="sub">Sales totals, expenses, and mileage. All amounts in USD.</p>
+
+  <label>Admin secret</label>
+  <input type="password" id="secret" placeholder="Your INVOICE_SECRET value">
+  <button id="loadBtn">Load finance data</button>
+  <div class="status" id="status"></div>
+
+  <div id="results" style="display:none;">
+    <h2>💰 Sales</h2>
+    <div class="rem" id="salesSummary" style="display:flex; gap:24px; flex-wrap:wrap;"></div>
+    <button type="button" id="csvBtn" style="background:var(--ink); color:#fff;">Download rental log (CSV)</button>
+
+    <h2>💵 Expenses</h2>
+    <div class="rem" id="expTotals" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
+    <div class="rem">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <input type="date" id="expDate">
+        <select id="expCategory">
+          <option>Equipment</option><option>Supplies</option><option>Fuel</option>
+          <option>Software &amp; Fees</option><option>Insurance</option><option>Marketing</option><option>Other</option>
+        </select>
+        <select id="expRecurring">
+          <option value="one-time">One-time cost</option>
+          <option value="monthly">Recurring — monthly</option>
+          <option value="yearly">Recurring — yearly</option>
+        </select>
+        <input type="number" id="expAmount" placeholder="Amount ($)" step="0.01" min="0">
+      </div>
+      <input type="text" id="expDesc" placeholder="Description (optional)" style="margin-top:10px;">
+      <button type="button" id="expAddBtn">Add expense</button>
+    </div>
+    <div id="expList"></div>
+    <button type="button" id="expCsvBtn" style="background:var(--ink); color:#fff;">Download expenses (CSV)</button>
+
+    <h2>🚗 Mileage</h2>
+    <div class="rem" id="mileTotals" style="display:flex; gap:20px; flex-wrap:wrap; align-items:center;"></div>
+    <div class="rem">
+      <p class="empty" style="margin:0 0 8px;">Quick-fill from recent trips:</p>
+      <div id="tripChips" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <input type="date" id="mileDate">
+        <input type="number" id="mileMiles" placeholder="Miles" step="0.1" min="0">
+      </div>
+      <input type="text" id="milePurpose" placeholder="Purpose (e.g., Deliver — Jane Smith, Moore)" style="margin-top:10px;">
+      <button type="button" id="mileAddBtn">Add trip</button>
+    </div>
+    <div id="mileList"></div>
+    <button type="button" id="mileCsvBtn" style="background:var(--ink); color:#fff;">Download mileage (CSV)</button>
+  </div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  // Restore shared secret from admin hub
+  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
+  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+
+  let ALL_RENTALS = [];
+  let FIN = { expenses: [], mileage: [], mileageRate: null };
+
+  $('loadBtn').addEventListener('click', async () => {
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret.');
+    const btn = $('loadBtn');
+    btn.disabled = true; btn.textContent = 'Loading…';
+    try {
+      const [rentalsResp, finResp] = await Promise.all([
+        fetch('/.netlify/functions/get-rentals', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret }),
+        }),
+        fetch('/.netlify/functions/finance', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret, action: 'list' }),
+        }),
+      ]);
+      if (rentalsResp.status === 401 || finResp.status === 401) { showErr('Wrong admin secret.'); }
+      else if (!rentalsResp.ok || !finResp.ok) { showErr('Load failed.'); }
+      else {
+        const rd = await rentalsResp.json();
+        ALL_RENTALS = rd.rentals || [];
+        FIN = await finResp.json();
+        renderSales(ALL_RENTALS);
+        renderFinance();
+        $('results').style.display = 'block';
+        $('status').style.display = 'none';
+      }
+    } catch { showErr('Network error — use this page on the live site.'); }
+    btn.disabled = false; btn.textContent = 'Load finance data';
+  });
+
+  function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML;}
+  function showErr(m){const s=$('status');s.className='status err';s.textContent=m;}
+  function thisYear(d){ return (d||'').slice(0,4) === String(new Date().getFullYear()); }
+  const money = n => '$' + Number(n||0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  function priceNum(p){ const m = String(p||'').replace(/[^0-9.]/g,''); return m ? parseFloat(m) : 0; }
+  function renderSales(rentals){
+    const now = new Date();
+    const thisMonth = now.toISOString().slice(0,7);
+    const inMonth = rentals.filter(r => (r.invoicedAt||'').slice(0,7) === thisMonth);
+    const sum = arr => arr.reduce((t,r) => t + priceNum(r.price), 0);
+    const fmt = n => '$' + n.toLocaleString('en-US', {maximumFractionDigits:0});
+    $('salesSummary').innerHTML = `
+      <div><div style="font-size:1.3rem;font-weight:bold;">${rentals.length}</div><div style="font-size:0.78rem;color:var(--steel);">Total rentals</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;">${fmt(sum(rentals))}</div><div style="font-size:0.78rem;color:var(--steel);">Total invoiced</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;">${inMonth.length}</div><div style="font-size:0.78rem;color:var(--steel);">Rentals this month</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;">${fmt(sum(inMonth))}</div><div style="font-size:0.78rem;color:var(--steel);">Invoiced this month</div></div>`;
+  }
+
+  $('csvBtn').addEventListener('click', () => {
+    if (!ALL_RENTALS.length) return showErr('No rentals to export yet.');
+    const cols = ['invoicedAt','name','email','phone','package','price','duration','dropoffDate','dropoffTime','dropoffAddress','pickupDate','pickupTime','pickupAddress'];
+    dlCsv('ready-tote-rentals', cols, [...ALL_RENTALS].sort((a,b) => (b.invoicedAt||'').localeCompare(a.invoicedAt||'')));
+  });
+
+  // ---- Finance ----
+  const finCall = (payload) => fetch('/.netlify/functions/finance', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ secret: $('secret').value.trim(), ...payload }),
+  });
+  async function reloadFinance(){
+    const resp = await finCall({ action: 'list' });
+    if (resp.ok) { FIN = await resp.json(); renderFinance(); }
+  }
+
+  function renderFinance() {
+    const ytdExp = FIN.expenses.filter(e => thisYear(e.date));
+    let ytdTotal = 0, monthlyOverhead = 0;
+    const byCat = {};
+    for (const e of FIN.expenses) {
+      if (e.recurring === 'monthly') monthlyOverhead += e.amount;
+      else if (e.recurring === 'yearly') monthlyOverhead += e.amount / 12;
+    }
+    for (const e of ytdExp) {
+      ytdTotal += e.amount;
+      const b = byCat[e.category] || { oneTime: 0, monthly: 0 };
+      if (e.recurring === 'one-time' || !e.recurring) b.oneTime += e.amount;
+      else b.monthly += e.amount;
+      byCat[e.category] = b;
+    }
+    $('expTotals').innerHTML =
+      `<div><div style="font-size:1.2rem;font-weight:bold;">${money(ytdTotal)}</div><div style="font-size:0.75rem;color:var(--steel);">YTD expenses</div></div>` +
+      `<div><div style="font-size:1.2rem;font-weight:bold;color:var(--gold);">${money(monthlyOverhead)}/mo</div><div style="font-size:0.75rem;color:var(--steel);">Est. monthly overhead</div></div>` +
+      Object.entries(byCat).map(([cat,amt]) => {
+        const sub = amt.monthly > 0 && amt.oneTime > 0 ? `${money(amt.oneTime)} + ${money(amt.monthly)} recurring`
+                  : amt.monthly > 0 ? `${money(amt.monthly)} recurring` : money(amt.oneTime);
+        return `<div><div style="font-size:0.9rem;font-weight:bold;">${sub}</div><div style="font-size:0.72rem;color:var(--steel);">${esc(cat)}</div></div>`;
+      }).join('');
+
+    const expSorted = [...FIN.expenses].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    $('expList').innerHTML = expSorted.slice(0,15).map(e => `
+      <div class="rem" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <div>
+          <div style="font-weight:bold; font-size:0.9rem;">${money(e.amount)} — ${esc(e.category)}${(e.recurring === 'monthly' || e.recurring === 'yearly') ? ` <span style="font-weight:normal; font-size:0.72rem; color:var(--gold); background:rgba(201,154,50,0.12); border:1px solid rgba(201,154,50,0.4); padding:1px 8px; border-radius:999px; margin-left:6px; vertical-align:middle;">${e.recurring}</span>` : ''}</div>
+          <div style="font-size:0.78rem; color:var(--steel); margin:0;">${esc(e.date)}${e.description ? ' · ' + esc(e.description) : ''}</div>
+        </div>
+        <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
+          onclick="finDelete('${esc(e.key)}')">Delete</button>
+      </div>`).join('') || '<p class="empty">No expenses logged yet.</p>';
+
+    const ytdMiles = FIN.mileage.filter(m => thisYear(m.date)).reduce((t,m)=>t+m.miles,0);
+    const rate = FIN.mileageRate;
+    $('mileTotals').innerHTML =
+      `<div><div style="font-size:1.2rem;font-weight:bold;">${ytdMiles.toLocaleString('en-US',{maximumFractionDigits:1})} mi</div><div style="font-size:0.75rem;color:var(--steel);">YTD business miles</div></div>` +
+      (rate ? `<div><div style="font-size:1.2rem;font-weight:bold;">${money(ytdMiles*rate)}</div><div style="font-size:0.75rem;color:var(--steel);">Est. deduction @ $${rate}/mi</div></div>` : '') +
+      `<div style="display:flex; align-items:center; gap:6px;">
+        <input type="number" id="rateInput" step="0.005" min="0" placeholder="Rate $/mi" value="${rate ?? ''}" style="width:110px; padding:8px 10px;">
+        <button type="button" onclick="saveRate()" style="width:auto; margin:0; padding:8px 14px; font-size:0.8rem;">Save rate</button>
+      </div>`;
+
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+    const lo = new Date(today+'T12:00:00Z'); lo.setUTCDate(lo.getUTCDate()-7);
+    const hi = new Date(today+'T12:00:00Z'); hi.setUTCDate(hi.getUTCDate()+7);
+    const loS = lo.toISOString().slice(0,10), hiS = hi.toISOString().slice(0,10);
+    const trips = [];
+    for (const r of ALL_RENTALS) {
+      if (r.serviceType === 'self') continue;
+      if (r.dropoffDate >= loS && r.dropoffDate <= hiS)
+        trips.push({ date: r.dropoffDate, purpose: 'Deliver — ' + r.name + (r.dropoffAddress||r.address ? ', ' + (r.dropoffAddress||r.address) : '') });
+      if (r.pickupDate >= loS && r.pickupDate <= hiS)
+        trips.push({ date: r.pickupDate, purpose: 'Pick up — ' + r.name + (r.pickupAddress||r.address ? ', ' + (r.pickupAddress||r.address) : '') });
+    }
+    trips.sort((a,b)=>b.date.localeCompare(a.date));
+    $('tripChips').innerHTML = trips.slice(0,8).map(t => `
+      <button type="button" style="width:auto; margin:0; padding:7px 12px; font-size:0.75rem; background:var(--cream); color:var(--ink); border:1px solid var(--line); border-radius:999px;"
+        onclick="fillTrip('${esc(t.date)}', '${esc(t.purpose).replaceAll("'","&#39;")}')">${esc(t.date.slice(5))} · ${esc(t.purpose.slice(0,34))}${t.purpose.length>34?'…':''}</button>`).join('')
+      || '<span class="empty">No rental trips in the last/next 7 days.</span>';
+
+    const mileSorted = [...FIN.mileage].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    $('mileList').innerHTML = mileSorted.slice(0,15).map(m => `
+      <div class="rem" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <div>
+          <div style="font-weight:bold; font-size:0.9rem;">${m.miles} mi</div>
+          <div style="font-size:0.78rem; color:var(--steel); margin:0;">${esc(m.date)} · ${esc(m.purpose)}</div>
+        </div>
+        <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
+          onclick="finDelete('${esc(m.key)}')">Delete</button>
+      </div>`).join('') || '<p class="empty">No trips logged yet.</p>';
+  }
+
+  window.fillTrip = (date, purpose) => { $('mileDate').value = date; $('milePurpose').value = purpose; $('mileMiles').focus(); };
+  window.finDelete = async (key) => {
+    if (!confirm('Delete this entry?')) return;
+    const resp = await finCall({ action: 'delete', key });
+    if (resp.ok) reloadFinance(); else showErr('Delete failed.');
+  };
+  window.saveRate = async () => {
+    const rate = document.getElementById('rateInput').value;
+    const resp = await finCall({ action: 'setRate', rate });
+    if (resp.ok) reloadFinance(); else showErr('Rate must be $/mile, like 0.70.');
+  };
+
+  $('expAddBtn').addEventListener('click', async () => {
+    const date = $('expDate').value, category = $('expCategory').value,
+          description = $('expDesc').value.trim(), amount = $('expAmount').value,
+          recurring = $('expRecurring').value;
+    if (!date || !amount) return showErr('Expense needs a date and amount.');
+    const resp = await finCall({ action: 'addExpense', date, category, description, amount, recurring });
+    if (resp.ok) { $('expDesc').value=''; $('expAmount').value=''; reloadFinance(); }
+    else showErr('Add expense failed.');
+  });
+  $('mileAddBtn').addEventListener('click', async () => {
+    const date = $('mileDate').value, purpose = $('milePurpose').value.trim(), miles = $('mileMiles').value;
+    if (!date || !purpose || !miles) return showErr('Trip needs date, purpose, and miles.');
+    const resp = await finCall({ action: 'addMileage', date, purpose, miles });
+    if (resp.ok) { $('milePurpose').value=''; $('mileMiles').value=''; reloadFinance(); }
+    else showErr('Add trip failed.');
+  });
+
+  function dlCsv(name, cols, rows){
+    const cell = v => '"' + String(v ?? '').replaceAll('"','""') + '"';
+    const lines = [cols.join(',')].concat(rows.map(r => cols.map(cc => cell(r[cc])).join(',')));
+    const blob = new Blob([lines.join('\r\n')], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name + '-' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click(); URL.revokeObjectURL(a.href);
+  }
+  $('expCsvBtn').addEventListener('click', () =>
+    dlCsv('ready-tote-expenses', ['date','category','recurring','description','amount'],
+      [...FIN.expenses].sort((a,b)=>(a.date||'').localeCompare(b.date||''))));
+  $('mileCsvBtn').addEventListener('click', () =>
+    dlCsv('ready-tote-mileage', ['date','purpose','miles'],
+      [...FIN.mileage].sort((a,b)=>(a.date||'').localeCompare(b.date||''))));
+</script>
+</body>
+</html>

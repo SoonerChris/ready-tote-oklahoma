@@ -26,6 +26,7 @@
 </style>
 </head>
 <body>
+<div class="top" style="max-width:640px;margin:0 auto 10px;font-size:0.85rem;"><a href="admin.html" style="color:var(--gold);text-decoration:none;">← Admin dashboard</a></div>
 <div class="card">
   <h1>Add Rental to Log</h1>
   <p class="sub">Records a rental directly — <strong>no email is sent</strong>. Use for backfilling bookings made before the log existed. Logged rentals feed the reminders page, review requests, and the sales CSV.</p>
@@ -98,6 +99,8 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
+  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
+  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
 
   $('addBtn').addEventListener('click', async () => {
     const req = ['secret','name','phone','package','price','dropoffDate','pickupDate'];

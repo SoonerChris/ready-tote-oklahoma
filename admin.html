@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Admin Dashboard — Ready Tote Oklahoma</title>
+<style>
+  :root{--ink:#1E1B18;--gold:#C99A32;--cream:#F5F1E7;--steel:#6B6259;--line:rgba(30,27,24,0.15);}
+  *{box-sizing:border-box;}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--cream);color:var(--ink);margin:0;padding:32px 16px;}
+  .wrap{max-width:760px;margin:0 auto;}
+  h1{font-size:1.6rem;margin:0 0 4px;}
+  .sub{color:var(--steel);font-size:0.95rem;margin:0 0 24px;}
+  .secret-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:22px;}
+  .secret-card label{display:block;font-size:0.82rem;font-weight:bold;margin-bottom:6px;}
+  .secret-card input{width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);}
+  .note{font-size:0.78rem;color:var(--steel);margin-top:8px;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media(max-width:560px){.grid{grid-template-columns:1fr;}}
+  .tile{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;text-decoration:none;color:var(--ink);transition:transform 0.1s, border-color 0.1s;}
+  .tile:hover{transform:translateY(-2px);border-color:var(--gold);}
+  .tile .icon{font-size:1.8rem;margin-bottom:10px;}
+  .tile h2{margin:0 0 4px;font-size:1.05rem;}
+  .tile p{margin:0;font-size:0.85rem;color:var(--steel);line-height:1.4;}
+  footer{max-width:760px;margin:32px auto 0;text-align:center;font-size:0.78rem;color:var(--steel);}
+  footer a{color:var(--gold);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Admin Dashboard</h1>
+  <p class="sub">Internal tools for Ready Tote Oklahoma.</p>
+
+  <div class="secret-card">
+    <label for="secret">Admin secret</label>
+    <input type="password" id="secret" placeholder="Your INVOICE_SECRET value" autocomplete="current-password">
+    <p class="note">Saved for this browser session so you don't need to re-enter it on each page.</p>
+  </div>
+
+  <div class="grid">
+    <a class="tile" href="admin-reminders.html"><div class="icon">🚚</div><h2>Today &amp; This Week</h2><p>Reminder texts to send, upcoming deliveries and pickups, all rentals.</p></a>
+    <a class="tile" href="admin-invoice.html"><div class="icon">🧾</div><h2>Send Invoice</h2><p>Parse a booking email and send the branded Stripe invoice.</p></a>
+    <a class="tile" href="admin-add-rental.html"><div class="icon">➕</div><h2>Add Rental</h2><p>Log a rental directly without sending an email. For backfilling or manual entries.</p></a>
+    <a class="tile" href="admin-finance.html"><div class="icon">💰</div><h2>Finance</h2><p>Sales totals, expenses with recurring, mileage, CSV exports.</p></a>
+  </div>
+</div>
+
+<footer><a href="/">← Back to readytoteokc.com</a></footer>
+
+<script>
+  const secret = document.getElementById('secret');
+  secret.value = sessionStorage.getItem('rto-admin-secret') || '';
+  secret.addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', secret.value));
+</script>
+</body>
+</html>
