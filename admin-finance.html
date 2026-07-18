@@ -60,7 +60,20 @@
         </select>
         <input type="number" id="expAmount" placeholder="Amount ($)" step="0.01" min="0">
       </div>
-      <input type="text" id="expDesc" placeholder="Description (optional)" style="margin-top:10px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
+        <input type="text" id="expVendor" placeholder="Vendor (e.g., Amazon, Home Depot)">
+        <select id="expPayment" style="width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);">
+          <option value="">Payment method…</option>
+          <option>Credit Card</option>
+          <option>Debit Card</option>
+          <option>Cash</option>
+          <option>Check</option>
+          <option>Bank Transfer</option>
+          <option>Venmo/Zelle</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <input type="text" id="expDesc" placeholder="Description / notes (optional)" style="margin-top:10px;">
       <button type="button" id="expAddBtn">Add expense</button>
     </div>
     <div id="expList"></div>
@@ -186,7 +199,7 @@
       <div class="rem" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
         <div>
           <div style="font-weight:bold; font-size:0.9rem;">${money(e.amount)} — ${esc(e.category)}${(e.recurring === 'monthly' || e.recurring === 'yearly') ? ` <span style="font-weight:normal; font-size:0.72rem; color:var(--gold); background:rgba(201,154,50,0.12); border:1px solid rgba(201,154,50,0.4); padding:1px 8px; border-radius:999px; margin-left:6px; vertical-align:middle;">${e.recurring}</span>` : ''}</div>
-          <div style="font-size:0.78rem; color:var(--steel); margin:0;">${esc(e.date)}${e.description ? ' · ' + esc(e.description) : ''}</div>
+          <div style="font-size:0.78rem; color:var(--steel); margin:0;">${esc(e.date)}${e.vendor ? ' · ' + esc(e.vendor) : ''}${e.paymentMethod ? ' · ' + esc(e.paymentMethod) : ''}${e.description ? ' · ' + esc(e.description) : ''}</div>
         </div>
         <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
           onclick="finDelete('${esc(e.key)}')">Delete</button>
@@ -247,10 +260,11 @@
   $('expAddBtn').addEventListener('click', async () => {
     const date = $('expDate').value, category = $('expCategory').value,
           description = $('expDesc').value.trim(), amount = $('expAmount').value,
-          recurring = $('expRecurring').value;
+          recurring = $('expRecurring').value, vendor = $('expVendor').value.trim(),
+          paymentMethod = $('expPayment').value;
     if (!date || !amount) return showErr('Expense needs a date and amount.');
-    const resp = await finCall({ action: 'addExpense', date, category, description, amount, recurring });
-    if (resp.ok) { $('expDesc').value=''; $('expAmount').value=''; reloadFinance(); }
+    const resp = await finCall({ action: 'addExpense', date, category, description, amount, recurring, vendor, paymentMethod });
+    if (resp.ok) { $('expDesc').value=''; $('expAmount').value=''; $('expVendor').value=''; reloadFinance(); }
     else showErr('Add expense failed.');
   });
   $('mileAddBtn').addEventListener('click', async () => {
@@ -271,7 +285,7 @@
     a.click(); URL.revokeObjectURL(a.href);
   }
   $('expCsvBtn').addEventListener('click', () =>
-    dlCsv('ready-tote-expenses', ['date','category','recurring','description','amount'],
+    dlCsv('ready-tote-expenses', ['date','category','vendor','recurring','paymentMethod','description','amount'],
       [...FIN.expenses].sort((a,b)=>(a.date||'').localeCompare(b.date||''))));
   $('mileCsvBtn').addEventListener('click', () =>
     dlCsv('ready-tote-mileage', ['date','purpose','miles'],
