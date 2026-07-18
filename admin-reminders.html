@@ -110,6 +110,7 @@
 
   window.markSent = async (flagId) => {
     const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
     try {
       const resp = await fetch('/.netlify/functions/mark-sent', {
         method: 'POST',
@@ -117,7 +118,10 @@
         body: JSON.stringify({ secret, flagId }),
       });
       if (resp.ok) { $('loadBtn').click(); }
-      else { showErr('Mark sent failed (' + resp.status + ').'); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Mark sent failed (' + resp.status + '): ' + detail);
+      }
     } catch { showErr('Network error.'); }
   };
 
