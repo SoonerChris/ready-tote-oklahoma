@@ -100,9 +100,12 @@
         <div class="meta">${esc(r.package)} · ${esc(r.address)}</div>
         <div class="msg">${esc(r.message)}</div>
         <a class="sms-btn" href="${r.sms}">Text ${esc(r.name.split(' ')[0])} →</a>
-        <button type="button" style="width:auto; margin-left:10px; padding:10px 16px; font-size:0.82rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px;"
-          onclick="markSent('${esc(r.flagId)}')">✓ Mark sent</button>
+        <button type="button" class="mark-sent-btn" data-flagid="${r.flagId}" style="width:auto; margin-left:10px; padding:10px 16px; font-size:0.82rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">✓ Mark sent</button>
       </div>`).join('');
+    // Wire up mark-sent buttons via delegation
+    el.querySelectorAll('.mark-sent-btn').forEach(btn => {
+      btn.addEventListener('click', () => markSent(btn.dataset.flagid));
+    });
   }
 
   window.markSent = async (flagId) => {
