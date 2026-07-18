@@ -13,10 +13,14 @@ export default async () => {
   const rentals = [];
   for (const b of blobs) {
     const r = await store.get(b.key, { type: "json" });
-    if (r) rentals.push(r);
+    if (r) rentals.push({ key: b.key, ...r });
   }
 
-  const rem = computeReminders(rentals, process.env.GOOGLE_REVIEW_LINK || "");
+  const metaStore = getStore("meta");
+  let sentFlags = {};
+  try { sentFlags = (await metaStore.get("sentFlags", { type: "json" })) || {}; } catch {}
+
+  const rem = computeReminders(rentals, process.env.GOOGLE_REVIEW_LINK || "", sentFlags);
   const total = rem.delivery.length + rem.pickup.length + rem.review.length;
 
   if (total === 0) {

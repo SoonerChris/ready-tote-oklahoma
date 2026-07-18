@@ -17,7 +17,12 @@ export default async (request) => {
 
   try {
     const store = getStore("meta");
-    const flags = (await store.get("sentFlags", { type: "json" })) || {};
+    let flags = {};
+    try {
+      flags = (await store.get("sentFlags", { type: "json" })) || {};
+    } catch {
+      // Key doesn't exist yet, start fresh
+    }
     flags[body.flagId] = new Date().toISOString();
     await store.setJSON("sentFlags", flags);
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
