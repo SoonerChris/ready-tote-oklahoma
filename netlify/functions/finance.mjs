@@ -36,12 +36,16 @@ export default async (request) => {
         for (const f of ["date", "category", "amount"]) {
           if (!body[f]) return new Response("Missing field: " + f, { status: 400 });
         }
+        const recurring = ["monthly", "yearly"].includes(body.recurring) ? body.recurring : "one-time";
         const key = `exp_${body.date}_${Date.now()}`;
         await store.setJSON(key, {
           date: body.date,
           category: body.category,
+          vendor: body.vendor || "",
           description: body.description || "",
           amount: Number(body.amount) || 0,
+          paymentMethod: body.paymentMethod || "",
+          recurring,
         });
         return json({ ok: true });
       }
