@@ -61,6 +61,8 @@
   $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
   $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
 
+  let ALL_RENTALS = [];
+
   $('loadBtn').addEventListener('click', async () => {
     const secret = $('secret').value.trim();
     if (!secret) return showErr('Enter the admin secret.');
@@ -82,7 +84,6 @@
         render('review', data.reminders.review);
         renderWeek(ALL_RENTALS);
         renderAll(ALL_RENTALS);
-        loadFinance();
         $('results').style.display = 'block';
         $('status').style.display = 'none';
       }
@@ -181,16 +182,6 @@
 
   function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML;}
   function showErr(m){const s=$('status');s.className='status err';s.textContent=m;}
-
-  // ---- Sales summary + CSV export ----
-  let ALL_RENTALS = [];
-
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'ready-tote-rentals-' + new Date().toISOString().slice(0,10) + '.csv';
-    a.click();
-    URL.revokeObjectURL(a.href);
-  });
 
 </script>
 </body>
