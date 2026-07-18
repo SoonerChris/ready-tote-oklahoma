@@ -5,6 +5,8 @@ import { getStore } from "@netlify/blobs";
 import { computeReminders } from "./lib-reminders.mjs";
 
 const OWNER_EMAIL = "readytoteok@gmail.com";
+const REMINDER_RECIPIENTS = (process.env.REMINDER_EMAILS || OWNER_EMAIL)
+  .split(",").map(e => e.trim()).filter(Boolean);
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 
 export default async () => {
@@ -61,7 +63,7 @@ export default async () => {
     },
     body: JSON.stringify({
       from: process.env.RESEND_FROM || FROM_FALLBACK,
-      to: [OWNER_EMAIL],
+      to: REMINDER_RECIPIENTS,
       subject: `${total} reminder text${total > 1 ? "s" : ""} to send today — Ready Tote`,
       html,
     }),
