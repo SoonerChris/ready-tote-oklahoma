@@ -73,3 +73,98 @@ export function reviewMessageFor(rental, reviewLink) {
   const msg = `Hi ${first}, thanks for renting with Ready Tote Oklahoma! If we made your move easier, we'd love a quick Google review: ${link}`;
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
+
+// ---- ICS calendar file generation ----
+export function generateICS(event) {
+  // event: { title, date (YYYY-MM-DD), time (e.g. "10:00 AM"), durationMinutes, location, description }
+  const dt = parseDateTime(event.date, event.time);
+  const end = new Date(dt.getTime() + (event.durationMinutes || 60) * 60000);
+  const uid = `${event.date}-${Date.now()}@readytoteokc.com`;
+
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Ready Tote Oklahoma//readytoteokc.com//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTART:${icsDate(dt)}`,
+    `DTEND:${icsDate(end)}`,
+    `SUMMARY:${icsEscape(event.title)}`,
+    event.location ? `LOCATION:${icsEscape(event.location)}` : '',
+    event.description ? `DESCRIPTION:${icsEscape(event.description)}` : '',
+    'STATUS:CONFIRMED',
+    `BEGIN:VALARM`,
+    `TRIGGER:-PT1H`,
+    `ACTION:DISPLAY`,
+    `DESCRIPTION:Reminder`,
+    `END:VALARM`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].filter(Boolean).join('\r\n');
+}
+
+function parseDateTime(dateStr, timeStr) {
+  // "2026-07-23" + "10:00 AM" -> Date in Central time (UTC-5 or -6)
+  let hours = 10, minutes = 0;
+  if (timeStr) {
+    const m = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (m) {
+      hours = parseInt(m[1]);
+      minutes = parseInt(m[2]);
+      if (m[3]) {
+        const pm = m[3].toUpperCase() === 'PM';
+        if (pm && hours < 12) hours += 12;
+        if (!pm && hours === 12) hours = 0;
+      }
+    }
+  }
+  // Assume Central time: UTC-5 (CDT) as a reasonable default
+  const utcHours = hours + 5;
+  return new Date(`${dateStr}T${String(utcHours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:00Z`);
+}
+
+function icsDate(d) {
+  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+}
+
+function icsEscape(s) {
+  return String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+}
+
+export function rentalToICSAttachments(rental) {
+  const first = (rental.name || 'Customer').split(' ')[0];
+  const self = rental.serviceType === 'self';
+  const attachments = [];
+
+  // Delivery/pickup event
+  const deliverICS = generateICS({
+    title: self ? `Tote Pickup — ${rental.name}` : `Tote Delivery — ${rental.name}`,
+    date: rental.dropoffDate,
+    time: rental.dropoffTime || '10:00 AM',
+    durationMinutes: 30,
+    location: self ? '' : (rental.dropoffAddress || rental.address || ''),
+    description: `${rental.package}\\n${self ? 'Customer picks up totes' : 'Deliver totes to customer'}\\nPhone: ${rental.phone || ''}`,
+  });
+  attachments.push({
+    filename: `delivery-${first}-${rental.dropoffDate}.ics`,
+    content: Buffer.from(deliverICS).toString('base64'),
+  });
+
+  // Pickup/return event
+  const pickupICS = generateICS({
+    title: self ? `Tote Return — ${rental.name}` : `Tote Pickup — ${rental.name}`,
+    date: rental.pickupDate,
+    time: rental.pickupTime || '10:00 AM',
+    durationMinutes: 30,
+    location: self ? '' : (rental.pickupAddress || rental.address || ''),
+    description: `${rental.package}\\n${self ? 'Customer returns totes' : 'Pick up totes from customer'}\\nPhone: ${rental.phone || ''}`,
+  });
+  attachments.push({
+    filename: `pickup-${first}-${rental.pickupDate}.ics`,
+    content: Buffer.from(pickupICS).toString('base64'),
+  });
+
+  return attachments;
+}

@@ -8,6 +8,7 @@
 //   INVOICE_SECRET - a password you choose; the admin page asks for it
 
 import { getStore } from "@netlify/blobs";
+import { rentalToICSAttachments } from "./lib-reminders.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
@@ -160,6 +161,9 @@ export default async (request) => {
 </body>
 </html>`;
 
+  // Generate calendar event attachments
+  const icsAttachments = rentalToICSAttachments(body);
+
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -173,6 +177,7 @@ export default async (request) => {
       reply_to: OWNER_EMAIL,
       subject: `Your invoice — ${body.package} — Ready Tote Oklahoma`,
       html,
+      attachments: icsAttachments,
     }),
   });
 

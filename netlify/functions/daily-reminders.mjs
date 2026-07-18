@@ -2,7 +2,7 @@
 // Emails the owner a summary of today's reminder texts with tap-to-send links.
 
 import { getStore } from "@netlify/blobs";
-import { computeReminders } from "./lib-reminders.mjs";
+import { computeReminders, rentalToICSAttachments } from "./lib-reminders.mjs";
 
 const OWNER_EMAIL = "readytoteok@gmail.com";
 const REMINDER_RECIPIENTS = (process.env.REMINDER_EMAILS || OWNER_EMAIL)
@@ -37,7 +37,7 @@ export default async () => {
         <td style="padding:10px 14px; border:1px solid #E5DFD2; font-family:Arial,sans-serif; font-size:14px;">
           <strong>${r.name}</strong> — ${r.phone}<br>
           <span style="color:#6B6259; font-size:12px;">${r.package} · ${r.address}</span><br>
-          <a href="${r.sms}" style="display:inline-block; margin-top:8px; background:#C99A32; color:#1E1B18; font-weight:bold; text-decoration:none; padding:8px 16px; border-radius:8px; font-size:13px;">Tap to text ${r.name.split(" ")[0]}</a>
+          <div style="margin-top:8px; background:#F5F1E7; border-radius:8px; padding:10px 12px; font-size:12px; color:#1E1B18;">${r.message}</div>
         </td>
       </tr>`).join("");
     return `
@@ -45,15 +45,29 @@ export default async () => {
       <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">${rows}</table>`;
   };
 
+  const dashboardUrl = "https://www.readytoteokc.com/admin-reminders.html";
+
   const html = `
   <div style="max-width:600px; margin:0 auto; font-family:Arial,sans-serif; color:#1E1B18;">
     <h1 style="font-size:20px;">Today's reminders — ${total} text${total > 1 ? "s" : ""} to send</h1>
-    <p style="color:#6B6259; font-size:14px;">Open this on your phone and tap each button. Messages are pre-filled — just hit send.</p>
+    <p style="color:#6B6259; font-size:14px;">Tap the button below to open the dashboard and send each text with one tap.</p>
+    <div style="text-align:center; margin:20px 0;">
+      <a href="${dashboardUrl}" style="display:inline-block; background:#C99A32; color:#1E1B18; font-weight:bold; text-decoration:none; padding:14px 32px; border-radius:10px; font-size:15px;">Open Dashboard &amp; Send Texts →</a>
+    </div>
     ${section("🚚 Delivery tomorrow", rem.delivery)}
     ${section("📦 Pickup in 2 days", rem.pickup)}
     ${section("⭐ Review requests", rem.review)}
-    <p style="color:#9A938A; font-size:12px; margin-top:24px;">Full dashboard: readytoteokc.com/admin-reminders.html</p>
   </div>`;
+
+  // Collect ICS calendar attachments for delivery + pickup reminders
+  const attachments = [];
+  const seen = new Set();
+  for (const r of [...rem.delivery, ...rem.pickup]) {
+    const id = (r.key || r.phone + r.dropoffDate);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    attachments.push(...rentalToICSAttachments(r));
+  }
 
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -66,6 +80,7 @@ export default async () => {
       to: REMINDER_RECIPIENTS,
       subject: `${total} reminder text${total > 1 ? "s" : ""} to send today — Ready Tote`,
       html,
+      attachments: attachments.length ? attachments : undefined,
     }),
   });
 
