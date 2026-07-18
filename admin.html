@@ -9,52 +9,259 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Admin Dashboard — Ready Tote Oklahoma</title>
 <style>
-  :root{--ink:#1E1B18;--gold:#C99A32;--cream:#F5F1E7;--steel:#6B6259;--line:rgba(30,27,24,0.15);}
+  :root{--ink:#1E1B18;--gold:#C99A32;--gold-bg:rgba(201,154,50,0.10);--cream:#F5F1E7;--steel:#6B6259;--green:#1E8E52;--green-bg:rgba(30,142,82,0.08);--red:#C0392B;--red-bg:rgba(192,57,43,0.07);--line:rgba(30,27,24,0.12);--white:#FFFFFF;}
   *{box-sizing:border-box;}
-  body{font-family:Arial,Helvetica,sans-serif;background:var(--cream);color:var(--ink);margin:0;padding:32px 16px;}
-  .wrap{max-width:760px;margin:0 auto;}
-  h1{font-size:1.6rem;margin:0 0 4px;}
-  .sub{color:var(--steel);font-size:0.95rem;margin:0 0 24px;}
-  .secret-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:22px;}
-  .secret-card label{display:block;font-size:0.82rem;font-weight:bold;margin-bottom:6px;}
-  .secret-card input{width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);}
-  .note{font-size:0.78rem;color:var(--steel);margin-top:8px;}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-  @media(max-width:560px){.grid{grid-template-columns:1fr;}}
-  .tile{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;text-decoration:none;color:var(--ink);transition:transform 0.1s, border-color 0.1s;}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--cream);color:var(--ink);margin:0;padding:24px 14px;}
+  .wrap{max-width:840px;margin:0 auto;}
+  .header{display:flex;align-items:center;gap:14px;margin-bottom:6px;}
+  .header img{height:52px;width:auto;}
+  h1{font-size:1.5rem;margin:0;}
+  .sub{color:var(--steel);font-size:0.9rem;margin:0 0 20px;}
+  .secret-bar{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .secret-bar label{font-size:0.82rem;font-weight:bold;white-space:nowrap;}
+  .secret-bar input{flex:1;min-width:200px;padding:10px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);}
+  .secret-bar button{padding:10px 20px;font-size:0.9rem;font-weight:bold;background:var(--gold);color:var(--ink);border:none;border-radius:8px;cursor:pointer;white-space:nowrap;}
+  .secret-bar button:disabled{opacity:0.6;}
+
+  /* Summary cards grid */
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+  @media(max-width:700px){.summary{grid-template-columns:repeat(2,1fr);}}
+  .scard{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:18px 16px;text-align:center;}
+  .scard .num{font-size:1.6rem;font-weight:bold;line-height:1.1;}
+  .scard .lbl{font-size:0.72rem;color:var(--steel);margin-top:4px;text-transform:uppercase;letter-spacing:0.04em;}
+  .scard.gold{border-color:var(--gold);background:var(--gold-bg);}
+  .scard.gold .num{color:var(--gold);}
+  .scard.green{border-color:var(--green);background:var(--green-bg);}
+  .scard.green .num{color:var(--green);}
+
+  /* Sections */
+  .section{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px;}
+  .section h2{font-size:1rem;margin:0 0 14px;display:flex;align-items:center;gap:8px;}
+  .section h2 .badge{font-size:0.72rem;background:var(--gold-bg);border:1px solid var(--gold);color:var(--gold);padding:2px 10px;border-radius:999px;font-weight:bold;}
+
+  /* Schedule list */
+  .sched-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:0.88rem;}
+  .sched-item:last-child{border-bottom:none;}
+  .sched-day{font-weight:bold;width:90px;flex:none;font-size:0.82rem;}
+  .sched-type{font-size:0.72rem;font-weight:bold;padding:3px 10px;border-radius:999px;flex:none;}
+  .sched-type.deliver{background:var(--green-bg);color:var(--green);border:1px solid var(--green);}
+  .sched-type.pickup{background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold);}
+  .sched-type.self{background:var(--cream);color:var(--steel);border:1px solid var(--line);}
+  .sched-who{flex:1;min-width:0;}
+  .sched-addr{color:var(--steel);font-size:0.78rem;}
+
+  /* Action tiles */
+  .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:16px;}
+  @media(max-width:560px){.tiles{grid-template-columns:1fr;}}
+  .tile{display:flex;align-items:center;gap:14px;background:var(--white);border:1px solid var(--line);border-radius:12px;padding:16px 18px;text-decoration:none;color:var(--ink);transition:transform 0.1s,border-color 0.1s;}
   .tile:hover{transform:translateY(-2px);border-color:var(--gold);}
-  .tile .icon{font-size:1.8rem;margin-bottom:10px;}
-  .tile h2{margin:0 0 4px;font-size:1.05rem;}
-  .tile p{margin:0;font-size:0.85rem;color:var(--steel);line-height:1.4;}
-  footer{max-width:760px;margin:32px auto 0;text-align:center;font-size:0.78rem;color:var(--steel);}
+  .tile .icon{font-size:1.4rem;flex:none;}
+  .tile h3{margin:0;font-size:0.95rem;}
+  .tile p{margin:2px 0 0;font-size:0.78rem;color:var(--steel);line-height:1.3;}
+
+  /* Alerts */
+  .alerts{margin-bottom:16px;}
+  .alert{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:10px;margin-bottom:8px;font-size:0.88rem;font-weight:500;}
+  .alert.warn{background:var(--gold-bg);border:1px solid var(--gold);color:var(--ink);}
+  .alert.info{background:var(--green-bg);border:1px solid var(--green);color:var(--green);}
+
+  .loading{text-align:center;color:var(--steel);padding:30px 0;font-size:0.9rem;}
+  .status{margin-top:8px;padding:10px 14px;border-radius:8px;font-size:0.88rem;display:none;}
+  .status.err{display:block;background:var(--red-bg);border:1px solid var(--red);color:var(--red);}
+  footer{text-align:center;font-size:0.78rem;color:var(--steel);margin-top:24px;}
   footer a{color:var(--gold);}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Admin Dashboard</h1>
-  <p class="sub">Internal tools for Ready Tote Oklahoma.</p>
-
-  <div class="secret-card">
-    <label for="secret">Admin secret</label>
-    <input type="password" id="secret" placeholder="Your INVOICE_SECRET value" autocomplete="current-password">
-    <p class="note">Saved for this browser session so you don't need to re-enter it on each page.</p>
+  <div class="header">
+    <img src="images/logo.png" alt="Ready Tote Oklahoma">
+    <div>
+      <h1>Admin Dashboard</h1>
+      <p class="sub" style="margin:0;">Ready Tote Oklahoma — internal tools</p>
+    </div>
   </div>
 
-  <div class="grid">
-    <a class="tile" href="admin-reminders.html"><div class="icon">🚚</div><h2>Today &amp; This Week</h2><p>Reminder texts to send, upcoming deliveries and pickups, all rentals.</p></a>
-    <a class="tile" href="admin-invoice.html"><div class="icon">🧾</div><h2>Send Invoice</h2><p>Parse a booking email and send the branded Stripe invoice.</p></a>
-    <a class="tile" href="admin-add-rental.html"><div class="icon">➕</div><h2>Add Rental</h2><p>Log a rental directly without sending an email. For backfilling or manual entries.</p></a>
-    <a class="tile" href="admin-finance.html"><div class="icon">💰</div><h2>Finance</h2><p>Sales totals, expenses with recurring, mileage, CSV exports.</p></a>
+  <div class="secret-bar">
+    <label for="secret">Admin secret</label>
+    <input type="password" id="secret" placeholder="Your INVOICE_SECRET value" autocomplete="current-password">
+    <button id="loadBtn">Load dashboard</button>
+  </div>
+  <div class="status" id="status"></div>
+
+  <div id="dashboard" style="display:none;">
+    <!-- Alerts -->
+    <div class="alerts" id="alerts"></div>
+
+    <!-- Summary cards -->
+    <div class="summary" id="summaryCards"></div>
+
+    <!-- This Week schedule -->
+    <div class="section" id="schedSection">
+      <h2>📅 This Week <span class="badge" id="schedCount">0</span></h2>
+      <div id="schedList"></div>
+    </div>
+
+    <!-- Texts to send today -->
+    <div class="section" id="textsSection">
+      <h2>📱 Texts to Send Today <span class="badge" id="textsCount">0</span></h2>
+      <div id="textsList"></div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="tiles">
+      <a class="tile" href="admin-invoice.html"><div class="icon">🧾</div><div><h3>Send Invoice</h3><p>Parse booking email, send branded Stripe invoice</p></div></a>
+      <a class="tile" href="admin-add-rental.html"><div class="icon">➕</div><div><h3>Add Rental</h3><p>Log a rental without sending an email</p></div></a>
+      <a class="tile" href="admin-reminders.html"><div class="icon">🚚</div><div><h3>Reminders &amp; Rentals</h3><p>Full reminder queue, all rentals, mark sent</p></div></a>
+      <a class="tile" href="admin-finance.html"><div class="icon">💰</div><div><h3>Finance</h3><p>Sales, expenses, mileage, CSV exports</p></div></a>
+    </div>
   </div>
 </div>
 
-<footer><a href="/">← Back to readytoteokc.com</a></footer>
+<footer><a href="/">← readytoteokc.com</a></footer>
 
 <script>
-  const secret = document.getElementById('secret');
-  secret.value = sessionStorage.getItem('rto-admin-secret') || '';
-  secret.addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', secret.value));
+  const $ = (id) => document.getElementById(id);
+  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
+  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+
+  $('loadBtn').addEventListener('click', load);
+  // Auto-load if secret is saved
+  if ($('secret').value) load();
+
+  async function load() {
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret.');
+    const btn = $('loadBtn');
+    btn.disabled = true; btn.textContent = 'Loading…';
+    try {
+      const [rResp, fResp] = await Promise.all([
+        post('get-rentals', { secret }),
+        post('finance', { secret, action: 'list' }),
+      ]);
+      if (rResp.status === 401 || fResp.status === 401) return showErr('Wrong admin secret.');
+      if (!rResp.ok || !fResp.ok) return showErr('Load failed.');
+
+      const rd = await rResp.json();
+      const fd = await fResp.json();
+      render(rd, fd);
+      $('dashboard').style.display = 'block';
+      $('status').style.display = 'none';
+    } catch { showErr('Network error — use on the live site.'); }
+    finally { btn.disabled = false; btn.textContent = 'Load dashboard'; }
+  }
+
+  function post(fn, body) {
+    return fetch('/.netlify/functions/' + fn, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+  }
+
+  function render(rd, fd) {
+    const rentals = rd.rentals || [];
+    const reminders = rd.reminders || { delivery: [], pickup: [], review: [] };
+    const expenses = fd.expenses || [];
+    const mileage = fd.mileage || [];
+
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+    const thisMonth = today.slice(0, 7);
+    const thisYear = today.slice(0, 4);
+
+    // ---- Computed values ----
+    const priceNum = p => { const m = String(p||'').replace(/[^0-9.]/g,''); return m ? parseFloat(m) : 0; };
+    const sumPrice = arr => arr.reduce((t,r) => t + priceNum(r.price), 0);
+    const money = n => '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    const moneyDec = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const monthRentals = rentals.filter(r => (r.invoicedAt||'').slice(0,7) === thisMonth);
+    const activeRentals = rentals.filter(r => r.dropoffDate <= today && r.pickupDate >= today);
+    const textsToday = reminders.delivery.length + reminders.pickup.length + reminders.review.length;
+
+    const ytdExpenses = expenses.filter(e => (e.date||'').slice(0,4) === thisYear).reduce((t,e) => t + (e.amount||0), 0);
+    let monthlyOverhead = 0;
+    for (const e of expenses) {
+      if (e.recurring === 'monthly') monthlyOverhead += e.amount;
+      else if (e.recurring === 'yearly') monthlyOverhead += e.amount / 12;
+    }
+    const ytdMiles = mileage.filter(m => (m.date||'').slice(0,4) === thisYear).reduce((t,m) => t + (m.miles||0), 0);
+
+    // ---- Alerts ----
+    const alerts = [];
+    if (textsToday > 0) alerts.push({ type: 'warn', msg: `📱 ${textsToday} reminder text${textsToday>1?'s':''} to send today` });
+    const tomorrow = shiftDate(today, 1);
+    const tomorrowDeliveries = rentals.filter(r => r.dropoffDate === tomorrow);
+    if (tomorrowDeliveries.length > 0) alerts.push({ type: 'info', msg: `🚚 ${tomorrowDeliveries.length} deliver${tomorrowDeliveries.length>1?'ies':'y'} tomorrow` });
+    $('alerts').innerHTML = alerts.map(a => `<div class="alert ${a.type}">${a.msg}</div>`).join('');
+
+    // ---- Summary cards ----
+    $('summaryCards').innerHTML = `
+      <div class="scard green"><div class="num">${activeRentals.length}</div><div class="lbl">Active rentals</div></div>
+      <div class="scard"><div class="num">${monthRentals.length}</div><div class="lbl">This month</div></div>
+      <div class="scard gold"><div class="num">${money(sumPrice(monthRentals))}</div><div class="lbl">Month revenue</div></div>
+      <div class="scard"><div class="num">${rentals.length}</div><div class="lbl">Total rentals</div></div>
+      <div class="scard gold"><div class="num">${money(sumPrice(rentals))}</div><div class="lbl">Total invoiced</div></div>
+      <div class="scard"><div class="num">${moneyDec(monthlyOverhead)}/mo</div><div class="lbl">Overhead</div></div>
+      <div class="scard"><div class="num">${moneyDec(ytdExpenses)}</div><div class="lbl">YTD expenses</div></div>
+      <div class="scard"><div class="num">${ytdMiles.toLocaleString('en-US',{maximumFractionDigits:0})} mi</div><div class="lbl">YTD miles</div></div>
+    `;
+
+    // ---- This Week schedule ----
+    const endDate = shiftDate(today, 7);
+    const events = [];
+    for (const r of rentals) {
+      const self = r.serviceType === 'self';
+      if (r.dropoffDate >= today && r.dropoffDate <= endDate) {
+        events.push({ date: r.dropoffDate, time: r.dropoffTime || '', type: self ? 'Customer pickup' : 'Deliver',
+          typeClass: self ? 'self' : 'deliver', name: r.name, pkg: r.package,
+          addr: self ? '' : (r.dropoffAddress || r.address || '') });
+      }
+      if (r.pickupDate >= today && r.pickupDate <= endDate) {
+        events.push({ date: r.pickupDate, time: r.pickupTime || '', type: self ? 'Customer return' : 'Pick up',
+          typeClass: self ? 'self' : 'pickup', name: r.name, pkg: r.package,
+          addr: self ? '' : (r.pickupAddress || r.address || '') });
+      }
+    }
+    events.sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time));
+    $('schedCount').textContent = events.length;
+    $('schedList').innerHTML = events.length ? events.map(e => `
+      <div class="sched-item">
+        <div class="sched-day">${fmtDay(e.date)}</div>
+        <div class="sched-type ${e.typeClass}">${e.type}</div>
+        <div class="sched-who">
+          <div>${esc(e.name)}<span style="color:var(--steel);font-size:0.78rem;margin-left:6px;">${esc(e.time)}</span></div>
+          ${e.addr ? `<div class="sched-addr">${esc(e.addr)}</div>` : ''}
+        </div>
+      </div>`).join('') : '<div style="color:var(--steel);font-size:0.88rem;">Nothing scheduled this week.</div>';
+
+    // ---- Texts to send ----
+    const allTexts = [
+      ...reminders.delivery.map(r => ({ ...r, cat: '🚚 Delivery tomorrow' })),
+      ...reminders.pickup.map(r => ({ ...r, cat: '📦 Pickup in 2 days' })),
+      ...reminders.review.map(r => ({ ...r, cat: '⭐ Review request' })),
+    ];
+    $('textsCount').textContent = allTexts.length;
+    $('textsList').innerHTML = allTexts.length ? allTexts.map(r => `
+      <div class="sched-item" style="flex-wrap:wrap;gap:8px;">
+        <div style="font-size:0.72rem;color:var(--steel);width:120px;flex:none;">${r.cat}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:bold;">${esc(r.name)} — ${esc(r.phone)}</div>
+          <div style="font-size:0.78rem;color:var(--steel);">${esc(r.package)}</div>
+        </div>
+        <a href="${r.sms}" style="display:inline-block;background:var(--green);color:#fff;font-weight:bold;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:0.8rem;flex:none;">Text →</a>
+      </div>`).join('') : '<div style="color:var(--steel);font-size:0.88rem;">No texts due today.</div>';
+  }
+
+  function shiftDate(iso, days) {
+    const d = new Date(iso + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+  function fmtDay(iso) {
+    const d = new Date(iso + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+  function showErr(m) { const s = $('status'); s.className = 'status err'; s.textContent = m; }
 </script>
 </body>
 </html>
