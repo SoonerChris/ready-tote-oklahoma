@@ -74,6 +74,24 @@ export function reviewMessageFor(rental, reviewLink) {
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
 
+export function deliveryMessageFor(rental) {
+  const first = (rental.name || "there").split(" ")[0];
+  const self = rental.serviceType === "self";
+  const msg = self
+    ? `Hi ${first}, it's Ready Tote Oklahoma! Reminder: your totes are ready for pickup (${friendlyDate(rental.dropoffDate)}) around ${rental.dropoffTime}. See you then!`
+    : `Hi ${first}, it's Ready Tote Oklahoma! Friendly reminder: your totes arrive ${friendlyDate(rental.dropoffDate)} around ${rental.dropoffTime}. Reply here with any questions!`;
+  return { message: msg, sms: smsLink(rental.phone, msg) };
+}
+
+export function pickupMessageFor(rental) {
+  const first = (rental.name || "there").split(" ")[0];
+  const self = rental.serviceType === "self";
+  const msg = self
+    ? `Hi ${first}, Ready Tote Oklahoma here. Friendly reminder to return your totes on ${friendlyDate(rental.pickupDate)} around ${rental.pickupTime}. Thanks!`
+    : `Hi ${first}, Ready Tote Oklahoma here. We'll pick up your totes on ${friendlyDate(rental.pickupDate)} around ${rental.pickupTime}. Please have them empty and accessible. Thanks!`;
+  return { message: msg, sms: smsLink(rental.phone, msg) };
+}
+
 // ---- ICS calendar file generation ----
 export function generateICS(event) {
   // event: { title, date (YYYY-MM-DD), time (e.g. "10:00 AM"), durationMinutes, location, description }

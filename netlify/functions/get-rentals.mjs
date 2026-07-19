@@ -3,7 +3,7 @@
 // Protected by INVOICE_SECRET (same secret as the invoice admin page).
 
 import { getStore } from "@netlify/blobs";
-import { computeReminders, reviewMessageFor } from "./lib-reminders.mjs";
+import { computeReminders, reviewMessageFor, deliveryMessageFor, pickupMessageFor } from "./lib-reminders.mjs";
 
 export default async (request) => {
   if (request.method !== "POST") {
@@ -30,10 +30,14 @@ export default async (request) => {
   const reviewLink = process.env.GOOGLE_REVIEW_LINK || "";
   const reminders = computeReminders(rentals, reviewLink, sentFlags);
 
-  // On-demand review text for every rental (for the All Rentals list)
+  // On-demand text links for every rental (All Rentals list)
   for (const r of rentals) {
     const rv = reviewMessageFor(r, reviewLink);
+    const dv = deliveryMessageFor(r);
+    const pv = pickupMessageFor(r);
     r.reviewSms = rv.sms;
+    r.deliverySms = dv.sms;
+    r.pickupSms = pv.sms;
   }
 
   return new Response(JSON.stringify({ rentals, reminders, sentFlags }), {
