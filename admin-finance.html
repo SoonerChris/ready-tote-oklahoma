@@ -144,6 +144,7 @@
   });
 
   function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML;}
+  function fmtPrice(p){ const s=String(p||'').trim(); return s ? (s.startsWith('$') ? esc(s) : '$'+esc(s)) : ''; }
   function showErr(m){const s=$('status');s.className='status err';s.textContent=m;}
   function thisYear(d){ return (d||'').slice(0,4) === String(new Date().getFullYear()); }
   const money = n => '$' + Number(n||0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -245,7 +246,7 @@
           <div style="font-weight:bold;">${esc(r.name)} ${status}</div>
           <div style="color:var(--steel); font-size:0.75rem;">${esc(invoiceDate)} · ${esc(r.package || '')}</div>
         </div>
-        <div style="font-weight:bold;">${esc(r.price || '')}</div>
+        <div style="font-weight:bold;">${fmtPrice(r.price)}</div>
       </div>`;
     }).join('') : '<div style="color:var(--steel);font-size:0.82rem;">No rentals yet.</div>';
   }
