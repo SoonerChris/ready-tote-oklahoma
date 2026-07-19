@@ -62,6 +62,7 @@
   $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
 
   let ALL_RENTALS = [];
+  let SENT_FLAGS = {};
 
   $('loadBtn').addEventListener('click', async () => {
     const secret = $('secret').value.trim();
@@ -79,6 +80,7 @@
       else {
         const data = await resp.json();
         ALL_RENTALS = data.rentals || [];
+        SENT_FLAGS = data.sentFlags || {};
         render('delivery', data.reminders.delivery);
         render('pickup', data.reminders.pickup);
         render('review', data.reminders.review);
@@ -164,9 +166,9 @@
       <div class="rem">
         <div class="who">${esc(r.name)} — ${esc(r.price || '')}</div>
         <div class="meta">${esc(r.package)} · Drop-off ${esc(r.dropoffDate)}${(r.dropoffAddress||r.address) ? ' @ ' + esc(r.dropoffAddress||r.address) : ''} · Pickup ${esc(r.pickupDate)}${(r.pickupAddress||r.address) ? ' @ ' + esc(r.pickupAddress||r.address) : ''}</div>
-        <a class="sms-btn" style="padding:8px 16px; font-size:0.8rem; margin-right:6px; background:var(--green);" href="${r.deliverySms}">🚚 Delivery</a>
-        <a class="sms-btn" style="padding:8px 16px; font-size:0.8rem; margin-right:6px; background:var(--gold); color:var(--ink);" href="${r.pickupSms}">📦 Pickup</a>
-        <a class="sms-btn" style="padding:8px 16px; font-size:0.8rem; margin-right:8px;" href="${r.reviewSms}">⭐ Review</a>
+        ${textBtn('delivery', r.key, r.deliverySms, '🚚', 'Delivery', 'var(--green)')}
+        ${textBtn('pickup', r.key, r.pickupSms, '📦', 'Pickup', 'var(--gold)')}
+        ${textBtn('review', r.key, r.reviewSms, '⭐', 'Review', 'var(--green)')}
         <button type="button" style="width:auto; margin-top:4px; padding:8px 16px; font-size:0.8rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
           onclick="deleteRental('${esc(r.key)}', '${esc(r.name)}')">Delete</button>
       </div>`).join('');
@@ -187,6 +189,21 @@
         showErr('Delete failed (' + resp.status + ').');
       }
     } catch { showErr('Network error.'); }
+  };
+
+  // Text button with sent status
+  function textBtn(type, key, smsLink, icon, label, color) {
+    const flagId = type + ':' + (key || 'unknown');
+    const sent = SENT_FLAGS[flagId];
+    if (sent) {
+      return `<span style="display:inline-block; padding:8px 16px; font-size:0.8rem; margin-right:6px; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px;">${icon} ✓ Sent</span>`;
+    }
+    return `<a class="sms-btn" href="${smsLink}" onclick="setTimeout(()=>confirmSent('${flagId}'),500)" style="padding:8px 16px; font-size:0.8rem; margin-right:6px; background:${color};${color==='var(--gold)'?' color:var(--ink);':''}">${icon} ${label}</a>`;
+  }
+
+  window.confirmSent = async (flagId) => {
+    if (!confirm('Did you send the text? Mark as sent?')) return;
+    await markSent(flagId);
   };
 
   function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML;}
