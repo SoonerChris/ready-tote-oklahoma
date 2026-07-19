@@ -41,8 +41,19 @@
 
   <div id="results" style="display:none;">
     <h2>💰 Sales</h2>
-    <div class="rem" id="salesSummary" style="display:flex; gap:24px; flex-wrap:wrap;"></div>
-    <button type="button" id="csvBtn" style="background:var(--ink); color:#fff;">Download rental log (CSV)</button>
+    <div class="rem" id="salesSummary" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
+    <div id="salesByMonth"></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;" id="salesDetails">
+      <div>
+        <h3 style="font-size:0.88rem; margin:16px 0 8px;">📦 By Package</h3>
+        <div id="salesByPackage"></div>
+      </div>
+      <div>
+        <h3 style="font-size:0.88rem; margin:16px 0 8px;">🕐 Recent Rentals</h3>
+        <div id="recentRentals"></div>
+      </div>
+    </div>
+    <button type="button" id="csvBtn" style="background:var(--ink); color:#fff; margin-top:14px;">Download rental log (CSV)</button>
 
     <h2>💵 Expenses</h2>
     <div class="rem" id="expTotals" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
@@ -141,14 +152,102 @@
   function renderSales(rentals){
     const now = new Date();
     const thisMonth = now.toISOString().slice(0,7);
-    const inMonth = rentals.filter(r => (r.invoicedAt||'').slice(0,7) === thisMonth);
-    const sum = arr => arr.reduce((t,r) => t + priceNum(r.price), 0);
+    const thisYear = now.getFullYear().toString();
+    const today = now.toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+
+    const pn = p => { const m = String(p||'').replace(/[^0-9.]/g,''); return m ? parseFloat(m) : 0; };
+    const sum = arr => arr.reduce((t,r) => t + pn(r.price), 0);
     const fmt = n => '$' + n.toLocaleString('en-US', {maximumFractionDigits:0});
+
+    const monthRentals = rentals.filter(r => (r.invoicedAt||'').slice(0,7) === thisMonth);
+    const ytdRentals = rentals.filter(r => (r.invoicedAt||'').slice(0,4) === thisYear);
+    const activeRentals = rentals.filter(r => r.dropoffDate <= today && r.pickupDate >= today);
+    const avgValue = rentals.length ? sum(rentals) / rentals.length : 0;
+
+    // Previous month comparison
+    const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonth = prevDate.toISOString().slice(0,7);
+    const prevRentals = rentals.filter(r => (r.invoicedAt||'').slice(0,7) === prevMonth);
+    const monthDiff = sum(monthRentals) - sum(prevRentals);
+    const monthDiffPct = sum(prevRentals) > 0 ? ((monthDiff / sum(prevRentals)) * 100).toFixed(0) : null;
+
+    // Summary cards
     $('salesSummary').innerHTML = `
-      <div><div style="font-size:1.3rem;font-weight:bold;">${rentals.length}</div><div style="font-size:0.78rem;color:var(--steel);">Total rentals</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;">${fmt(sum(rentals))}</div><div style="font-size:0.78rem;color:var(--steel);">Total invoiced</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;">${inMonth.length}</div><div style="font-size:0.78rem;color:var(--steel);">Rentals this month</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;">${fmt(sum(inMonth))}</div><div style="font-size:0.78rem;color:var(--steel);">Invoiced this month</div></div>`;
+      <div><div style="font-size:1.3rem;font-weight:bold;color:var(--green);">${activeRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">Active Now</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;">${monthRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">This Month</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;color:var(--gold);">${fmt(sum(monthRentals))}</div><div style="font-size:0.72rem;color:var(--steel);">Month Revenue</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;">${ytdRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">YTD Rentals</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;color:var(--gold);">${fmt(sum(ytdRentals))}</div><div style="font-size:0.72rem;color:var(--steel);">YTD Revenue</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;">${rentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">All Time</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;color:var(--gold);">${fmt(sum(rentals))}</div><div style="font-size:0.72rem;color:var(--steel);">Total Invoiced</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;">${fmt(avgValue)}</div><div style="font-size:0.72rem;color:var(--steel);">Avg Order</div></div>
+    `;
+
+    // Monthly revenue (last 6 months)
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(d.toISOString().slice(0,7));
+    }
+    const monthlyData = months.map(m => {
+      const mrs = rentals.filter(r => (r.invoicedAt||'').slice(0,7) === m);
+      return { month: m, count: mrs.length, revenue: sum(mrs) };
+    });
+    const maxRev = Math.max(...monthlyData.map(m => m.revenue), 1);
+    const monthLabel = m => {
+      const d = new Date(m + '-01T12:00:00');
+      return d.toLocaleDateString('en-US', { month: 'short' });
+    };
+
+    $('salesByMonth').innerHTML = `
+      <h3 style="font-size:0.88rem; margin:16px 0 8px;">📊 Monthly Revenue (Last 6 Months)${monthDiffPct !== null ? ` <span style="font-size:0.75rem; color:${monthDiff >= 0 ? 'var(--green)' : 'var(--red)'}; margin-left:8px;">${monthDiff >= 0 ? '▲' : '▼'} ${Math.abs(monthDiffPct)}% vs last month</span>` : ''}</h3>
+      <div style="display:flex; align-items:flex-end; gap:8px; height:120px; padding:8px 0; border-bottom:1px solid var(--line);">
+        ${monthlyData.map(m => `
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
+            <div style="font-size:0.7rem; font-weight:bold; color:var(--ink);">${m.revenue > 0 ? fmt(m.revenue) : ''}</div>
+            <div style="width:100%; max-width:50px; background:${m.month === thisMonth ? 'var(--gold)' : 'var(--cream)'}; border:1px solid ${m.month === thisMonth ? 'var(--gold)' : 'var(--line)'}; border-radius:4px 4px 0 0; height:${Math.max(m.revenue / maxRev * 80, 4)}px;"></div>
+            <div style="font-size:0.68rem; color:var(--steel);">${monthLabel(m.month)}</div>
+            <div style="font-size:0.65rem; color:var(--steel);">${m.count} rental${m.count !== 1 ? 's' : ''}</div>
+          </div>
+        `).join('')}
+      </div>`;
+
+    // By package type
+    const byPkg = {};
+    for (const r of rentals) {
+      const pkg = r.package || 'Unknown';
+      if (!byPkg[pkg]) byPkg[pkg] = { count: 0, revenue: 0 };
+      byPkg[pkg].count++;
+      byPkg[pkg].revenue += pn(r.price);
+    }
+    const pkgEntries = Object.entries(byPkg).sort((a,b) => b[1].revenue - a[1].revenue);
+    $('salesByPackage').innerHTML = pkgEntries.length ? pkgEntries.map(([pkg, d]) => `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); font-size:0.82rem;">
+        <div>
+          <div style="font-weight:bold;">${esc(pkg)}</div>
+          <div style="color:var(--steel); font-size:0.75rem;">${d.count} rental${d.count !== 1 ? 's' : ''}</div>
+        </div>
+        <div style="font-weight:bold; color:var(--gold);">${fmt(d.revenue)}</div>
+      </div>`).join('') : '<div style="color:var(--steel);font-size:0.82rem;">No data yet.</div>';
+
+    // Recent rentals (last 8)
+    const recent = [...rentals].sort((a,b) => (b.invoicedAt||'').localeCompare(a.invoicedAt||'')).slice(0, 8);
+    $('recentRentals').innerHTML = recent.length ? recent.map(r => {
+      const invoiceDate = (r.invoicedAt||'').slice(0,10);
+      const isActive = r.dropoffDate <= today && r.pickupDate >= today;
+      const isPast = r.pickupDate < today;
+      const status = isActive ? '<span style="color:var(--green);font-size:0.7rem;font-weight:bold;">● Active</span>'
+                   : isPast ? '<span style="color:var(--steel);font-size:0.7rem;">Completed</span>'
+                   : '<span style="color:var(--gold);font-size:0.7rem;font-weight:bold;">Upcoming</span>';
+      return `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); font-size:0.82rem;">
+        <div>
+          <div style="font-weight:bold;">${esc(r.name)} ${status}</div>
+          <div style="color:var(--steel); font-size:0.75rem;">${esc(invoiceDate)} · ${esc(r.package || '')}</div>
+        </div>
+        <div style="font-weight:bold;">${esc(r.price || '')}</div>
+      </div>`;
+    }).join('') : '<div style="color:var(--steel);font-size:0.82rem;">No rentals yet.</div>';
   }
 
   $('csvBtn').addEventListener('click', () => {
