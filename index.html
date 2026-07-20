@@ -230,6 +230,8 @@
   #how{padding-top:40px;}
   #serve{padding-top:40px;}
   #compare{padding-top:40px;}
+  #reviews{padding-top:40px;}
+  #faq{padding-top:40px;}
   #pricing{padding-top:40px;}
   #totes{padding-top:40px;}
   #area{padding-top:40px;}
@@ -444,6 +446,63 @@
   .footer-links a:hover{color:var(--white);}
   .footer-bottom{font-size:0.8rem; display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
 
+  /* Testimonials */
+  .testimonials{display:grid; gap:22px;}
+  @media(min-width:800px){.testimonials{grid-template-columns:repeat(3,1fr);}}
+  .testimonial-card{
+    background:var(--white); border:1px solid var(--line-dark); border-radius:18px;
+    padding:26px 24px; display:flex; flex-direction:column;
+  }
+  .testimonial-card .stars{color:var(--yellow); font-size:1.1rem; letter-spacing:2px; margin-bottom:12px;}
+  .testimonial-card .quote{font-size:0.95rem; color:var(--ink); line-height:1.6; flex:1; font-style:italic;}
+  .testimonial-card .attribution{margin-top:16px; font-size:0.82rem; font-weight:700; color:var(--ink);}
+  .testimonial-card .attribution span{font-weight:400; color:var(--steel);}
+
+  /* FAQ */
+  .faq-list{display:flex; flex-direction:column; gap:0;}
+  .faq-item{border-bottom:1px solid var(--line-dark);}
+  .faq-item:first-child{border-top:1px solid var(--line-dark);}
+  .faq-q{
+    display:flex; justify-content:space-between; align-items:center; gap:14px;
+    padding:18px 0; cursor:pointer; font-weight:700; font-size:1rem;
+    background:none; border:none; width:100%; text-align:left;
+    font-family:inherit; color:var(--ink);
+  }
+  .faq-q:hover{color:var(--yellow);}
+  .faq-q .arrow{font-size:1.2rem; color:var(--yellow); transition:transform 0.2s; flex:none;}
+  .faq-item.open .faq-q .arrow{transform:rotate(45deg);}
+  .faq-a{
+    max-height:0; overflow:hidden; transition:max-height 0.3s ease;
+    font-size:0.95rem; color:var(--steel); line-height:1.6;
+  }
+  .faq-item.open .faq-a{max-height:500px;}
+  .faq-a-inner{padding:0 0 18px;}
+
+  /* Floating text button */
+  .float-text{
+    position:fixed; bottom:24px; right:24px; z-index:90;
+    display:flex; align-items:center; gap:8px;
+    background:var(--yellow); color:var(--ink);
+    font-weight:700; font-size:0.92rem;
+    padding:14px 22px; border-radius:999px;
+    text-decoration:none;
+    box-shadow:0 8px 28px -8px rgba(30,27,24,0.4);
+    transition:transform 0.15s;
+  }
+  .float-text:hover{transform:translateY(-2px);}
+  .float-text .bubble{font-size:1.2rem;}
+
+  /* Social icons */
+  .social-row{display:flex; gap:14px; margin-top:12px;}
+  .social-icon{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:38px; height:38px; border-radius:50%;
+    background:rgba(255,255,255,0.1); color:var(--white);
+    text-decoration:none; font-size:1rem;
+    transition:background 0.15s;
+  }
+  .social-icon:hover{background:var(--yellow); color:var(--ink);}
+
   @media (prefers-reduced-motion: reduce){
     html{scroll-behavior:auto;}
     *{transition:none !important;}
@@ -465,6 +524,7 @@
       <a href="#about">About</a>
       <a href="#area">Area</a>
       <a href="#contact">Contact</a>
+      <a href="#faq">FAQ</a>
     </nav>
     <a href="#book" class="btn btn-primary nav-cta">Reserve Now</a>
     <button class="mobile-toggle" aria-expanded="false" aria-controls="mobileMenu" id="mobileToggle" aria-label="Toggle menu">☰</button>
@@ -476,6 +536,7 @@
     <a href="#about">About</a>
     <a href="#area">Area</a>
     <a href="#contact">Contact</a>
+    <a href="#faq">FAQ</a>
     <a href="#book" class="btn btn-primary" style="margin-top:14px; text-align:center; justify-content:center;">Reserve Now</a>
   </div>
 </header>
@@ -625,6 +686,33 @@
     </div>
   </section>
 
+  <!-- TESTIMONIALS -->
+  <section id="reviews">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">What Customers Say</span>
+        <h2>Don't Take Our Word for It</h2>
+      </div>
+      <div class="testimonials">
+        <div class="testimonial-card">
+          <div class="stars">★★★★★</div>
+          <div class="quote">"So much easier than cardboard boxes. The totes stacked perfectly in the truck, no tape needed, and they picked them up right from our new place. Will never go back to boxes."</div>
+          <div class="attribution">Sarah M. <span>· Norman, OK</span></div>
+        </div>
+        <div class="testimonial-card">
+          <div class="stars">★★★★★</div>
+          <div class="quote">"Used these for my daughter's move to college. Drop-off was on time, totes were clean, and the dolly was a lifesaver. Way less stressful than the box scramble."</div>
+          <div class="attribution">Mike T. <span>· Edmond, OK</span></div>
+        </div>
+        <div class="testimonial-card">
+          <div class="stars">★★★★★</div>
+          <div class="quote">"Great local business. Responded fast, delivered on schedule, and the price was the same as buying boxes I'd just throw away. Win-win."</div>
+          <div class="attribution">Jessica R. <span>· Moore, OK</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- PRICING -->
   <section id="pricing" class="section-alt">
     <div class="wrap">
@@ -673,6 +761,50 @@
         </div>
       </div>
       <p class="price-note">Need extra time or extra totes? <a href="#contact" style="text-decoration:underline;">Message us</a> for custom bundles.</p>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Common Questions</span>
+        <h2>Frequently Asked Questions</h2>
+      </div>
+      <div class="faq-list">
+        <div class="faq-item">
+          <button class="faq-q">Are you a moving company? <span class="arrow">+</span></button>
+          <div class="faq-a"><div class="faq-a-inner">No. We're a tote rental service. We deliver clean totes and a dolly to your door and pick them up when you're done. You handle the packing and moving yourself (or hire movers separately).</div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">How many totes do I need? <span class="arrow">+</span></button>
+          <div class="faq-a"><div class="faq-a-inner">A rough guide: 20 totes covers a 1-bedroom apartment, 40 covers a 2–3 bedroom home, and 60 covers 4+ bedrooms. When in doubt, go one size up. If you run short mid-move, call us and we'll work something out.</div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">What if I need the totes longer than 2 weeks? <span class="arrow">+</span></button>
+          <div class="faq-a"><div class="faq-a-inner">No problem. Contact us before your scheduled pickup and we'll arrange an extension for an additional fee. Just don't wait until after the pickup date, let us know ahead of time.</div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">What can I put in the totes? <span class="arrow">+</span></button>
+          <div class="faq-a"><div class="faq-a-inner">Normal household and office items. Each tote holds up to 65 lbs. Don't use them for hazardous materials, chemicals, liquids that can spill, perishable food, or anything illegal. Use padding for fragile items.</div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">What happens if a tote is lost or damaged? <span class="arrow">+</span></button>
+          <div class="faq-a"><div class="faq-a-inner">Normal wear is expected and fine. Lost, stolen, or damaged-beyond-use totes are charged at a reasonable replacement cost. We'll communicate that cost upfront if it ever comes up.</div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">Can I cancel or reschedule? <span class="arrow">+</span></button>
+          <div class="faq-a"><div class="faq-a-inner">Yes. Cancel or reschedule at no charge up to 48 hours before your scheduled delivery. Within 48 hours, a fee may apply. Just call or text us.</div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">Do you deliver to my area? <span class="arrow">+</span></button>
+          <div class="faq-a"><div class="faq-a-inner">We offer free delivery across the OKC metro (30-mile radius) and the Ada area (15-mile radius). Check the maps on our delivery area section, or text us your zip code and we'll tell you right away.</div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">Can I pick up the totes myself? <span class="arrow">+</span></button>
+          <div class="faq-a"><div class="faq-a-inner">Yes! If you prefer to pick up and return the totes yourself, we offer that option. Just let us know when you book.</div></div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -860,6 +992,7 @@
       <div class="contact-row">
         <a class="contact-pill" href="tel:+15803993202">📞 580.399.3202</a>
         <a class="contact-pill" href="mailto:readytoteok@gmail.com">✉️ readytoteok@gmail.com</a>
+        <a class="contact-pill" href="https://facebook.com/readytoteoklahoma" target="_blank" rel="noopener">📘 Facebook</a>
       </div>
     </div>
   </section>
@@ -883,11 +1016,29 @@
       <span class="footer-links">
         <a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms of Service</a> · <a href="accessibility.html">Accessibility</a>
       </span>
+      <div class="social-row" style="justify-content:center; margin-top:8px;">
+        <a class="social-icon" href="https://facebook.com/readytoteoklahoma" target="_blank" rel="noopener" aria-label="Facebook">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        </a>
+      </div>
+      </span>
     </div>
   </div>
 </footer>
 
 <script>
+  // FAQ accordion
+  document.querySelectorAll('.faq-q').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = btn.parentElement;
+      const wasOpen = item.classList.contains('open');
+      // Close all
+      document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+      // Toggle clicked
+      if (!wasOpen) item.classList.add('open');
+    });
+  });
+
   const toggle = document.getElementById('mobileToggle');
   const menu = document.getElementById('mobileMenu');
   toggle.addEventListener('click', () => {
@@ -951,6 +1102,10 @@
   <input type="text" name="delivery_address">
   <input type="text" name="hp_field">
 </form>
+
+<a class="float-text" href="sms:+15803993202" aria-label="Text us">
+  <span class="bubble">💬</span> Text Us
+</a>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
