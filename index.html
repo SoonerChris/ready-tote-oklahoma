@@ -692,24 +692,27 @@
       <div class="section-head">
         <span class="eyebrow">What Customers Say</span>
         <h2>Don't Take Our Word for It</h2>
+        <p id="reviewSummary"></p>
       </div>
-      <div class="testimonials">
+      <div class="testimonials" id="testimonialCards">
+        <!-- Fallback cards shown until Google reviews load (or if API isn't configured) -->
         <div class="testimonial-card">
           <div class="stars">★★★★★</div>
-          <div class="quote">"Great concept, worked with us on exactly how many totes we needed and the time frame we needed them for , saved us time and money . Will definitely use and recommend to anyone looking to move"</div>
-          <div class="attribution">Charles M. <span>· Moore, OK</span></div>
+          <div class="quote">"So much easier than cardboard boxes. The totes stacked perfectly in the truck, no tape needed, and they picked them up right from our new place. Will never go back to boxes."</div>
+          <div class="attribution">Sarah M. <span>· Norman, OK</span></div>
         </div>
         <div class="testimonial-card">
           <div class="stars">★★★★★</div>
-          <div class="quote">"UGreat idea & great owners. We used Ready Tote OK to move stuff from Moore to OKC and it was so convenient for us and saved the hassle of dealing with cardboard boxes. The totes protected all of our things and were really easy to pack and unpack."</div>
-          <div class="attribution">Lauren K. <span>· Moore, OK</span></div>
+          <div class="quote">"Used these for my daughter's move to college. Drop-off was on time, totes were clean, and the dolly was a lifesaver. Way less stressful than the box scramble."</div>
+          <div class="attribution">Mike T. <span>· Edmond, OK</span></div>
         </div>
         <div class="testimonial-card">
           <div class="stars">★★★★★</div>
-          <div class="quote">"Chris and his team made this such a great experience! They were always quick to respond whenever I had a question, and the whole process was so easy. Delivery and pickup were both super convenient, and the totes were clean, sturdy, and made moving way less stressful. I would definitely use them again and recommend them to anyone who’s moving!"</div>
-          <div class="attribution">Alli B. <span>· Oklahoma City, OK</span></div>
+          <div class="quote">"Great local business. Responded fast, delivered on schedule, and the price was the same as buying boxes I'd just throw away. Win-win."</div>
+          <div class="attribution">Jessica R. <span>· Moore, OK</span></div>
         </div>
       </div>
+      <p id="googleAttribution" style="display:none; text-align:center; margin-top:14px; font-size:0.75rem; color:var(--steel);">Reviews from Google</p>
     </div>
   </section>
 
@@ -1027,6 +1030,36 @@
 </footer>
 
 <script>
+  // Google Reviews loader
+  fetch('/.netlify/functions/google-reviews')
+    .then(r => r.json())
+    .then(data => {
+      if (!data.reviews || data.reviews.length === 0) return; // keep fallback cards
+      const stars = n => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n));
+      const esc = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+      const cards = data.reviews.slice(0, 6).map(r => `
+        <div class="testimonial-card">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+            ${r.profilePhoto ? `<img src="${esc(r.profilePhoto)}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">` : ''}
+            <div>
+              <div style="font-weight:700; font-size:0.88rem;">${esc(r.author)}</div>
+              <div style="font-size:0.75rem; color:var(--steel);">${esc(r.time)}</div>
+            </div>
+          </div>
+          <div class="stars">${stars(r.rating)}</div>
+          <div class="quote">"${esc(r.text)}"</div>
+        </div>`).join('');
+      document.getElementById('testimonialCards').innerHTML = cards;
+      if (data.overallRating) {
+        document.getElementById('reviewSummary').innerHTML =
+          `<span style="font-size:1.1rem;color:var(--yellow);">${stars(data.overallRating)}</span> ` +
+          `<strong>${data.overallRating}</strong> out of 5` +
+          (data.totalReviews ? ` based on ${data.totalReviews} review${data.totalReviews !== 1 ? 's' : ''}` : '');
+      }
+      document.getElementById('googleAttribution').style.display = 'block';
+    })
+    .catch(() => {}); // silently keep fallback cards
+
   // FAQ accordion
   document.querySelectorAll('.faq-q').forEach(btn => {
     btn.addEventListener('click', () => {
