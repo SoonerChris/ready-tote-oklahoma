@@ -36,12 +36,25 @@ export default async (request) => {
   // If no Place ID, find it by business name
   if (!placeId) {
     try {
+      // Try Find Place first
       const findUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(placeName)}&inputtype=textquery&fields=place_id&key=${apiKey}`;
       const findResp = await fetch(findUrl);
       const findData = await findResp.json();
       if (findData.candidates && findData.candidates.length > 0) {
         placeId = findData.candidates[0].place_id;
-      } else {
+      }
+
+      // Fallback: Text Search with location bias (better for new listings)
+      if (!placeId) {
+        const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(placeName + " Oklahoma")}&location=35.1157,-97.2023&radius=50000&key=${apiKey}`;
+        const searchResp = await fetch(searchUrl);
+        const searchData = await searchResp.json();
+        if (searchData.results && searchData.results.length > 0) {
+          placeId = searchData.results[0].place_id;
+        }
+      }
+
+      if (!placeId) {
         console.error("Could not find Place ID for:", placeName);
         return json({ reviews: [], error: "Business not found on Google" });
       }
