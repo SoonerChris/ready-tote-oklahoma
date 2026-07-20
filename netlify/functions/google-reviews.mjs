@@ -13,10 +13,11 @@ const CACHE_HOURS = 24;
 
 export default async (request) => {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-  const placeId = process.env.GOOGLE_PLACE_ID;
+  let placeId = process.env.GOOGLE_PLACE_ID || "";
+  const placeName = process.env.GOOGLE_PLACE_NAME || "Ready Tote Oklahoma";
 
-  if (!apiKey || !placeId) {
-    return json({ reviews: [], error: "Missing GOOGLE_PLACES_API_KEY or GOOGLE_PLACE_ID env vars" });
+  if (!apiKey) {
+    return json({ reviews: [], error: "Missing GOOGLE_PLACES_API_KEY env var" });
   }
 
   const store = getStore("meta");
@@ -27,12 +28,30 @@ export default async (request) => {
     if (cached && cached.fetchedAt) {
       const age = (Date.now() - new Date(cached.fetchedAt).getTime()) / 3600000;
       if (age < CACHE_HOURS) {
-        return json({ reviews: cached.reviews, cached: true });
+        return json({ reviews: cached.reviews, overallRating: cached.overallRating, totalReviews: cached.totalReviews, cached: true });
       }
     }
   } catch {}
 
-  // Fetch fresh from Google Places API (New)
+  // If no Place ID, find it by business name
+  if (!placeId) {
+    try {
+      const findUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(placeName)}&inputtype=textquery&fields=place_id&key=${apiKey}`;
+      const findResp = await fetch(findUrl);
+      const findData = await findResp.json();
+      if (findData.candidates && findData.candidates.length > 0) {
+        placeId = findData.candidates[0].place_id;
+      } else {
+        console.error("Could not find Place ID for:", placeName);
+        return json({ reviews: [], error: "Business not found on Google" });
+      }
+    } catch (e) {
+      console.error("Find Place failed:", e.message);
+      return json({ reviews: [], error: "Find Place API error" });
+    }
+  }
+
+  // Fetch reviews using the Place ID
   try {
     const url = `https://places.googleapis.com/v1/places/${placeId}?fields=reviews,rating,userRatingCount&key=${apiKey}`;
     const resp = await fetch(url, {
