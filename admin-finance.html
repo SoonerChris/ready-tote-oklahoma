@@ -144,6 +144,13 @@
   });
 
   function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML;}
+  function fmtDate(iso) {
+    if (!iso) return '';
+    const parts = String(iso).slice(0, 10).split('-');
+    if (parts.length !== 3) return iso;
+    const [y, m, d] = parts;
+    return m + '/' + d + '/' + y.slice(2);
+  }
   function fmtPrice(p){ const s=String(p||'').trim(); return s ? (s.startsWith('$') ? esc(s) : '$'+esc(s)) : ''; }
   function showErr(m){const s=$('status');s.className='status err';s.textContent=m;}
   function thisYear(d){ return (d||'').slice(0,4) === String(new Date().getFullYear()); }
@@ -234,7 +241,7 @@
     // Recent rentals (last 8)
     const recent = [...rentals].sort((a,b) => (b.invoicedAt||'').localeCompare(a.invoicedAt||'')).slice(0, 8);
     $('recentRentals').innerHTML = recent.length ? recent.map(r => {
-      const invoiceDate = (r.invoicedAt||'').slice(0,10);
+      const invoiceDate = fmtDate((r.invoicedAt||'').slice(0,10));
       const isActive = r.dropoffDate <= today && r.pickupDate >= today;
       const isPast = r.pickupDate < today;
       const status = isActive ? '<span style="color:var(--green);font-size:0.7rem;font-weight:bold;">● Active</span>'
@@ -254,7 +261,9 @@
   $('csvBtn').addEventListener('click', () => {
     if (!ALL_RENTALS.length) return showErr('No rentals to export yet.');
     const cols = ['invoicedAt','name','email','phone','package','price','duration','dropoffDate','dropoffTime','dropoffAddress','pickupDate','pickupTime','pickupAddress'];
-    dlCsv('ready-tote-rentals', cols, [...ALL_RENTALS].sort((a,b) => (b.invoicedAt||'').localeCompare(a.invoicedAt||'')));
+    const rows = [...ALL_RENTALS].sort((a,b) => (b.invoicedAt||'').localeCompare(a.invoicedAt||''))
+      .map(r => ({ ...r, invoicedAt: fmtDate((r.invoicedAt||'').slice(0,10)), dropoffDate: fmtDate(r.dropoffDate), pickupDate: fmtDate(r.pickupDate) }));
+    dlCsv('ready-tote-rentals', cols, rows);
   });
 
   // ---- Finance ----
@@ -296,7 +305,7 @@
       <div class="rem" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
         <div>
           <div style="font-weight:bold; font-size:0.9rem;">${money(e.amount)} — ${esc(e.category)}${(e.recurring === 'monthly' || e.recurring === 'yearly') ? ` <span style="font-weight:normal; font-size:0.72rem; color:var(--gold); background:rgba(201,154,50,0.12); border:1px solid rgba(201,154,50,0.4); padding:1px 8px; border-radius:999px; margin-left:6px; vertical-align:middle;">${e.recurring}</span>` : ''}</div>
-          <div style="font-size:0.78rem; color:var(--steel); margin:0;">${esc(e.date)}${e.vendor ? ' · ' + esc(e.vendor) : ''}${e.paymentMethod ? ' · ' + esc(e.paymentMethod) : ''}${e.description ? ' · ' + esc(e.description) : ''}</div>
+          <div style="font-size:0.78rem; color:var(--steel); margin:0;">${esc(fmtDate(e.date))}${e.vendor ? ' · ' + esc(e.vendor) : ''}${e.paymentMethod ? ' · ' + esc(e.paymentMethod) : ''}${e.description ? ' · ' + esc(e.description) : ''}</div>
         </div>
         <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
           onclick="finDelete('${esc(e.key)}')">Delete</button>
@@ -327,7 +336,7 @@
     trips.sort((a,b)=>b.date.localeCompare(a.date));
     $('tripChips').innerHTML = trips.slice(0,8).map(t => `
       <button type="button" style="width:auto; margin:0; padding:7px 12px; font-size:0.75rem; background:var(--cream); color:var(--ink); border:1px solid var(--line); border-radius:999px;"
-        onclick="fillTrip('${esc(t.date)}', '${esc(t.purpose).replaceAll("'","&#39;")}')">${esc(t.date.slice(5))} · ${esc(t.purpose.slice(0,34))}${t.purpose.length>34?'…':''}</button>`).join('')
+        onclick="fillTrip('${esc(t.date)}', '${esc(t.purpose).replaceAll("'","&#39;")}')">${esc(fmtDate(t.date).slice(0,5))} · ${esc(t.purpose.slice(0,34))}${t.purpose.length>34?'…':''}</button>`).join('')
       || '<span class="empty">No rental trips in the last/next 7 days.</span>';
 
     const mileSorted = [...FIN.mileage].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
@@ -335,7 +344,7 @@
       <div class="rem" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
         <div>
           <div style="font-weight:bold; font-size:0.9rem;">${m.miles} mi</div>
-          <div style="font-size:0.78rem; color:var(--steel); margin:0;">${esc(m.date)} · ${esc(m.purpose)}</div>
+          <div style="font-size:0.78rem; color:var(--steel); margin:0;">${esc(fmtDate(m.date))} · ${esc(m.purpose)}</div>
         </div>
         <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
           onclick="finDelete('${esc(m.key)}')">Delete</button>
@@ -383,10 +392,10 @@
   }
   $('expCsvBtn').addEventListener('click', () =>
     dlCsv('ready-tote-expenses', ['date','category','vendor','recurring','paymentMethod','description','amount'],
-      [...FIN.expenses].sort((a,b)=>(a.date||'').localeCompare(b.date||''))));
+      [...FIN.expenses].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(e => ({ ...e, date: fmtDate(e.date) }))));
   $('mileCsvBtn').addEventListener('click', () =>
     dlCsv('ready-tote-mileage', ['date','purpose','miles'],
-      [...FIN.mileage].sort((a,b)=>(a.date||'').localeCompare(b.date||''))));
+      [...FIN.mileage].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(m => ({ ...m, date: fmtDate(m.date) }))));
 </script>
 </body>
 </html>

@@ -152,9 +152,17 @@
       </div>`).join('');
   }
 
+  function fmtDate(iso) {
+    if (!iso) return '';
+    const parts = String(iso).slice(0, 10).split('-');
+    if (parts.length !== 3) return iso;
+    const [y, m, d] = parts;
+    return m + '/' + d + '/' + y.slice(2);
+  }
   function fmtDay(iso){
     const d = new Date(iso + 'T12:00:00');
-    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
+    return weekday + ' ' + fmtDate(iso);
   }
 
   // ---- All rentals management ----
@@ -165,7 +173,7 @@
     el.innerHTML = sorted.map(r => `
       <div class="rem">
         <div class="who">${esc(r.name)} — ${esc(r.price || '')}</div>
-        <div class="meta">${esc(r.package)} · Drop-off ${esc(r.dropoffDate)}${(r.dropoffAddress||r.address) ? ' @ ' + esc(r.dropoffAddress||r.address) : ''} · Pickup ${esc(r.pickupDate)}${(r.pickupAddress||r.address) ? ' @ ' + esc(r.pickupAddress||r.address) : ''}</div>
+        <div class="meta">${esc(r.package)} · Drop-off ${esc(fmtDate(r.dropoffDate))}${(r.dropoffAddress||r.address) ? ' @ ' + esc(r.dropoffAddress||r.address) : ''} · Pickup ${esc(fmtDate(r.pickupDate))}${(r.pickupAddress||r.address) ? ' @ ' + esc(r.pickupAddress||r.address) : ''}</div>
         ${textBtn('delivery', r.key, r.deliverySms, '🚚', 'Delivery', 'var(--green)')}
         ${textBtn('pickup', r.key, r.pickupSms, '📦', 'Pickup', 'var(--gold)')}
         ${textBtn('review', r.key, r.reviewSms, '⭐', 'Review', 'var(--green)')}

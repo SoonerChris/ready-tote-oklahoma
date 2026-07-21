@@ -256,9 +256,17 @@
     d.setUTCDate(d.getUTCDate() + days);
     return d.toISOString().slice(0, 10);
   }
+  function fmtDate(iso) {
+    if (!iso) return '';
+    const parts = String(iso).slice(0, 10).split('-');
+    if (parts.length !== 3) return iso;
+    const [y, m, d] = parts;
+    return m + '/' + d + '/' + y.slice(2);
+  }
   function fmtDay(iso) {
     const d = new Date(iso + 'T12:00:00');
-    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
+    return weekday + ' ' + fmtDate(iso);
   }
   function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
   function showErr(m) { const s = $('status'); s.className = 'status err'; s.textContent = m; }
