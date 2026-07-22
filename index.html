@@ -502,11 +502,23 @@
   }
   .social-icon:hover{background:var(--yellow); color:var(--ink);}
 
+  .reveal{
+    opacity:0;
+    transform:translateY(28px);
+    transition:opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.is-visible{
+    opacity:1;
+    transform:translateY(0);
+  }
+
   @media (prefers-reduced-motion: reduce){
     html{scroll-behavior:auto;}
     *{transition:none !important;}
+    .reveal{opacity:1; transform:none;}
         }
       </style>
+      <noscript><style>.reveal{opacity:1 !important; transform:none !important;}</style></noscript>
       
       <!-- Meta Pixel Code -->
       <script>
@@ -596,7 +608,7 @@
   </div>
 
   <!-- HOW IT WORKS -->
-  <section id="how">
+  <section id="how" class="reveal">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Simple as 1&ndash;2&ndash;3</span>
@@ -624,7 +636,7 @@
   </section>
 
   <!-- WHO WE SERVE -->
-  <section id="serve" class="section-alt">
+  <section id="serve" class="section-alt reveal">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Perfect For</span>
@@ -662,7 +674,7 @@
   </section>
 
   <!-- COMPARISON -->
-  <section id="compare">
+  <section id="compare" class="reveal">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">The Smarter Choice</span>
@@ -704,7 +716,7 @@
   </section>
 
   <!-- TESTIMONIALS -->
-  <section id="reviews">
+  <section id="reviews" class="reveal">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">What Customers Say</span>
@@ -734,7 +746,7 @@
   </section>
 
   <!-- PRICING -->
-  <section id="pricing" class="section-alt">
+  <section id="pricing" class="section-alt reveal">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Packages</span>
@@ -785,7 +797,7 @@
   </section>
 
   <!-- FAQ -->
-  <section id="faq">
+  <section id="faq" class="reveal">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Common Questions</span>
@@ -829,7 +841,7 @@
   </section>
 
   <!-- FEATURES -->
-  <section id="totes">
+  <section id="totes" class="reveal">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">The Totes</span>
@@ -854,7 +866,7 @@
   </section>
 
   <!-- ABOUT -->
-  <section id="about" class="section-alt">
+  <section id="about" class="section-alt reveal">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">About Us</span>
@@ -889,7 +901,7 @@
   </section>
 
   <!-- SERVICE AREA -->
-  <section id="area">
+  <section id="area" class="reveal">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Where We Deliver</span>
@@ -921,7 +933,7 @@
   </section>
 
   <!-- BOOKING FORM -->
-  <section id="book" class="section-alt">
+  <section id="book" class="section-alt reveal">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Reserve Your Totes</span>
@@ -1002,7 +1014,7 @@
   </section>
 
   <!-- CONTACT -->
-  <section id="contact">
+  <section id="contact" class="reveal">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Got Questions?</span>
@@ -1216,6 +1228,23 @@
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
     script.onload = initDeliveryMaps;
     document.body.appendChild(script);
+  }
+
+  // Scroll-reveal animation for section entrances
+  const revealEls = document.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window) {
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
+    revealEls.forEach((el) => revealObserver.observe(el));
+  } else {
+    // No IntersectionObserver support — show everything immediately.
+    revealEls.forEach((el) => el.classList.add('is-visible'));
   }
 
   const areaSection = document.getElementById('area');
