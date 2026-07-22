@@ -21,12 +21,18 @@ export default async (request) => {
     switch (body.action) {
       case "list": {
         const { blobs } = await store.list();
+        const fetched = await Promise.all(
+          blobs.map(async (b) => {
+            const r = await store.get(b.key, { type: "json" });
+            return r ? { key: b.key, ...r } : null;
+          })
+        );
         const expenses = [], mileage = [];
-        for (const b of blobs) {
-          const r = await store.get(b.key, { type: "json" });
+        for (let i = 0; i < blobs.length; i++) {
+          const r = fetched[i];
           if (!r) continue;
-          if (b.key.startsWith("exp_")) expenses.push({ key: b.key, ...r });
-          else if (b.key.startsWith("mile_")) mileage.push({ key: b.key, ...r });
+          if (blobs[i].key.startsWith("exp_")) expenses.push(r);
+          else if (blobs[i].key.startsWith("mile_")) mileage.push(r);
         }
         const mileageRate = (await meta.get("mileageRate", { type: "json" })) ?? null;
         return json({ expenses, mileage, mileageRate });

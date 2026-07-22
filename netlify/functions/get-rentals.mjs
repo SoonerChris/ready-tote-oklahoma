@@ -17,11 +17,13 @@ export default async (request) => {
 
   const store = getStore("rentals");
   const { blobs } = await store.list();
-  const rentals = [];
-  for (const b of blobs) {
-    const r = await store.get(b.key, { type: "json" });
-    if (r) rentals.push({ key: b.key, ...r });
-  }
+  const fetched = await Promise.all(
+    blobs.map(async (b) => {
+      const r = await store.get(b.key, { type: "json" });
+      return r ? { key: b.key, ...r } : null;
+    })
+  );
+  const rentals = fetched.filter(Boolean);
 
   const metaStore = getStore("meta");
   let sentFlags = {};
