@@ -8,28 +8,20 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="robots" content="noindex, nofollow">
 <title>Send Invoice — Ready Tote Oklahoma (Internal)</title>
+<link rel="stylesheet" href="admin-shared.css">
 <style>
-  :root{--ink:#1E1B18;--gold:#C99A32;--cream:#F5F1E7;--steel:#6B6259;--line:rgba(30,27,24,0.15);}
-  *{box-sizing:border-box;}
-  body{font-family:Arial,Helvetica,sans-serif;background:var(--cream);color:var(--ink);margin:0;padding:32px 16px;}
-  .card{max-width:640px;margin:0 auto;background:#fff;border-radius:16px;border:1px solid var(--line);padding:32px;}
-  h1{font-size:1.4rem;margin:0 0 4px;}
-  .sub{color:var(--steel);font-size:0.9rem;margin:0 0 24px;}
-  label{display:block;font-size:0.85rem;font-weight:bold;margin:16px 0 6px;}
-  input,select{width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);font-family:inherit;}
-  input:focus,select:focus{outline:2px solid var(--gold);}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-  @media(max-width:560px){.grid2{grid-template-columns:1fr;}}
-  button{margin-top:24px;width:100%;padding:15px;font-size:1rem;font-weight:bold;background:var(--gold);color:var(--ink);border:none;border-radius:10px;cursor:pointer;}
-  button:disabled{opacity:0.6;cursor:wait;}
-  .status{margin-top:16px;padding:12px 16px;border-radius:8px;font-size:0.9rem;display:none;}
-  .status.ok{display:block;background:rgba(34,160,90,0.1);border:1px solid rgba(34,160,90,0.4);color:#1E8E52;}
-  .status.err{display:block;background:rgba(200,60,50,0.08);border:1px solid rgba(200,60,50,0.35);color:#C0392B;}
-  .note{font-size:0.78rem;color:var(--steel);margin-top:6px;}
+  body{padding:32px 16px;}
+  .card{padding:32px;}
 </style>
 </head>
 <body>
-<div class="top" style="max-width:640px;margin:0 auto 10px;font-size:0.85rem;"><a href="admin.html" style="color:var(--gold);text-decoration:none;">← Admin dashboard</a></div>
+<nav class="admin-nav" aria-label="Admin tools">
+  <a href="admin.html">Dashboard</a>
+  <a href="admin-invoice.html" aria-current="page">Send Invoice</a>
+  <a href="admin-add-rental.html">Add Rental</a>
+  <a href="admin-reminders.html">Reminders</a>
+  <a href="admin-finance.html">Finance</a>
+</nav>
 <div class="card">
   <h1>Send Customer Invoice</h1>
   <p class="sub">Internal tool — fills out and sends the branded invoice email with a Stripe payment button.</p>

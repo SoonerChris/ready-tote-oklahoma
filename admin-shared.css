@@ -1,0 +1,72 @@
+/* admin-shared.css
+   Shared design tokens, resets, and components for all admin-*.html pages
+   (admin.html, admin-invoice.html, admin-add-rental.html, admin-reminders.html,
+   admin-finance.html). Keeps look/behavior consistent and avoids re-defining
+   the same CSS in five separate files. Page-specific styles stay inline in
+   each page's own <style> block. */
+
+:root{
+  --ink:#1E1B18;
+  --gold:#C99A32;
+  --gold-bg:rgba(201,154,50,0.10);
+  --cream:#F5F1E7;
+  --steel:#6B6259;
+  --green:#1E8E52;
+  --green-bg:rgba(30,142,82,0.08);
+  --red:#C0392B;
+  --red-bg:rgba(192,57,43,0.07);
+  --line:rgba(30,27,24,0.15);
+  --white:#FFFFFF;
+}
+*{box-sizing:border-box;}
+body{
+  font-family:Arial,Helvetica,sans-serif;
+  background:var(--cream);
+  color:var(--ink);
+  margin:0;
+  padding:24px 14px;
+}
+h1{font-size:1.3rem;margin:0 0 4px;}
+.sub{color:var(--steel);font-size:0.88rem;margin:0 0 20px;}
+h2{font-size:1rem;margin:26px 0 10px;}
+
+.card{max-width:640px;margin:0 auto;background:#fff;border-radius:16px;border:1px solid var(--line);padding:26px;}
+
+label{display:block;font-size:0.85rem;font-weight:bold;margin:14px 0 6px;}
+input, select, textarea{width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);font-family:inherit;}
+input:focus, select:focus, textarea:focus{outline:2px solid var(--gold);}
+button{margin-top:16px;width:100%;padding:14px;font-size:0.95rem;font-weight:bold;background:var(--gold);color:var(--ink);border:none;border-radius:10px;cursor:pointer;}
+button:disabled{opacity:0.6;cursor:wait;}
+
+.rem{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;}
+.empty{color:var(--steel);font-size:0.88rem;}
+.note{font-size:0.78rem;color:var(--steel);margin-top:6px;}
+
+.status{margin-top:12px;padding:10px 14px;border-radius:8px;font-size:0.88rem;display:none;}
+.status.err{display:block;background:var(--red-bg);border:1px solid rgba(192,57,43,0.35);color:var(--red);}
+.status.ok{display:block;background:var(--green-bg);border:1px solid rgba(30,142,82,0.4);color:var(--green);}
+
+/* Two-column form rows that collapse to one column on phones */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:560px){.grid2{grid-template-columns:1fr;}}
+
+/* Shared admin nav bar -- lets Chris jump directly between admin tools */
+.admin-nav{
+  max-width:640px;margin:0 auto 14px;
+  display:flex; flex-wrap:wrap; gap:8px;
+  background:var(--white); border:1px solid var(--line); border-radius:12px;
+  padding:10px;
+}
+.admin-nav.wide{max-width:840px;}
+.admin-nav a{
+  flex:1 1 auto; text-align:center; white-space:nowrap;
+  padding:8px 12px; font-size:0.82rem; font-weight:bold;
+  color:var(--ink); text-decoration:none; border-radius:8px;
+  background:var(--cream);
+}
+.admin-nav a:hover{background:var(--gold-bg);}
+.admin-nav a[aria-current="page"]{background:var(--gold); color:var(--ink);}
+@media(max-width:500px){
+  .admin-nav{gap:6px;}
+  .admin-nav a{flex:1 1 40%; font-size:0.78rem; padding:8px 6px;}
+}

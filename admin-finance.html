@@ -8,28 +8,16 @@
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Finance — Ready Tote Oklahoma (Internal)</title>
-<style>
-  :root{--ink:#1E1B18;--gold:#C99A32;--cream:#F5F1E7;--steel:#6B6259;--line:rgba(30,27,24,0.15);}
-  *{box-sizing:border-box;}
-  body{font-family:Arial,Helvetica,sans-serif;background:var(--cream);color:var(--ink);margin:0;padding:24px 14px;}
-  .top{max-width:640px;margin:0 auto 10px;font-size:0.85rem;}
-  .top a{color:var(--gold);text-decoration:none;}
-  .card{max-width:640px;margin:0 auto;background:#fff;border-radius:16px;border:1px solid var(--line);padding:26px;}
-  h1{font-size:1.3rem;margin:0 0 4px;}
-  .sub{color:var(--steel);font-size:0.88rem;margin:0 0 20px;}
-  label{display:block;font-size:0.85rem;font-weight:bold;margin:14px 0 6px;}
-  input, select{width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);font-family:inherit;}
-  button{margin-top:14px;width:100%;padding:13px;font-size:0.95rem;font-weight:bold;background:var(--gold);color:var(--ink);border:none;border-radius:10px;cursor:pointer;}
-  button:disabled{opacity:0.6;}
-  h2{font-size:1rem;margin:26px 0 10px;}
-  .rem{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;}
-  .empty{color:var(--steel);font-size:0.88rem;}
-  .status{margin-top:12px;padding:10px 14px;border-radius:8px;font-size:0.88rem;display:none;}
-  .status.err{display:block;background:rgba(200,60,50,0.08);border:1px solid rgba(200,60,50,0.35);color:#C0392B;}
-</style>
+<link rel="stylesheet" href="admin-shared.css">
 </head>
 <body>
-<div class="top"><a href="admin.html">← Admin dashboard</a></div>
+<nav class="admin-nav" aria-label="Admin tools">
+  <a href="admin.html">Dashboard</a>
+  <a href="admin-invoice.html">Send Invoice</a>
+  <a href="admin-add-rental.html">Add Rental</a>
+  <a href="admin-reminders.html">Reminders</a>
+  <a href="admin-finance.html" aria-current="page">Finance</a>
+</nav>
 <div class="card">
   <h1>Finance</h1>
   <p class="sub">Sales totals, expenses, and mileage. All amounts in USD.</p>
@@ -43,7 +31,7 @@
     <h2>💰 Sales</h2>
     <div class="rem" id="salesSummary" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
     <div id="salesByMonth"></div>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;" id="salesDetails">
+    <div class="grid2" id="salesDetails">
       <div>
         <h3 style="font-size:0.88rem; margin:16px 0 8px;">📦 By Package</h3>
         <div id="salesByPackage"></div>
@@ -58,7 +46,7 @@
     <h2>💵 Expenses</h2>
     <div class="rem" id="expTotals" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
     <div class="rem">
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="grid2" style="gap:10px;">
         <input type="date" id="expDate">
         <select id="expCategory">
           <option>Equipment</option><option>Supplies</option><option>Fuel</option>
@@ -71,7 +59,7 @@
         </select>
         <input type="number" id="expAmount" placeholder="Amount ($)" step="0.01" min="0">
       </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
+      <div class="grid2" style="gap:10px; margin-top:10px;">
         <input type="text" id="expVendor" placeholder="Vendor (e.g., Amazon, Home Depot)">
         <select id="expPayment" style="width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);">
           <option value="">Payment method…</option>
@@ -92,7 +80,7 @@
     <div class="rem">
       <p class="empty" style="margin:0 0 8px;">Quick-fill from recent trips:</p>
       <div id="tripChips" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="grid2" style="gap:10px;">
         <input type="date" id="mileDate">
         <input type="number" id="mileMiles" placeholder="Miles" step="0.1" min="0">
       </div>
@@ -114,7 +102,11 @@
   let ALL_RENTALS = [];
   let FIN = { expenses: [], mileage: [], mileageRate: null };
 
-  $('loadBtn').addEventListener('click', async () => {
+  $('loadBtn').addEventListener('click', load);
+  // Auto-load if a secret is already saved (matches admin.html behavior)
+  if ($('secret').value) load();
+
+  async function load() {
     const secret = $('secret').value.trim();
     if (!secret) return showErr('Enter the admin secret.');
     const btn = $('loadBtn');
@@ -141,7 +133,7 @@
       }
     } catch { showErr('Network error — use this page on the live site.'); }
     btn.disabled = false; btn.textContent = 'Load finance data';
-  });
+  }
 
   function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML;}
   function fmtDate(iso) {

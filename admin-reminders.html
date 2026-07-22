@@ -4,31 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Today's Reminders — Ready Tote Oklahoma (Internal)</title>
+<link rel="stylesheet" href="admin-shared.css">
 <style>
-  :root{--ink:#1E1B18;--gold:#C99A32;--cream:#F5F1E7;--steel:#6B6259;--line:rgba(30,27,24,0.15);--green:#1E8E52;}
-  *{box-sizing:border-box;}
-  body{font-family:Arial,Helvetica,sans-serif;background:var(--cream);color:var(--ink);margin:0;padding:24px 14px;}
-  .card{max-width:640px;margin:0 auto;background:#fff;border-radius:16px;border:1px solid var(--line);padding:26px;}
-  h1{font-size:1.3rem;margin:0 0 4px;}
-  .sub{color:var(--steel);font-size:0.88rem;margin:0 0 20px;}
-  label{display:block;font-size:0.85rem;font-weight:bold;margin:14px 0 6px;}
-  input{width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);}
-  button{margin-top:14px;width:100%;padding:13px;font-size:0.95rem;font-weight:bold;background:var(--gold);color:var(--ink);border:none;border-radius:10px;cursor:pointer;}
-  button:disabled{opacity:0.6;}
-  h2{font-size:1rem;margin:26px 0 10px;}
-  .rem{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;}
   .rem .who{font-weight:bold;}
   .rem .meta{color:var(--steel);font-size:0.82rem;margin:4px 0 10px;}
   .rem .msg{background:var(--cream);border-radius:8px;padding:10px 12px;font-size:0.85rem;color:var(--ink);margin-bottom:10px;}
   .sms-btn{display:inline-block;background:var(--green);color:#fff;font-weight:bold;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:0.88rem;}
-  .empty{color:var(--steel);font-size:0.88rem;}
-  .status{margin-top:12px;padding:10px 14px;border-radius:8px;font-size:0.88rem;display:none;}
-  .status.err{display:block;background:rgba(200,60,50,0.08);border:1px solid rgba(200,60,50,0.35);color:#C0392B;}
 </style>
 </head>
 <body>
-<div class="top" style="max-width:640px;margin:0 auto 10px;font-size:0.85rem;"><a href="admin.html" style="color:var(--gold);text-decoration:none;">← Admin dashboard</a></div>
+<nav class="admin-nav" aria-label="Admin tools">
+  <a href="admin.html">Dashboard</a>
+  <a href="admin-invoice.html">Send Invoice</a>
+  <a href="admin-add-rental.html">Add Rental</a>
+  <a href="admin-reminders.html" aria-current="page">Reminders</a>
+  <a href="admin-finance.html">Finance</a>
+</nav>
 <div class="card">
   <h1>Today's Reminder Texts</h1>
   <p class="sub">Tap a green button to open Messages with the text pre-filled. Best used on your phone.</p>
@@ -64,7 +59,11 @@
   let ALL_RENTALS = [];
   let SENT_FLAGS = {};
 
-  $('loadBtn').addEventListener('click', async () => {
+  $('loadBtn').addEventListener('click', load);
+  // Auto-load if a secret is already saved (matches admin.html behavior)
+  if ($('secret').value) load();
+
+  async function load() {
     const secret = $('secret').value.trim();
     if (!secret) return showErr('Enter the admin secret.');
     const btn = $('loadBtn');
@@ -91,7 +90,7 @@
       }
     } catch { showErr('Network error — use this page on the live site.'); }
     btn.disabled = false; btn.textContent = 'Load today\'s reminders';
-  });
+  }
 
   function render(id, items) {
     const el = $(id);

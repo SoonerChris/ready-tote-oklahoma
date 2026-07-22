@@ -8,10 +8,8 @@
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Admin Dashboard — Ready Tote Oklahoma</title>
+<link rel="stylesheet" href="admin-shared.css">
 <style>
-  :root{--ink:#1E1B18;--gold:#C99A32;--gold-bg:rgba(201,154,50,0.10);--cream:#F5F1E7;--steel:#6B6259;--green:#1E8E52;--green-bg:rgba(30,142,82,0.08);--red:#C0392B;--red-bg:rgba(192,57,43,0.07);--line:rgba(30,27,24,0.12);--white:#FFFFFF;}
-  *{box-sizing:border-box;}
-  body{font-family:Arial,Helvetica,sans-serif;background:var(--cream);color:var(--ink);margin:0;padding:24px 14px;}
   .wrap{max-width:840px;margin:0 auto;}
   .header{display:flex;align-items:center;gap:14px;margin-bottom:6px;}
   .header img{height:52px;width:auto;}
@@ -20,7 +18,7 @@
   .secret-bar{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
   .secret-bar label{font-size:0.82rem;font-weight:bold;white-space:nowrap;}
   .secret-bar input{flex:1;min-width:200px;padding:10px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);}
-  .secret-bar button{padding:10px 20px;font-size:0.9rem;font-weight:bold;background:var(--gold);color:var(--ink);border:none;border-radius:8px;cursor:pointer;white-space:nowrap;}
+  .secret-bar button{margin-top:0;width:auto;padding:10px 20px;font-size:0.9rem;font-weight:bold;background:var(--gold);color:var(--ink);border:none;border-radius:8px;cursor:pointer;white-space:nowrap;}
   .secret-bar button:disabled{opacity:0.6;}
 
   /* Summary cards grid */
@@ -66,8 +64,6 @@
   .alert.info{background:var(--green-bg);border:1px solid var(--green);color:var(--green);}
 
   .loading{text-align:center;color:var(--steel);padding:30px 0;font-size:0.9rem;}
-  .status{margin-top:8px;padding:10px 14px;border-radius:8px;font-size:0.88rem;display:none;}
-  .status.err{display:block;background:var(--red-bg);border:1px solid var(--red);color:var(--red);}
   footer{text-align:center;font-size:0.78rem;color:var(--steel);margin-top:24px;}
   footer a{color:var(--gold);}
 </style>
@@ -81,6 +77,14 @@
       <p class="sub" style="margin:0;">Ready Tote Oklahoma — internal tools</p>
     </div>
   </div>
+
+  <nav class="admin-nav wide" aria-label="Admin tools">
+    <a href="admin.html" aria-current="page">Dashboard</a>
+    <a href="admin-invoice.html">Send Invoice</a>
+    <a href="admin-add-rental.html">Add Rental</a>
+    <a href="admin-reminders.html">Reminders</a>
+    <a href="admin-finance.html">Finance</a>
+  </nav>
 
   <div class="secret-bar">
     <label for="secret">Admin secret</label>
