@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Outreach Tracker — Ready Tote Oklahoma (Internal)</title>
+<link rel="stylesheet" href="admin-shared.css">
+<style>
+  .wrap{max-width:900px;margin:0 auto;}
+  body{padding:24px 14px;}
+  h1{font-size:1.4rem;margin:0 0 4px;}
+
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+  @media(max-width:700px){.summary{grid-template-columns:repeat(2,1fr);}}
+  .scard{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center;}
+  .scard .num{font-size:1.6rem;font-weight:bold;line-height:1.1;}
+  .scard .lbl{font-size:0.7rem;color:var(--steel);margin-top:4px;text-transform:uppercase;letter-spacing:0.04em;}
+  .scard.gold{border-color:var(--gold);background:var(--gold-bg);}
+  .scard.gold .num{color:var(--gold);}
+  .scard.green{border-color:var(--green);background:var(--green-bg);}
+  .scard.green .num{color:var(--green);}
+
+  .secret-bar{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .secret-bar label{font-size:0.82rem;font-weight:bold;white-space:nowrap;}
+  .secret-bar input{flex:1;min-width:200px;padding:10px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);}
+  .secret-bar button{margin-top:0;width:auto;padding:10px 18px;font-size:0.85rem;font-weight:bold;background:var(--gold);color:var(--ink);border:none;border-radius:8px;cursor:pointer;white-space:nowrap;}
+
+  .section{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:20px;}
+  .section h2{font-size:1.05rem;margin:0 0 4px;display:flex;align-items:center;gap:8px;justify-content:space-between;}
+  .section .count-badge{font-size:0.72rem;background:var(--gold-bg);border:1px solid var(--gold);color:var(--gold);padding:2px 10px;border-radius:999px;font-weight:bold;}
+
+  .addform{border:1px dashed var(--line);border-radius:10px;padding:14px;margin:14px 0;}
+  .addform .grid2{margin-bottom:0;}
+  .addform button{width:auto;padding:10px 18px;font-size:0.85rem;}
+
+  .entry{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;}
+  .entry-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+  .entry-name{font-weight:bold;font-size:0.95rem;}
+  .entry-meta{font-size:0.8rem;color:var(--steel);margin-top:2px;}
+  .entry-notes{font-size:0.82rem;color:var(--steel);margin-top:6px;font-style:italic;}
+  .entry-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .status-pill{font-size:0.72rem;font-weight:bold;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--cream);}
+  .status-pill.active{border-color:var(--green);background:var(--green-bg);color:var(--green);}
+  .status-pill.contacted, .status-pill.followup{border-color:var(--gold);background:var(--gold-bg);color:var(--gold);}
+  .status-pill.notinterested{border-color:var(--red);background:var(--red-bg);color:var(--red);}
+  select.inline-status{width:auto;padding:6px 8px;font-size:0.78rem;}
+  .small-btn{width:auto;padding:6px 12px;font-size:0.78rem;margin-top:0;background:var(--white);border:1px solid var(--line);color:var(--ink);}
+  .small-btn.danger{color:var(--red);border-color:var(--red);}
+
+  .empty{color:var(--steel);font-size:0.88rem;padding:8px 0;}
+  .toggle-add{width:auto;padding:8px 16px;font-size:0.85rem;margin:0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="admin-nav wide" aria-label="Admin tools">
+    <a href="admin.html">Dashboard</a>
+    <a href="admin-invoice.html">Send Invoice</a>
+    <a href="admin-add-rental.html">Add Rental</a>
+    <a href="admin-reminders.html">Reminders</a>
+    <a href="admin-finance.html">Finance</a>
+    <a href="admin-outreach.html" aria-current="page">Outreach</a>
+  </nav>
+
+  <h1>B2B Outreach Tracker</h1>
+  <p class="sub">Apartment communities &amp; realtor partnerships — tracks status so nothing falls through the cracks.</p>
+
+  <div class="secret-bar">
+    <label for="secret">Admin secret</label>
+    <input type="password" id="secret" placeholder="Your INVOICE_SECRET value">
+    <button id="loadBtn">Load</button>
+  </div>
+
+  <div class="summary" id="summary">
+    <div class="scard"><div class="num" id="s-apt-total">–</div><div class="lbl">Apartments Contacted</div></div>
+    <div class="scard green"><div class="num" id="s-apt-active">–</div><div class="lbl">Apartment Partners</div></div>
+    <div class="scard"><div class="num" id="s-realtor-total">–</div><div class="lbl">Realtors Contacted</div></div>
+    <div class="scard green"><div class="num" id="s-realtor-active">–</div><div class="lbl">Realtor Partners</div></div>
+  </div>
+
+  <div class="section">
+    <h2>Apartment Communities <span class="count-badge" id="apt-count">0</span></h2>
+    <button class="toggle-add" onclick="toggleForm('apartment')">+ Add apartment contact</button>
+    <div class="addform" id="form-apartment" style="display:none;"></div>
+    <div id="list-apartment"><div class="empty">Load your data to see entries.</div></div>
+  </div>
+
+  <div class="section">
+    <h2>Realtors &amp; Brokerages <span class="count-badge" id="realtor-count">0</span></h2>
+    <button class="toggle-add" onclick="toggleForm('realtor')">+ Add realtor contact</button>
+    <div class="addform" id="form-realtor" style="display:none;"></div>
+    <div id="list-realtor"><div class="empty">Load your data to see entries.</div></div>
+  </div>
+
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const STATUSES = ["Not Contacted","Contacted","Follow-Up Scheduled","Active Partner","Not Interested"];
+  let ENTRIES = [];
+
+  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
+  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+  $('loadBtn').addEventListener('click', loadAll);
+
+  function secret() { return $('secret').value.trim(); }
+
+  function showStatus(kind, msg) {
+    const s = $('status');
+    s.className = 'status ' + kind;
+    s.textContent = msg;
+    if (kind === 'ok') setTimeout(() => { s.className = 'status'; }, 2500);
+  }
+
+  async function api(fn, payload) {
+    const resp = await fetch('/.netlify/functions/' + fn, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: secret(), ...payload }),
+    });
+    if (resp.status === 401) throw new Error('Wrong admin secret.');
+    if (!resp.ok) throw new Error('Request failed (' + resp.status + ')');
+    return resp.json();
+  }
+
+  async function loadAll() {
+    if (!secret()) return showStatus('err', 'Enter your admin secret first.');
+    $('loadBtn').disabled = true; $('loadBtn').textContent = 'Loading…';
+    try {
+      const data = await api('get-outreach', {});
+      ENTRIES = data.entries || [];
+      render();
+      showStatus('ok', 'Loaded ' + ENTRIES.length + ' contacts.');
+    } catch (e) {
+      showStatus('err', e.message);
+    }
+    $('loadBtn').disabled = false; $('loadBtn').textContent = 'Load';
+  }
+
+  function statusClass(status) {
+    if (status === 'Active Partner') return 'active';
+    if (status === 'Not Interested') return 'notinterested';
+    if (status === 'Follow-Up Scheduled') return 'followup';
+    if (status === 'Contacted') return 'contacted';
+    return '';
+  }
+
+  function render() {
+    for (const cat of ['apartment', 'realtor']) {
+      const list = $('list-' + cat);
+      const items = ENTRIES.filter(e => e.category === cat);
+      $(cat === 'apartment' ? 'apt-count' : 'realtor-count').textContent = items.length;
+
+      if (!items.length) {
+        list.innerHTML = '<div class="empty">No contacts yet. Add one above.</div>';
+      } else {
+        list.innerHTML = items.map(entryHtml).join('');
+      }
+    }
+
+    const aptTotal = ENTRIES.filter(e => e.category === 'apartment').length;
+    const aptActive = ENTRIES.filter(e => e.category === 'apartment' && e.status === 'Active Partner').length;
+    const realTotal = ENTRIES.filter(e => e.category === 'realtor').length;
+    const realActive = ENTRIES.filter(e => e.category === 'realtor' && e.status === 'Active Partner').length;
+    $('s-apt-total').textContent = aptTotal;
+    $('s-apt-active').textContent = aptActive;
+    $('s-realtor-total').textContent = realTotal;
+    $('s-realtor-active').textContent = realActive;
+  }
+
+  function entryHtml(e) {
+    const opts = STATUSES.map(s => `<option value="${s}" ${s === e.status ? 'selected' : ''}>${s}</option>`).join('');
+    const contactLine = [e.contactName, e.email, e.phone].filter(Boolean).join(' · ');
+    return `
+      <div class="entry" data-key="${e.key}">
+        <div class="entry-top">
+          <div>
+            <div class="entry-name">${escapeHtml(e.name)}</div>
+            ${contactLine ? `<div class="entry-meta">${escapeHtml(contactLine)}</div>` : ''}
+            ${e.notes ? `<div class="entry-notes">${escapeHtml(e.notes)}</div>` : ''}
+          </div>
+          <div class="entry-actions">
+            <span class="status-pill ${statusClass(e.status)}">${e.status}</span>
+            <select class="inline-status" onchange="quickStatus('${e.key}', this.value)">${opts}</select>
+            <button class="small-btn" onclick="editEntry('${e.key}')">Edit</button>
+            <button class="small-btn danger" onclick="deleteEntry('${e.key}')">Delete</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  async function quickStatus(key, status) {
+    const e = ENTRIES.find(x => x.key === key);
+    if (!e) return;
+    try {
+      await api('save-outreach', { key, category: e.category, name: e.name, contactName: e.contactName, email: e.email, phone: e.phone, notes: e.notes, status });
+      e.status = status;
+      render();
+      showStatus('ok', 'Updated ' + e.name + '.');
+    } catch (err) {
+      showStatus('err', err.message);
+    }
+  }
+
+  async function deleteEntry(key) {
+    const e = ENTRIES.find(x => x.key === key);
+    if (!e || !confirm('Delete "' + e.name + '"? This can\'t be undone.')) return;
+    try {
+      await api('delete-outreach', { key });
+      ENTRIES = ENTRIES.filter(x => x.key !== key);
+      render();
+      showStatus('ok', 'Deleted.');
+    } catch (err) {
+      showStatus('err', err.message);
+    }
+  }
+
+  function toggleForm(cat) {
+    const el = $('form-' + cat);
+    if (el.style.display === 'none') {
+      el.style.display = 'block';
+      el.innerHTML = formHtml(cat);
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  function formHtml(cat, existing) {
+    const e = existing || {};
+    return `
+      <div class="grid2">
+        <div><label>Name</label><input type="text" id="f-name-${cat}" value="${e.name ? escapeHtml(e.name) : ''}" placeholder="${cat === 'apartment' ? 'Property or management company' : 'Agent or brokerage'}"></div>
+        <div><label>Contact person</label><input type="text" id="f-contactName-${cat}" value="${e.contactName ? escapeHtml(e.contactName) : ''}" placeholder="Optional"></div>
+      </div>
+      <div class="grid2">
+        <div><label>Email</label><input type="email" id="f-email-${cat}" value="${e.email ? escapeHtml(e.email) : ''}"></div>
+        <div><label>Phone</label><input type="text" id="f-phone-${cat}" value="${e.phone ? escapeHtml(e.phone) : ''}"></div>
+      </div>
+      <label>Notes</label>
+      <input type="text" id="f-notes-${cat}" value="${e.notes ? escapeHtml(e.notes) : ''}" placeholder="Any context worth remembering">
+      <button onclick="submitForm('${cat}'${existing ? `, '${existing.key}'` : ''})">${existing ? 'Save Changes' : 'Add Contact'}</button>
+    `;
+  }
+
+  async function submitForm(cat, key) {
+    const name = $('f-name-' + cat).value.trim();
+    if (!name) return showStatus('err', 'Name is required.');
+    const payload = {
+      category: cat,
+      name,
+      contactName: $('f-contactName-' + cat).value.trim(),
+      email: $('f-email-' + cat).value.trim(),
+      phone: $('f-phone-' + cat).value.trim(),
+      notes: $('f-notes-' + cat).value.trim(),
+    };
+    if (key) payload.key = key;
+    try {
+      const result = await api('save-outreach', payload);
+      if (key) {
+        const idx = ENTRIES.findIndex(x => x.key === key);
+        ENTRIES[idx] = { ...ENTRIES[idx], ...payload };
+      } else {
+        ENTRIES.push({ key: result.key, ...payload, status: 'Not Contacted' });
+      }
+      $('form-' + cat).style.display = 'none';
+      render();
+      showStatus('ok', 'Saved ' + name + '.');
+    } catch (err) {
+      showStatus('err', err.message);
+    }
+  }
+
+  function editEntry(key) {
+    const e = ENTRIES.find(x => x.key === key);
+    if (!e) return;
+    const cat = e.category;
+    const el = $('form-' + cat);
+    el.style.display = 'block';
+    el.innerHTML = formHtml(cat, e);
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+</script>
+</body>
+</html>
