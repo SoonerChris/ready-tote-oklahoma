@@ -150,7 +150,7 @@
     }[type] || type;
   }
 
-  const invCall = (payload) => fetch('/.netlify/functions/inventory', {
+  const invCall = (payload) => fetch('/.netlify/functions/tote-stock', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ secret: $('secret').value.trim(), ...payload }),
   });
