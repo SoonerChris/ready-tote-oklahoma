@@ -31,6 +31,8 @@
   .scard.gold .num{color:var(--gold);}
   .scard.green{border-color:var(--green);background:var(--green-bg);}
   .scard.green .num{color:var(--green);}
+  .scard.red{border-color:var(--red);background:var(--red-bg);}
+  .scard.red .num{color:var(--red);}
 
   /* Sections */
   .section{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px;}
@@ -62,6 +64,7 @@
   .alert{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:10px;margin-bottom:8px;font-size:0.88rem;font-weight:500;}
   .alert.warn{background:var(--gold-bg);border:1px solid var(--gold);color:var(--ink);}
   .alert.info{background:var(--green-bg);border:1px solid var(--green);color:var(--green);}
+  .alert.danger{background:var(--red-bg);border:1px solid var(--red);color:var(--red);}
 
   .loading{text-align:center;color:var(--steel);padding:30px 0;font-size:0.9rem;}
   footer{text-align:center;font-size:0.78rem;color:var(--steel);margin-top:24px;}
@@ -141,16 +144,18 @@
     const btn = $('loadBtn');
     btn.disabled = true; btn.textContent = 'Loading…';
     try {
-      const [rResp, fResp] = await Promise.all([
+      const [rResp, fResp, iResp] = await Promise.all([
         post('get-rentals', { secret }),
         post('finance', { secret, action: 'list' }),
+        post('tote-stock', { secret, action: 'list' }),
       ]);
-      if (rResp.status === 401 || fResp.status === 401) return showErr('Wrong admin secret.');
-      if (!rResp.ok || !fResp.ok) return showErr('Load failed.');
+      if (rResp.status === 401 || fResp.status === 401 || iResp.status === 401) return showErr('Wrong admin secret.');
+      if (!rResp.ok || !fResp.ok || !iResp.ok) return showErr('Load failed.');
 
       const rd = await rResp.json();
       const fd = await fResp.json();
-      render(rd, fd);
+      const id = await iResp.json();
+      render(rd, fd, id);
       $('dashboard').style.display = 'block';
       $('status').style.display = 'none';
     } catch { showErr('Network error — use on the live site.'); }
@@ -163,11 +168,12 @@
     });
   }
 
-  function render(rd, fd) {
+  function render(rd, fd, id) {
     const rentals = rd.rentals || [];
     const reminders = rd.reminders || { delivery: [], pickup: [], review: [] };
     const expenses = fd.expenses || [];
     const mileage = fd.mileage || [];
+    const invEvents = id.events || [];
 
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
     const thisMonth = today.slice(0, 7);
@@ -183,6 +189,12 @@
     const activeRentals = rentals.filter(r => r.dropoffDate <= today && r.pickupDate >= today);
     const textsToday = reminders.delivery.length + reminders.pickup.length + reminders.review.length;
 
+    const ADD_TYPES = ['purchased', 'returned-to-service'];
+    const totesInPackage = p => { const m = String(p||'').match(/(\d+)\s*totes?/i); return m ? parseInt(m[1], 10) : 0; };
+    const totalTotesOwned = invEvents.reduce((t,e) => t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity), 0);
+    const totesDeployed = activeRentals.reduce((t,r) => t + totesInPackage(r.package), 0);
+    const totesAvailable = totalTotesOwned - totesDeployed;
+
     const ytdExpenses = expenses.filter(e => (e.date||'').slice(0,4) === thisYear).reduce((t,e) => t + (e.amount||0), 0);
     let monthlyOverhead = 0;
     for (const e of expenses) {
@@ -197,6 +209,7 @@
     const tomorrow = shiftDate(today, 1);
     const tomorrowDeliveries = rentals.filter(r => r.dropoffDate === tomorrow);
     if (tomorrowDeliveries.length > 0) alerts.push({ type: 'info', msg: `🚚 ${tomorrowDeliveries.length} deliver${tomorrowDeliveries.length>1?'ies':'y'} tomorrow` });
+    if (totesAvailable < 0) alerts.push({ type: 'danger', msg: `📦 ${Math.abs(totesAvailable)} totes oversold — check availability before booking more` });
     $('alerts').innerHTML = alerts.map(a => `<div class="alert ${a.type}">${a.msg}</div>`).join('');
 
     // ---- Summary cards ----
@@ -209,6 +222,7 @@
       <div class="scard"><div class="num">${moneyDec(monthlyOverhead)}/mo</div><div class="lbl">Overhead</div></div>
       <div class="scard"><div class="num">${moneyDec(ytdExpenses)}</div><div class="lbl">YTD expenses</div></div>
       <div class="scard"><div class="num">${ytdMiles.toLocaleString('en-US',{maximumFractionDigits:0})} mi</div><div class="lbl">YTD miles</div></div>
+      <div class="scard ${totesAvailable < 0 ? 'red' : 'green'}"><div class="num">${totesAvailable}</div><div class="lbl">Totes available</div></div>
     `;
 
     // ---- This Week schedule ----
