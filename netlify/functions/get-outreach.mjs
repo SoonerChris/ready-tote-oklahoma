@@ -1,5 +1,5 @@
 // POST /.netlify/functions/get-outreach
-// Returns all B2B outreach entries (apartments + realtors).
+// Returns all B2B outreach entries (apartments + realtors + moving companies).
 // Protected by INVOICE_SECRET (same secret as the other admin pages).
 
 import { getStore } from "@netlify/blobs";
