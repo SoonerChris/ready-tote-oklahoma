@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /.netlify/
 
-Sitemap: https://readytoteokc.com/sitemap.xml
+Sitemap: https://www.readytoteokc.com/sitemap.xml
