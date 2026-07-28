@@ -23,7 +23,7 @@ export default async () => {
   try { sentFlags = (await metaStore.get("sentFlags", { type: "json" })) || {}; } catch {}
 
   const rem = computeReminders(rentals, process.env.GOOGLE_REVIEW_LINK || "", sentFlags);
-  const total = rem.delivery.length + rem.pickup.length + rem.review.length;
+  const total = rem.delivery.length + rem.pickup.length + rem.review.length + rem.followup.length;
 
   if (total === 0) {
     console.log("No reminders due today.");
@@ -57,6 +57,7 @@ export default async () => {
     ${section("🚚 Delivery tomorrow", rem.delivery)}
     ${section("📦 Pickup in 2 days", rem.pickup)}
     ${section("⭐ Review requests", rem.review)}
+    ${section("💬 Invoice follow-ups", rem.followup)}
   </div>`;
 
   // Collect ICS calendar attachments for delivery + pickup reminders
