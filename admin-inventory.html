@@ -17,6 +17,31 @@
   .stats .num.warn{color:var(--red);}
   .stats .num.gold{color:var(--gold);}
   .stats .num.green{color:var(--green);}
+
+  /* Expected inventory calendar */
+  .exp-legend{display:flex; gap:14px; font-size:0.76rem; color:var(--steel); flex-wrap:wrap; margin-bottom:10px;}
+  .exp-legend span{display:inline-flex; align-items:center; gap:5px;}
+  .exp-dot{width:9px; height:9px; border-radius:50%; display:inline-block;}
+  .exp-dot.open{background:var(--green);}
+  .exp-dot.limited{background:var(--gold);}
+  .exp-dot.booked{background:var(--red);}
+
+  .exp-month{margin-bottom:18px;}
+  .exp-month h3{font-size:0.9rem; margin:0 0 8px; color:var(--ink);}
+  .exp-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px;}
+  .exp-dow{font-size:0.65rem; color:var(--steel); text-align:center; font-weight:bold;}
+  .exp-day{
+    aspect-ratio:1; border-radius:6px; border:1px solid var(--line);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:0.7rem; background:var(--cream); position:relative;
+  }
+  .exp-day.blank{visibility:hidden;}
+  .exp-day.open{background:var(--green-bg); border-color:var(--green);}
+  .exp-day.limited{background:var(--gold-bg); border-color:var(--gold);}
+  .exp-day.booked{background:var(--red-bg); border-color:var(--red); color:var(--red);}
+  .exp-day .n{font-weight:bold; font-size:0.68rem;}
+  .exp-day .a{font-size:0.62rem; margin-top:1px;}
+  .exp-scroll{max-height:520px; overflow-y:auto; padding-right:4px;}
 </style>
 </head>
 <body>
@@ -31,7 +56,7 @@
 </nav>
 <div class="card">
   <h1>Tote Inventory</h1>
-  <p class="sub">Track totes owned and estimate how many are out on rental right now. "Out on rental" is estimated from tote counts parsed out of active rentals' package names.</p>
+  <p class="sub">Track totes owned and estimate how many are out on rental right now — and project availability forward using every rental on the books (not just active ones). Estimates are based on tote counts parsed out of package names.</p>
 
   <label>Admin secret</label>
   <input type="password" id="secret" placeholder="Your INVOICE_SECRET value">
@@ -40,6 +65,17 @@
 
   <div id="results" style="display:none;">
     <div class="rem stats" id="statCards"></div>
+
+    <h2>Expected Inventory (Next 60 Days)</h2>
+    <div class="rem">
+      <div class="exp-legend">
+        <span><i class="exp-dot open"></i>Plenty free</span>
+        <span><i class="exp-dot limited"></i>Under 20 free</span>
+        <span><i class="exp-dot booked"></i>Zero or oversold</span>
+      </div>
+      <p class="note" style="margin:0 0 12px;">Each cell is totes owned minus everything scheduled to be out that day, across all logged rentals (not just currently active ones), so you can see upcoming crunches before they happen.</p>
+      <div class="exp-scroll" id="expectedCal"></div>
+    </div>
 
     <h2>Log an event</h2>
     <div class="rem">
@@ -74,6 +110,7 @@
   const ADD_TYPES = ['purchased', 'returned-to-service'];
   let EVENTS = [];
   let ACTIVE_RENTALS = [];
+  let ALL_RENTALS = [];
 
   $('loadBtn').addEventListener('click', load);
   if ($('secret').value) load();
@@ -98,9 +135,11 @@
       EVENTS = id.events || [];
 
       const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
-      ACTIVE_RENTALS = (rd.rentals || []).filter(r => r.dropoffDate <= today && r.pickupDate >= today);
+      ALL_RENTALS = rd.rentals || [];
+      ACTIVE_RENTALS = ALL_RENTALS.filter(r => r.dropoffDate <= today && r.pickupDate >= today);
 
       render();
+      renderExpected();
       $('results').style.display = 'block';
       $('status').style.display = 'none';
     } catch { showErr('Network error — use this page on the live site.'); }
@@ -140,6 +179,89 @@
     }).join('') : '<p class="empty">No inventory events logged yet.</p>';
   }
 
+  // ---- Expected Inventory (forward-looking calendar) ----
+  // Same math as the public availability.mjs function, but run client-side here
+  // against ALL logged rentals (not just active ones) so future crunches show up
+  // before they happen, and with exact counts shown since this page is internal-only.
+  function shiftDate(iso, n) {
+    const d = new Date(iso + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function renderExpected() {
+    const totalOwned = EVENTS.reduce((t, e) => t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity), 0);
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+    const DAYS_AHEAD = 60;
+
+    const days = [];
+    for (let i = 0; i < DAYS_AHEAD; i++) {
+      const date = shiftDate(today, i);
+      const deployed = ALL_RENTALS.reduce((t, r) => {
+        if (r.dropoffDate && r.pickupDate && r.dropoffDate <= date && r.pickupDate >= date) {
+          return t + totesInPackage(r.package);
+        }
+        return t;
+      }, 0);
+      days.push({ date, available: totalOwned - deployed });
+    }
+
+    const wrap = $('expectedCal');
+    wrap.innerHTML = '';
+
+    const byMonth = {};
+    days.forEach(d => {
+      const key = d.date.slice(0, 7);
+      (byMonth[key] = byMonth[key] || []).push(d);
+    });
+
+    const dowNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+    Object.keys(byMonth).forEach(monthKey => {
+      const entries = byMonth[monthKey];
+      const first = new Date(entries[0].date + 'T12:00:00');
+      const monthLabel = first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+      const monthDiv = document.createElement('div');
+      monthDiv.className = 'exp-month';
+      const h3 = document.createElement('h3');
+      h3.textContent = monthLabel;
+      monthDiv.appendChild(h3);
+
+      const grid = document.createElement('div');
+      grid.className = 'exp-grid';
+      dowNames.forEach(n => {
+        const el = document.createElement('div');
+        el.className = 'exp-dow';
+        el.textContent = n;
+        grid.appendChild(el);
+      });
+
+      const leadingBlanks = first.getDay();
+      for (let i = 0; i < leadingBlanks; i++) {
+        const b = document.createElement('div');
+        b.className = 'exp-day blank';
+        grid.appendChild(b);
+      }
+
+      entries.forEach(entry => {
+        const cell = document.createElement('div');
+        const dayNum = parseInt(entry.date.slice(8, 10), 10);
+        let cls = 'exp-day';
+        if (entry.available <= 0) cls += ' booked';
+        else if (entry.available < 20) cls += ' limited';
+        else cls += ' open';
+        cell.className = cls;
+        cell.title = entry.date + ': ' + entry.available + ' available';
+        cell.innerHTML = `<span class="n">${dayNum}</span><span class="a">${entry.available}</span>`;
+        grid.appendChild(cell);
+      });
+
+      monthDiv.appendChild(grid);
+      wrap.appendChild(monthDiv);
+    });
+  }
+
   function labelFor(type) {
     return {
       purchased: 'Purchased new totes',
@@ -157,7 +279,7 @@
 
   async function reload() {
     const resp = await invCall({ action: 'list' });
-    if (resp.ok) { const d = await resp.json(); EVENTS = d.events || []; render(); }
+    if (resp.ok) { const d = await resp.json(); EVENTS = d.events || []; render(); renderExpected(); }
   }
 
   $('evAddBtn').addEventListener('click', async () => {
