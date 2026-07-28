@@ -219,6 +219,7 @@
           <span><i class="dot booked"></i>Booked out</span>
         </div>
       </div>
+      <p class="note" style="color:var(--steel); font-size:0.8rem; margin:-4px 0 12px;">Once you pick a package above, colors reflect whether <em>that package</em> can be fulfilled on each day. Before you pick one, colors just show general stock levels.</p>
       <div id="calendarWrap"><div class="loading">Loading live availability…</div></div>
     </div>
   </section>
@@ -294,7 +295,10 @@
 (function(){
   const $ = (id) => document.getElementById(id);
 
-  const MS_DAY = 86400000;
+  // Smallest package size, used as the "general stock is tight" threshold
+  // when no specific package has been chosen yet.
+  const SMALLEST_PACKAGE = 20;
+
   function parseISO(iso){ return new Date(iso + 'T12:00:00'); }
   function toISO(d){ return d.toLocaleDateString('en-CA'); }
   function addDays(iso, n){ const d = parseISO(iso); d.setDate(d.getDate()+n); return toISO(d); }
@@ -370,10 +374,12 @@
   }
 
   // ---- Status banner ----
-  // Note: we deliberately only ever show a status word (Available / Limited / Booked out),
-  // never the raw tote count. Exact inventory numbers aren't shown to customers.
+  // Once a package is selected, availability for a given window is binary:
+  // either every day in the window has enough totes for that package, or it
+  // doesn't. There's no "partial" tote rental, so we never show a soft
+  // "tight, might still work" message once a specific package is in play —
+  // that used to invite requests that could never actually be fulfilled.
   function updateStatus(){
-    const banner = $('statusBanner');
     const dDate = $('deliveryDate').value, pDate = $('pickupDate').value;
 
     if (!dDate) {
@@ -400,10 +406,8 @@
 
     if (minAvail >= selectedTotes) {
       setBanner('ok', 'Totes are available for these dates.');
-    } else if (minAvail > 0) {
-      setBanner('limited', 'Tight for part of this window — we may still make it work, so go ahead and request it.');
     } else {
-      setBanner('none', 'Fully booked for part of this window. Try nearby dates or request anyway — we\'ll reach out with options.');
+      setBanner('none', 'Not enough totes on hand for this package during part of this window. Try a smaller package, different dates, or give us a call and we\'ll see what we can do.');
     }
   }
   function setBanner(kind, msg){
@@ -413,8 +417,14 @@
   }
 
   // ---- Calendar ----
-  // Cells show a status word (Open / Limited / Full), never the raw tote count,
-  // so exact inventory numbers stay internal.
+  // Cells show a status word (Open / Limited / Full), never the raw tote
+  // count, so exact inventory numbers stay internal.
+  //
+  // Once a package is selected, coloring is binary (Open if it fits, Full if
+  // it doesn't) — no "Limited" state, since a specific package either can or
+  // can't be fulfilled on a given day. "Limited" only appears in the general
+  // browsing view before a package is chosen, to flag days where overall
+  // stock is getting tight (below the smallest package size).
   function renderCalendar(){
     if (!AVAIL) return;
     const wrap = $('calendarWrap');
@@ -463,9 +473,13 @@
         let statusWord = '';
         if (entry.date < AVAIL.today) {
           cls += ' past';
+        } else if (selectedTotes > 0) {
+          // A specific package is chosen: binary fulfillability.
+          if (entry.available >= selectedTotes) { cls += ' open'; statusWord = 'Open'; }
+          else { cls += ' booked'; statusWord = 'Full'; }
         } else {
-          const need = selectedTotes || 1;
-          if (entry.available >= need) { cls += ' open'; statusWord = 'Open'; }
+          // No package chosen yet: general stock signal.
+          if (entry.available >= SMALLEST_PACKAGE) { cls += ' open'; statusWord = 'Open'; }
           else if (entry.available > 0) { cls += ' limited'; statusWord = 'Low'; }
           else { cls += ' booked'; statusWord = 'Full'; }
         }
