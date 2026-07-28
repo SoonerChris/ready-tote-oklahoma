@@ -102,6 +102,7 @@
   <div class="section">
     <h2>Moving Companies <span class="count-badge" id="mover-count">0</span></h2>
     <button class="toggle-add" onclick="toggleForm('mover')">+ Add mover contact</button>
+    <button class="toggle-add" onclick="importTopMovers()" style="background:var(--gold-bg);border:1px solid var(--gold);color:var(--gold);">+ Import top 5 verified movers</button>
     <div class="addform" id="form-mover" style="display:none;"></div>
     <div id="list-mover"><div class="empty">Load your data to see entries.</div></div>
   </div>
@@ -113,6 +114,34 @@
   const $ = (id) => document.getElementById(id);
   const STATUSES = ["Not Contacted","Contacted","Follow-Up Scheduled","Active Partner","Not Interested"];
   let ENTRIES = [];
+
+  const TOP_MOVERS = [
+    { name: "Thunder Moving", contactName: "", phone: "(405) 757-5354", email: "", notes: "BBB A+, family-owned since 2019, explicitly services Moore/Edmond/Norman. Top pick, largest fleet (13 trucks)." },
+    { name: "Boxed Out Moving", contactName: "Jonathan", phone: "(405) 820-4552", email: "jonathan@boxedoutmoving.com", notes: "Also does apartment relocations, good overlap with our apartment partners. Explicitly covers Moore." },
+    { name: "On Call Moving", contactName: "Blake Boyd", phone: "(405) 586-5243", email: "info@oncallmovingcompany.com", notes: "Established OKC metro operation, family-owned." },
+    { name: "The 2 Move Crew", contactName: "", phone: "(405) 430-3529", email: "the2movecrew@gmail.com", notes: "Based in Norman, serves within 100-mile radius, easily reaches Moore/OKC." },
+    { name: "High Quality Moving OKC", contactName: "", phone: "(580) 595-1262", email: "", notes: "Claims 2,000+ OKC moves. Verify current reviews before investing heavily, contact info less established." },
+  ];
+
+  async function importTopMovers() {
+    if (!secret()) return showStatus('err', 'Enter your admin secret first.');
+    if (!confirm('Import the 5 verified mover contacts? Skip this if you already added them.')) return;
+    let added = 0;
+    for (const m of TOP_MOVERS) {
+      if (ENTRIES.some(e => e.category === 'mover' && e.name === m.name)) continue;
+      try {
+        const payload = { category: 'mover', name: m.name, contactName: m.contactName, email: m.email, phone: m.phone, notes: m.notes };
+        const result = await api('save-outreach', payload);
+        ENTRIES.push({ key: result.key, ...payload, status: 'Not Contacted' });
+        added++;
+      } catch (err) {
+        showStatus('err', 'Failed on ' + m.name + ': ' + err.message);
+        return;
+      }
+    }
+    render();
+    showStatus('ok', added ? `Imported ${added} mover contact(s).` : 'All 5 movers already in your list.');
+  }
 
   $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
   $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
