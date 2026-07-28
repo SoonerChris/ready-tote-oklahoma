@@ -68,7 +68,7 @@
   </nav>
 
   <h1>B2B Outreach Tracker</h1>
-  <p class="sub">Apartment communities, realtor &amp; moving company partnerships — tracks status so nothing falls through the cracks.</p>
+  <p class="sub">Apartment communities, realtor, remodeler &amp; moving company partnerships — tracks status so nothing falls through the cracks.</p>
 
   <div class="secret-bar">
     <label for="secret">Admin secret</label>
@@ -81,6 +81,8 @@
     <div class="scard green"><div class="num" id="s-apt-active">–</div><div class="lbl">Apartment Partners</div></div>
     <div class="scard"><div class="num" id="s-realtor-total">–</div><div class="lbl">Realtors Contacted</div></div>
     <div class="scard green"><div class="num" id="s-realtor-active">–</div><div class="lbl">Realtor Partners</div></div>
+    <div class="scard"><div class="num" id="s-remodeler-total">–</div><div class="lbl">Remodelers Contacted</div></div>
+    <div class="scard green"><div class="num" id="s-remodeler-active">–</div><div class="lbl">Remodeler Partners</div></div>
     <div class="scard"><div class="num" id="s-mover-total">–</div><div class="lbl">Movers Contacted</div></div>
     <div class="scard green"><div class="num" id="s-mover-active">–</div><div class="lbl">Mover Partners</div></div>
   </div>
@@ -97,6 +99,14 @@
     <button class="toggle-add" onclick="toggleForm('realtor')">+ Add realtor contact</button>
     <div class="addform" id="form-realtor" style="display:none;"></div>
     <div id="list-realtor"><div class="empty">Load your data to see entries.</div></div>
+  </div>
+
+  <div class="section">
+    <h2>Remodeling Companies <span class="count-badge" id="remodeler-count">0</span></h2>
+    <button class="toggle-add" onclick="toggleForm('remodeler')">+ Add remodeler contact</button>
+    <button class="toggle-add" onclick="importTopRemodelers()" style="background:var(--gold-bg);border:1px solid var(--gold);color:var(--gold);">+ Import top 9 remodelers</button>
+    <div class="addform" id="form-remodeler" style="display:none;"></div>
+    <div id="list-remodeler"><div class="empty">Load your data to see entries.</div></div>
   </div>
 
   <div class="section">
@@ -123,6 +133,18 @@
     { name: "High Quality Moving OKC", contactName: "", phone: "(580) 595-1262", email: "", notes: "Claims 2,000+ OKC moves. Verify current reviews before investing heavily, contact info less established." },
   ];
 
+  const TOP_REMODELERS = [
+    { name: "Guss Construction and Remodeling", contactName: "", phone: "(405) 550-7799", email: "", notes: "4.8★ (78 reviews). Moore, OK, closest to home base. Kitchen/bath remodels." },
+    { name: "A2Z Construction and Remodeling", contactName: "", phone: "(405) 443-5642", email: "", notes: "4.8★ (142 reviews). Edmond + Norman locations. High-volume kitchen/bath remodeler." },
+    { name: "Ten Key Home & Kitchen Remodels", contactName: "", phone: "(405) 531-9095", email: "", notes: "4.7★ (71 reviews). OKC. Kitchen/bath specialist, handles large whole-home projects." },
+    { name: "OKC Renovations", contactName: "Blake", phone: "(405) 642-0015", email: "", notes: "4.8★ (161 reviews). OKC. Full home renovations, highest review volume in the list." },
+    { name: "A Karen Black Company", contactName: "", phone: "(405) 858-8333", email: "", notes: "4.9★ (11 reviews). OKC. Design-build kitchen/bath remodeler, smaller shop." },
+    { name: "Heritage Renovations", contactName: "Dan", phone: "(405) 887-4121", email: "", notes: "5.0★ (11 reviews). OKC. Kitchen, attic conversion, whole-home projects." },
+    { name: "G1 Remodeling", contactName: "Ben", phone: "(405) 696-4050", email: "", notes: "5.0★ (4 reviews). Norman. Bathroom remodel specialist, also does rental/Airbnb remodels." },
+    { name: "Roadhouse Renovations LLC", contactName: "", phone: "(580) 559-2680", email: "", notes: "New listing, no reviews yet. Ada, OK coverage." },
+    { name: "TR Contracting", contactName: "", phone: "(580) 217-9342", email: "", notes: "5.0★ (40 reviews). Ada, OK. Mostly roofing/exterior/storm restoration but covers Ada." },
+  ];
+
   async function importTopMovers() {
     if (!secret()) return showStatus('err', 'Enter your admin secret first.');
     if (!confirm('Import the 5 verified mover contacts? Skip this if you already added them.')) return;
@@ -141,6 +163,26 @@
     }
     render();
     showStatus('ok', added ? `Imported ${added} mover contact(s).` : 'All 5 movers already in your list.');
+  }
+
+  async function importTopRemodelers() {
+    if (!secret()) return showStatus('err', 'Enter your admin secret first.');
+    if (!confirm('Import the 9 verified remodeler contacts? Skip this if you already added them.')) return;
+    let added = 0;
+    for (const m of TOP_REMODELERS) {
+      if (ENTRIES.some(e => e.category === 'remodeler' && e.name === m.name)) continue;
+      try {
+        const payload = { category: 'remodeler', name: m.name, contactName: m.contactName, email: m.email, phone: m.phone, notes: m.notes };
+        const result = await api('save-outreach', payload);
+        ENTRIES.push({ key: result.key, ...payload, status: 'Not Contacted' });
+        added++;
+      } catch (err) {
+        showStatus('err', 'Failed on ' + m.name + ': ' + err.message);
+        return;
+      }
+    }
+    render();
+    showStatus('ok', added ? `Imported ${added} remodeler contact(s).` : 'All 9 remodelers already in your list.');
   }
 
   $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
@@ -190,8 +232,8 @@
   }
 
   function render() {
-    const countIds = { apartment: 'apt-count', realtor: 'realtor-count', mover: 'mover-count' };
-    for (const cat of ['apartment', 'realtor', 'mover']) {
+    const countIds = { apartment: 'apt-count', realtor: 'realtor-count', remodeler: 'remodeler-count', mover: 'mover-count' };
+    for (const cat of ['apartment', 'realtor', 'remodeler', 'mover']) {
       const list = $('list-' + cat);
       const items = ENTRIES.filter(e => e.category === cat);
       $(countIds[cat]).textContent = items.length;
@@ -207,12 +249,16 @@
     const aptActive = ENTRIES.filter(e => e.category === 'apartment' && e.status === 'Active Partner').length;
     const realTotal = ENTRIES.filter(e => e.category === 'realtor').length;
     const realActive = ENTRIES.filter(e => e.category === 'realtor' && e.status === 'Active Partner').length;
+    const remodTotal = ENTRIES.filter(e => e.category === 'remodeler').length;
+    const remodActive = ENTRIES.filter(e => e.category === 'remodeler' && e.status === 'Active Partner').length;
     const moverTotal = ENTRIES.filter(e => e.category === 'mover').length;
     const moverActive = ENTRIES.filter(e => e.category === 'mover' && e.status === 'Active Partner').length;
     $('s-apt-total').textContent = aptTotal;
     $('s-apt-active').textContent = aptActive;
     $('s-realtor-total').textContent = realTotal;
     $('s-realtor-active').textContent = realActive;
+    $('s-remodeler-total').textContent = remodTotal;
+    $('s-remodeler-active').textContent = remodActive;
     $('s-mover-total').textContent = moverTotal;
     $('s-mover-active').textContent = moverActive;
   }
@@ -282,7 +328,7 @@
     const e = existing || {};
     return `
       <div class="grid2">
-        <div><label>Name</label><input type="text" id="f-name-${cat}" value="${e.name ? escapeHtml(e.name) : ''}" placeholder="${cat === 'apartment' ? 'Property or management company' : cat === 'realtor' ? 'Agent or brokerage' : 'Moving company name'}"></div>
+        <div><label>Name</label><input type="text" id="f-name-${cat}" value="${e.name ? escapeHtml(e.name) : ''}" placeholder="${cat === 'apartment' ? 'Property or management company' : cat === 'realtor' ? 'Agent or brokerage' : cat === 'remodeler' ? 'Remodeling or contracting company' : 'Moving company name'}"></div>
         <div><label>Contact person</label><input type="text" id="f-contactName-${cat}" value="${e.contactName ? escapeHtml(e.contactName) : ''}" placeholder="Optional"></div>
       </div>
       <div class="grid2">
