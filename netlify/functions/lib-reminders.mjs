@@ -86,6 +86,12 @@ export function reviewMessageFor(rental, reviewLink) {
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
 
+export function followupMessageFor(rental) {
+  const first = (rental.name || "there").split(" ")[0];
+  const msg = `Hi ${first}, it's Chris with Ready Tote Oklahoma! Just wanted to make sure you got the invoice we sent over for your tote rental. Let me know if you have any questions, happy to help however I can!`;
+  return { message: msg, sms: smsLink(rental.phone, msg) };
+}
+
 export function deliveryMessageFor(rental) {
   const first = (rental.name || "there").split(" ")[0];
   const self = rental.serviceType === "self";

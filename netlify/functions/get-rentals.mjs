@@ -3,7 +3,7 @@
 // Protected by INVOICE_SECRET (same secret as the invoice admin page).
 
 import { getStore } from "@netlify/blobs";
-import { computeReminders, reviewMessageFor, deliveryMessageFor, pickupMessageFor } from "./lib-reminders.mjs";
+import { computeReminders, reviewMessageFor, deliveryMessageFor, pickupMessageFor, followupMessageFor } from "./lib-reminders.mjs";
 
 export default async (request) => {
   if (request.method !== "POST") {
@@ -37,9 +37,11 @@ export default async (request) => {
     const rv = reviewMessageFor(r, reviewLink);
     const dv = deliveryMessageFor(r);
     const pv = pickupMessageFor(r);
+    const fv = followupMessageFor(r);
     r.reviewSms = rv.sms;
     r.deliverySms = dv.sms;
     r.pickupSms = pv.sms;
+    r.followupSms = fv.sms;
   }
 
   return new Response(JSON.stringify({ rentals, reminders, sentFlags }), {
