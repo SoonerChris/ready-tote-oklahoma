@@ -46,7 +46,7 @@ export default async (request) => {
 
       // Fallback: Text Search with location bias (better for new listings)
       if (!placeId) {
-        const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(placeName + " Oklahoma")}&location=35.1157,-97.2023&radius=50000&key=${apiKey}`;
+        const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(placeName + " Oklahoma")}&location=35.327,-97.555&radius=50000&key=${apiKey}`;
         const searchResp = await fetch(searchUrl);
         const searchData = await searchResp.json();
         if (searchData.results && searchData.results.length > 0) {
