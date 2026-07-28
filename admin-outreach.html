@@ -68,7 +68,7 @@
   </nav>
 
   <h1>B2B Outreach Tracker</h1>
-  <p class="sub">Apartment communities &amp; realtor partnerships — tracks status so nothing falls through the cracks.</p>
+  <p class="sub">Apartment communities, realtor &amp; moving company partnerships — tracks status so nothing falls through the cracks.</p>
 
   <div class="secret-bar">
     <label for="secret">Admin secret</label>
@@ -81,6 +81,8 @@
     <div class="scard green"><div class="num" id="s-apt-active">–</div><div class="lbl">Apartment Partners</div></div>
     <div class="scard"><div class="num" id="s-realtor-total">–</div><div class="lbl">Realtors Contacted</div></div>
     <div class="scard green"><div class="num" id="s-realtor-active">–</div><div class="lbl">Realtor Partners</div></div>
+    <div class="scard"><div class="num" id="s-mover-total">–</div><div class="lbl">Movers Contacted</div></div>
+    <div class="scard green"><div class="num" id="s-mover-active">–</div><div class="lbl">Mover Partners</div></div>
   </div>
 
   <div class="section">
@@ -95,6 +97,13 @@
     <button class="toggle-add" onclick="toggleForm('realtor')">+ Add realtor contact</button>
     <div class="addform" id="form-realtor" style="display:none;"></div>
     <div id="list-realtor"><div class="empty">Load your data to see entries.</div></div>
+  </div>
+
+  <div class="section">
+    <h2>Moving Companies <span class="count-badge" id="mover-count">0</span></h2>
+    <button class="toggle-add" onclick="toggleForm('mover')">+ Add mover contact</button>
+    <div class="addform" id="form-mover" style="display:none;"></div>
+    <div id="list-mover"><div class="empty">Load your data to see entries.</div></div>
   </div>
 
   <div class="status" id="status"></div>
@@ -152,10 +161,11 @@
   }
 
   function render() {
-    for (const cat of ['apartment', 'realtor']) {
+    const countIds = { apartment: 'apt-count', realtor: 'realtor-count', mover: 'mover-count' };
+    for (const cat of ['apartment', 'realtor', 'mover']) {
       const list = $('list-' + cat);
       const items = ENTRIES.filter(e => e.category === cat);
-      $(cat === 'apartment' ? 'apt-count' : 'realtor-count').textContent = items.length;
+      $(countIds[cat]).textContent = items.length;
 
       if (!items.length) {
         list.innerHTML = '<div class="empty">No contacts yet. Add one above.</div>';
@@ -168,10 +178,14 @@
     const aptActive = ENTRIES.filter(e => e.category === 'apartment' && e.status === 'Active Partner').length;
     const realTotal = ENTRIES.filter(e => e.category === 'realtor').length;
     const realActive = ENTRIES.filter(e => e.category === 'realtor' && e.status === 'Active Partner').length;
+    const moverTotal = ENTRIES.filter(e => e.category === 'mover').length;
+    const moverActive = ENTRIES.filter(e => e.category === 'mover' && e.status === 'Active Partner').length;
     $('s-apt-total').textContent = aptTotal;
     $('s-apt-active').textContent = aptActive;
     $('s-realtor-total').textContent = realTotal;
     $('s-realtor-active').textContent = realActive;
+    $('s-mover-total').textContent = moverTotal;
+    $('s-mover-active').textContent = moverActive;
   }
 
   function entryHtml(e) {
@@ -239,7 +253,7 @@
     const e = existing || {};
     return `
       <div class="grid2">
-        <div><label>Name</label><input type="text" id="f-name-${cat}" value="${e.name ? escapeHtml(e.name) : ''}" placeholder="${cat === 'apartment' ? 'Property or management company' : 'Agent or brokerage'}"></div>
+        <div><label>Name</label><input type="text" id="f-name-${cat}" value="${e.name ? escapeHtml(e.name) : ''}" placeholder="${cat === 'apartment' ? 'Property or management company' : cat === 'realtor' ? 'Agent or brokerage' : 'Moving company name'}"></div>
         <div><label>Contact person</label><input type="text" id="f-contactName-${cat}" value="${e.contactName ? escapeHtml(e.contactName) : ''}" placeholder="Optional"></div>
       </div>
       <div class="grid2">
