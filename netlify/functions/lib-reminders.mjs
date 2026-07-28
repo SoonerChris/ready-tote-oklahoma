@@ -49,17 +49,6 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}) {
         }
       }
     }
-    // Invoice follow-up: invoiced 3 days ago, skip historical backfilled entries
-    if (!r.backfilled && r.invoicedAt) {
-      const invoicedDate = r.invoicedAt.slice(0, 10);
-      if (invoicedDate === shiftDate(today, -3)) {
-        const msg = `Hi ${first}, it's Chris with Ready Tote Oklahoma! Just wanted to make sure you got the invoice we sent over for your tote rental. Let me know if you have any questions, happy to help however I can!`;
-        const flagId = "followup:" + (r.key || r.phone + invoicedDate);
-        if (!sentFlags[flagId]) {
-          out.followup.push({ ...r, flagId, address: `Invoiced ${friendlyDate(invoicedDate)}`, message: msg, sms: smsLink(r.phone, msg) });
-        }
-      }
-    }
 
     // Delivery reminder: drop-off is tomorrow
     if (r.dropoffDate === shiftDate(today, 1)) {
