@@ -18,8 +18,8 @@ export default async (request) => {
   for (const f of required) {
     if (!body[f]) return new Response(`Missing field: ${f}`, { status: 400 });
   }
-  if (!["apartment", "realtor", "mover"].includes(body.category)) {
-    return new Response("category must be 'apartment', 'realtor', or 'mover'", { status: 400 });
+  if (!["apartment", "realtor", "remodeler", "mover"].includes(body.category)) {
+    return new Response("category must be 'apartment', 'realtor', 'remodeler', or 'mover'", { status: 400 });
   }
 
   try {
