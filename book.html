@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Check Tote Availability & Book | Ready Tote Oklahoma</title>
+<meta name="description" content="See live tote availability and request your booking. 20, 40, or 60 heavy-duty moving totes delivered across OKC metro and the Ada area.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1E1B18;
+    --ink-2:#2B2620;
+    --yellow:#C99A32;
+    --yellow-2:#D9AE4E;
+    --cream:#F5F1E7;
+    --white:#FFFFFF;
+    --steel:#6B6259;
+    --crate-red:#B3481D;
+    --green:#3C7A4B;
+    --green-bg:#E9F3EB;
+    --line-dark: rgba(30,27,24,0.12);
+    --radius: 4px;
+    --max: 1120px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    font-family:'Barlow', sans-serif;
+    color:var(--ink);
+    background:var(--cream);
+    line-height:1.5;
+  }
+  h1,h2,h3{
+    font-family:'Archivo Black', sans-serif;
+    font-weight:400;
+    letter-spacing:-0.01em;
+    line-height:1.05;
+    margin:0;
+  }
+  .mono{ font-family:'JetBrains Mono', monospace; }
+  .wrap{ max-width:var(--max); margin:0 auto; padding:0 20px; }
+  a{ color:inherit; }
+
+  /* Header */
+  header{ background:var(--ink); padding:16px 0; }
+  header .wrap{ display:flex; align-items:center; justify-content:space-between; gap:16px; }
+  header .logo img{ height:44px; width:auto; display:block; }
+  header nav a{ color:var(--white); text-decoration:none; font-weight:600; font-size:0.92rem; }
+  header .phone{ color:var(--yellow-2); font-weight:bold; text-decoration:none; font-family:'JetBrains Mono', monospace; }
+
+  /* Hero */
+  .hero{ padding:48px 0 28px; text-align:center; }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.78rem; letter-spacing:0.12em; text-transform:uppercase;
+    color:var(--yellow); font-weight:bold; margin-bottom:10px; display:block;
+  }
+  .hero h1{ font-size:clamp(1.8rem, 4vw, 2.6rem); margin-bottom:12px; }
+  .hero p{ color:var(--steel); max-width:560px; margin:0 auto; font-size:1.02rem; }
+
+  /* Sections */
+  section.block{ padding:28px 0; }
+  .card{ background:var(--white); border:1px solid var(--line-dark); border-radius:14px; padding:24px; }
+
+  /* Package cards */
+  .pkg-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media(max-width:800px){ .pkg-grid{ grid-template-columns:repeat(2,1fr);} }
+  @media(max-width:480px){ .pkg-grid{ grid-template-columns:1fr;} }
+  .pkg-card{
+    background:var(--white); border:2px solid var(--line-dark); border-radius:12px;
+    padding:18px 16px; cursor:pointer; text-align:center; transition:border-color .12s, transform .12s;
+  }
+  .pkg-card:hover{ transform:translateY(-2px); }
+  .pkg-card.selected{ border-color:var(--yellow); background:#FBF6EA; }
+  .pkg-card .name{ font-weight:bold; font-size:0.92rem; margin-bottom:4px; }
+  .pkg-card .totes{ color:var(--steel); font-size:0.8rem; margin-bottom:8px; }
+  .pkg-card .price{ font-family:'Archivo Black',sans-serif; font-size:1.3rem; color:var(--ink); }
+  .pkg-card .price span{ font-size:0.7rem; font-weight:400; font-family:'Barlow',sans-serif; color:var(--steel); }
+
+  /* Date + status */
+  .date-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:18px; }
+  @media(max-width:560px){ .date-row{ grid-template-columns:1fr; } }
+  label{ display:block; font-size:0.85rem; font-weight:600; margin-bottom:14px; }
+  input, select{
+    display:block; width:100%; margin-top:6px; padding:11px 12px; font-size:0.95rem;
+    border:1px solid var(--line-dark); border-radius:8px; background:var(--cream);
+    font-family:inherit; color:var(--ink);
+  }
+  input:focus, select:focus{ outline:2px solid var(--yellow); outline-offset:1px; }
+
+  .status-banner{
+    margin-top:16px; padding:14px 16px; border-radius:10px; font-weight:600; font-size:0.92rem;
+    display:none; align-items:center; gap:10px;
+  }
+  .status-banner.show{ display:flex; }
+  .status-banner.ok{ background:var(--green-bg); color:var(--green); border:1px solid var(--green); }
+  .status-banner.limited{ background:#FBF3E1; color:#946B15; border:1px solid var(--yellow); }
+  .status-banner.none{ background:#FBEAE6; color:var(--crate-red); border:1px solid var(--crate-red); }
+  .status-banner.neutral{ background:var(--cream); color:var(--steel); border:1px solid var(--line-dark); }
+
+  /* Calendar */
+  .cal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px; }
+  .cal-legend{ display:flex; gap:14px; font-size:0.78rem; color:var(--steel); flex-wrap:wrap; }
+  .cal-legend span{ display:inline-flex; align-items:center; gap:5px; }
+  .dot{ width:10px; height:10px; border-radius:50%; display:inline-block; }
+  .dot.open{ background:var(--green); }
+  .dot.limited{ background:var(--yellow); }
+  .dot.booked{ background:var(--crate-red); }
+  .dot.past{ background:#D8D2C4; }
+
+  .month{ margin-bottom:22px; }
+  .month h3{ font-size:1rem; margin-bottom:10px; }
+  .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+  .cal-dow{ font-size:0.7rem; color:var(--steel); text-align:center; font-weight:bold; }
+  .cal-day{
+    aspect-ratio:1; border-radius:8px; border:1px solid var(--line-dark);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:0.78rem; cursor:pointer; background:var(--cream); position:relative;
+  }
+  .cal-day.blank{ visibility:hidden; cursor:default; }
+  .cal-day.past{ color:#B7B0A2; cursor:default; background:transparent; border-color:transparent; }
+  .cal-day.open{ background:var(--green-bg); border-color:var(--green); }
+  .cal-day.limited{ background:#FBF3E1; border-color:var(--yellow); }
+  .cal-day.booked{ background:#FBEAE6; border-color:var(--crate-red); color:var(--crate-red); }
+  .cal-day.selected{ outline:2px solid var(--ink); outline-offset:1px; font-weight:bold; }
+  .cal-day .n{ font-weight:bold; }
+  .cal-day .a{ font-size:0.62rem; margin-top:1px; }
+
+  /* Form */
+  .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
+  @media(max-width:560px){ .form-grid{ grid-template-columns:1fr; } }
+  .hp{ position:absolute; left:-9999px; }
+  button.submit{
+    width:100%; margin-top:6px; padding:14px; font-size:1rem; font-weight:bold;
+    background:var(--yellow); color:var(--ink); border:none; border-radius:8px; cursor:pointer;
+  }
+  button.submit:disabled{ opacity:0.6; cursor:default; }
+  .form-note{ text-align:center; font-size:0.8rem; color:var(--steel); margin-top:10px; }
+  .form-status{ margin-top:14px; padding:12px 14px; border-radius:8px; font-size:0.9rem; font-weight:600; display:none; }
+  .form-status.show{ display:block; }
+  .form-status.ok{ background:var(--green-bg); color:var(--green); border:1px solid var(--green); }
+  .form-status.err{ background:#FBEAE6; color:var(--crate-red); border:1px solid var(--crate-red); }
+
+  footer{ background:var(--ink); color:#9A938A; padding:28px 0; text-align:center; font-size:0.82rem; margin-top:20px; }
+  footer a{ color:var(--yellow-2); text-decoration:none; }
+
+  .loading{ text-align:center; color:var(--steel); padding:24px 0; font-size:0.9rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a href="/" class="logo"><img src="images/logo.png" alt="Ready Tote Oklahoma logo"></a>
+    <nav><a href="/#pricing">Pricing</a></nav>
+    <a class="phone" href="tel:+15803993202">580.399.3202</a>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <span class="eyebrow">Live Availability</span>
+    <h1>See What's Open. Book Your Totes.</h1>
+    <p>Pick a package and a delivery date below — the calendar shows real tote availability so you can find dates that work. Submitting a request doesn't charge you anything; we'll confirm details and send an invoice.</p>
+  </section>
+
+  <section class="block wrap">
+    <div class="card">
+      <h2 style="font-size:1.05rem; margin-bottom:14px;">1. Choose a package</h2>
+      <div class="pkg-grid" id="pkgGrid">
+        <div class="pkg-card" data-totes="20" data-label="1 Bedroom — 20 Totes + Dolly — $99">
+          <div class="name">1 Bedroom</div>
+          <div class="totes">20 Totes + Dolly</div>
+          <div class="price">$99 <span>/ 2 wks</span></div>
+        </div>
+        <div class="pkg-card" data-totes="40" data-label="2–3 Bedrooms — 40 Totes + 2 Dollies — $149">
+          <div class="name">2–3 Bedrooms</div>
+          <div class="totes">40 Totes + 2 Dollies</div>
+          <div class="price">$149 <span>/ 2 wks</span></div>
+        </div>
+        <div class="pkg-card" data-totes="60" data-label="4+ Bedrooms — 60 Totes + 3 Dollies — $199">
+          <div class="name">4+ Bedrooms</div>
+          <div class="totes">60 Totes + 3 Dollies</div>
+          <div class="price">$199 <span>/ 2 wks</span></div>
+        </div>
+        <div class="pkg-card" data-totes="0" data-label="Not sure yet — let's discuss">
+          <div class="name">Not Sure Yet</div>
+          <div class="totes">Let's discuss</div>
+          <div class="price" style="font-size:1rem;">Talk to us</div>
+        </div>
+      </div>
+
+      <div class="date-row">
+        <label>Delivery date
+          <input type="date" id="deliveryDate">
+        </label>
+        <label>Pickup date <span class="mono" style="font-weight:400; color:var(--steel);">(auto, 2 weeks — editable)</span>
+          <input type="date" id="pickupDate">
+        </label>
+      </div>
+
+      <div class="status-banner neutral" id="statusBanner">Pick a package and delivery date to check availability.</div>
+    </div>
+  </section>
+
+  <section class="block wrap">
+    <div class="card">
+      <div class="cal-head">
+        <h2 style="font-size:1.05rem;">2. Browse open dates</h2>
+        <div class="cal-legend">
+          <span><i class="dot open"></i>Open</span>
+          <span><i class="dot limited"></i>Limited</span>
+          <span><i class="dot booked"></i>Booked out</span>
+        </div>
+      </div>
+      <div id="calendarWrap"><div class="loading">Loading live availability…</div></div>
+    </div>
+  </section>
+
+  <section class="block wrap">
+    <div class="card">
+      <h2 style="font-size:1.05rem; margin-bottom:14px;">3. Request your booking</h2>
+
+      <form name="booking" method="POST" data-netlify="true" netlify-honeypot="hp_field" id="bookingForm">
+        <input type="hidden" name="form-name" value="booking">
+        <input class="hp" type="text" name="hp_field" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+        <div class="form-grid">
+          <label>Full Name*
+            <input type="text" name="name" required>
+          </label>
+          <label>Phone Number*
+            <input type="tel" name="phone" required>
+          </label>
+        </div>
+        <div class="form-grid">
+          <label>Email Address*
+            <input type="email" name="email" required>
+          </label>
+          <label>Package*
+            <select name="package" id="packageSelect" required>
+              <option value="">Choose a package...</option>
+              <option>1 Bedroom — 20 Totes + Dolly — $99</option>
+              <option>2–3 Bedrooms — 40 Totes + 2 Dollies — $149</option>
+              <option>4+ Bedrooms — 60 Totes + 3 Dollies — $199</option>
+              <option>Not sure yet — let's discuss</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-grid">
+          <label>Delivery Window
+            <select name="delivery_window">
+              <option value="No preference">No preference</option>
+              <option>Morning (8 AM – 12 PM)</option>
+              <option>Afternoon (12 – 5 PM)</option>
+              <option>Evening (5 – 8 PM)</option>
+            </select>
+          </label>
+          <label>Pickup Window
+            <select name="pickup_window">
+              <option value="No preference">No preference</option>
+              <option>Morning (8 AM – 12 PM)</option>
+              <option>Afternoon (12 – 5 PM)</option>
+              <option>Evening (5 – 8 PM)</option>
+            </select>
+          </label>
+        </div>
+        <label>Delivery Address*
+          <input type="text" name="delivery_address" placeholder="Street, City, Zip" required>
+        </label>
+        <input type="hidden" name="delivery_date" id="hiddenDeliveryDate">
+        <input type="hidden" name="pickup_date" id="hiddenPickupDate">
+
+        <button type="submit" class="submit" id="submitBtn">Request Booking</button>
+        <p class="form-note">We'll follow up to confirm your dates and send your invoice. No payment due now.</p>
+      </form>
+      <div class="form-status" id="formStatus"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>Ready Tote Oklahoma &bull; Serving the OKC Metro &amp; Ada Area</p>
+  <p><a href="tel:+15803993202">580.399.3202</a> &nbsp;&bull;&nbsp; <a href="/">readytoteokc.com</a></p>
+</footer>
+
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+
+  const MS_DAY = 86400000;
+  function parseISO(iso){ return new Date(iso + 'T12:00:00'); }
+  function toISO(d){ return d.toLocaleDateString('en-CA'); }
+  function addDays(iso, n){ const d = parseISO(iso); d.setDate(d.getDate()+n); return toISO(d); }
+
+  let AVAIL = null;       // { totalOwned, today, days: [{date, available}] }
+  let AVAIL_MAP = {};      // date -> available
+  let selectedTotes = 0;   // totes required by chosen package
+  let selectedLabel = '';
+
+  // ---- Load availability ----
+  fetch('/.netlify/functions/availability')
+    .then(r => { if (!r.ok) throw new Error('bad response'); return r.json(); })
+    .then(data => {
+      AVAIL = data;
+      AVAIL_MAP = {};
+      data.days.forEach(d => { AVAIL_MAP[d.date] = d.available; });
+      renderCalendar();
+      updateStatus();
+    })
+    .catch(() => {
+      $('calendarWrap').innerHTML = '<p style="color:var(--steel); font-size:0.9rem;">Live availability is temporarily unavailable — go ahead and submit a request below and we\'ll confirm dates by hand.</p>';
+    });
+
+  // ---- Package selection ----
+  const pkgCards = Array.from(document.querySelectorAll('.pkg-card'));
+  pkgCards.forEach(card => {
+    card.addEventListener('click', () => {
+      pkgCards.forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedTotes = parseInt(card.dataset.totes, 10) || 0;
+      selectedLabel = card.dataset.label;
+      $('packageSelect').value = selectedLabel;
+      updateStatus();
+      renderCalendar();
+    });
+  });
+  $('packageSelect').addEventListener('change', () => {
+    const label = $('packageSelect').value;
+    const card = pkgCards.find(c => c.dataset.label === label);
+    pkgCards.forEach(c => c.classList.remove('selected'));
+    if (card) { card.classList.add('selected'); selectedTotes = parseInt(card.dataset.totes, 10) || 0; selectedLabel = label; }
+    else { selectedTotes = 0; selectedLabel = label; }
+    updateStatus();
+    renderCalendar();
+  });
+
+  // ---- Dates ----
+  const today = new Date().toLocaleDateString('en-CA');
+  $('deliveryDate').min = today;
+  $('deliveryDate').addEventListener('change', () => {
+    if ($('deliveryDate').value) {
+      $('pickupDate').value = addDays($('deliveryDate').value, 14);
+      $('pickupDate').min = $('deliveryDate').value;
+    }
+    syncHiddenDates();
+    updateStatus();
+    renderCalendar();
+  });
+  $('pickupDate').addEventListener('change', () => { syncHiddenDates(); updateStatus(); });
+
+  function syncHiddenDates(){
+    $('hiddenDeliveryDate').value = $('deliveryDate').value;
+    $('hiddenPickupDate').value = $('pickupDate').value;
+  }
+
+  function setDelivery(iso){
+    $('deliveryDate').value = iso;
+    $('pickupDate').value = addDays(iso, 14);
+    $('pickupDate').min = iso;
+    syncHiddenDates();
+    updateStatus();
+    renderCalendar();
+  }
+
+  // ---- Status banner ----
+  function updateStatus(){
+    const banner = $('statusBanner');
+    const dDate = $('deliveryDate').value, pDate = $('pickupDate').value;
+
+    if (!dDate) {
+      setBanner('neutral', 'Pick a package and delivery date to check availability.');
+      return;
+    }
+    if (!AVAIL) {
+      setBanner('neutral', 'Checking availability…');
+      return;
+    }
+    if (!selectedTotes) {
+      setBanner('neutral', 'Choose a package above to check tote availability for these dates.');
+      return;
+    }
+
+    let minAvail = Infinity;
+    let d = dDate;
+    while (d <= pDate) {
+      const a = AVAIL_MAP[d];
+      if (typeof a === 'number') minAvail = Math.min(minAvail, a);
+      d = addDays(d, 1);
+    }
+    if (!isFinite(minAvail)) { setBanner('neutral', 'Those dates are a bit far out — go ahead and request a booking and we\'ll confirm by hand.'); return; }
+
+    if (minAvail >= selectedTotes) {
+      setBanner('ok', `Totes are available for these dates (${minAvail} on hand at the tightest point).`);
+    } else if (minAvail > 0) {
+      setBanner('limited', `Tight — only ${minAvail} totes free during part of this window. We may still make it work, so go ahead and request it.`);
+    } else {
+      setBanner('none', `Fully booked for part of this window. Try nearby dates or request anyway — we'll reach out with options.`);
+    }
+  }
+  function setBanner(kind, msg){
+    const b = $('statusBanner');
+    b.className = 'status-banner show ' + kind;
+    b.textContent = msg;
+  }
+
+  // ---- Calendar ----
+  function renderCalendar(){
+    if (!AVAIL) return;
+    const wrap = $('calendarWrap');
+    wrap.innerHTML = '';
+
+    // group the next ~90 days by month
+    const byMonth = {};
+    AVAIL.days.slice(0, 90).forEach(d => {
+      const monthKey = d.date.slice(0,7);
+      (byMonth[monthKey] = byMonth[monthKey] || []).push(d);
+    });
+
+    const dowNames = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+    Object.keys(byMonth).forEach(monthKey => {
+      const entries = byMonth[monthKey];
+      const first = parseISO(entries[0].date);
+      const monthLabel = first.toLocaleDateString('en-US', { month:'long', year:'numeric' });
+
+      const monthDiv = document.createElement('div');
+      monthDiv.className = 'month';
+      const h3 = document.createElement('h3');
+      h3.textContent = monthLabel;
+      monthDiv.appendChild(h3);
+
+      const grid = document.createElement('div');
+      grid.className = 'cal-grid';
+      dowNames.forEach(n => {
+        const el = document.createElement('div');
+        el.className = 'cal-dow';
+        el.textContent = n;
+        grid.appendChild(el);
+      });
+
+      const leadingBlanks = first.getDay();
+      for (let i=0;i<leadingBlanks;i++){
+        const b = document.createElement('div');
+        b.className = 'cal-day blank';
+        grid.appendChild(b);
+      }
+
+      entries.forEach(entry => {
+        const cell = document.createElement('div');
+        const dayNum = parseInt(entry.date.slice(8,10), 10);
+        let cls = 'cal-day';
+        if (entry.date < AVAIL.today) {
+          cls += ' past';
+        } else {
+          const need = selectedTotes || 1;
+          if (entry.available >= need) cls += ' open';
+          else if (entry.available > 0) cls += ' limited';
+          else cls += ' booked';
+        }
+        if (entry.date === $('deliveryDate').value) cls += ' selected';
+        cell.className = cls;
+        cell.innerHTML = `<span class="n">${dayNum}</span><span class="a">${entry.date < AVAIL.today ? '' : entry.available}</span>`;
+        if (entry.date >= AVAIL.today) {
+          cell.addEventListener('click', () => setDelivery(entry.date));
+        }
+        grid.appendChild(cell);
+      });
+
+      monthDiv.appendChild(grid);
+      wrap.appendChild(monthDiv);
+    });
+  }
+
+  // ---- Form submit (Netlify Forms via AJAX, same pattern as the homepage) ----
+  const form = $('bookingForm');
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (form.hp_field.value) return; // honeypot triggered, silently ignore
+
+    syncHiddenDates();
+    const status = $('formStatus');
+    const btn = $('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    fetch('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(new FormData(form)).toString(),
+    })
+      .then(r => {
+        if (!r.ok) throw new Error('submit failed');
+        status.className = 'form-status show ok';
+        status.textContent = 'Request received! Check your email — we\'ll confirm your dates and send an invoice shortly. No payment due now.';
+        form.reset();
+        btn.textContent = 'Request Booking';
+      })
+      .catch(() => {
+        status.className = 'form-status show err';
+        status.textContent = 'Something went wrong sending your request. Please call or text 580.399.3202 and we\'ll get you booked.';
+        btn.disabled = false;
+        btn.textContent = 'Request Booking';
+      });
+  });
+})();
+</script>
+</body>
+</html>
