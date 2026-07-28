@@ -130,7 +130,7 @@
   .cal-day.booked{ background:#FBEAE6; border-color:var(--crate-red); color:var(--crate-red); }
   .cal-day.selected{ outline:2px solid var(--ink); outline-offset:1px; font-weight:bold; }
   .cal-day .n{ font-weight:bold; }
-  .cal-day .a{ font-size:0.62rem; margin-top:1px; }
+  .cal-day .a{ font-size:0.58rem; margin-top:1px; text-transform:uppercase; letter-spacing:0.02em; }
 
   /* Form */
   .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
@@ -370,6 +370,8 @@
   }
 
   // ---- Status banner ----
+  // Note: we deliberately only ever show a status word (Available / Limited / Booked out),
+  // never the raw tote count. Exact inventory numbers aren't shown to customers.
   function updateStatus(){
     const banner = $('statusBanner');
     const dDate = $('deliveryDate').value, pDate = $('pickupDate').value;
@@ -397,11 +399,11 @@
     if (!isFinite(minAvail)) { setBanner('neutral', 'Those dates are a bit far out — go ahead and request a booking and we\'ll confirm by hand.'); return; }
 
     if (minAvail >= selectedTotes) {
-      setBanner('ok', `Totes are available for these dates (${minAvail} on hand at the tightest point).`);
+      setBanner('ok', 'Totes are available for these dates.');
     } else if (minAvail > 0) {
-      setBanner('limited', `Tight — only ${minAvail} totes free during part of this window. We may still make it work, so go ahead and request it.`);
+      setBanner('limited', 'Tight for part of this window — we may still make it work, so go ahead and request it.');
     } else {
-      setBanner('none', `Fully booked for part of this window. Try nearby dates or request anyway — we'll reach out with options.`);
+      setBanner('none', 'Fully booked for part of this window. Try nearby dates or request anyway — we\'ll reach out with options.');
     }
   }
   function setBanner(kind, msg){
@@ -411,6 +413,8 @@
   }
 
   // ---- Calendar ----
+  // Cells show a status word (Open / Limited / Full), never the raw tote count,
+  // so exact inventory numbers stay internal.
   function renderCalendar(){
     if (!AVAIL) return;
     const wrap = $('calendarWrap');
@@ -456,17 +460,18 @@
         const cell = document.createElement('div');
         const dayNum = parseInt(entry.date.slice(8,10), 10);
         let cls = 'cal-day';
+        let statusWord = '';
         if (entry.date < AVAIL.today) {
           cls += ' past';
         } else {
           const need = selectedTotes || 1;
-          if (entry.available >= need) cls += ' open';
-          else if (entry.available > 0) cls += ' limited';
-          else cls += ' booked';
+          if (entry.available >= need) { cls += ' open'; statusWord = 'Open'; }
+          else if (entry.available > 0) { cls += ' limited'; statusWord = 'Low'; }
+          else { cls += ' booked'; statusWord = 'Full'; }
         }
         if (entry.date === $('deliveryDate').value) cls += ' selected';
         cell.className = cls;
-        cell.innerHTML = `<span class="n">${dayNum}</span><span class="a">${entry.date < AVAIL.today ? '' : entry.available}</span>`;
+        cell.innerHTML = `<span class="n">${dayNum}</span><span class="a">${statusWord}</span>`;
         if (entry.date >= AVAIL.today) {
           cell.addEventListener('click', () => setDelivery(entry.date));
         }
