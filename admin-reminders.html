@@ -47,9 +47,12 @@
     <div id="review"></div>
     <h2>💬 Invoice follow-ups (invoiced 3 days ago)</h2>
     <div id="followup"></div>
+    <h2>📧 Email payment reminders (invoiced 5+ days ago, still unpaid)</h2>
+    <div id="emailReminder"></div>
 
     <h2>📋 All rentals</h2>
     <p class="empty" style="margin:0 0 10px;">Delete an entry to remove a cancellation or to re-add one with corrected details.</p>
+    <div id="unpaidSummary"></div>
     <div id="allRentals"></div>
   </div>
 </div>
@@ -62,6 +65,7 @@
 
   let ALL_RENTALS = [];
   let SENT_FLAGS = {};
+  let PAID_FLAGS = {};
 
   $('loadBtn').addEventListener('click', load);
   // Auto-load if a secret is already saved (matches admin.html behavior)
@@ -84,10 +88,12 @@
         const data = await resp.json();
         ALL_RENTALS = data.rentals || [];
         SENT_FLAGS = data.sentFlags || {};
+        PAID_FLAGS = data.paidFlags || {};
         render('delivery', data.reminders.delivery);
         render('pickup', data.reminders.pickup);
         render('review', data.reminders.review);
         render('followup', data.reminders.followup);
+        renderEmailDue(data.reminders.emailReminder || []);
         renderWeek(ALL_RENTALS);
         renderAll(ALL_RENTALS);
         $('results').style.display = 'block';
@@ -172,20 +178,75 @@
   // ---- All rentals management ----
   function renderAll(rentals){
     const el = $('allRentals');
-    if (!rentals.length) { el.innerHTML = '<p class="empty">No rentals logged yet.</p>'; return; }
+    if (!rentals.length) { el.innerHTML = '<p class="empty">No rentals logged yet.</p>'; $('unpaidSummary').innerHTML = ''; return; }
     const sorted = [...rentals].sort((a,b) => (b.dropoffDate||'').localeCompare(a.dropoffDate||''));
+
+    const unpaidCount = sorted.filter(isUnpaid).length;
+    $('unpaidSummary').innerHTML = unpaidCount
+      ? `<p style="margin:0 0 10px; padding:8px 12px; background:var(--red-bg); color:var(--red); font-weight:bold; font-size:0.85rem; border-radius:8px;">⚠️ ${unpaidCount} invoice${unpaidCount === 1 ? '' : 's'} sent, awaiting payment</p>`
+      : '';
+
     el.innerHTML = sorted.map(r => `
       <div class="rem">
-        <div class="who">${esc(r.name)} — ${esc(r.price || '')}</div>
+        <div class="who">${esc(r.name)} — ${esc(r.price || '')} ${paymentBadge(r)}</div>
         <div class="meta">${esc(r.package)} · Drop-off ${esc(fmtDate(r.dropoffDate))}${(r.dropoffAddress||r.address) ? ' @ ' + esc(r.dropoffAddress||r.address) : ''} · Pickup ${esc(fmtDate(r.pickupDate))}${(r.pickupAddress||r.address) ? ' @ ' + esc(r.pickupAddress||r.address) : ''}</div>
         ${textBtn('delivery', r.key, r.deliverySms, '🚚', 'Delivery', 'var(--green)')}
         ${textBtn('pickup', r.key, r.pickupSms, '📦', 'Pickup', 'var(--gold)')}
         ${textBtn('review', r.key, r.reviewSms, '⭐', 'Review', 'var(--green)')}
         ${textBtn('followup', r.key, r.followupSms, '💬', 'Follow-up', 'var(--gold)')}
+        ${payBtn(r)}
+        ${emailReminderBtn(r)}
         <button type="button" style="width:auto; margin-top:4px; padding:8px 16px; font-size:0.8rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
           onclick="deleteRental('${esc(r.key)}', '${esc(r.name)}')">Delete</button>
       </div>`).join('');
+
+    // Wire up pay/unpay and email-reminder buttons via delegation
+    el.querySelectorAll('.pay-btn').forEach(btn => {
+      btn.addEventListener('click', () => togglePaid(btn.dataset.key, btn.dataset.setpaid === 'true'));
+    });
+    el.querySelectorAll('.email-reminder-btn').forEach(btn => {
+      btn.addEventListener('click', () => sendEmailReminder(btn.dataset.key));
+    });
   }
+
+  // An invoice counts as "unpaid" once it's actually been emailed (invoicedAt,
+  // not a backfilled record) and no paid flag has been set for it.
+  function isUnpaid(r) {
+    return !!r.invoicedAt && !r.backfilled && !PAID_FLAGS[r.key];
+  }
+
+  function paymentBadge(r) {
+    if (!r.invoicedAt || r.backfilled) return '';
+    if (PAID_FLAGS[r.key]) {
+      return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--green-bg); color:var(--green); border-radius:20px; vertical-align:middle;">✓ Paid</span>`;
+    }
+    return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--red-bg); color:var(--red); border-radius:20px; vertical-align:middle;">🧾 Invoiced — Unpaid</span>`;
+  }
+
+  function payBtn(r) {
+    if (!r.invoicedAt || r.backfilled) return '';
+    if (PAID_FLAGS[r.key]) {
+      return `<button type="button" class="pay-btn" data-key="${esc(r.key)}" data-setpaid="false" style="width:auto; margin-top:4px; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--steel); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">Mark unpaid</button>`;
+    }
+    return `<button type="button" class="pay-btn" data-key="${esc(r.key)}" data-setpaid="true" style="width:auto; margin-top:4px; padding:8px 16px; font-size:0.8rem; background:var(--green); color:#fff; border:none; border-radius:8px; cursor:pointer;">✓ Mark paid</button>`;
+  }
+
+  window.togglePaid = async (key, setPaid) => {
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const resp = await fetch('/.netlify/functions/mark-paid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key, paid: setPaid }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Update failed (' + resp.status + '): ' + detail);
+      }
+    } catch { showErr('Network error.'); }
+  };
 
   window.deleteRental = async (key, name) => {
     if (!confirm('Delete the rental for ' + name + '? This cannot be undone.')) return;
@@ -217,6 +278,53 @@
   window.confirmSent = async (flagId) => {
     if (!confirm('Did you send the text? Mark as sent?')) return;
     await markSent(flagId);
+  };
+
+  // ---- Email payment reminders (computed: invoiced 5+ days ago, unpaid) ----
+  function renderEmailDue(items) {
+    const el = $('emailReminder');
+    if (!items.length) { el.innerHTML = '<p class="empty">None today.</p>'; return; }
+    el.innerHTML = items.map(r => `
+      <div class="rem">
+        <div class="who">${esc(r.name)} — ${esc(r.email || '')}</div>
+        <div class="meta">${esc(r.package)} · Invoiced ${esc(fmtDate((r.invoicedAt || '').slice(0, 10)))} · ${esc(r.price || '')}</div>
+        ${emailReminderBtn(r)}
+      </div>`).join('');
+    el.querySelectorAll('.email-reminder-btn').forEach(btn => {
+      btn.addEventListener('click', () => sendEmailReminder(btn.dataset.key));
+    });
+  }
+
+  // Button/status used both in the computed "due today" list above and
+  // on-demand in the All Rentals list below.
+  function emailReminderBtn(r) {
+    if (!r.invoicedAt || r.backfilled || PAID_FLAGS[r.key]) return '';
+    const flagId = 'emailReminder:' + r.key;
+    const sent = SENT_FLAGS[flagId];
+    if (!r.email || !r.stripeUrl) {
+      return `<span style="display:inline-block; padding:8px 0; font-size:0.78rem; color:var(--steel);">📧 No payment link on file — resend the invoice instead</span>`;
+    }
+    if (sent) {
+      return `<span style="display:inline-block; padding:8px 16px; font-size:0.8rem; margin-right:6px; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px;">📧 ✓ Emailed ${esc(fmtDate(sent))}</span>`;
+    }
+    return `<button type="button" class="email-reminder-btn" data-key="${esc(r.key)}" style="width:auto; margin-top:4px; padding:8px 16px; font-size:0.8rem; margin-right:6px; background:var(--gold); color:var(--ink); border:none; border-radius:8px; cursor:pointer;">📧 Send reminder</button>`;
+  }
+
+  window.sendEmailReminder = async (key) => {
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const resp = await fetch('/.netlify/functions/send-payment-reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Send reminder failed (' + resp.status + '): ' + detail);
+      }
+    } catch { showErr('Network error.'); }
   };
 
   function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML;}
