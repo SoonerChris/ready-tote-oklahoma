@@ -53,13 +53,13 @@ button:disabled{opacity:0.6;cursor:wait;}
 /* Shared admin nav bar -- lets Chris jump directly between admin tools */
 .admin-nav{
   max-width:640px;margin:0 auto 14px;
-  display:flex; flex-wrap:wrap; gap:8px;
+  display:flex; flex-wrap:wrap; gap:8px; justify-content:center;
   background:var(--white); border:1px solid var(--line); border-radius:12px;
   padding:10px;
 }
 .admin-nav.wide{max-width:840px;}
 .admin-nav a{
-  flex:1 1 auto; text-align:center; white-space:nowrap;
+  flex:0 1 auto; text-align:center; white-space:nowrap;
   padding:8px 12px; font-size:0.82rem; font-weight:bold;
   color:var(--ink); text-decoration:none; border-radius:8px;
   background:var(--cream);
