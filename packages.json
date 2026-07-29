@@ -13,10 +13,16 @@
       "stripeUrl": "https://buy.stripe.com/eVq8wP9bDh273RL4rO4ko06"
     },
     {
-      "name": "40 Totes + 1 Dollies",
+      "name": "40 Totes + 2 Dollies",
       "price": "$149",
       "duration": "2 Weeks",
       "stripeUrl": "https://buy.stripe.com/fZuaEXbjLfY35ZTf6s4ko09"
+    }
+    {
+      "name": "60 Totes + 3 Dollies",
+      "price": "$199",
+      "duration": "2 Weeks",
+      "stripeUrl": "https://buy.stripe.com/14A3cv0F7eTZ3RL1fC4ko0d"
     }
   ]
 }
