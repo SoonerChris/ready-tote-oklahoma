@@ -25,7 +25,7 @@ export default async () => {
   try { paidFlags = (await metaStore.get("paidFlags", { type: "json" })) || {}; } catch {}
 
   const rem = computeReminders(rentals, process.env.GOOGLE_REVIEW_LINK || "", sentFlags, paidFlags);
-  const total = rem.delivery.length + rem.pickup.length + rem.review.length + rem.followup.length + rem.emailReminder.length;
+  const total = rem.delivery.length + rem.pickupTomorrow.length + rem.pickup.length + rem.review.length + rem.followup.length + rem.emailReminder.length;
 
   if (total === 0) {
     console.log("No reminders due today.");
@@ -73,6 +73,7 @@ export default async () => {
       <a href="${dashboardUrl}" style="display:inline-block; background:#C99A32; color:#1E1B18; font-weight:bold; text-decoration:none; padding:14px 32px; border-radius:10px; font-size:15px;">Open Dashboard →</a>
     </div>
     ${section("🚚 Delivery tomorrow", rem.delivery)}
+    ${section("📦 Pickup tomorrow", rem.pickupTomorrow)}
     ${section("📦 Pickup in 2 days", rem.pickup)}
     ${section("⭐ Review requests", rem.review)}
     ${section("💬 Invoice follow-ups", rem.followup)}
@@ -82,7 +83,7 @@ export default async () => {
   // Collect ICS calendar attachments for delivery + pickup reminders
   const attachments = [];
   const seen = new Set();
-  for (const r of [...rem.delivery, ...rem.pickup]) {
+  for (const r of [...rem.delivery, ...rem.pickupTomorrow, ...rem.pickup]) {
     const id = (r.key || r.phone + r.dropoffDate);
     if (seen.has(id)) continue;
     seen.add(id);
