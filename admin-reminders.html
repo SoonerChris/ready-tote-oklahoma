@@ -38,6 +38,10 @@
 
   <label>Admin secret</label>
   <input type="password" id="secret" placeholder="Your INVOICE_SECRET value">
+
+  <label>Starting from (optional, for "On the Way" texts)</label>
+  <input type="text" id="startFrom" placeholder="Leave blank to use your home address">
+
   <button id="loadBtn">Load today's reminders</button>
   <div class="status" id="status"></div>
 
@@ -68,6 +72,9 @@
   // Restore shared secret
   $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
   $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+
+  $('startFrom').value = sessionStorage.getItem('rto-admin-startfrom') || '';
+  $('startFrom').addEventListener('input', () => sessionStorage.setItem('rto-admin-startfrom', $('startFrom').value));
 
   let ALL_RENTALS = [];
   let SENT_FLAGS = {};
@@ -204,6 +211,10 @@
           ${textBtn('review', r.key, r.reviewSms, '⭐', 'Review', 'var(--green)')}
           ${textBtn('followup', r.key, r.followupSms, '💬', 'Follow-up', 'var(--gold)')}
         </div>
+        ${r.serviceType !== 'self' ? `<div class="actions">
+          ${(r.dropoffAddress || r.address) ? onTheWayBtn('delivery', r.key) : ''}
+          ${(r.pickupAddress || r.address) ? onTheWayBtn('pickup', r.key) : ''}
+        </div>` : ''}
         ${paymentControls ? `<div class="actions">${paymentControls}</div>` : ''}
         <div class="actions delete-row">
           <button type="button" class="delete-btn" onclick="deleteRental('${esc(r.key)}', '${esc(r.name)}')">Delete</button>
@@ -218,7 +229,44 @@
     el.querySelectorAll('.email-reminder-btn').forEach(btn => {
       btn.addEventListener('click', () => sendEmailReminder(btn.dataset.key));
     });
+    el.querySelectorAll('.otw-btn').forEach(btn => {
+      btn.addEventListener('click', () => onTheWay(btn.dataset.key, btn.dataset.type));
+    });
   }
+
+  // "On the Way" button: starts as a plain button, calculates a live ETA via
+  // the on-my-way function, then swaps in a ready-to-tap text link.
+  function onTheWayBtn(type, key) {
+    const label = type === 'delivery' ? 'Delivery' : 'Pickup';
+    return `<span id="otw-wrap-${type}-${key}"><button type="button" id="otw-${type}-${key}" class="otw-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">🚗 On the Way (${label})</button></span>`;
+  }
+
+  window.onTheWay = async (key, type) => {
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    const origin = $('startFrom').value.trim();
+    const label = type === 'delivery' ? 'Delivery' : 'Pickup';
+    const btn = $('otw-' + type + '-' + key);
+    const wrap = $('otw-wrap-' + type + '-' + key);
+    if (btn) { btn.disabled = true; btn.textContent = '🚗 Calculating ETA…'; }
+    try {
+      const resp = await fetch('/.netlify/functions/on-my-way', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key, type, origin }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || data.error) {
+        showErr(data.error || ('On the Way calculation failed (' + resp.status + ').'));
+        if (btn) { btn.disabled = false; btn.textContent = '🚗 On the Way (' + label + ')'; }
+        return;
+      }
+      wrap.innerHTML = `<a class="sms-btn" href="${data.sms}" style="padding:8px 16px; font-size:0.8rem; background:var(--green);">🚗 Text ETA — ${esc(data.durationText)} →</a>`;
+    } catch {
+      showErr('Network error calculating ETA.');
+      if (btn) { btn.disabled = false; btn.textContent = '🚗 On the Way (' + label + ')'; }
+    }
+  };
 
   // An invoice counts as "unpaid" once it's actually been emailed (invoicedAt,
   // not a backfilled record) and no paid flag has been set for it.
