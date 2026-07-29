@@ -1,9 +1,9 @@
 // POST /.netlify/functions/stripe-webhook
 // Receives Stripe webhook events. On checkout.session.completed (a paid
 // payment link): (1) auto-matches the payment to a rental record by email
-// or customer name and marks it paid, so admin-reminders.html no longer
-// shows it as an outstanding invoice, and (2) sends the customer a branded
-// confirmation email via Resend.
+// or customer name and marks it paid, (2) if the customer checked the terms
+// of service box at checkout, records that acceptance on the same rental
+// record, and (3) sends the customer a branded confirmation email via Resend.
 //
 // Env vars required:
 //   STRIPE_WEBHOOK_SECRET - signing secret (whsec_...) from the Stripe webhook endpoint
@@ -65,9 +65,13 @@ export default async (request) => {
   const firstName = escapeHtml(fullName.split(" ")[0]);
   const amount = formatAmount(session.amount_total, session.currency);
 
+  // Was the terms-of-service checkbox checked at checkout? Only present when
+  // consent_collection.terms_of_service = "required" is set on the Payment Link.
+  const tosAccepted = session.consent?.terms_of_service === "accepted";
+
   // --- Auto-match this payment to a rental record and mark it paid ---
   try {
-    await autoMarkPaid(email, rawName, session.amount_total);
+    await autoMarkPaid(email, rawName, session.amount_total, tosAccepted);
   } catch (e) {
     console.error("stripe-webhook: auto mark-paid failed:", e.message);
   }
@@ -244,7 +248,7 @@ function escapeHtml(str) {
 // Matches on email first (most reliable), falling back to customer name if
 // no email match is found. If a customer has more than one unpaid invoice,
 // narrows by the paid amount, then falls back to the most recently invoiced.
-async function autoMarkPaid(email, name, amountCents) {
+async function autoMarkPaid(email, name, amountCents, tosAccepted) {
   const rentalsStore = getStore("rentals");
   const { blobs } = await rentalsStore.list();
   const fetched = await Promise.all(
@@ -272,6 +276,22 @@ async function autoMarkPaid(email, name, amountCents) {
   paidFlags[match.key] = new Date().toISOString();
   await metaStore.setJSON("paidFlags", paidFlags);
   console.log("stripe-webhook: marked rental paid ->", match.key, match.name);
+
+  // Record terms-of-service acceptance on the rental record itself, so it's
+  // kept alongside the rest of that customer's booking details.
+  if (tosAccepted) {
+    const { key, ...rest } = match;
+    try {
+      await rentalsStore.setJSON(key, {
+        ...rest,
+        tosAccepted: true,
+        tosAcceptedAt: new Date().toISOString(),
+      });
+      console.log("stripe-webhook: recorded ToS acceptance ->", key);
+    } catch (e) {
+      console.error("stripe-webhook: failed to save ToS acceptance:", e.message);
+    }
+  }
 }
 
 function findRentalMatch(rentals, paidFlags, email, name, amountCents) {
