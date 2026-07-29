@@ -196,7 +196,7 @@
       const paymentControls = payBtn(r) + emailReminderBtn(r);
       return `
       <div class="rem">
-        <div class="who">${esc(r.name)} — ${esc(r.price || '')} ${paymentBadge(r)}</div>
+        <div class="who">${esc(r.name)} — ${esc(r.price || '')} ${paymentBadge(r)} ${tosBadge(r)}</div>
         <div class="meta">${esc(r.package)} · Drop-off ${esc(fmtDate(r.dropoffDate))}${(r.dropoffAddress||r.address) ? ' @ ' + esc(r.dropoffAddress||r.address) : ''} · Pickup ${esc(fmtDate(r.pickupDate))}${(r.pickupAddress||r.address) ? ' @ ' + esc(r.pickupAddress||r.address) : ''}</div>
         <div class="actions">
           ${textBtn('delivery', r.key, r.deliverySms, '🚚', 'Delivery', 'var(--green)')}
@@ -232,6 +232,14 @@
       return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--green-bg); color:var(--green); border-radius:20px; vertical-align:middle;">✓ Paid</span>`;
     }
     return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--red-bg); color:var(--red); border-radius:20px; vertical-align:middle;">🧾 Invoiced — Unpaid</span>`;
+  }
+
+  // Shows only once the customer has checked the terms-of-service box at
+  // Stripe checkout (set by stripe-webhook.mjs when session.consent.terms_of_service === "accepted").
+  function tosBadge(r) {
+    if (!r.tosAccepted) return '';
+    const acceptedDate = esc(fmtDate((r.tosAcceptedAt || '').slice(0, 10)));
+    return `<span title="Accepted ${acceptedDate}" style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--gold-bg); color:var(--gold); border-radius:20px; vertical-align:middle;">📝 Terms Accepted</span>`;
   }
 
   function payBtn(r) {
