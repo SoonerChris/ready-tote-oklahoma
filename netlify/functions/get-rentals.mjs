@@ -28,9 +28,11 @@ export default async (request) => {
   const metaStore = getStore("meta");
   let sentFlags = {};
   try { sentFlags = (await metaStore.get("sentFlags", { type: "json" })) || {}; } catch {}
+  let paidFlags = {};
+  try { paidFlags = (await metaStore.get("paidFlags", { type: "json" })) || {}; } catch {}
 
   const reviewLink = process.env.GOOGLE_REVIEW_LINK || "";
-  const reminders = computeReminders(rentals, reviewLink, sentFlags);
+  const reminders = computeReminders(rentals, reviewLink, sentFlags, paidFlags);
 
   // On-demand text links for every rental (All Rentals list)
   for (const r of rentals) {
@@ -44,7 +46,7 @@ export default async (request) => {
     r.followupSms = fv.sms;
   }
 
-  return new Response(JSON.stringify({ rentals, reminders, sentFlags }), {
+  return new Response(JSON.stringify({ rentals, reminders, sentFlags, paidFlags }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
   });

@@ -28,9 +28,9 @@ function friendlyDate(isoDate) {
   return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 
-export function computeReminders(rentals, reviewLink, sentFlags = {}) {
+export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags = {}) {
   const today = todayInOklahoma();
-  const out = { delivery: [], pickup: [], review: [], followup: [] };
+  const out = { delivery: [], pickup: [], review: [], followup: [], emailReminder: [] };
 
   for (const r of rentals) {
     const first = (r.name || "there").split(" ")[0];
@@ -46,6 +46,17 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}) {
         const flagId = "followup:" + (r.key || r.phone + invoicedDate);
         if (!sentFlags[flagId]) {
           out.followup.push({ ...r, flagId, address: `Invoiced ${friendlyDate(invoicedDate)}`, message: msg, sms: smsLink(r.phone, msg) });
+        }
+      }
+    }
+
+    // Email payment reminder: invoiced 5 days ago, still unpaid, skip backfilled entries
+    if (!r.backfilled && r.invoicedAt && !paidFlags[r.key]) {
+      const invoicedDate = r.invoicedAt.slice(0, 10);
+      if (invoicedDate === shiftDate(today, -5)) {
+        const flagId = "emailReminder:" + (r.key || r.phone + invoicedDate);
+        if (!sentFlags[flagId]) {
+          out.emailReminder.push({ ...r, flagId });
         }
       }
     }

@@ -21,9 +21,11 @@ export default async () => {
   const metaStore = getStore("meta");
   let sentFlags = {};
   try { sentFlags = (await metaStore.get("sentFlags", { type: "json" })) || {}; } catch {}
+  let paidFlags = {};
+  try { paidFlags = (await metaStore.get("paidFlags", { type: "json" })) || {}; } catch {}
 
-  const rem = computeReminders(rentals, process.env.GOOGLE_REVIEW_LINK || "", sentFlags);
-  const total = rem.delivery.length + rem.pickup.length + rem.review.length + rem.followup.length;
+  const rem = computeReminders(rentals, process.env.GOOGLE_REVIEW_LINK || "", sentFlags, paidFlags);
+  const total = rem.delivery.length + rem.pickup.length + rem.review.length + rem.followup.length + rem.emailReminder.length;
 
   if (total === 0) {
     console.log("No reminders due today.");
@@ -45,19 +47,36 @@ export default async () => {
       <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">${rows}</table>`;
   };
 
+  // Email reminders aren't tap-to-send links like texts — they're sent by
+  // the dashboard itself, so this section just flags who's due.
+  const emailSection = (items) => {
+    if (!items.length) return "";
+    const rows = items.map(r => `
+      <tr>
+        <td style="padding:10px 14px; border:1px solid #E5DFD2; font-family:Arial,sans-serif; font-size:14px;">
+          <strong>${r.name}</strong> — ${r.email || ""}<br>
+          <span style="color:#6B6259; font-size:12px;">${r.package} · ${r.price || ""}</span>
+        </td>
+      </tr>`).join("");
+    return `
+      <h2 style="font-family:Arial,sans-serif; font-size:16px; color:#1E1B18; margin:24px 0 8px;">📧 Email payment reminders due (${items.length}) — send from the dashboard</h2>
+      <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">${rows}</table>`;
+  };
+
   const dashboardUrl = "https://www.readytoteokc.com/admin-reminders.html";
 
   const html = `
   <div style="max-width:600px; margin:0 auto; font-family:Arial,sans-serif; color:#1E1B18;">
-    <h1 style="font-size:20px;">Today's reminders — ${total} text${total > 1 ? "s" : ""} to send</h1>
-    <p style="color:#6B6259; font-size:14px;">Tap the button below to open the dashboard and send each text with one tap.</p>
+    <h1 style="font-size:20px;">Today's reminders — ${total} item${total > 1 ? "s" : ""} to handle</h1>
+    <p style="color:#6B6259; font-size:14px;">Tap the button below to open the dashboard and send each one with one tap.</p>
     <div style="text-align:center; margin:20px 0;">
-      <a href="${dashboardUrl}" style="display:inline-block; background:#C99A32; color:#1E1B18; font-weight:bold; text-decoration:none; padding:14px 32px; border-radius:10px; font-size:15px;">Open Dashboard &amp; Send Texts →</a>
+      <a href="${dashboardUrl}" style="display:inline-block; background:#C99A32; color:#1E1B18; font-weight:bold; text-decoration:none; padding:14px 32px; border-radius:10px; font-size:15px;">Open Dashboard →</a>
     </div>
     ${section("🚚 Delivery tomorrow", rem.delivery)}
     ${section("📦 Pickup in 2 days", rem.pickup)}
     ${section("⭐ Review requests", rem.review)}
     ${section("💬 Invoice follow-ups", rem.followup)}
+    ${emailSection(rem.emailReminder)}
   </div>`;
 
   // Collect ICS calendar attachments for delivery + pickup reminders
@@ -79,7 +98,7 @@ export default async () => {
     body: JSON.stringify({
       from: process.env.RESEND_FROM || FROM_FALLBACK,
       to: REMINDER_RECIPIENTS,
-      subject: `${total} reminder text${total > 1 ? "s" : ""} to send today — Ready Tote`,
+      subject: `${total} reminder${total > 1 ? "s" : ""} to handle today — Ready Tote`,
       html,
       attachments: attachments.length ? attachments : undefined,
     }),

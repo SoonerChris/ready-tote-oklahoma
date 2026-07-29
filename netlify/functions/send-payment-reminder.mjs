@@ -1,14 +1,14 @@
-// POST /.netlify/functions/send-invoice
-// Sends a branded invoice email to a customer with a Stripe payment button.
-// Protected by INVOICE_SECRET env var — requests must include the matching secret.
+// POST /.netlify/functions/send-payment-reminder
+// Sends a follow-up payment reminder email for an invoice that's still
+// unpaid, reusing the Stripe payment link saved when the invoice was sent.
+// Protected by INVOICE_SECRET. Body: { secret, key } where key is the
+// rental's blob store key.
 //
 // Env vars required:
 //   RESEND_API_KEY - Resend API key
 //   RESEND_FROM    - verified sender
-//   INVOICE_SECRET - a password you choose; the admin page asks for it
 
 import { getStore } from "@netlify/blobs";
-import { rentalToICSAttachments } from "./lib-reminders.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
@@ -29,32 +29,30 @@ export default async (request) => {
     return new Response("Invalid JSON", { status: 400 });
   }
 
-  // Auth check
   if (!process.env.INVOICE_SECRET || body.secret !== process.env.INVOICE_SECRET) {
     return new Response("Unauthorized", { status: 401 });
   }
+  if (!body.key) return new Response("Missing key", { status: 400 });
 
-  const required = ["email", "name", "phone", "package", "duration", "price", "dropoffDate", "dropoffTime", "pickupDate", "pickupTime", "dropoffAddress", "pickupAddress", "stripeUrl"];
-  for (const f of required) {
-    if (!body[f]) return new Response(`Missing field: ${f}`, { status: 400 });
+  const store = getStore("rentals");
+  const rental = await store.get(body.key, { type: "json" });
+  if (!rental) return new Response("Rental not found", { status: 404 });
+  if (!rental.email) return new Response("This rental has no email on file", { status: 400 });
+  if (!rental.stripeUrl) {
+    return new Response("No payment link saved for this rental — resend the invoice instead", { status: 400 });
   }
-
-  const name = escapeHtml(body.name);
-  const firstName = name.split(" ")[0];
-  const pkg = escapeHtml(body.package);
-  const duration = escapeHtml(body.duration);
-  const rawPrice = String(body.price).trim();
-  const price = escapeHtml(rawPrice.startsWith("$") ? rawPrice : "$" + rawPrice);
-  const dropoff = `${formatDate(body.dropoffDate)} at ${escapeHtml(body.dropoffTime)}`;
-  const pickup = `${formatDate(body.pickupDate)} at ${escapeHtml(body.pickupTime)}`;
-  const dropoffAddress = escapeHtml(body.dropoffAddress);
-  const pickupAddress = escapeHtml(body.pickupAddress);
-  const sameAddress = body.dropoffAddress === body.pickupAddress;
-  const selfService = body.serviceType === "self";
-  const stripeUrl = String(body.stripeUrl);
+  const stripeUrl = String(rental.stripeUrl);
   if (!/^https:\/\/([a-z0-9-]+\.)?stripe\.com\//.test(stripeUrl)) {
-    return new Response("stripeUrl must be a stripe.com link", { status: 400 });
+    return new Response("Saved payment link is invalid", { status: 400 });
   }
+
+  const name = escapeHtml(rental.name || "there");
+  const firstName = name.split(" ")[0];
+  const pkg = escapeHtml(rental.package || "");
+  const rawPrice = String(rental.price || "").trim();
+  const price = escapeHtml(rawPrice ? (rawPrice.startsWith("$") ? rawPrice : "$" + rawPrice) : "");
+  const dropoffKnown = !!(rental.dropoffDate && rental.dropoffTime);
+  const dropoff = dropoffKnown ? `${formatDate(rental.dropoffDate)} at ${escapeHtml(rental.dropoffTime)}` : "";
 
   const from = process.env.RESEND_FROM || FROM_FALLBACK;
 
@@ -69,7 +67,7 @@ export default async (request) => {
 <html lang="en">
 <body style="margin:0; padding:0; background-color:#F5F1E7;">
   <div style="display:none; max-height:0; overflow:hidden;">
-    Your invoice is ready — complete your reservation to lock in your dates.
+    Friendly reminder — your Ready Tote Oklahoma invoice is still open.
   </div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5F1E7; padding:32px 16px;">
     <tr><td align="center">
@@ -88,10 +86,10 @@ export default async (request) => {
           <td style="background-color:#FFFFFF; padding:36px 32px; font-family: Arial, Helvetica, sans-serif; color:#1E1B18;">
 
             <h1 style="margin:0 0 6px; font-size:24px; line-height:1.2;">
-              Your invoice is ready, ${firstName}
+              Just a reminder, ${firstName}
             </h1>
             <p style="margin:0 0 24px; font-size:15px; line-height:1.6; color:#6B6259;">
-              Here are your confirmed rental details. Complete your reservation below to lock in your dates.
+              We haven't received payment yet for your tote rental invoice. Complete your reservation below to lock in your dates${dropoffKnown ? ` for ${dropoff}` : ""}.
             </p>
 
             <!-- Invoice card -->
@@ -100,14 +98,11 @@ export default async (request) => {
               <tr>
                 <td style="padding:22px 24px;">
                   <p style="margin:0 0 14px; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#C99A32; font-weight:bold;">
-                    Rental Invoice
+                    Payment Reminder
                   </p>
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family: Arial, Helvetica, sans-serif;">
                     ${row("Package", pkg)}
-                    ${row("Duration", duration)}
-                    ${selfService
-                      ? row("Service", "You pick up &amp; return the totes") + row("Pick up totes", dropoff) + row("Return totes", pickup)
-                      : row("Drop-off", dropoff) + row("Pickup", pickup) + (sameAddress ? row("Address", dropoffAddress) : row("Drop-off address", dropoffAddress) + row("Pickup address", pickupAddress))}
+                    ${dropoffKnown ? row("Drop-off", dropoff) : ""}
                   </table>
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px; border-top:2px solid #C99A32;">
                     <tr>
@@ -135,7 +130,7 @@ export default async (request) => {
             </p>
 
             <p style="margin:0; font-size:14px; line-height:1.6; color:#6B6259;">
-              Need to change anything? Just reply to this email or call
+              Already paid, or need to change anything? Just reply to this email or call
               <a href="tel:${PHONE_TEL}" style="color:#1E1B18; font-weight:bold; text-decoration:none;">${PHONE_DISPLAY}</a>.
             </p>
           </td>
@@ -162,9 +157,6 @@ export default async (request) => {
 </body>
 </html>`;
 
-  // Generate calendar event attachments
-  const icsAttachments = rentalToICSAttachments(body);
-
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -173,12 +165,11 @@ export default async (request) => {
     },
     body: JSON.stringify({
       from,
-      to: [body.email],
+      to: [rental.email],
       bcc: [OWNER_EMAIL],
       reply_to: OWNER_EMAIL,
-      subject: `Your invoice — ${body.package} — Ready Tote Oklahoma`,
+      subject: `Reminder: your invoice is still open — ${rental.package || "Ready Tote Oklahoma"}`,
       html,
-      attachments: icsAttachments,
     }),
   });
 
@@ -188,29 +179,16 @@ export default async (request) => {
     return new Response(JSON.stringify({ ok: false, error: errText }), { status: 502 });
   }
 
-  // Log the rental so reminders and review requests can find it
+  // Record that the reminder was sent, in the same flags store the SMS
+  // reminders use (flagId prefix keeps it distinct: "emailReminder:<key>")
   try {
-    const store = getStore("rentals");
-    const key = `${body.dropoffDate}_${body.email.replace(/[^a-zA-Z0-9@.]/g, "")}_${Date.now()}`;
-    await store.setJSON(key, {
-      name: body.name,
-      email: body.email,
-      phone: body.phone,
-      package: body.package,
-      price: body.price,
-      duration: body.duration,
-      dropoffDate: body.dropoffDate,
-      dropoffTime: body.dropoffTime,
-      pickupDate: body.pickupDate,
-      pickupTime: body.pickupTime,
-      dropoffAddress: body.dropoffAddress,
-      pickupAddress: body.pickupAddress,
-      serviceType: body.serviceType || "delivery",
-      invoicedAt: new Date().toISOString(),
-      stripeUrl,
-    });
+    const metaStore = getStore("meta");
+    let flags = {};
+    try { flags = (await metaStore.get("sentFlags", { type: "json" })) || {}; } catch {}
+    flags["emailReminder:" + body.key] = new Date().toISOString();
+    await metaStore.setJSON("sentFlags", flags);
   } catch (e) {
-    console.error("Rental log failed (invoice still sent):", e.message);
+    console.error("send-payment-reminder: failed to record sent flag (email still sent):", e.message);
   }
 
   return new Response(JSON.stringify({ ok: true }), { status: 200 });
