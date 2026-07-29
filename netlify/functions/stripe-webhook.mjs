@@ -1,11 +1,16 @@
 // POST /.netlify/functions/stripe-webhook
 // Receives Stripe webhook events. On checkout.session.completed (a paid
-// payment link), sends the customer a branded confirmation email via Resend.
+// payment link): (1) auto-matches the payment to a rental record by email
+// or customer name and marks it paid, so admin-reminders.html no longer
+// shows it as an outstanding invoice, and (2) sends the customer a branded
+// confirmation email via Resend.
 //
 // Env vars required:
 //   STRIPE_WEBHOOK_SECRET - signing secret (whsec_...) from the Stripe webhook endpoint
 //   RESEND_API_KEY        - Resend API key
 //   RESEND_FROM           - verified sender
+
+import { getStore } from "@netlify/blobs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
@@ -55,9 +60,17 @@ export default async (request) => {
     return new Response("No customer email", { status: 200 });
   }
 
-  const fullName = session.customer_details?.name || "there";
+  const rawName = session.customer_details?.name || "";
+  const fullName = rawName || "there";
   const firstName = escapeHtml(fullName.split(" ")[0]);
   const amount = formatAmount(session.amount_total, session.currency);
+
+  // --- Auto-match this payment to a rental record and mark it paid ---
+  try {
+    await autoMarkPaid(email, rawName, session.amount_total);
+  } catch (e) {
+    console.error("stripe-webhook: auto mark-paid failed:", e.message);
+  }
 
   const from = process.env.RESEND_FROM || FROM_FALLBACK;
 
@@ -225,4 +238,75 @@ function escapeHtml(str) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+// --- Auto-match a Stripe payment to a rental record, then mark it paid ---
+// Matches on email first (most reliable), falling back to customer name if
+// no email match is found. If a customer has more than one unpaid invoice,
+// narrows by the paid amount, then falls back to the most recently invoiced.
+async function autoMarkPaid(email, name, amountCents) {
+  const rentalsStore = getStore("rentals");
+  const { blobs } = await rentalsStore.list();
+  const fetched = await Promise.all(
+    blobs.map(async (b) => {
+      const r = await rentalsStore.get(b.key, { type: "json" });
+      return r ? { key: b.key, ...r } : null;
+    })
+  );
+  const rentals = fetched.filter(Boolean);
+
+  const metaStore = getStore("meta");
+  let paidFlags = {};
+  try {
+    paidFlags = (await metaStore.get("paidFlags", { type: "json" })) || {};
+  } catch {
+    // Key doesn't exist yet, start fresh
+  }
+
+  const match = findRentalMatch(rentals, paidFlags, email, name, amountCents);
+  if (!match) {
+    console.warn("stripe-webhook: no rental match for payment from", email, name || "(no name)");
+    return;
+  }
+
+  paidFlags[match.key] = new Date().toISOString();
+  await metaStore.setJSON("paidFlags", paidFlags);
+  console.log("stripe-webhook: marked rental paid ->", match.key, match.name);
+}
+
+function findRentalMatch(rentals, paidFlags, email, name, amountCents) {
+  // Only rentals that were actually invoiced (not backfilled) and aren't
+  // already marked paid are candidates — same rule admin-reminders.html uses.
+  const candidates = rentals.filter((r) => r.invoicedAt && !r.backfilled && !paidFlags[r.key]);
+  if (!candidates.length) return null;
+
+  const normEmail = email ? normalize(email) : "";
+  const normName = name ? normalize(name) : "";
+
+  let pool = normEmail ? candidates.filter((r) => normalize(r.email || "") === normEmail) : [];
+  if (!pool.length && normName) {
+    pool = candidates.filter((r) => normalize(r.name || "") === normName);
+  }
+  if (!pool.length) return null;
+  if (pool.length === 1) return pool[0];
+
+  // Same person, multiple unpaid invoices — narrow by the amount actually paid
+  if (Number.isFinite(amountCents)) {
+    const byAmount = pool.filter((r) => centsFromPriceString(r.price) === amountCents);
+    if (byAmount.length) pool = byAmount;
+  }
+
+  // Still ambiguous — assume the most recently invoiced one
+  pool.sort((a, b) => (b.invoicedAt || "").localeCompare(a.invoicedAt || ""));
+  return pool[0];
+}
+
+function normalize(str) {
+  return String(str).trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function centsFromPriceString(price) {
+  if (!price) return null;
+  const num = parseFloat(String(price).replace(/[^0-9.]/g, ""));
+  return Number.isFinite(num) ? Math.round(num * 100) : null;
 }
