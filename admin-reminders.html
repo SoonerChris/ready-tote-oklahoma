@@ -328,7 +328,7 @@
   };
 
   function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML;}
-  function showErr(m){const s=$('status');s.className='status err';s.textContent=m;}
+  function showErr(m){const s=$('status');s.style.display='block';s.className='status err';s.textContent=m;}
 
 </script>
 </body>
