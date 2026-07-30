@@ -1,6 +1,8 @@
 // POST /.netlify/functions/mark-sent
 // Records that a reminder text was sent, so it stops appearing in the
-// dashboard and morning emails. Protected by INVOICE_SECRET.
+// dashboard and morning emails. Pass { unsent: true } to clear a flag
+// instead (puts the reminder back on the "due" list). Protected by
+// INVOICE_SECRET.
 
 import { getStore } from "@netlify/blobs";
 
@@ -23,7 +25,11 @@ export default async (request) => {
     } catch {
       // Key doesn't exist yet, start fresh
     }
-    flags[body.flagId] = new Date().toISOString();
+    if (body.unsent === true) {
+      delete flags[body.flagId];
+    } else {
+      flags[body.flagId] = new Date().toISOString();
+    }
     await store.setJSON("sentFlags", flags);
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (e) {
