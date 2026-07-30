@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Contacts — Ready Tote Oklahoma (Internal)</title>
+<link rel="stylesheet" href="admin-shared.css">
+<style>
+  .wrap{max-width:1000px;margin:0 auto;}
+  .secret-bar{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .secret-bar label{font-size:0.82rem;font-weight:bold;white-space:nowrap;}
+  .secret-bar input{flex:1;min-width:200px;padding:10px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);}
+  .secret-bar button{margin-top:0;width:auto;padding:10px 20px;font-size:0.9rem;font-weight:bold;background:var(--gold);color:var(--ink);border:none;border-radius:8px;cursor:pointer;white-space:nowrap;}
+  .secret-bar button:disabled{opacity:0.6;}
+
+  .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  .toolbar input[type=search]{flex:1;min-width:220px;margin:0;}
+  .count-badge{font-size:0.8rem;color:var(--steel);white-space:nowrap;}
+
+  .tbl-wrap{background:var(--white);border:1px solid var(--line);border-radius:14px;overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:0.86rem;min-width:760px;}
+  thead th{text-align:left;padding:12px 14px;background:var(--cream);border-bottom:1px solid var(--line);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--steel);white-space:nowrap;}
+  tbody td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:var(--gold-bg);}
+  td.name{font-weight:bold;white-space:nowrap;}
+  td a{color:var(--ink);text-decoration:none;border-bottom:1px dotted var(--gold);}
+  td a:hover{color:var(--gold);}
+  td.addr{color:var(--steel);font-size:0.82rem;max-width:240px;}
+  .pkg-badge{display:inline-block;font-size:0.72rem;font-weight:bold;background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold);padding:2px 8px;border-radius:999px;white-space:nowrap;}
+  .no-results{padding:24px;text-align:center;color:var(--steel);font-size:0.9rem;}
+
+  footer{text-align:center;font-size:0.78rem;color:var(--steel);margin-top:20px;}
+  footer a{color:var(--gold);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="admin-nav wide" aria-label="Admin tools">
+    <a href="admin.html">Dashboard</a>
+    <a href="admin-invoice.html">Send Invoice</a>
+    <a href="admin-add-rental.html">Add Rental</a>
+    <a href="admin-reminders.html">Reminders</a>
+    <a href="admin-contacts.html" aria-current="page">Contacts</a>
+    <a href="admin-finance.html">Finance</a>
+    <a href="admin-outreach.html">Outreach</a>
+    <a href="admin-inventory.html">Inventory</a>
+  </nav>
+
+  <h1>Customer Contacts</h1>
+  <p class="sub">Every renter's phone, email, and address in one searchable table. Sorted by most recent rental first.</p>
+
+  <div class="secret-bar">
+    <label for="secret">Admin secret</label>
+    <input type="password" id="secret" placeholder="Your INVOICE_SECRET value" autocomplete="current-password">
+    <button id="loadBtn">Load contacts</button>
+  </div>
+  <div class="status" id="status"></div>
+
+  <div id="results" style="display:none;">
+    <div class="toolbar">
+      <input type="search" id="search" placeholder="Search name, phone, email, or address…">
+      <span class="count-badge" id="countBadge"></span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th><th>Phone</th><th>Email</th><th>Package</th><th>Drop-off</th><th>Pickup</th><th>Address</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<footer><a href="/">← readytoteokc.com</a></footer>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
+  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+
+  let ALL_ROWS = [];
+
+  $('loadBtn').addEventListener('click', load);
+  $('search').addEventListener('input', () => renderTable(filterRows($('search').value)));
+  // Auto-load if secret is already saved (matches other admin pages)
+  if ($('secret').value) load();
+
+  async function load() {
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret.');
+    const btn = $('loadBtn');
+    btn.disabled = true; btn.textContent = 'Loading…';
+    try {
+      const resp = await fetch('/.netlify/functions/get-rentals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret }),
+      });
+      if (resp.status === 401) { showErr('Wrong admin secret.'); return; }
+      if (!resp.ok) { showErr('Load failed (' + resp.status + ').'); return; }
+      const data = await resp.json();
+      const rentals = data.rentals || [];
+      ALL_ROWS = [...rentals].sort((a, b) => (b.dropoffDate || '').localeCompare(a.dropoffDate || ''));
+      $('search').value = '';
+      renderTable(ALL_ROWS);
+      $('results').style.display = 'block';
+      $('status').style.display = 'none';
+    } catch {
+      showErr('Network error — use this page on the live site.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Load contacts';
+    }
+  }
+
+  function filterRows(q) {
+    q = q.trim().toLowerCase();
+    if (!q) return ALL_ROWS;
+    return ALL_ROWS.filter(r => {
+      const hay = [r.name, r.phone, r.email, r.dropoffAddress, r.pickupAddress, r.address, r.package]
+        .filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  function renderTable(rows) {
+    $('countBadge').textContent = rows.length + (rows.length === 1 ? ' contact' : ' contacts');
+    const tb = $('tbody');
+    if (!rows.length) {
+      const q = esc($('search').value);
+      tb.innerHTML = `<tr><td colspan="7" class="no-results">No contacts match "${q}".</td></tr>`;
+      return;
+    }
+    tb.innerHTML = rows.map(r => {
+      const addr = r.dropoffAddress || r.pickupAddress || r.address || '';
+      const pickupAddr = r.pickupAddress || '';
+      const addrTitle = (pickupAddr && pickupAddr !== addr) ? ` title="Pickup address: ${escAttr(pickupAddr)}"` : '';
+      const phoneDigits = (r.phone || '').replace(/[^0-9+]/g, '');
+      return `
+      <tr>
+        <td class="name">${esc(r.name)}</td>
+        <td>${r.phone ? `<a href="tel:${escAttr(phoneDigits)}">${esc(r.phone)}</a>` : '—'}</td>
+        <td>${r.email ? `<a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : '—'}</td>
+        <td>${r.package ? `<span class="pkg-badge">${esc(r.package)}</span>` : ''}</td>
+        <td>${esc(fmtDate(r.dropoffDate))}</td>
+        <td>${esc(fmtDate(r.pickupDate))}</td>
+        <td class="addr"${addrTitle}>${esc(addr)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    const parts = String(iso).slice(0, 10).split('-');
+    if (parts.length !== 3) return iso;
+    const [y, m, d] = parts;
+    return m + '/' + d + '/' + y.slice(2);
+  }
+  function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+  function escAttr(s) { return String(s ?? '').replace(/"/g, '&quot;'); }
+  function showErr(m) { const s = $('status'); s.className = 'status err'; s.textContent = m; }
+</script>
+</body>
+</html>
