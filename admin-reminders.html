@@ -233,6 +233,9 @@
     el.querySelectorAll('.otw-btn').forEach(btn => {
       btn.addEventListener('click', () => onTheWay(btn.dataset.key, btn.dataset.type));
     });
+    el.querySelectorAll('.unsend-btn').forEach(btn => {
+      btn.addEventListener('click', () => unmarkSent(btn.dataset.flagid));
+    });
   }
 
   // "On the Way" button: starts as a plain button, calculates a live ETA via
@@ -338,7 +341,7 @@
     const flagId = type + ':' + (key || 'unknown');
     const sent = SENT_FLAGS[flagId];
     if (sent) {
-      return `<span style="display:inline-block; padding:8px 16px; font-size:0.8rem; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px;">${icon} ✓ Sent</span>`;
+      return `<button type="button" class="unsend-btn" data-flagid="${flagId}" title="Click to mark as unsent" style="width:auto; padding:8px 16px; font-size:0.8rem; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px; cursor:pointer;">${icon} ✓ Sent ↩</button>`;
     }
     return `<a class="sms-btn" href="${smsLink}" onclick="setTimeout(()=>confirmSent('${flagId}'),500)" style="padding:8px 16px; font-size:0.8rem; background:${color};${color==='var(--gold)'?' color:var(--ink);':''}">${icon} ${label}</a>`;
   }
@@ -346,6 +349,24 @@
   window.confirmSent = async (flagId) => {
     if (!confirm('Did you send the text? Mark as sent?')) return;
     await markSent(flagId);
+  };
+
+  window.unmarkSent = async (flagId) => {
+    if (!confirm('Mark this text as unsent? It will show as due again.')) return;
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const resp = await fetch('/.netlify/functions/mark-sent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, flagId, unsent: true }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Unmark failed (' + resp.status + '): ' + detail);
+      }
+    } catch { showErr('Network error.'); }
   };
 
   // ---- Email payment reminders (computed: invoiced 5+ days ago, unpaid) ----
