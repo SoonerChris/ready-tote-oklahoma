@@ -31,6 +31,12 @@
   <div class="status" id="status"></div>
 
   <div id="results" style="display:none;">
+    <div class="rem" id="netIncomeBubble" style="text-align:center; background:var(--cream); border:2px solid var(--gold); margin-bottom:20px;">
+      <div style="font-size:0.72rem; color:var(--steel); font-weight:bold; letter-spacing:0.5px; text-transform:uppercase;">📈 Net Income (YTD)</div>
+      <div id="netIncomeAmount" style="font-size:2.1rem; font-weight:bold; margin:6px 0 2px;">$0.00</div>
+      <div id="netIncomeSub" style="font-size:0.78rem; color:var(--steel);"></div>
+    </div>
+
     <h2>💰 Sales</h2>
     <div class="rem" id="salesSummary" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
     <div id="salesByMonth"></div>
@@ -131,6 +137,7 @@
         FIN = await finResp.json();
         renderSales(ALL_RENTALS);
         renderFinance();
+        renderNetIncome();
         $('results').style.display = 'block';
         $('status').style.display = 'none';
       }
@@ -268,7 +275,7 @@
   });
   async function reloadFinance(){
     const resp = await finCall({ action: 'list' });
-    if (resp.ok) { FIN = await resp.json(); renderFinance(); }
+    if (resp.ok) { FIN = await resp.json(); renderFinance(); renderNetIncome(); }
   }
 
   function renderFinance() {
@@ -344,6 +351,23 @@
         <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
           onclick="finDelete('${esc(m.key)}')">Delete</button>
       </div>`).join('') || '<p class="empty">No trips logged yet.</p>';
+  }
+
+  function renderNetIncome(){
+    const thisYearStr = new Date().getFullYear().toString();
+    const ytdRevenue = ALL_RENTALS
+      .filter(r => (r.invoicedAt||'').slice(0,4) === thisYearStr)
+      .reduce((t,r) => t + priceNum(r.price), 0);
+    const ytdExpenses = FIN.expenses
+      .filter(e => (e.date||'').slice(0,4) === thisYearStr)
+      .reduce((t,e) => t + Number(e.amount||0), 0);
+    const net = ytdRevenue - ytdExpenses;
+    const positive = net >= 0;
+    const color = positive ? 'var(--green)' : 'var(--red)';
+    $('netIncomeBubble').style.borderColor = color;
+    $('netIncomeAmount').style.color = color;
+    $('netIncomeAmount').textContent = (positive ? '' : '−') + money(Math.abs(net));
+    $('netIncomeSub').textContent = `${money(ytdRevenue)} revenue − ${money(ytdExpenses)} expenses`;
   }
 
   window.fillTrip = (date, purpose) => { $('mileDate').value = date; $('milePurpose').value = purpose; $('mileMiles').focus(); };
