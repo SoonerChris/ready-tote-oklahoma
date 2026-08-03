@@ -9,8 +9,11 @@ import { getStore } from "@netlify/blobs";
 const EDITABLE_FIELDS = [
   "name", "email", "phone", "package", "price", "duration",
   "dropoffDate", "dropoffTime", "pickupDate", "pickupTime",
-  "dropoffAddress", "pickupAddress", "serviceType",
+  "dropoffAddress", "pickupAddress", "serviceType", "notes",
 ];
+// Notes can be intentionally cleared (saved as blank); every other field
+// is skipped if blank so a stray empty submit can't wipe real data.
+const CLEARABLE_FIELDS = ["notes"];
 
 export default async (request) => {
   if (request.method !== "POST") {
@@ -31,10 +34,11 @@ export default async (request) => {
     const updated = { ...existing };
     let changed = false;
     for (const f of EDITABLE_FIELDS) {
-      if (body[f] !== undefined && body[f] !== null && String(body[f]).trim() !== "") {
-        updated[f] = body[f];
-        changed = true;
-      }
+      if (body[f] === undefined || body[f] === null) continue;
+      const isBlank = String(body[f]).trim() === "";
+      if (isBlank && !CLEARABLE_FIELDS.includes(f)) continue;
+      updated[f] = isBlank ? "" : body[f];
+      changed = true;
     }
     if (!changed) return new Response("No editable fields provided", { status: 400 });
 

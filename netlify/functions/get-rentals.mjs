@@ -34,6 +34,19 @@ export default async (request) => {
   const reviewLink = process.env.GOOGLE_REVIEW_LINK || "";
   const reminders = computeReminders(rentals, reviewLink, sentFlags, paidFlags);
 
+  // Flag which rentals already have a delivery/pickup proof photo, using a
+  // single list() call rather than checking each rental individually.
+  const photosStore = getStore("photos");
+  let photoKeys = new Set();
+  try {
+    const { blobs } = await photosStore.list();
+    photoKeys = new Set(blobs.map((b) => b.key));
+  } catch {}
+  for (const r of rentals) {
+    r.hasDeliveryPhoto = photoKeys.has(`${r.key}:delivery`);
+    r.hasPickupPhoto = photoKeys.has(`${r.key}:pickup`);
+  }
+
   // On-demand text links for every rental (All Rentals list)
   for (const r of rentals) {
     const rv = reviewMessageFor(r, reviewLink);

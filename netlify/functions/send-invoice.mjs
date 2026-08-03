@@ -206,6 +206,7 @@ export default async (request) => {
       dropoffAddress: body.dropoffAddress,
       pickupAddress: body.pickupAddress,
       serviceType: body.serviceType || "delivery",
+      notes: body.notes || "",
       invoicedAt: new Date().toISOString(),
       stripeUrl,
     });
