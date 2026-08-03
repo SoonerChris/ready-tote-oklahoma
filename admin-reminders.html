@@ -45,6 +45,7 @@
 
   <button id="loadBtn">Load today's reminders</button>
   <div class="status" id="status"></div>
+  <input type="file" id="photoFileInput" accept="image/*" capture="environment" style="display:none">
 
   <div id="results" style="display:none;">
     <h2>📅 This week</h2>
@@ -206,6 +207,7 @@
       <div class="rem">
         <div class="who">${esc(r.name)} — ${esc(r.price || '')} ${paymentBadge(r)} ${tosBadge(r)}</div>
         <div class="meta">${esc(r.package)} · Drop-off ${esc(fmtDate(r.dropoffDate))}${(r.dropoffAddress||r.address) ? ' @ ' + esc(r.dropoffAddress||r.address) : ''} · Pickup ${esc(fmtDate(r.pickupDate))}${(r.pickupAddress||r.address) ? ' @ ' + esc(r.pickupAddress||r.address) : ''}</div>
+        ${r.notes ? `<div class="msg" style="margin-bottom:8px;">📝 ${esc(r.notes)}</div>` : ''}
         <div class="actions">
           ${textBtn('delivery', r.key, r.deliverySms, '🚚', 'Delivery', 'var(--green)')}
           ${textBtn('pickup', r.key, r.pickupSms, '📦', 'Pickup', 'var(--gold)')}
@@ -216,9 +218,14 @@
           ${(r.dropoffAddress || r.address) ? onTheWayBtn('delivery', r.key) : ''}
           ${(r.pickupAddress || r.address) ? onTheWayBtn('pickup', r.key) : ''}
         </div>` : ''}
+        <div class="actions">
+          ${photoBtn(r, 'delivery')}
+          ${photoBtn(r, 'pickup')}
+        </div>
         ${paymentControls ? `<div class="actions">${paymentControls}</div>` : ''}
         <div class="actions delete-row">
           <button type="button" class="edit-pkg-btn" data-key="${esc(r.key)}" data-pkg="${esc(r.package || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">✏️ Edit package</button>
+          <button type="button" class="edit-notes-btn" data-key="${esc(r.key)}" data-notes="${esc(r.notes || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📝 ${r.notes ? 'Edit' : 'Add'} notes</button>
           <button type="button" class="delete-btn" onclick="deleteRental('${esc(r.key)}', '${esc(r.name)}')">Delete</button>
         </div>
       </div>`;
@@ -240,6 +247,26 @@
     el.querySelectorAll('.edit-pkg-btn').forEach(btn => {
       btn.addEventListener('click', () => editPackage(btn.dataset.key, btn.dataset.pkg));
     });
+    el.querySelectorAll('.edit-notes-btn').forEach(btn => {
+      btn.addEventListener('click', () => editNotes(btn.dataset.key, btn.dataset.notes));
+    });
+    el.querySelectorAll('.add-photo-btn').forEach(btn => {
+      btn.addEventListener('click', () => triggerPhotoCapture(btn.dataset.key, btn.dataset.type));
+    });
+    el.querySelectorAll('.view-photo-btn').forEach(btn => {
+      btn.addEventListener('click', () => viewPhoto(btn.dataset.key, btn.dataset.type));
+    });
+  }
+
+  // Delivery/pickup proof-of-photo button: "Add" if none on file yet, or
+  // "View" (which also lets you retake) once one's been uploaded.
+  function photoBtn(r, type) {
+    const has = type === 'delivery' ? r.hasDeliveryPhoto : r.hasPickupPhoto;
+    const label = type === 'delivery' ? 'Delivery' : 'Pickup';
+    if (has) {
+      return `<button type="button" class="view-photo-btn" data-key="${esc(r.key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px; cursor:pointer;">📷 View ${label} photo</button>`;
+    }
+    return `<button type="button" class="add-photo-btn" data-key="${esc(r.key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📷 Add ${label} photo</button>`;
   }
 
   // "On the Way" button: starts as a plain button, calculates a live ETA via
@@ -341,6 +368,118 @@
         showErr('Edit failed (' + resp.status + '): ' + detail);
       }
     } catch { showErr('Network error.'); }
+  };
+
+  window.editNotes = async (key, currentNotes) => {
+    const newNotes = prompt('Update notes for this rental (leave blank to clear):', currentNotes || '');
+    if (newNotes === null) return; // cancelled
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const resp = await fetch('/.netlify/functions/edit-rental', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key, notes: newNotes.trim() }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Edit failed (' + resp.status + '): ' + detail);
+      }
+    } catch { showErr('Network error.'); }
+  };
+
+  // ---- Delivery / pickup proof photos ----
+  // Tapping "Add photo" opens the phone camera (or file picker on desktop);
+  // the image is downsized client-side before upload to keep it well under
+  // the function payload limit.
+  let PENDING_PHOTO = null;
+
+  window.triggerPhotoCapture = (key, type) => {
+    PENDING_PHOTO = { key, type };
+    $('photoFileInput').value = '';
+    $('photoFileInput').click();
+  };
+
+  $('photoFileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    const pending = PENDING_PHOTO;
+    PENDING_PHOTO = null;
+    if (!file || !pending) return;
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const dataUrl = await compressImage(file, 1600, 0.72);
+      const base64 = dataUrl.split(',')[1];
+      const resp = await fetch('/.netlify/functions/upload-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key: pending.key, type: pending.type, imageBase64: base64, mimeType: 'image/jpeg' }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Photo upload failed (' + resp.status + '): ' + detail);
+      }
+    } catch (err) {
+      showErr('Could not process photo: ' + (err.message || err));
+    }
+  });
+
+  // Resizes/compresses an image file client-side via canvas, returns a JPEG data URL.
+  function compressImage(file, maxDim, quality) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width >= height) { height = Math.round(height * (maxDim / width)); width = maxDim; }
+            else { width = Math.round(width * (maxDim / height)); height = maxDim; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => reject(new Error('Could not read image.'));
+        img.src = reader.result;
+      };
+      reader.onerror = () => reject(new Error('Could not read file.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Opens a blank tab immediately (before the async fetch) so mobile Safari
+  // doesn't treat it as a popup, then fills it in once the photo loads.
+  window.viewPhoto = async (key, type) => {
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    const label = type === 'delivery' ? 'Delivery' : 'Pickup';
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(`<title>${label} photo</title><body style="margin:0;background:#111;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;">Loading…</body>`);
+    }
+    try {
+      const resp = await fetch('/.netlify/functions/get-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key, type }),
+      });
+      if (!resp.ok) {
+        const detail = await resp.text().catch(() => '');
+        const msg = 'Could not load photo (' + resp.status + '): ' + detail;
+        if (win) win.document.body.textContent = msg; else showErr(msg);
+        return;
+      }
+      const data = await resp.json();
+      if (win) {
+        win.document.body.innerHTML = `<img src="data:${data.mimeType};base64,${data.imageBase64}" style="max-width:100%;max-height:100vh;">`;
+      }
+    } catch {
+      if (win) win.document.body.textContent = 'Network error loading photo.'; else showErr('Network error loading photo.');
+    }
   };
 
   window.deleteRental = async (key, name) => {

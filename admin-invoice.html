@@ -153,6 +153,9 @@
   <input type="url" id="stripeUrl" placeholder="https://buy.stripe.com/...">
   <p class="note">Paste the Stripe Payment Link for this package. Tip: edit this file to hard-code your three links in the package dropdown (data-stripe attributes) so this auto-fills.</p>
 
+  <label>Notes (optional)</label>
+  <textarea id="notes" rows="3" placeholder="Gate code, dog on property, special instructions…" style="width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);font-family:inherit;resize:vertical;"></textarea>
+
   <button id="sendBtn">Send Invoice Email</button>
   <div class="status" id="status"></div>
 </div>
@@ -302,6 +305,7 @@
     }
 
     payload.serviceType = $('serviceType').value;
+    payload.notes = $('notes').value.trim();
     if (payload.serviceType === 'self') {
       payload.dropoffAddress = 'Customer pickup';
       payload.pickupAddress = 'Customer return';

@@ -91,6 +91,9 @@
   <label>Pickup address (optional)</label>
   <input type="text" id="pickupAddress" placeholder="456 Oak Ave, Moore, OK 73160">
 
+  <label>Notes (optional)</label>
+  <textarea id="notes" rows="3" placeholder="Gate code, dog on property, special instructions…" style="width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);font-family:inherit;resize:vertical;"></textarea>
+
   <button id="addBtn">Add to Rental Log</button>
   <div class="status" id="status"></div>
 </div>
@@ -113,6 +116,7 @@
     payload.dropoffAddress = $('dropoffAddress').value.trim();
     payload.pickupAddress = $('pickupAddress').value.trim();
     payload.email = $('email').value.trim();
+    payload.notes = $('notes').value.trim();
 
     const btn = $('addBtn');
     btn.disabled = true; btn.textContent = 'Adding…';
@@ -124,7 +128,7 @@
       });
       if (resp.ok) {
         showStatus('ok', 'Added ' + payload.name + '. Form cleared for the next one.');
-        ['name','email','phone','package','price','dropoffDate','pickupDate','dropoffAddress','pickupAddress'].forEach(f => $(f).value = '');
+        ['name','email','phone','package','price','dropoffDate','pickupDate','dropoffAddress','pickupAddress','notes'].forEach(f => $(f).value = '');
       } else if (resp.status === 401) {
         showStatus('err', 'Wrong admin secret.');
       } else {
