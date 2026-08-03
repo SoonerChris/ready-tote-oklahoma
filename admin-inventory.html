@@ -67,6 +67,13 @@
   <div id="results" style="display:none;">
     <div class="rem stats" id="statCards"></div>
 
+    <h2>Data cleanup</h2>
+    <div class="rem">
+      <p class="note" style="margin:0 0 10px;">Sets Tote/Dolly counts on older rentals from before those fields existed, by parsing the package text. Skips anything it can't confidently parse (e.g. "Custom Package") so it never guesses a wrong number — you'll get a list to fix by hand.</p>
+      <button type="button" id="backfillBtn" style="width:auto; padding:10px 18px;">🔧 Backfill counts from package text</button>
+      <div id="backfillResult" style="margin-top:10px;"></div>
+    </div>
+
     <h2>Expected Inventory (Next 60 Days)</h2>
     <div class="rem">
       <div class="exp-legend">
@@ -310,6 +317,62 @@
     const resp = await invCall({ action: 'add', date, type, quantity, note });
     if (resp.ok) { $('evQty').value = ''; $('evNote').value = ''; $('status').style.display = 'none'; reload(); }
     else showErr('Add event failed.');
+  });
+
+  $('backfillBtn').addEventListener('click', async () => {
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret.');
+
+    const toFix = ALL_RENTALS.filter(r => typeof r.toteCount !== 'number' || typeof r.dollyCount !== 'number');
+    const resultEl = $('backfillResult');
+    if (!toFix.length) {
+      resultEl.innerHTML = '<p class="note" style="color:var(--green);">Every rental already has a tote/dolly count set. Nothing to backfill.</p>';
+      return;
+    }
+
+    const btn = $('backfillBtn');
+    btn.disabled = true;
+    let updated = 0;
+    const needsReview = [];
+
+    for (let i = 0; i < toFix.length; i++) {
+      const r = toFix[i];
+      btn.textContent = `Backfilling ${i + 1} of ${toFix.length}…`;
+      const toteCount = totesInPackage(r.package);
+      const dollyCount = dolliesInPackage(r.package);
+      // Only write back when the package text actually yielded a real tote
+      // count — a 0 means the text couldn't be confidently parsed (e.g.
+      // "Custom Package"), and guessing 0 would just hide the problem.
+      if (toteCount <= 0) {
+        needsReview.push(r);
+        continue;
+      }
+      try {
+        const resp = await fetch('/.netlify/functions/edit-rental', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ secret, key: r.key, toteCount, dollyCount }),
+        });
+        if (resp.ok) updated++; else needsReview.push(r);
+      } catch { needsReview.push(r); }
+    }
+
+    btn.disabled = false;
+    btn.textContent = '🔧 Backfill counts from package text';
+
+    const reviewList = needsReview.length
+      ? '<ul style="margin:8px 0 0; padding-left:18px; font-size:0.85rem;">' +
+          needsReview.map(r => `<li>${esc(r.name)} — "${esc(r.package)}"</li>`).join('') +
+        '</ul>'
+      : '';
+    resultEl.innerHTML = `
+      <p class="note" style="color:${needsReview.length ? 'var(--red)' : 'var(--green)'};">
+        Updated ${updated} rental${updated === 1 ? '' : 's'} from package text.
+        ${needsReview.length ? `${needsReview.length} need${needsReview.length === 1 ? 's' : ''} a manual count, use "Edit tote/dolly count" for these on Reminders → All Rentals:` : 'All caught up!'}
+      </p>${reviewList}`;
+
+    // Reload rental data + inventory stats so badges/counts reflect the update
+    await load();
   });
 
   window.invDelete = async (key) => {
