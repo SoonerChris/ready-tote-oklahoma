@@ -92,6 +92,14 @@ button.secondary:hover{background:var(--gold-bg);}
 /* Data-dense text (phone, email, dates, codes, IDs) reads better in mono */
 .mono{font-family:'JetBrains Mono', monospace;}
 
+/* Reusable data table (contacts, monthly breakdowns, etc.) */
+.tbl-wrap{background:var(--white);border:1px solid var(--line);border-radius:8px;overflow-x:auto;box-shadow:0 1px 2px rgba(30,27,24,0.04);}
+.tbl-wrap table{width:100%;border-collapse:collapse;font-size:0.86rem;}
+.tbl-wrap thead th{text-align:left;padding:12px 14px;background:var(--cream);border-bottom:1px solid var(--line);font-size:0.7rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;color:var(--steel);white-space:nowrap;}
+.tbl-wrap tbody td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top;}
+.tbl-wrap tbody tr:last-child td{border-bottom:none;}
+.tbl-wrap tbody tr:hover{background:var(--gold-bg);}
+
 /* Two-column form rows that collapse to one column on phones */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 @media(max-width:560px){.grid2{grid-template-columns:1fr;}}

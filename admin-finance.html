@@ -40,6 +40,10 @@
     <h2>💰 Sales</h2>
     <div class="rem" id="salesSummary" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
     <div id="salesByMonth"></div>
+
+    <h3 style="font-size:0.88rem; margin:22px 0 8px;">📊 Monthly Breakdown</h3>
+    <div id="monthlyBreakdown"></div>
+
     <div class="grid2" id="salesDetails">
       <div>
         <h3 style="font-size:0.88rem; margin:16px 0 8px;">📦 By Package</h3>
@@ -138,6 +142,7 @@
         renderSales(ALL_RENTALS);
         renderFinance();
         renderNetIncome();
+        renderMonthlyBreakdown(ALL_RENTALS, FIN.expenses);
         $('results').style.display = 'block';
         $('status').style.display = 'none';
       }
@@ -275,7 +280,7 @@
   });
   async function reloadFinance(){
     const resp = await finCall({ action: 'list' });
-    if (resp.ok) { FIN = await resp.json(); renderFinance(); renderNetIncome(); }
+    if (resp.ok) { FIN = await resp.json(); renderFinance(); renderNetIncome(); renderMonthlyBreakdown(ALL_RENTALS, FIN.expenses); }
   }
 
   function renderFinance() {
@@ -351,6 +356,54 @@
         <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
           onclick="finDelete('${esc(m.key)}')">Delete</button>
       </div>`).join('') || '<p class="empty">No trips logged yet.</p>';
+  }
+
+  function monthKey(d){ return (d||'').slice(0,7); }
+  function monthLabel(m){
+    const d = new Date(m + '-01T12:00:00');
+    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }
+
+  // Splits revenue, expenses, and net income out by calendar month, from the
+  // earliest rental/expense on record through the current month -- so this
+  // stays accurate whether there's 1 month of data or several years of it.
+  function renderMonthlyBreakdown(rentals, expenses){
+    const currentMonth = new Date().toISOString().slice(0,7);
+    const seen = [...rentals.map(r => monthKey(r.invoicedAt)), ...expenses.map(e => monthKey(e.date))].filter(Boolean);
+    const firstMonth = seen.length ? seen.sort()[0] : currentMonth;
+
+    const months = [];
+    let [y, m] = firstMonth.split('-').map(Number);
+    const [cy, cm] = currentMonth.split('-').map(Number);
+    while (y < cy || (y === cy && m <= cm)) {
+      months.push(`${y}-${String(m).padStart(2,'0')}`);
+      m++; if (m > 12) { m = 1; y++; }
+    }
+
+    const fmt = n => '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    const rows = months.map(mo => {
+      const rev = rentals.filter(r => monthKey(r.invoicedAt) === mo).reduce((t,r) => t + priceNum(r.price), 0);
+      const exp = expenses.filter(e => monthKey(e.date) === mo).reduce((t,e) => t + Number(e.amount||0), 0);
+      const count = rentals.filter(r => monthKey(r.invoicedAt) === mo).length;
+      return { month: mo, count, rev, exp, net: rev - exp };
+    });
+
+    $('monthlyBreakdown').innerHTML = `
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Month</th><th>Rentals</th><th>Revenue</th><th>Expenses</th><th>Net Income</th></tr></thead>
+          <tbody>
+            ${rows.slice().reverse().map(r => `
+              <tr${r.month === currentMonth ? ' style="background:var(--gold-bg);"' : ''}>
+                <td style="font-weight:bold;">${monthLabel(r.month)}${r.month === currentMonth ? ' <span class="pill pending">Current</span>' : ''}</td>
+                <td class="mono">${r.count}</td>
+                <td class="mono">${fmt(r.rev)}</td>
+                <td class="mono">${fmt(r.exp)}</td>
+                <td class="mono" style="font-weight:bold;color:${r.net >= 0 ? 'var(--green)' : 'var(--crate-red)'};">${r.net >= 0 ? '' : '−'}${fmt(Math.abs(r.net))}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
   }
 
   function renderNetIncome(){
