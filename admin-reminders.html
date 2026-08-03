@@ -11,15 +11,16 @@
 <link rel="stylesheet" href="admin-shared.css">
 <style>
   .rem .who{font-weight:bold;}
-  .rem .meta{color:var(--steel);font-size:0.82rem;margin:4px 0 10px;}
-  .rem .msg{background:var(--cream);border-radius:8px;padding:10px 12px;font-size:0.85rem;color:var(--ink);margin-bottom:10px;}
-  .sms-btn{display:inline-block;background:var(--green);color:#fff;font-weight:bold;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:0.88rem;}
+  .rem .meta{color:var(--steel);font-size:0.8rem;margin:4px 0 10px;font-family:'JetBrains Mono',monospace;}
+  .rem .msg{background:var(--cream);border-radius:6px;padding:10px 12px;font-size:0.85rem;color:var(--ink);margin-bottom:10px;}
+  .sms-btn{display:inline-block;background:var(--green);color:#fff;font-weight:bold;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:0.88rem;transition:opacity 0.12s ease;}
+  .sms-btn:hover{opacity:0.88;}
   /* Group related row buttons so each group wraps independently and
      lines up the same way regardless of which buttons are "Sent" */
   .rem .actions{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px;}
   .rem .actions:last-child{margin-bottom:0;}
   .rem .actions.delete-row{margin-top:2px; padding-top:10px; border-top:1px solid var(--line);}
-  .delete-btn{width:auto; padding:8px 16px; font-size:0.8rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px; cursor:pointer;}
+  .delete-btn{width:auto; padding:8px 16px; font-size:0.8rem; background:var(--red-bg); color:var(--red); border:1px solid rgba(192,57,43,0.35); border-radius:6px; cursor:pointer;}
 </style>
 </head>
 <body>

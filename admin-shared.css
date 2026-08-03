@@ -1,13 +1,21 @@
 /* admin-shared.css
    Shared design tokens, resets, and components for all admin-*.html pages
    (admin.html, admin-invoice.html, admin-add-rental.html, admin-reminders.html,
-   admin-finance.html). Keeps look/behavior consistent and avoids re-defining
-   the same CSS in five separate files. Page-specific styles stay inline in
-   each page's own <style> block. */
+   admin-contacts.html, admin-finance.html, admin-outreach.html, admin-inventory.html).
+   Keeps look/behavior consistent and avoids re-defining the same CSS in every
+   file. Page-specific styles stay inline in each page's own <style> block.
+
+   Design refresh (Aug 2026): brought the admin tool in line with the public
+   readytoteokc.com brand system (Archivo Black / Barlow / JetBrains Mono,
+   crate-red accent) instead of the generic Arial/soft-SaaS look it started with. */
+
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root{
   --ink:#1E1B18;
+  --ink-2:#2B2620;
   --gold:#C99A32;
+  --gold-2:#D9AE4E;
   --gold-bg:rgba(201,154,50,0.10);
   --cream:#F5F1E7;
   --steel:#6B6259;
@@ -15,36 +23,74 @@
   --green-bg:rgba(30,142,82,0.08);
   --red:#C0392B;
   --red-bg:rgba(192,57,43,0.07);
-  --line:rgba(30,27,24,0.15);
+  --crate-red:#B3481D;
+  --crate-red-bg:rgba(179,72,29,0.08);
+  --line:rgba(30,27,24,0.14);
   --white:#FFFFFF;
 }
 *{box-sizing:border-box;}
 body{
-  font-family:Arial,Helvetica,sans-serif;
+  font-family:'Barlow', Arial, sans-serif;
   background:var(--cream);
   color:var(--ink);
   margin:0;
   padding:24px 14px;
 }
-h1{font-size:1.3rem;margin:0 0 4px;}
+h1{font-family:'Archivo Black', sans-serif; font-size:1.3rem; margin:0 0 4px; letter-spacing:-0.01em;}
 .sub{color:var(--steel);font-size:0.88rem;margin:0 0 20px;}
-h2{font-size:1rem;margin:26px 0 10px;}
+h2{font-family:'Archivo Black', sans-serif; font-size:0.95rem;margin:26px 0 10px; letter-spacing:-0.005em;}
 
-.card{max-width:640px;margin:0 auto;background:#fff;border-radius:16px;border:1px solid var(--line);padding:26px;}
+.card{
+  max-width:640px;margin:0 auto;background:#fff;border-radius:8px;
+  border:1px solid var(--line);padding:26px;
+  box-shadow:0 1px 2px rgba(30,27,24,0.04), 0 4px 14px rgba(30,27,24,0.04);
+}
 
 label{display:block;font-size:0.85rem;font-weight:bold;margin:14px 0 6px;}
-input, select, textarea{width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);font-family:inherit;}
+input, select, textarea{width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:6px;background:var(--cream);font-family:inherit;}
 input:focus, select:focus, textarea:focus{outline:2px solid var(--gold);}
-button{margin-top:16px;width:100%;padding:14px;font-size:0.95rem;font-weight:bold;background:var(--gold);color:var(--ink);border:none;border-radius:10px;cursor:pointer;}
+button{margin-top:16px;width:100%;padding:14px;font-size:0.95rem;font-weight:bold;font-family:'Barlow',sans-serif;background:var(--gold);color:var(--ink);border:none;border-radius:8px;cursor:pointer;transition:background 0.12s ease, transform 0.05s ease;}
+button:hover{background:var(--gold-2);}
+button:active{transform:translateY(1px);}
 button:disabled{opacity:0.6;cursor:wait;}
+button.secondary{background:transparent;border:1px solid var(--ink);color:var(--ink);}
+button.secondary:hover{background:var(--gold-bg);}
 
-.rem{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;}
+.rem{border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 2px rgba(30,27,24,0.03);}
 .empty{color:var(--steel);font-size:0.88rem;}
 .note{font-size:0.78rem;color:var(--steel);margin-top:6px;}
 
-.status{margin-top:12px;padding:10px 14px;border-radius:8px;font-size:0.88rem;display:none;}
+.status{margin-top:12px;padding:10px 14px;border-radius:6px;font-size:0.88rem;display:none;}
 .status.err{display:block;background:var(--red-bg);border:1px solid rgba(192,57,43,0.35);color:var(--red);}
 .status.ok{display:block;background:var(--green-bg);border:1px solid rgba(30,142,82,0.4);color:var(--green);}
+
+/* Tote-tag badge -- the one signature detail, used for package/tier tags.
+   The small notch reads like a hole-punched rental tag. Status pills
+   (paid/unpaid, sent/pending, etc.) stay plain on purpose -- one signature
+   element, not decoration everywhere. */
+.tag{
+  position:relative;display:inline-flex;align-items:center;
+  padding:4px 10px 4px 18px;
+  font-family:'JetBrains Mono', monospace; font-size:0.72rem; font-weight:700;
+  letter-spacing:0.02em;
+  background:var(--gold-bg); color:var(--ink-2); border:1px solid var(--gold);
+  border-radius:3px 10px 10px 3px;
+}
+.tag::before{
+  content:''; position:absolute; left:6px; top:50%; transform:translateY(-50%);
+  width:5px;height:5px;border-radius:50%;
+  background:var(--white); border:1px solid var(--gold);
+}
+.tag.red{background:var(--crate-red-bg); border-color:var(--crate-red); color:var(--crate-red);}
+.tag.red::before{border-color:var(--crate-red);}
+
+.pill{display:inline-block;font-size:0.72rem;font-weight:bold;padding:3px 10px;border-radius:999px;}
+.pill.ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green);}
+.pill.err{background:var(--red-bg);color:var(--red);border:1px solid var(--red);}
+.pill.pending{background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold);}
+
+/* Data-dense text (phone, email, dates, codes, IDs) reads better in mono */
+.mono{font-family:'JetBrains Mono', monospace;}
 
 /* Two-column form rows that collapse to one column on phones */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
@@ -53,20 +99,25 @@ button:disabled{opacity:0.6;cursor:wait;}
 /* Shared admin nav bar -- lets Chris jump directly between admin tools */
 .admin-nav{
   max-width:640px;margin:0 auto 14px;
-  display:flex; flex-wrap:wrap; gap:8px; justify-content:center;
-  background:var(--white); border:1px solid var(--line); border-radius:12px;
-  padding:10px;
+  display:flex; flex-wrap:wrap; gap:4px; justify-content:center;
+  background:var(--white); border:1px solid var(--line); border-radius:8px;
+  padding:6px;
 }
 .admin-nav.wide{max-width:840px;}
 .admin-nav a{
+  position:relative;
   flex:0 1 auto; text-align:center; white-space:nowrap;
-  padding:8px 12px; font-size:0.82rem; font-weight:bold;
-  color:var(--ink); text-decoration:none; border-radius:8px;
-  background:var(--cream);
+  padding:10px 12px 8px; font-size:0.82rem; font-weight:600;
+  color:var(--steel); text-decoration:none; border-radius:6px;
 }
-.admin-nav a:hover{background:var(--gold-bg);}
-.admin-nav a[aria-current="page"]{background:var(--gold); color:var(--ink);}
+.admin-nav a:hover{background:var(--gold-bg); color:var(--ink);}
+.admin-nav a[aria-current="page"]{background:none; color:var(--ink); font-weight:700;}
+.admin-nav a[aria-current="page"]::after{
+  content:''; position:absolute; left:12px; right:12px; bottom:2px; height:3px;
+  background:var(--gold); border-radius:2px;
+}
 @media(max-width:500px){
-  .admin-nav{gap:6px;}
-  .admin-nav a{flex:1 1 40%; font-size:0.78rem; padding:8px 6px;}
+  .admin-nav{gap:4px;}
+  .admin-nav a{flex:1 1 40%; font-size:0.78rem; padding:8px 6px 7px;}
+  .admin-nav a[aria-current="page"]::after{left:6px; right:6px;}
 }

@@ -16,37 +16,37 @@
 
   .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
   @media(max-width:700px){.summary{grid-template-columns:repeat(2,1fr);}}
-  .scard{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center;}
-  .scard .num{font-size:1.6rem;font-weight:bold;line-height:1.1;}
-  .scard .lbl{font-size:0.7rem;color:var(--steel);margin-top:4px;text-transform:uppercase;letter-spacing:0.04em;}
+  .scard{background:var(--white);border:1px solid var(--line);border-radius:8px;padding:16px;text-align:center;box-shadow:0 1px 2px rgba(30,27,24,0.04);}
+  .scard .num{font-family:'Archivo Black',sans-serif;font-size:1.5rem;line-height:1.1;}
+  .scard .lbl{font-size:0.68rem;color:var(--steel);margin-top:4px;text-transform:uppercase;letter-spacing:0.04em;font-family:'JetBrains Mono',monospace;}
   .scard.gold{border-color:var(--gold);background:var(--gold-bg);}
   .scard.gold .num{color:var(--gold);}
   .scard.green{border-color:var(--green);background:var(--green-bg);}
   .scard.green .num{color:var(--green);}
 
-  .secret-bar{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .secret-bar{background:var(--white);border:1px solid var(--line);border-radius:8px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 1px 2px rgba(30,27,24,0.04);}
   .secret-bar label{font-size:0.82rem;font-weight:bold;white-space:nowrap;}
-  .secret-bar input{flex:1;min-width:200px;padding:10px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);}
+  .secret-bar input{flex:1;min-width:200px;padding:10px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:6px;background:var(--cream);}
   .secret-bar button{margin-top:0;width:auto;padding:10px 18px;font-size:0.85rem;font-weight:bold;background:var(--gold);color:var(--ink);border:none;border-radius:8px;cursor:pointer;white-space:nowrap;}
 
-  .section{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:20px;}
+  .section{background:var(--white);border:1px solid var(--line);border-radius:8px;padding:20px;margin-bottom:20px;box-shadow:0 1px 2px rgba(30,27,24,0.04);}
   .section h2{font-size:1.05rem;margin:0 0 4px;display:flex;align-items:center;gap:8px;justify-content:space-between;}
-  .section .count-badge{font-size:0.72rem;background:var(--gold-bg);border:1px solid var(--gold);color:var(--gold);padding:2px 10px;border-radius:999px;font-weight:bold;}
+  .section .count-badge{font-size:0.72rem;font-family:'JetBrains Mono',monospace;background:var(--gold-bg);border:1px solid var(--gold);color:var(--gold);padding:2px 10px;border-radius:999px;font-weight:bold;}
 
-  .addform{border:1px dashed var(--line);border-radius:10px;padding:14px;margin:14px 0;}
+  .addform{border:1px dashed var(--line);border-radius:8px;padding:14px;margin:14px 0;}
   .addform .grid2{margin-bottom:0;}
   .addform button{width:auto;padding:10px 18px;font-size:0.85rem;}
 
-  .entry{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;}
+  .entry{border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:10px;}
   .entry-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
   .entry-name{font-weight:bold;font-size:0.95rem;}
-  .entry-meta{font-size:0.8rem;color:var(--steel);margin-top:2px;}
+  .entry-meta{font-size:0.8rem;color:var(--steel);margin-top:2px;font-family:'JetBrains Mono',monospace;}
   .entry-notes{font-size:0.82rem;color:var(--steel);margin-top:6px;font-style:italic;}
   .entry-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
   .status-pill{font-size:0.72rem;font-weight:bold;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--cream);}
   .status-pill.active{border-color:var(--green);background:var(--green-bg);color:var(--green);}
   .status-pill.contacted, .status-pill.followup{border-color:var(--gold);background:var(--gold-bg);color:var(--gold);}
-  .status-pill.notinterested{border-color:var(--red);background:var(--red-bg);color:var(--red);}
+  .status-pill.notinterested{border-color:var(--crate-red);background:var(--crate-red-bg);color:var(--crate-red);}
   select.inline-status{width:auto;padding:6px 8px;font-size:0.78rem;}
   .small-btn{width:auto;padding:6px 12px;font-size:0.78rem;margin-top:0;background:var(--white);border:1px solid var(--line);color:var(--ink);}
   .small-btn.danger{color:var(--red);border-color:var(--red);}

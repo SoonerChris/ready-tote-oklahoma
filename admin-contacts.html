@@ -21,17 +21,19 @@
   .toolbar input[type=search]{flex:1;min-width:220px;margin:0;}
   .count-badge{font-size:0.8rem;color:var(--steel);white-space:nowrap;}
 
-  .tbl-wrap{background:var(--white);border:1px solid var(--line);border-radius:14px;overflow-x:auto;}
+  .tbl-wrap{background:var(--white);border:1px solid var(--line);border-radius:8px;overflow-x:auto;box-shadow:0 1px 2px rgba(30,27,24,0.04);}
   table{width:100%;border-collapse:collapse;font-size:0.86rem;min-width:760px;}
-  thead th{text-align:left;padding:12px 14px;background:var(--cream);border-bottom:1px solid var(--line);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--steel);white-space:nowrap;}
+  thead th{text-align:left;padding:12px 14px;background:var(--cream);border-bottom:1px solid var(--line);font-size:0.7rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;color:var(--steel);white-space:nowrap;}
   tbody td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top;}
   tbody tr:last-child td{border-bottom:none;}
   tbody tr:hover{background:var(--gold-bg);}
   td.name{font-weight:bold;white-space:nowrap;}
+  td.mono{font-family:'JetBrains Mono',monospace;font-size:0.82rem;}
   td a{color:var(--ink);text-decoration:none;border-bottom:1px dotted var(--gold);}
   td a:hover{color:var(--gold);}
-  td.addr{color:var(--steel);font-size:0.82rem;max-width:240px;}
-  .pkg-badge{display:inline-block;font-size:0.72rem;font-weight:bold;background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold);padding:2px 8px;border-radius:999px;white-space:nowrap;}
+  td.addr{color:var(--steel);font-size:0.82rem;max-width:240px;font-family:'JetBrains Mono',monospace;}
+  .pkg-badge{position:relative;display:inline-flex;align-items:center;font-size:0.72rem;font-weight:700;font-family:'JetBrains Mono',monospace;background:var(--gold-bg);color:var(--ink-2);border:1px solid var(--gold);padding:2px 8px 2px 16px;border-radius:3px 10px 10px 3px;white-space:nowrap;}
+  .pkg-badge::before{content:'';position:absolute;left:6px;top:50%;transform:translateY(-50%);width:4px;height:4px;border-radius:50%;background:var(--white);border:1px solid var(--gold);}
   .no-results{padding:24px;text-align:center;color:var(--steel);font-size:0.9rem;}
 
   footer{text-align:center;font-size:0.78rem;color:var(--steel);margin-top:20px;}
@@ -146,11 +148,11 @@
       return `
       <tr>
         <td class="name">${esc(r.name)}</td>
-        <td>${r.phone ? `<a href="tel:${escAttr(phoneDigits)}">${esc(r.phone)}</a>` : '—'}</td>
-        <td>${r.email ? `<a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : '—'}</td>
+        <td class="mono">${r.phone ? `<a href="tel:${escAttr(phoneDigits)}">${esc(r.phone)}</a>` : '—'}</td>
+        <td class="mono">${r.email ? `<a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : '—'}</td>
         <td>${r.package ? `<span class="pkg-badge">${esc(r.package)}</span>` : ''}</td>
-        <td>${esc(fmtDate(r.dropoffDate))}</td>
-        <td>${esc(fmtDate(r.pickupDate))}</td>
+        <td class="mono">${esc(fmtDate(r.dropoffDate))}</td>
+        <td class="mono">${esc(fmtDate(r.pickupDate))}</td>
         <td class="addr"${addrTitle}>${esc(addr)}</td>
       </tr>`;
     }).join('');

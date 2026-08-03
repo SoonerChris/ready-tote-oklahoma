@@ -32,9 +32,9 @@
 
   <div id="results" style="display:none;">
     <div class="rem" id="netIncomeBubble" style="text-align:center; background:var(--cream); border:2px solid var(--gold); margin-bottom:20px;">
-      <div style="font-size:0.72rem; color:var(--steel); font-weight:bold; letter-spacing:0.5px; text-transform:uppercase;">📈 Net Income (YTD)</div>
-      <div id="netIncomeAmount" style="font-size:2.1rem; font-weight:bold; margin:6px 0 2px;">$0.00</div>
-      <div id="netIncomeSub" style="font-size:0.78rem; color:var(--steel);"></div>
+      <div style="font-size:0.7rem; color:var(--steel); font-weight:bold; letter-spacing:0.05em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">📈 Net Income (YTD)</div>
+      <div id="netIncomeAmount" style="font-family:'Archivo Black',sans-serif; font-size:2rem; margin:8px 0 2px;">$0.00</div>
+      <div id="netIncomeSub" style="font-size:0.78rem; color:var(--steel); font-family:'JetBrains Mono',monospace;"></div>
     </div>
 
     <h2>💰 Sales</h2>
@@ -183,14 +183,14 @@
 
     // Summary cards
     $('salesSummary').innerHTML = `
-      <div><div style="font-size:1.3rem;font-weight:bold;color:var(--green);">${activeRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">Active Now</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;">${monthRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">This Month</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;color:var(--gold);">${fmt(sum(monthRentals))}</div><div style="font-size:0.72rem;color:var(--steel);">Month Revenue</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;">${ytdRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">YTD Rentals</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;color:var(--gold);">${fmt(sum(ytdRentals))}</div><div style="font-size:0.72rem;color:var(--steel);">YTD Revenue</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;">${rentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">All Time</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;color:var(--gold);">${fmt(sum(rentals))}</div><div style="font-size:0.72rem;color:var(--steel);">Total Invoiced</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;">${fmt(avgValue)}</div><div style="font-size:0.72rem;color:var(--steel);">Avg Order</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--green);">${activeRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">Active Now</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${monthRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">This Month</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--gold);">${fmt(sum(monthRentals))}</div><div style="font-size:0.72rem;color:var(--steel);">Month Revenue</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${ytdRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">YTD Rentals</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--gold);">${fmt(sum(ytdRentals))}</div><div style="font-size:0.72rem;color:var(--steel);">YTD Revenue</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${rentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">All Time</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--gold);">${fmt(sum(rentals))}</div><div style="font-size:0.72rem;color:var(--steel);">Total Invoiced</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${fmt(avgValue)}</div><div style="font-size:0.72rem;color:var(--steel);">Avg Order</div></div>
     `;
 
     // Monthly revenue (last 6 months)
@@ -294,8 +294,8 @@
       byCat[e.category] = b;
     }
     $('expTotals').innerHTML =
-      `<div><div style="font-size:1.2rem;font-weight:bold;">${money(ytdTotal)}</div><div style="font-size:0.75rem;color:var(--steel);">YTD expenses</div></div>` +
-      `<div><div style="font-size:1.2rem;font-weight:bold;color:var(--gold);">${money(monthlyOverhead)}/mo</div><div style="font-size:0.75rem;color:var(--steel);">Est. monthly overhead</div></div>` +
+      `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${money(ytdTotal)}</div><div style="font-size:0.75rem;color:var(--steel);">YTD expenses</div></div>` +
+      `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--gold);">${money(monthlyOverhead)}/mo</div><div style="font-size:0.75rem;color:var(--steel);">Est. monthly overhead</div></div>` +
       Object.entries(byCat).map(([cat,amt]) => {
         const sub = amt.monthly > 0 && amt.oneTime > 0 ? `${money(amt.oneTime)} + ${money(amt.monthly)} recurring`
                   : amt.monthly > 0 ? `${money(amt.monthly)} recurring` : money(amt.oneTime);
@@ -316,8 +316,8 @@
     const ytdMiles = FIN.mileage.filter(m => thisYear(m.date)).reduce((t,m)=>t+m.miles,0);
     const rate = FIN.mileageRate;
     $('mileTotals').innerHTML =
-      `<div><div style="font-size:1.2rem;font-weight:bold;">${ytdMiles.toLocaleString('en-US',{maximumFractionDigits:1})} mi</div><div style="font-size:0.75rem;color:var(--steel);">YTD business miles</div></div>` +
-      (rate ? `<div><div style="font-size:1.2rem;font-weight:bold;">${money(ytdMiles*rate)}</div><div style="font-size:0.75rem;color:var(--steel);">Est. deduction @ $${rate}/mi</div></div>` : '') +
+      `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${ytdMiles.toLocaleString('en-US',{maximumFractionDigits:1})} mi</div><div style="font-size:0.75rem;color:var(--steel);">YTD business miles</div></div>` +
+      (rate ? `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${money(ytdMiles*rate)}</div><div style="font-size:0.75rem;color:var(--steel);">Est. deduction @ $${rate}/mi</div></div>` : '') +
       `<div style="display:flex; align-items:center; gap:6px;">
         <input type="number" id="rateInput" step="0.005" min="0" placeholder="Rate $/mi" value="${rate ?? ''}" style="width:110px; padding:8px 10px;">
         <button type="button" onclick="saveRate()" style="width:auto; margin:0; padding:8px 14px; font-size:0.8rem;">Save rate</button>
