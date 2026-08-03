@@ -59,6 +59,18 @@
 
   <div class="grid2">
     <div>
+      <label>Tote count</label>
+      <input type="number" id="toteCount" min="0" step="1" placeholder="20">
+    </div>
+    <div>
+      <label>Dolly count</label>
+      <input type="number" id="dollyCount" min="0" step="1" placeholder="1">
+    </div>
+  </div>
+  <p class="note">This is what the Inventory page actually counts — keep it accurate even if the package text above is a loose description.</p>
+
+  <div class="grid2">
+    <div>
       <label>Drop-off date</label>
       <input type="date" id="dropoffDate">
     </div>
@@ -118,6 +130,17 @@
     payload.email = $('email').value.trim();
     payload.notes = $('notes').value.trim();
 
+    const toteCount = Number($('toteCount').value);
+    const dollyCount = Number($('dollyCount').value);
+    if ($('toteCount').value.trim() === '' || !Number.isInteger(toteCount) || toteCount < 0) {
+      return showStatus('err', 'Tote count must be a whole number (0 or more).');
+    }
+    if ($('dollyCount').value.trim() === '' || !Number.isInteger(dollyCount) || dollyCount < 0) {
+      return showStatus('err', 'Dolly count must be a whole number (0 or more).');
+    }
+    payload.toteCount = toteCount;
+    payload.dollyCount = dollyCount;
+
     const btn = $('addBtn');
     btn.disabled = true; btn.textContent = 'Adding…';
     try {
@@ -128,7 +151,7 @@
       });
       if (resp.ok) {
         showStatus('ok', 'Added ' + payload.name + '. Form cleared for the next one.');
-        ['name','email','phone','package','price','dropoffDate','pickupDate','dropoffAddress','pickupAddress','notes'].forEach(f => $(f).value = '');
+        ['name','email','phone','package','price','dropoffDate','pickupDate','dropoffAddress','pickupAddress','notes','toteCount','dollyCount'].forEach(f => $(f).value = '');
       } else if (resp.status === 401) {
         showStatus('err', 'Wrong admin secret.');
       } else {

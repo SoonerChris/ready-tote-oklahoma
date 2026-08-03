@@ -205,7 +205,7 @@
       const paymentControls = payBtn(r) + emailReminderBtn(r);
       return `
       <div class="rem">
-        <div class="who">${esc(r.name)} — ${esc(r.price || '')} ${paymentBadge(r)} ${tosBadge(r)}</div>
+        <div class="who">${esc(r.name)} — ${esc(r.price || '')} ${paymentBadge(r)} ${tosBadge(r)} ${countBadge(r)}</div>
         <div class="meta">${esc(r.package)} · Drop-off ${esc(fmtDate(r.dropoffDate))}${(r.dropoffAddress||r.address) ? ' @ ' + esc(r.dropoffAddress||r.address) : ''} · Pickup ${esc(fmtDate(r.pickupDate))}${(r.pickupAddress||r.address) ? ' @ ' + esc(r.pickupAddress||r.address) : ''}</div>
         ${r.notes ? `<div class="msg" style="margin-bottom:8px;">📝 ${esc(r.notes)}</div>` : ''}
         <div class="actions">
@@ -225,6 +225,7 @@
         ${paymentControls ? `<div class="actions">${paymentControls}</div>` : ''}
         <div class="actions delete-row">
           <button type="button" class="edit-pkg-btn" data-key="${esc(r.key)}" data-pkg="${esc(r.package || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">✏️ Edit package</button>
+          <button type="button" class="edit-count-btn" data-key="${esc(r.key)}" data-totes="${typeof r.toteCount === 'number' ? r.toteCount : ''}" data-dollies="${typeof r.dollyCount === 'number' ? r.dollyCount : ''}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">🔢 Edit tote/dolly count</button>
           <button type="button" class="edit-notes-btn" data-key="${esc(r.key)}" data-notes="${esc(r.notes || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📝 ${r.notes ? 'Edit' : 'Add'} notes</button>
           <button type="button" class="delete-btn" onclick="deleteRental('${esc(r.key)}', '${esc(r.name)}')">Delete</button>
         </div>
@@ -250,6 +251,9 @@
     el.querySelectorAll('.edit-notes-btn').forEach(btn => {
       btn.addEventListener('click', () => editNotes(btn.dataset.key, btn.dataset.notes));
     });
+    el.querySelectorAll('.edit-count-btn').forEach(btn => {
+      btn.addEventListener('click', () => editCounts(btn.dataset.key, btn.dataset.totes, btn.dataset.dollies));
+    });
     el.querySelectorAll('.add-photo-btn').forEach(btn => {
       btn.addEventListener('click', () => triggerPhotoCapture(btn.dataset.key, btn.dataset.type));
     });
@@ -267,6 +271,19 @@
       return `<button type="button" class="view-photo-btn" data-key="${esc(r.key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px; cursor:pointer;">📷 View ${label} photo</button>`;
     }
     return `<button type="button" class="add-photo-btn" data-key="${esc(r.key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📷 Add ${label} photo</button>`;
+  }
+
+  // Shows the authoritative counts Inventory reads. Flags records logged
+  // before toteCount/dollyCount existed so they can be backfilled.
+  function countBadge(r) {
+    const hasTote = typeof r.toteCount === 'number';
+    const hasDolly = typeof r.dollyCount === 'number';
+    if (!hasTote && !hasDolly) {
+      return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--red-bg); color:var(--red); border-radius:20px; vertical-align:middle;">⚠️ No tote/dolly count set</span>`;
+    }
+    const toteText = hasTote ? `🧺 ${r.toteCount}` : '🧺 —';
+    const dollyText = hasDolly ? `🛒 ${r.dollyCount}` : '🛒 —';
+    return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--gold-bg); color:var(--gold); border-radius:20px; vertical-align:middle;">${toteText} · ${dollyText}</span>`;
   }
 
   // "On the Way" button: starts as a plain button, calculates a live ETA via
@@ -380,6 +397,33 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ secret, key, notes: newNotes.trim() }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Edit failed (' + resp.status + '): ' + detail);
+      }
+    } catch { showErr('Network error.'); }
+  };
+
+  window.editCounts = async (key, currentTotes, currentDollies) => {
+    const toteStr = prompt('Tote count for this rental (whole number):', currentTotes || '0');
+    if (toteStr === null) return; // cancelled
+    const toteCount = Number(toteStr);
+    if (!Number.isInteger(toteCount) || toteCount < 0) return showErr('Tote count must be a whole number (0 or more).');
+
+    const dollyStr = prompt('Dolly count for this rental (whole number):', currentDollies || '0');
+    if (dollyStr === null) return; // cancelled
+    const dollyCount = Number(dollyStr);
+    if (!Number.isInteger(dollyCount) || dollyCount < 0) return showErr('Dolly count must be a whole number (0 or more).');
+
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const resp = await fetch('/.netlify/functions/edit-rental', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key, toteCount, dollyCount }),
       });
       if (resp.ok) { $('loadBtn').click(); }
       else {

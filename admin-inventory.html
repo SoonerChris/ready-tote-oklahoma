@@ -57,7 +57,7 @@
 </nav>
 <div class="card">
   <h1>Tote Inventory</h1>
-  <p class="sub">Track totes owned and estimate how many are out on rental right now — and project availability forward using every rental on the books (not just active ones). Estimates are based on tote counts parsed out of package names.</p>
+  <p class="sub">Track totes owned and estimate how many are out on rental right now — and project availability forward using every rental on the books (not just active ones). Uses the Tote/Dolly count set on each rental; older rentals without one fall back to parsing the package name.</p>
 
   <label>Admin secret</label>
   <input type="password" id="secret" placeholder="Your INVOICE_SECRET value">
@@ -147,14 +147,33 @@
     btn.disabled = false; btn.textContent = 'Load inventory';
   }
 
+  // Legacy fallback: parse counts out of the package text, used only for
+  // rentals logged before toteCount/dollyCount existed as real fields.
   function totesInPackage(pkg) {
     const m = String(pkg || '').match(/(\d+)\s*totes?/i);
     return m ? parseInt(m[1], 10) : 0;
   }
+  function dolliesInPackage(pkg) {
+    const s = String(pkg || '');
+    const m = s.match(/(\d+)\s*doll(?:y|ies)/i);
+    if (m) return parseInt(m[1], 10);
+    return /doll(?:y|ies)/i.test(s) ? 1 : 0;
+  }
+
+  // Authoritative count: prefer the real numeric field set at booking time
+  // (via Send Invoice / Add Rental / the Reminders quick-edit); only fall
+  // back to text-parsing for older rentals that predate those fields.
+  function toteQty(r) {
+    return typeof r.toteCount === 'number' ? r.toteCount : totesInPackage(r.package);
+  }
+  function dollyQty(r) {
+    return typeof r.dollyCount === 'number' ? r.dollyCount : dolliesInPackage(r.package);
+  }
 
   function render() {
     const totalOwned = EVENTS.reduce((t, e) => t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity), 0);
-    const deployed = ACTIVE_RENTALS.reduce((t, r) => t + totesInPackage(r.package), 0);
+    const deployed = ACTIVE_RENTALS.reduce((t, r) => t + toteQty(r), 0);
+    const dolliesOut = ACTIVE_RENTALS.reduce((t, r) => t + dollyQty(r), 0);
     const available = totalOwned - deployed;
 
     $('statCards').innerHTML = `
@@ -162,6 +181,7 @@
       <div class="stat"><div class="num gold">${deployed}</div><div class="lbl">Out on rental (est.)</div></div>
       <div class="stat"><div class="num ${available < 0 ? 'warn' : 'green'}">${available}</div><div class="lbl">Available now</div></div>
       <div class="stat"><div class="num">${ACTIVE_RENTALS.length}</div><div class="lbl">Active rentals</div></div>
+      <div class="stat"><div class="num gold">${dolliesOut}</div><div class="lbl">Dollies out (est.)</div></div>
     `;
 
     const sorted = [...EVENTS].sort((a, b) => (b.date + b.key).localeCompare(a.date + a.key));
@@ -200,7 +220,7 @@
       const date = shiftDate(today, i);
       const deployed = ALL_RENTALS.reduce((t, r) => {
         if (r.dropoffDate && r.pickupDate && r.dropoffDate <= date && r.pickupDate >= date) {
-          return t + totesInPackage(r.package);
+          return t + toteQty(r);
         }
         return t;
       }, 0);

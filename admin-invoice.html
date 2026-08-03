@@ -54,12 +54,24 @@
   <select id="package">
     <option value="">Loading packages…</option>
   </select>
-  <p class="note">Packages load from <strong>packages.json</strong> in the site repo — edit that file on GitHub to add or update packages and Stripe links. Choose "Custom package" for ad-hoc rentals.</p>
+  <p class="note">Packages load from <strong>packages.json</strong> in the site repo — edit that file on GitHub to add or update packages, tote/dolly counts, and Stripe links. Choose "Custom package" for ad-hoc rentals.</p>
+
+  <div class="grid2">
+    <div>
+      <label>Tote count</label>
+      <input type="number" id="toteCount" min="0" step="1" placeholder="20">
+    </div>
+    <div>
+      <label>Dolly count</label>
+      <input type="number" id="dollyCount" min="0" step="1" placeholder="1">
+    </div>
+  </div>
+  <p class="note">Auto-filled from the package you pick, but always editable — this is what Inventory actually counts, so it stays accurate no matter what the package name says.</p>
 
   <div id="customPackageBlock" style="display:none;">
     <label>Custom package description</label>
     <input type="text" id="customPackageName" placeholder="e.g. 10 Totes + Extra Dolly">
-    <p class="note">Saved as this rental's package name. Include the tote count (e.g. "10 Totes") so the Inventory page can count it correctly.</p>
+    <p class="note">Just a human-readable label — set the Tote count / Dolly count above for inventory tracking.</p>
   </div>
 
   <div class="grid2">
@@ -198,7 +210,7 @@
       $('package').innerHTML = '<option value="custom">Custom package (packages.json failed to load)</option>';
     });
 
-  // Auto-fill price/duration/stripe when a package is chosen
+  // Auto-fill price/duration/stripe/counts when a package is chosen
   $('package').addEventListener('change', (e) => {
     const v = e.target.value;
     $('customPackageBlock').style.display = (v === 'custom') ? 'block' : 'none';
@@ -208,6 +220,8 @@
     $('price').value = p.price || '';
     $('duration').value = p.duration || '2 Weeks';
     $('stripeUrl').value = (p.stripeUrl && !p.stripeUrl.startsWith('PASTE')) ? p.stripeUrl : '';
+    $('toteCount').value = (p.toteCount ?? '');
+    $('dollyCount').value = (p.dollyCount ?? '');
   });
 
   // ---- Parse a pasted Netlify booking notification email ----
@@ -298,11 +312,23 @@
     if (!pkgVal) return showStatus('err', 'Missing: package');
     if (pkgVal === 'custom') {
       const customName = $('customPackageName').value.trim();
-      if (!customName) return showStatus('err', 'Missing: custom package description (include the tote count)');
+      if (!customName) return showStatus('err', 'Missing: custom package description');
       payload.package = customName;
     } else {
       payload.package = PACKAGES[Number(pkgVal)]?.name || 'Package';
     }
+
+    // Tote/dolly counts drive Inventory math directly — validate as real numbers
+    const toteCount = Number($('toteCount').value);
+    const dollyCount = Number($('dollyCount').value);
+    if ($('toteCount').value.trim() === '' || !Number.isInteger(toteCount) || toteCount < 0) {
+      return showStatus('err', 'Tote count must be a whole number (0 or more).');
+    }
+    if ($('dollyCount').value.trim() === '' || !Number.isInteger(dollyCount) || dollyCount < 0) {
+      return showStatus('err', 'Dolly count must be a whole number (0 or more).');
+    }
+    payload.toteCount = toteCount;
+    payload.dollyCount = dollyCount;
 
     payload.serviceType = $('serviceType').value;
     payload.notes = $('notes').value.trim();
