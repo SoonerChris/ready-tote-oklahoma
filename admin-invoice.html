@@ -56,6 +56,12 @@
   </select>
   <p class="note">Packages load from <strong>packages.json</strong> in the site repo — edit that file on GitHub to add or update packages and Stripe links. Choose "Custom package" for ad-hoc rentals.</p>
 
+  <div id="customPackageBlock" style="display:none;">
+    <label>Custom package description</label>
+    <input type="text" id="customPackageName" placeholder="e.g. 10 Totes + Extra Dolly">
+    <p class="note">Saved as this rental's package name. Include the tote count (e.g. "10 Totes") so the Inventory page can count it correctly.</p>
+  </div>
+
   <div class="grid2">
     <div>
       <label>Rental price</label>
@@ -192,6 +198,7 @@
   // Auto-fill price/duration/stripe when a package is chosen
   $('package').addEventListener('change', (e) => {
     const v = e.target.value;
+    $('customPackageBlock').style.display = (v === 'custom') ? 'block' : 'none';
     if (v === '' || v === 'custom') return;
     const p = PACKAGES[Number(v)];
     if (!p) return;
@@ -286,9 +293,13 @@
     // Resolve package display name from the dropdown selection
     const pkgVal = $('package').value;
     if (!pkgVal) return showStatus('err', 'Missing: package');
-    payload.package = pkgVal === 'custom'
-      ? 'Custom Package'
-      : (PACKAGES[Number(pkgVal)]?.name || 'Package');
+    if (pkgVal === 'custom') {
+      const customName = $('customPackageName').value.trim();
+      if (!customName) return showStatus('err', 'Missing: custom package description (include the tote count)');
+      payload.package = customName;
+    } else {
+      payload.package = PACKAGES[Number(pkgVal)]?.name || 'Package';
+    }
 
     payload.serviceType = $('serviceType').value;
     if (payload.serviceType === 'self') {

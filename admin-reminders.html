@@ -218,6 +218,7 @@
         </div>` : ''}
         ${paymentControls ? `<div class="actions">${paymentControls}</div>` : ''}
         <div class="actions delete-row">
+          <button type="button" class="edit-pkg-btn" data-key="${esc(r.key)}" data-pkg="${esc(r.package || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">✏️ Edit package</button>
           <button type="button" class="delete-btn" onclick="deleteRental('${esc(r.key)}', '${esc(r.name)}')">Delete</button>
         </div>
       </div>`;
@@ -235,6 +236,9 @@
     });
     el.querySelectorAll('.unsend-btn').forEach(btn => {
       btn.addEventListener('click', () => unmarkSent(btn.dataset.flagid));
+    });
+    el.querySelectorAll('.edit-pkg-btn').forEach(btn => {
+      btn.addEventListener('click', () => editPackage(btn.dataset.key, btn.dataset.pkg));
     });
   }
 
@@ -315,6 +319,26 @@
       else {
         const detail = await resp.text().catch(() => '');
         showErr('Update failed (' + resp.status + '): ' + detail);
+      }
+    } catch { showErr('Network error.'); }
+  };
+
+  window.editPackage = async (key, currentPkg) => {
+    const newPkg = prompt('Update package description (include the tote count, e.g. "10 Totes", so Inventory can count it correctly):', currentPkg || '');
+    if (newPkg === null) return; // cancelled
+    if (!newPkg.trim()) return showErr('Package description cannot be empty.');
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const resp = await fetch('/.netlify/functions/edit-rental', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key, package: newPkg.trim() }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Edit failed (' + resp.status + '): ' + detail);
       }
     } catch { showErr('Network error.'); }
   };
