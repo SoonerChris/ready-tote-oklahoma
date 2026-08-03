@@ -11,9 +11,12 @@ const EDITABLE_FIELDS = [
   "dropoffDate", "dropoffTime", "pickupDate", "pickupTime",
   "dropoffAddress", "pickupAddress", "serviceType", "notes",
 ];
-// Notes can be intentionally cleared (saved as blank); every other field
-// is skipped if blank so a stray empty submit can't wipe real data.
+// Notes can be intentionally cleared (saved as blank); every other text
+// field is skipped if blank so a stray empty submit can't wipe real data.
 const CLEARABLE_FIELDS = ["notes"];
+// Validated separately since these drive Inventory math and must stay
+// real whole numbers, not arbitrary strings.
+const NUMERIC_FIELDS = ["toteCount", "dollyCount"];
 
 export default async (request) => {
   if (request.method !== "POST") {
@@ -38,6 +41,15 @@ export default async (request) => {
       const isBlank = String(body[f]).trim() === "";
       if (isBlank && !CLEARABLE_FIELDS.includes(f)) continue;
       updated[f] = isBlank ? "" : body[f];
+      changed = true;
+    }
+    for (const f of NUMERIC_FIELDS) {
+      if (body[f] === undefined || body[f] === null || String(body[f]).trim() === "") continue;
+      const n = Number(body[f]);
+      if (!Number.isInteger(n) || n < 0) {
+        return new Response(`${f} must be a whole number (0 or more)`, { status: 400 });
+      }
+      updated[f] = n;
       changed = true;
     }
     if (!changed) return new Response("No editable fields provided", { status: 400 });
