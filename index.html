@@ -542,6 +542,9 @@
   }
   .float-text:hover{transform:translateY(-2px);}
   .float-text .bubble{font-size:1.2rem;}
+  @media(max-width:480px){
+    .float-text{padding:12px 18px; font-size:0.85rem; bottom:16px; right:16px;}
+  }
 
   /* Social icons */
   .social-row{display:flex; gap:14px; margin-top:12px;}
@@ -1236,8 +1239,8 @@
   <input type="text" name="hp_field">
 </form>
 
-<a class="float-text" href="sms:+15803993202" aria-label="Text us">
-  <span class="bubble">💬</span> Text Us
+<a class="float-text" href="sms:+15803993202" aria-label="Questions? Text us">
+  <span class="bubble">💬</span> Questions? Text Us
 </a>
 
 <script>
