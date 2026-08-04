@@ -174,15 +174,15 @@
     const sum = arr => arr.reduce((t,r) => t + pn(r.price), 0);
     const fmt = n => '$' + n.toLocaleString('en-US', {maximumFractionDigits:0});
 
-    const monthRentals = rentals.filter(r => (r.invoicedAt||'').slice(0,7) === thisMonth);
-    const ytdRentals = rentals.filter(r => (r.invoicedAt||'').slice(0,4) === thisYear);
+    const monthRentals = rentals.filter(r => (r.dropoffDate||'').slice(0,7) === thisMonth);
+    const ytdRentals = rentals.filter(r => (r.dropoffDate||'').slice(0,4) === thisYear);
     const activeRentals = rentals.filter(r => r.dropoffDate <= today && r.pickupDate >= today);
     const avgValue = rentals.length ? sum(rentals) / rentals.length : 0;
 
     // Previous month comparison
     const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const prevMonth = prevDate.toISOString().slice(0,7);
-    const prevRentals = rentals.filter(r => (r.invoicedAt||'').slice(0,7) === prevMonth);
+    const prevRentals = rentals.filter(r => (r.dropoffDate||'').slice(0,7) === prevMonth);
     const monthDiff = sum(monthRentals) - sum(prevRentals);
     const monthDiffPct = sum(prevRentals) > 0 ? ((monthDiff / sum(prevRentals)) * 100).toFixed(0) : null;
 
@@ -205,7 +205,7 @@
       months.push(d.toISOString().slice(0,7));
     }
     const monthlyData = months.map(m => {
-      const mrs = rentals.filter(r => (r.invoicedAt||'').slice(0,7) === m);
+      const mrs = rentals.filter(r => (r.dropoffDate||'').slice(0,7) === m);
       return { month: m, count: mrs.length, revenue: sum(mrs) };
     });
     const maxRev = Math.max(...monthlyData.map(m => m.revenue), 1);
@@ -369,7 +369,7 @@
   // stays accurate whether there's 1 month of data or several years of it.
   function renderMonthlyBreakdown(rentals, expenses){
     const currentMonth = new Date().toISOString().slice(0,7);
-    const seen = [...rentals.map(r => monthKey(r.invoicedAt)), ...expenses.map(e => monthKey(e.date))].filter(Boolean);
+    const seen = [...rentals.map(r => monthKey(r.dropoffDate)), ...expenses.map(e => monthKey(e.date))].filter(Boolean);
     const firstMonth = seen.length ? seen.sort()[0] : currentMonth;
 
     const months = [];
@@ -382,9 +382,9 @@
 
     const fmt = n => '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
     const rows = months.map(mo => {
-      const rev = rentals.filter(r => monthKey(r.invoicedAt) === mo).reduce((t,r) => t + priceNum(r.price), 0);
+      const rev = rentals.filter(r => monthKey(r.dropoffDate) === mo).reduce((t,r) => t + priceNum(r.price), 0);
       const exp = expenses.filter(e => monthKey(e.date) === mo).reduce((t,e) => t + Number(e.amount||0), 0);
-      const count = rentals.filter(r => monthKey(r.invoicedAt) === mo).length;
+      const count = rentals.filter(r => monthKey(r.dropoffDate) === mo).length;
       return { month: mo, count, rev, exp, net: rev - exp };
     });
 
@@ -409,7 +409,7 @@
   function renderNetIncome(){
     const thisYearStr = new Date().getFullYear().toString();
     const ytdRevenue = ALL_RENTALS
-      .filter(r => (r.invoicedAt||'').slice(0,4) === thisYearStr)
+      .filter(r => (r.dropoffDate||'').slice(0,4) === thisYearStr)
       .reduce((t,r) => t + priceNum(r.price), 0);
     const ytdExpenses = FIN.expenses
       .filter(e => (e.date||'').slice(0,4) === thisYearStr)
