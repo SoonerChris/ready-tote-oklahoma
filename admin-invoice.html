@@ -17,6 +17,7 @@
 <body>
 <nav class="admin-nav" aria-label="Admin tools">
   <a href="admin.html">Dashboard</a>
+  <a href="admin-requests.html">Requests</a>
   <a href="admin-invoice.html" aria-current="page">Send Invoice</a>
   <a href="admin-add-rental.html">Add Rental</a>
   <a href="admin-reminders.html">Reminders</a>
@@ -177,6 +178,63 @@
   $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
   $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
 
+  // ---- Prefill from a confirmed Booking Request (admin-requests.html handoff) ----
+  let PREFILL_REQUEST_KEY = null;
+  let PENDING_PREFILL = null;
+  (function loadPrefill() {
+    const raw = sessionStorage.getItem('rto-prefill-request');
+    if (!raw) return;
+    sessionStorage.removeItem('rto-prefill-request');
+    try { PENDING_PREFILL = JSON.parse(raw); } catch { return; }
+    applyPrefill(PENDING_PREFILL);
+  })();
+
+  function applyPrefill(r) {
+    PREFILL_REQUEST_KEY = r.key || null;
+    if (r.name) $('name').value = r.name;
+    if (r.email) $('email').value = r.email;
+    if (r.phone) $('phone').value = r.phone;
+    if (r.deliveryDate) $('dropoffDate').value = r.deliveryDate;
+    if (r.pickupDate) $('pickupDate').value = r.pickupDate;
+
+    if (r.deliveryAddress) {
+      const parts = r.deliveryAddress.split(',').map(s => s.trim());
+      if (parts.length >= 2) {
+        $('street').value = parts[0];
+        const last = parts[parts.length - 1];
+        const zipMatch = last.match(/\b(\d{5})(?:-\d{4})?\b/);
+        const stateMatch = last.match(/\b([A-Za-z]{2})\b/);
+        $('city').value = parts.length >= 3 ? parts[1] : last.replace(zipMatch ? zipMatch[0] : '', '').replace(stateMatch ? stateMatch[0] : '', '').trim() || parts[1] || '';
+        if (parts.length >= 3) {
+          if (zipMatch) $('zip').value = zipMatch[1];
+          if (stateMatch && stateMatch[1].toUpperCase() !== $('city').value.toUpperCase()) $('state').value = stateMatch[1].toUpperCase();
+        } else if (zipMatch) { $('zip').value = zipMatch[1]; }
+      } else {
+        $('street').value = r.deliveryAddress;
+      }
+    }
+
+    let noteParts = [];
+    if (r.reviewNotes) noteParts.push(r.reviewNotes);
+    if (r.deliveryWindow && !/no preference/i.test(r.deliveryWindow)) noteParts.push('Delivery pref: ' + r.deliveryWindow + '.');
+    if (r.pickupWindow && !/no preference/i.test(r.pickupWindow)) noteParts.push('Pickup pref: ' + r.pickupWindow + '.');
+    if (noteParts.length) $('notes').value = noteParts.join(' ');
+
+    matchPrefillPackage(r);
+    showStatus('ok', 'Prefilled from a confirmed booking request — verify address, times, and price before sending.');
+  }
+
+  function matchPrefillPackage(r) {
+    if (!r.package || !PACKAGES.length) return;
+    const idx = PACKAGES.findIndex(p =>
+      r.package.toLowerCase().includes(p.name.toLowerCase().slice(0, 12)) ||
+      (p.price && r.package.includes(p.price)));
+    if (idx >= 0) {
+      $('package').value = String(idx);
+      $('package').dispatchEvent(new Event('change'));
+    }
+  }
+
   // Toggle pickup address block
   $('sameAddress').addEventListener('change', (e) => {
     $('pickupAddressBlock').style.display = e.target.checked ? 'none' : 'block';
@@ -205,6 +263,7 @@
       custom.value = 'custom';
       custom.textContent = 'Custom package';
       sel.appendChild(custom);
+      if (PENDING_PREFILL) matchPrefillPackage(PENDING_PREFILL);
     })
     .catch(() => {
       $('package').innerHTML = '<option value="custom">Custom package (packages.json failed to load)</option>';
@@ -363,6 +422,7 @@
       });
       if (resp.ok) {
         showStatus('ok', 'Invoice sent to ' + payload.email + ' (BCC to you).');
+        if (PREFILL_REQUEST_KEY) markRequestInvoiced(PREFILL_REQUEST_KEY);
       } else if (resp.status === 401) {
         showStatus('err', 'Wrong admin secret.');
       } else {
@@ -379,6 +439,18 @@
     const s = $('status');
     s.className = 'status ' + kind;
     s.textContent = msg;
+  }
+
+  // Closes the loop with admin-requests.html: once the invoice email is
+  // confirmed sent, flag the originating request as invoiced so it drops
+  // out of the active pipeline. Best-effort — invoice send already succeeded.
+  function markRequestInvoiced(key) {
+    fetch('/.netlify/functions/update-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: $('secret').value.trim(), key, action: 'invoice' }),
+    }).catch(() => {});
+    PREFILL_REQUEST_KEY = null;
   }
 
   // "14:30" -> "2:30 PM", "09:00" -> "9:00 AM"
