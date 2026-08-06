@@ -206,7 +206,7 @@
       const paymentControls = payBtn(r) + emailReminderBtn(r);
       return `
       <div class="rem">
-        <div class="who">${esc(r.name)} — ${esc(r.price || '')} ${paymentBadge(r)} ${tosBadge(r)} ${countBadge(r)}</div>
+        <div class="who">${esc(r.name)} — ${fmtPrice(r.price)} ${paymentBadge(r)} ${tosBadge(r)} ${countBadge(r)}</div>
         <div class="meta">${esc(r.package)} · Drop-off ${esc(fmtDate(r.dropoffDate))}${(r.dropoffAddress||r.address) ? ' @ ' + esc(r.dropoffAddress||r.address) : ''} · Pickup ${esc(fmtDate(r.pickupDate))}${(r.pickupAddress||r.address) ? ' @ ' + esc(r.pickupAddress||r.address) : ''}</div>
         ${r.notes ? `<div class="msg" style="margin-bottom:8px;">📝 ${esc(r.notes)}</div>` : ''}
         <div class="actions">
@@ -328,10 +328,10 @@
   }
 
   function paymentBadge(r) {
-    if (!r.invoicedAt || r.backfilled) return '';
     if (PAID_FLAGS[r.key]) {
       return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--green-bg); color:var(--green); border-radius:20px; vertical-align:middle;">✓ Paid</span>`;
     }
+    if (!r.invoicedAt || r.backfilled) return '';
     return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--red-bg); color:var(--red); border-radius:20px; vertical-align:middle;">🧾 Invoiced — Unpaid</span>`;
   }
 
@@ -344,7 +344,6 @@
   }
 
   function payBtn(r) {
-    if (!r.invoicedAt || r.backfilled) return '';
     if (PAID_FLAGS[r.key]) {
       return `<button type="button" class="pay-btn" data-key="${esc(r.key)}" data-setpaid="false" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--steel); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">Mark unpaid</button>`;
     }
@@ -584,7 +583,7 @@
     el.innerHTML = items.map(r => `
       <div class="rem">
         <div class="who">${esc(r.name)} — ${esc(r.email || '')}</div>
-        <div class="meta">${esc(r.package)} · Invoiced ${esc(fmtDate((r.invoicedAt || '').slice(0, 10)))} · ${esc(r.price || '')}</div>
+        <div class="meta">${esc(r.package)} · Invoiced ${esc(fmtDate((r.invoicedAt || '').slice(0, 10)))} · ${fmtPrice(r.price)}</div>
         ${emailReminderBtn(r)}
       </div>`).join('');
     el.querySelectorAll('.email-reminder-btn').forEach(btn => {
@@ -625,6 +624,7 @@
   };
 
   function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML;}
+  function fmtPrice(p){ const s=String(p||'').trim(); return s ? (s.startsWith('$') ? esc(s) : '$'+esc(s)) : ''; }
   function showErr(m){const s=$('status');s.style.display='block';s.className='status err';s.textContent=m;}
 
 </script>

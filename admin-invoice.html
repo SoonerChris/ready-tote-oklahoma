@@ -77,7 +77,7 @@
   <div class="grid2">
     <div>
       <label>Rental price</label>
-      <input type="text" id="price" placeholder="$99">
+      <input type="text" id="price" placeholder="$99" value="$">
     </div>
     <div>
       <label>Duration</label>
@@ -217,7 +217,7 @@
     if (v === '' || v === 'custom') return;
     const p = PACKAGES[Number(v)];
     if (!p) return;
-    $('price').value = p.price || '';
+    $('price').value = p.price || '$';
     $('duration').value = p.duration || '2 Weeks';
     $('stripeUrl').value = (p.stripeUrl && !p.stripeUrl.startsWith('PASTE')) ? p.stripeUrl : '';
     $('toteCount').value = (p.toteCount ?? '');
@@ -306,6 +306,7 @@
       payload[f] = $(f).value.trim();
       if (!payload[f]) return showStatus('err', 'Missing: ' + f);
     }
+    if (!payload.price.replace(/^\$+/, '').trim()) return showStatus('err', 'Enter a price after the $.');
 
     // Resolve package display name from the dropdown selection
     const pkgVal = $('package').value;

@@ -104,6 +104,19 @@ button.secondary:hover{background:var(--gold-bg);}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 @media(max-width:560px){.grid2{grid-template-columns:1fr;}}
 
+/* Money input wrapper -- visual $ prefix for type="number" amount fields
+   (their value can't contain a literal $, so the sign lives outside the
+   input rather than pre-filled into it). Text-type price fields instead
+   default value="$" directly since they store a plain string. */
+.money-field{position:relative;}
+.money-field > input{padding-left:26px;}
+.money-field::before{
+  content:'$'; position:absolute; left:12px; top:50%; transform:translateY(-50%);
+  color:var(--steel); font-weight:600; font-size:0.95rem; pointer-events:none;
+}
+.money-field.compact > input{padding-left:22px;}
+.money-field.compact::before{left:9px; font-size:0.85rem;}
+
 /* Shared admin nav bar -- lets Chris jump directly between admin tools */
 .admin-nav{
   max-width:640px;margin:0 auto 14px;

@@ -70,7 +70,7 @@
           <option value="monthly">Recurring — monthly</option>
           <option value="yearly">Recurring — yearly</option>
         </select>
-        <input type="number" id="expAmount" placeholder="Amount ($)" step="0.01" min="0">
+        <div class="money-field"><input type="number" id="expAmount" placeholder="Amount" step="0.01" min="0"></div>
       </div>
       <div class="grid2" style="gap:10px; margin-top:10px;">
         <input type="text" id="expVendor" placeholder="Vendor (e.g., Amazon, Home Depot)">
@@ -324,7 +324,10 @@
       `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${ytdMiles.toLocaleString('en-US',{maximumFractionDigits:1})} mi</div><div style="font-size:0.75rem;color:var(--steel);">YTD business miles</div></div>` +
       (rate ? `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${money(ytdMiles*rate)}</div><div style="font-size:0.75rem;color:var(--steel);">Est. deduction @ $${rate}/mi</div></div>` : '') +
       `<div style="display:flex; align-items:center; gap:6px;">
-        <input type="number" id="rateInput" step="0.005" min="0" placeholder="Rate $/mi" value="${rate ?? ''}" style="width:110px; padding:8px 10px;">
+        <div class="money-field compact" style="display:inline-block;">
+          <input type="number" id="rateInput" step="0.005" min="0" placeholder="0.65" value="${rate ?? ''}" style="width:110px; padding:8px 10px 8px 22px;">
+        </div>
+        <span style="font-size:0.78rem; color:var(--steel);">/mi</span>
         <button type="button" onclick="saveRate()" style="width:auto; margin:0; padding:8px 14px; font-size:0.8rem;">Save rate</button>
       </div>`;
 

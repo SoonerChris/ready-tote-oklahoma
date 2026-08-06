@@ -50,7 +50,7 @@
     </div>
     <div>
       <label>Price</label>
-      <input type="text" id="price" placeholder="$99">
+      <input type="text" id="price" placeholder="$99" value="$">
     </div>
   </div>
 
@@ -122,6 +122,7 @@
       payload[f] = $(f).value.trim();
       if (!payload[f]) return showStatus('err', 'Missing: ' + f);
     }
+    if (!payload.price.replace(/^\$+/, '').trim()) return showStatus('err', 'Enter a price after the $.');
     payload.dropoffTime = to12Hour($('dropoffTime').value || '10:00');
     payload.pickupTime = to12Hour($('pickupTime').value || '10:00');
     payload.serviceType = $('serviceType').value;
@@ -151,7 +152,8 @@
       });
       if (resp.ok) {
         showStatus('ok', 'Added ' + payload.name + '. Form cleared for the next one.');
-        ['name','email','phone','package','price','dropoffDate','pickupDate','dropoffAddress','pickupAddress','notes','toteCount','dollyCount'].forEach(f => $(f).value = '');
+        ['name','email','phone','package','dropoffDate','pickupDate','dropoffAddress','pickupAddress','notes','toteCount','dollyCount'].forEach(f => $(f).value = '');
+        $('price').value = '$';
       } else if (resp.status === 401) {
         showStatus('err', 'Wrong admin secret.');
       } else {
