@@ -6,6 +6,8 @@
 //   RESEND_API_KEY - Resend API key
 //   RESEND_FROM    - verified sender, e.g. "Ready Tote Oklahoma <booking@readytoteokc.com>"
 
+import { getStore } from "@netlify/blobs";
+
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
 const SITE_URL = "https://readytoteokc.com";
@@ -34,6 +36,31 @@ export default async (request) => {
   const pickupDate = formatDate(data.pickup_date) || "your requested date";
 
   const from = process.env.RESEND_FROM || FROM_FALLBACK;
+
+  // Persist the request itself so it shows up in the Booking Requests admin
+  // page, instead of only existing as a Netlify notification email. Never
+  // let a storage hiccup block the customer auto-reply below.
+  try {
+    const store = getStore("requests");
+    const emailPart = String(customerEmail).replace(/[^a-zA-Z0-9@.]/g, "");
+    const dateKey = data.delivery_date || "no-date";
+    const key = `${dateKey}_${emailPart}_${Date.now()}`;
+    await store.setJSON(key, {
+      name: data.name || "",
+      email: customerEmail,
+      phone: data.phone || "",
+      package: data.package || "",
+      deliveryDate: data.delivery_date || "",
+      pickupDate: data.pickup_date || "",
+      deliveryWindow: data.delivery_window || "",
+      pickupWindow: data.pickup_window || "",
+      deliveryAddress: data.delivery_address || "",
+      status: "new",
+      submittedAt: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.error("Booking request log failed (auto-reply still sent):", e.message);
+  }
 
   const html = `
 <!DOCTYPE html>
