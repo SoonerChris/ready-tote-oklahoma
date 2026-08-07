@@ -57,6 +57,7 @@
   .tile:hover{transform:translateY(-2px);border-color:var(--gold);}
   .tile .icon{font-size:1.4rem;flex:none;}
   .tile h3{margin:0;font-size:0.95rem;font-family:'Barlow',sans-serif;font-weight:700;}
+  .tile h3 .badge{font-size:0.68rem;font-family:'JetBrains Mono',monospace;background:var(--crate-red-bg);border:1px solid var(--crate-red);color:var(--crate-red);padding:2px 8px;border-radius:999px;font-weight:bold;margin-left:6px;vertical-align:middle;}
   .tile p{margin:2px 0 0;font-size:0.78rem;color:var(--steel);line-height:1.3;}
 
   /* Alerts */
@@ -83,6 +84,7 @@
 
   <nav class="admin-nav wide" aria-label="Admin tools">
     <a href="admin.html" aria-current="page">Dashboard</a>
+  <a href="admin-requests.html">Requests</a>
     <a href="admin-invoice.html">Send Invoice</a>
     <a href="admin-add-rental.html">Add Rental</a>
     <a href="admin-reminders.html">Reminders</a>
@@ -120,6 +122,7 @@
 
     <!-- Quick actions -->
     <div class="tiles">
+      <a class="tile" href="admin-requests.html"><div class="icon">📥</div><div><h3>Booking Requests <span class="badge" id="reqBadge" style="display:none;">0</span></h3><p>Review new requests, confirm with customers, then invoice</p></div></a>
       <a class="tile" href="admin-invoice.html"><div class="icon">🧾</div><div><h3>Send Invoice</h3><p>Parse booking email, send branded Stripe invoice</p></div></a>
       <a class="tile" href="admin-add-rental.html"><div class="icon">➕</div><div><h3>Add Rental</h3><p>Log a rental without sending an email</p></div></a>
       <a class="tile" href="admin-reminders.html"><div class="icon">🚚</div><div><h3>Reminders &amp; Rentals</h3><p>Full reminder queue, all rentals, mark sent</p></div></a>
@@ -160,8 +163,22 @@
       render(rd, fd, id);
       $('dashboard').style.display = 'block';
       $('status').style.display = 'none';
+      loadRequestsBadge(secret);
     } catch { showErr('Network error — use on the live site.'); }
     finally { btn.disabled = false; btn.textContent = 'Load dashboard'; }
+  }
+
+  // Best-effort, non-blocking: shows a count of requests still needing
+  // attention (everything short of confirmed/declined/invoiced) on the tile.
+  async function loadRequestsBadge(secret) {
+    try {
+      const resp = await post('get-requests', { secret });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const pending = (data.requests || []).filter(r => r.status === 'new' || r.status === 'reviewed' || r.status === 'awaiting_confirmation').length;
+      const badge = $('reqBadge');
+      if (pending > 0) { badge.textContent = pending; badge.style.display = 'inline-block'; }
+    } catch {}
   }
 
   function post(fn, body) {
