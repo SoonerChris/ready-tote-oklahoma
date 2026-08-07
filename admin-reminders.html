@@ -226,7 +226,7 @@
         </div>
         ${paymentControls ? `<div class="actions">${paymentControls}</div>` : ''}
         <div class="actions delete-row">
-          <button type="button" class="edit-contact-btn" data-key="${esc(r.key)}" data-name="${esc(r.name || '')}" data-phone="${esc(r.phone || '')}" data-email="${esc(r.email || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">👤 Edit contact</button>
+          <button type="button" class="edit-contact-btn" data-key="${esc(r.key)}" data-name="${esc(r.name || '')}" data-phone="${esc(r.phone || '')}" data-email="${esc(r.email || '')}" data-dropoff="${esc(r.dropoffAddress || '')}" data-pickup="${esc(r.pickupAddress || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">👤 Edit contact</button>
           <button type="button" class="edit-pkg-btn" data-key="${esc(r.key)}" data-pkg="${esc(r.package || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">✏️ Edit package</button>
           <button type="button" class="edit-count-btn" data-key="${esc(r.key)}" data-totes="${typeof r.toteCount === 'number' ? r.toteCount : ''}" data-dollies="${typeof r.dollyCount === 'number' ? r.dollyCount : ''}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">🔢 Edit tote/dolly count</button>
           <button type="button" class="edit-notes-btn" data-key="${esc(r.key)}" data-notes="${esc(r.notes || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📝 ${r.notes ? 'Edit' : 'Add'} notes</button>
@@ -252,7 +252,7 @@
       btn.addEventListener('click', () => editPackage(btn.dataset.key, btn.dataset.pkg));
     });
     el.querySelectorAll('.edit-contact-btn').forEach(btn => {
-      btn.addEventListener('click', () => editContact(btn.dataset.key, btn.dataset.name, btn.dataset.phone, btn.dataset.email));
+      btn.addEventListener('click', () => editContact(btn.dataset.key, btn.dataset.name, btn.dataset.phone, btn.dataset.email, btn.dataset.dropoff, btn.dataset.pickup));
     });
     el.querySelectorAll('.edit-notes-btn').forEach(btn => {
       btn.addEventListener('click', () => editNotes(btn.dataset.key, btn.dataset.notes));
@@ -372,13 +372,19 @@
     } catch { showErr('Network error.'); }
   };
 
-  window.editContact = async (key, currentName, currentPhone, currentEmail) => {
+  window.editContact = async (key, currentName, currentPhone, currentEmail, currentDropoff, currentPickup) => {
     const newName = prompt('Name:', currentName || '');
     if (newName === null) return; // cancelled
     const newPhone = prompt('Phone:', currentPhone || '');
     if (newPhone === null) return;
     const newEmail = prompt('Email:', currentEmail || '');
     if (newEmail === null) return;
+    const newDropoff = prompt('Drop-off address:', currentDropoff || '');
+    if (newDropoff === null) return;
+    // Defaults to whatever was just entered for drop-off, so if pickup is
+    // the same address (the common case), just hitting OK copies it over.
+    const newPickup = prompt('Pickup address (edit if different from drop-off):', currentPickup || newDropoff);
+    if (newPickup === null) return;
 
     const secret = $('secret').value.trim();
     if (!secret) return showErr('Enter the admin secret first.');
@@ -386,7 +392,11 @@
       const resp = await fetch('/.netlify/functions/edit-rental', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret, key, name: newName.trim(), phone: newPhone.trim(), email: newEmail.trim() }),
+        body: JSON.stringify({
+          secret, key,
+          name: newName.trim(), phone: newPhone.trim(), email: newEmail.trim(),
+          dropoffAddress: newDropoff.trim(), pickupAddress: newPickup.trim(),
+        }),
       });
       if (resp.ok) { $('loadBtn').click(); }
       else {
