@@ -50,13 +50,14 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
       }
     }
 
-    // Email payment reminder: invoiced 5 days ago, still unpaid, skip backfilled entries
+    // Email/text payment reminder: invoiced 5 days ago, still unpaid, skip backfilled entries
     if (!r.backfilled && r.invoicedAt && !paidFlags[r.key]) {
       const invoicedDate = r.invoicedAt.slice(0, 10);
       if (invoicedDate === shiftDate(today, -5)) {
         const flagId = "emailReminder:" + (r.key || r.phone + invoicedDate);
         if (!sentFlags[flagId]) {
-          out.emailReminder.push({ ...r, flagId });
+          const { message, sms } = paymentReminderMessageFor(r);
+          out.emailReminder.push({ ...r, flagId, message, sms });
         }
       }
     }
@@ -109,6 +110,15 @@ export function reviewMessageFor(rental, reviewLink) {
 export function followupMessageFor(rental) {
   const first = (rental.name || "there").split(" ")[0];
   const msg = `Hi ${first}, it's Chris with Ready Tote Oklahoma! Just wanted to make sure you got the invoice we sent over for your tote rental. Let me know if you have any questions, happy to help however I can!`;
+  return { message: msg, sms: smsLink(rental.phone, msg) };
+}
+
+export function paymentReminderMessageFor(rental) {
+  const first = (rental.name || "there").split(" ")[0];
+  const link = rental.stripeUrl || "";
+  const msg = link
+    ? `Hi ${first}, it's Chris with Ready Tote Oklahoma! Just checking in — your tote rental invoice is still open. Here's your payment link again: ${link} Let me know if you have any questions!`
+    : `Hi ${first}, it's Chris with Ready Tote Oklahoma! Just checking in — your tote rental invoice is still open. Let me know if you'd like me to resend the payment link!`;
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
 
