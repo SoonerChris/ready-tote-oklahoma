@@ -204,7 +204,7 @@
       : '';
 
     el.innerHTML = sorted.map(r => {
-      const paymentControls = payBtn(r) + emailReminderBtn(r);
+      const paymentControls = payBtn(r) + emailReminderBtn(r) + textReminderBtn(r);
       return `
       <div class="rem">
         <div class="who">${esc(r.name)} — ${fmtPrice(r.price)} ${paymentBadge(r)} ${tosBadge(r)} ${countBadge(r)}</div>
@@ -585,7 +585,7 @@
       <div class="rem">
         <div class="who">${esc(r.name)} — ${esc(r.email || '')}</div>
         <div class="meta">${esc(r.package)} · Invoiced ${esc(fmtDate((r.invoicedAt || '').slice(0, 10)))} · ${fmtPrice(r.price)}</div>
-        ${emailReminderBtn(r)}
+        <div class="actions">${emailReminderBtn(r)}${textReminderBtn(r)}</div>
       </div>`).join('');
     el.querySelectorAll('.email-reminder-btn').forEach(btn => {
       btn.addEventListener('click', () => sendEmailReminder(btn.dataset.key));
@@ -605,6 +605,16 @@
       return `<span style="display:inline-block; padding:8px 16px; font-size:0.8rem; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px;">📧 ✓ Emailed ${esc(fmtDate(sent))}</span>`;
     }
     return `<button type="button" class="email-reminder-btn" data-key="${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:var(--gold); color:var(--ink); border:none; border-radius:8px; cursor:pointer;">📧 Send reminder</button>`;
+  }
+
+  // Text version of the same nudge. Independent of the email reminder —
+  // either, both, or neither can be sent, tracked by its own flagId via
+  // the shared textBtn() sent/unsend pattern used for the other text types.
+  function textReminderBtn(r) {
+    if (!r.invoicedAt || r.backfilled || PAID_FLAGS[r.key]) return '';
+    const link = r.paymentReminderSms || r.sms;
+    if (!r.phone || !link) return '';
+    return textBtn('textReminder', r.key, link, '💬', 'Text reminder', 'var(--green)');
   }
 
   window.sendEmailReminder = async (key) => {
