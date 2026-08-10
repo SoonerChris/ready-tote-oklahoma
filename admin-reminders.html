@@ -31,6 +31,11 @@
   h2{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
   .section-toggle{width:auto; margin:0; padding:2px 10px; font-size:0.7rem; font-weight:bold; background:none; border:1px solid var(--line); color:var(--steel); border-radius:20px; cursor:pointer;}
   .section-toggle:hover{border-color:var(--gold); color:var(--gold);}
+
+  .date-edit-block{display:none; margin-top:10px; padding-top:12px; border-top:1px dashed var(--line);}
+  .date-edit-block .grid2{margin-bottom:10px;}
+  .date-edit-block label{font-size:0.75rem; margin:0 0 4px; display:block;}
+  .date-edit-block button{margin-top:6px; width:auto; padding:7px 14px; font-size:0.8rem;}
 </style>
 </head>
 <body>
@@ -263,7 +268,19 @@
             <button type="button" class="edit-pkg-btn" data-key="${esc(r.key)}" data-pkg="${esc(r.package || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">✏️ Edit package</button>
             <button type="button" class="edit-count-btn" data-key="${esc(r.key)}" data-totes="${typeof r.toteCount === 'number' ? r.toteCount : ''}" data-dollies="${typeof r.dollyCount === 'number' ? r.dollyCount : ''}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">🔢 Edit tote/dolly count</button>
             <button type="button" class="edit-notes-btn" data-key="${esc(r.key)}" data-notes="${esc(r.notes || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📝 ${r.notes ? 'Edit' : 'Add'} notes</button>
+            <button type="button" class="toggle-dates-btn" data-target="dates-${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📅 Edit dates</button>
             <button type="button" class="delete-btn" onclick="deleteRental('${esc(r.key)}', '${esc(r.name)}')">Delete</button>
+          </div>
+          <div class="date-edit-block" id="dates-${esc(r.key)}">
+            <div class="grid2">
+              <div><label>Drop-off date</label><input type="date" data-df="dropoffDate" value="${esc(r.dropoffDate || '')}"></div>
+              <div><label>Drop-off time</label><input type="time" data-df="dropoffTime" value="${esc(r.dropoffTime || '')}"></div>
+            </div>
+            <div class="grid2">
+              <div><label>Pickup date</label><input type="date" data-df="pickupDate" value="${esc(r.pickupDate || '')}"></div>
+              <div><label>Pickup time</label><input type="time" data-df="pickupTime" value="${esc(r.pickupTime || '')}"></div>
+            </div>
+            <button type="button" class="save-dates-btn" data-key="${esc(r.key)}">Save dates</button>
           </div>
         </div>
       </div>`;
@@ -293,6 +310,15 @@
     });
     el.querySelectorAll('.edit-count-btn').forEach(btn => {
       btn.addEventListener('click', () => editCounts(btn.dataset.key, btn.dataset.totes, btn.dataset.dollies));
+    });
+    el.querySelectorAll('.toggle-dates-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const block = document.getElementById(btn.dataset.target);
+        block.style.display = block.style.display === 'block' ? 'none' : 'block';
+      });
+    });
+    el.querySelectorAll('.save-dates-btn').forEach(btn => {
+      btn.addEventListener('click', () => saveDates(btn));
     });
     el.querySelectorAll('.add-photo-btn').forEach(btn => {
       btn.addEventListener('click', () => triggerPhotoCapture(btn.dataset.key, btn.dataset.type));
@@ -402,6 +428,28 @@
       else {
         const detail = await resp.text().catch(() => '');
         showErr('Update failed (' + resp.status + '): ' + detail);
+      }
+    } catch { showErr('Network error.'); }
+  };
+
+  window.saveDates = async (btn) => {
+    const key = btn.dataset.key;
+    const block = btn.closest('.date-edit-block');
+    const fields = {};
+    block.querySelectorAll('[data-df]').forEach(inp => { fields[inp.dataset.df] = inp.value; });
+
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const resp = await fetch('/.netlify/functions/edit-rental', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key, ...fields }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Edit failed (' + resp.status + '): ' + detail);
       }
     } catch { showErr('Network error.'); }
   };
