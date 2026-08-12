@@ -183,12 +183,15 @@
     const deployed = ACTIVE_RENTALS.reduce((t, r) => t + toteQty(r), 0);
     const dolliesOut = ACTIVE_RENTALS.reduce((t, r) => t + dollyQty(r), 0);
     const available = totalOwned - deployed;
+    // Lifetime total: every rental ever logged, any status, not just active ones.
+    const lifetimeTotes = ALL_RENTALS.reduce((t, r) => t + toteQty(r), 0);
 
     $('statCards').innerHTML = `
       <div class="stat"><div class="num">${totalOwned}</div><div class="lbl">Total owned</div></div>
       <div class="stat"><div class="num gold">${deployed}</div><div class="lbl">Out on rental (est.)</div></div>
       <div class="stat"><div class="num ${available < 0 ? 'warn' : 'green'}">${available}</div><div class="lbl">Available now</div></div>
       <div class="stat"><div class="num">${ACTIVE_RENTALS.length}</div><div class="lbl">Active rentals</div></div>
+      <div class="stat"><div class="num green">${lifetimeTotes}</div><div class="lbl">Lifetime totes rented</div></div>
       <div class="stat"><div class="num gold">${dolliesOut}</div><div class="lbl">Dollies out (est.)</div></div>
     `;
 
