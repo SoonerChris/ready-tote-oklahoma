@@ -11,11 +11,13 @@
 <link rel="stylesheet" href="admin-shared.css?v=20260804">
 <style>
   .rem .who{font-weight:bold;}
-  .rem .meta{color:var(--steel);font-size:0.82rem;margin:4px 0 0;font-family:inherit;line-height:1.45;}
+  .rem .meta{color:var(--steel);font-size:0.82rem;margin:3px 0 0;font-family:inherit;line-height:1.45;}
   .rem .meta.addr{margin-top:2px;}
-  #results h2{margin:22px 0 8px;}
-  #results .empty{margin:4px 0 0;}
-  .rem .msg{background:var(--cream);border-radius:6px;padding:10px 12px;font-size:0.85rem;color:var(--ink);margin-bottom:10px;}
+  #results h2{margin:16px 0 6px; font-size:0.9rem;}
+  #results h2 .h2-note{font-family:'Barlow',sans-serif; font-weight:400; font-size:0.72rem; color:var(--steel);}
+  #results .empty{margin:0 0 0 2px; font-size:0.85rem;}
+  .rem{margin-bottom:8px;}
+  .rem .msg{background:var(--cream);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:12px 14px;font-size:0.88rem;color:var(--ink);line-height:1.55;margin-bottom:10px;}
   .sms-btn{display:inline-block;background:var(--green);color:#fff;font-weight:bold;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:0.88rem;transition:opacity 0.12s ease;}
   .sms-btn:hover{opacity:0.88;}
   /* Group related row buttons so each group wraps independently and
@@ -75,11 +77,11 @@
     <div id="delivery"></div>
     <h2>📦 Pickup in 2 days <button type="button" class="section-toggle" onclick="toggleAllSection('pickup', this)">Expand all</button></h2>
     <div id="pickup"></div>
-    <h2>⭐ Review requests (picked up 3 days ago) <button type="button" class="section-toggle" onclick="toggleAllSection('review', this)">Expand all</button></h2>
+    <h2>⭐ Review requests <span class="h2-note">picked up 3 days ago</span> <button type="button" class="section-toggle" onclick="toggleAllSection('review', this)">Expand all</button></h2>
     <div id="review"></div>
-    <h2>💬 Invoice follow-ups (invoiced 3 days ago) <button type="button" class="section-toggle" onclick="toggleAllSection('followup', this)">Expand all</button></h2>
+    <h2>💬 Invoice follow-ups <span class="h2-note">invoiced 3 days ago</span> <button type="button" class="section-toggle" onclick="toggleAllSection('followup', this)">Expand all</button></h2>
     <div id="followup"></div>
-    <h2>📧 Email payment reminders (invoiced 5+ days ago, still unpaid) <button type="button" class="section-toggle" onclick="toggleAllSection('emailReminder', this)">Expand all</button></h2>
+    <h2>📧 Email payment reminders <span class="h2-note">invoiced 5+ days, unpaid</span> <button type="button" class="section-toggle" onclick="toggleAllSection('emailReminder', this)">Expand all</button></h2>
     <div id="emailReminder"></div>
 
     <h2>📋 All rentals <button type="button" class="section-toggle" onclick="toggleAllSection('allRentals', this)">Expand all</button></h2>
@@ -156,8 +158,8 @@
         <div class="rem-summary" onclick="this.closest('.rem').classList.toggle('open')">
           <span class="chevron">▸</span>
           <div>
-            <div class="who">${esc(r.name)} — ${esc(r.phone)}</div>
-            <div class="meta">${esc(r.package)} · ${esc(r.address)}</div>
+            <div class="who">${esc(r.name)}</div>
+            <div class="meta">${esc(r.phone)}${r.package ? ' · ' + esc(r.package) : ''}${r.address ? ' · ' + esc(r.address) : ''}</div>
           </div>
         </div>
         <div class="rem-details">
@@ -726,8 +728,8 @@
         <div class="rem-summary" onclick="this.closest('.rem').classList.toggle('open')">
           <span class="chevron">▸</span>
           <div>
-            <div class="who">${esc(r.name)} — ${esc(r.email || '')}</div>
-            <div class="meta">${esc(r.package)} · Invoiced ${esc(fmtDate((r.invoicedAt || '').slice(0, 10)))} · ${fmtPrice(r.price)}</div>
+            <div class="who">${esc(r.name)}</div>
+            <div class="meta">${r.email ? esc(r.email) + ' · ' : ''}${esc(r.package)} · Invoiced ${esc(fmtDate((r.invoicedAt || '').slice(0, 10)))} · ${fmtPrice(r.price)}</div>
           </div>
         </div>
         <div class="rem-details">
