@@ -175,6 +175,7 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
+  let PACKAGES = []; // declared early: matchPrefillPackage() can run before the fetch below finishes
   $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
   $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
 
@@ -246,7 +247,6 @@
   });
 
   // ---- Load packages from packages.json ----
-  let PACKAGES = [];
   fetch('/packages.json')
     .then(r => r.json())
     .then(data => {
