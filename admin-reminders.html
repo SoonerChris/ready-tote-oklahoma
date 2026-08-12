@@ -11,7 +11,10 @@
 <link rel="stylesheet" href="admin-shared.css?v=20260804">
 <style>
   .rem .who{font-weight:bold;}
-  .rem .meta{color:var(--steel);font-size:0.8rem;margin:4px 0 0;font-family:'JetBrains Mono',monospace;}
+  .rem .meta{color:var(--steel);font-size:0.82rem;margin:4px 0 0;font-family:inherit;line-height:1.45;}
+  .rem .meta.addr{margin-top:2px;}
+  #results h2{margin:22px 0 8px;}
+  #results .empty{margin:4px 0 0;}
   .rem .msg{background:var(--cream);border-radius:6px;padding:10px 12px;font-size:0.85rem;color:var(--ink);margin-bottom:10px;}
   .sms-btn{display:inline-block;background:var(--green);color:#fff;font-weight:bold;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:0.88rem;transition:opacity 0.12s ease;}
   .sms-btn:hover{opacity:0.88;}
@@ -211,6 +214,24 @@
       </div>`).join('');
   }
 
+  // Builds the compact two-line summary for an "All rentals" card: a short
+  // date-range line that never wraps, plus an address line shown once when
+  // drop-off and pickup share the same address (the common case), or as
+  // one line per address when they differ. Omitted entirely for self-service
+  // rentals with no address on file.
+  function rentalMetaHtml(r) {
+    const dOff = r.dropoffAddress || r.address || '';
+    const pOff = r.pickupAddress || r.address || '';
+    const dateLine = `${esc(r.package)} · 🚚 ${esc(fmtDate(r.dropoffDate))} → 📦 ${esc(fmtDate(r.pickupDate))}`;
+    let addrLine = '';
+    if (dOff && dOff === pOff) {
+      addrLine = esc(dOff);
+    } else if (dOff || pOff) {
+      addrLine = [dOff ? '🚚 ' + esc(dOff) : '', pOff ? '📦 ' + esc(pOff) : ''].filter(Boolean).join(' · ');
+    }
+    return `<div class="meta">${dateLine}</div>${addrLine ? `<div class="meta addr">${addrLine}</div>` : ''}`;
+  }
+
   function fmtDate(iso) {
     if (!iso) return '';
     const parts = String(iso).slice(0, 10).split('-');
@@ -243,7 +264,7 @@
           <span class="chevron">▸</span>
           <div>
             <div class="who">${esc(r.name)} — ${fmtPrice(r.price)} ${paymentBadge(r)} ${tosBadge(r)} ${countBadge(r)}</div>
-            <div class="meta">${esc(r.package)} · Drop-off ${esc(fmtDate(r.dropoffDate))}${(r.dropoffAddress||r.address) ? ' @ ' + esc(r.dropoffAddress||r.address) : ''} · Pickup ${esc(fmtDate(r.pickupDate))}${(r.pickupAddress||r.address) ? ' @ ' + esc(r.pickupAddress||r.address) : ''}</div>
+            ${rentalMetaHtml(r)}
           </div>
         </div>
         <div class="rem-details">
