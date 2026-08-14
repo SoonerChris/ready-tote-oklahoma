@@ -313,7 +313,7 @@
   function confirmMessage(r) {
     const first = (r.name || 'there').split(' ')[0];
     const pkg = r.package || 'your package';
-    return `Hi ${first}, Ready Tote Oklahoma here! Got your request for ${pkg}. ${fmtDate(r.deliveryDate)} to ${fmtDate(r.pickupDate)} works on our end. Reply YES to confirm and I'll send your invoice right after.`;
+    return `Hi ${first}, Ready Tote Oklahoma here! Got your request for ${pkg}. Your dates, ${fmtDate(r.deliveryDate)} to ${fmtDate(r.pickupDate)}, work on our end. Reply YES to confirm and we will send you an invoice shortly.`;
   }
 
   function normalizePhone(raw) {
