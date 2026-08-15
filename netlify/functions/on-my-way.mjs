@@ -72,7 +72,8 @@ export default async (request) => {
 
     const durationText = (element.duration_in_traffic || element.duration).text;
     const durationSeconds = (element.duration_in_traffic || element.duration).value;
-    const arrivalTime = formatArrivalTime(new Date(Date.now() + durationSeconds * 1000));
+    const rawArrival = new Date(Date.now() + durationSeconds * 1000);
+    const arrivalTime = formatArrivalTime(roundToNearest15(rawArrival));
 
     const first = (rental.name || "there").split(" ")[0];
     const action = type === "delivery" ? "deliver your totes" : "pick up your totes";
@@ -84,6 +85,12 @@ export default async (request) => {
     return json({ error: "Network error calculating travel time" }, 500);
   }
 };
+
+// Rounds a Date to the nearest 15-minute mark (:00, :15, :30, :45).
+function roundToNearest15(date) {
+  const ms15 = 15 * 60 * 1000;
+  return new Date(Math.round(date.getTime() / ms15) * ms15);
+}
 
 // Formats a Date as a friendly clock time in Central time, e.g. "12pm" or
 // "12:15pm" (drops ":00" for on-the-hour times).
