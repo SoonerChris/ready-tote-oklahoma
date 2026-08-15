@@ -402,7 +402,7 @@
         if (btn) { btn.disabled = false; btn.textContent = '🚗 On the Way (' + label + ')'; }
         return;
       }
-      wrap.innerHTML = `<a class="sms-btn" href="${data.sms}" style="padding:8px 16px; font-size:0.8rem; background:var(--green);">🚗 Text ETA — ${esc(data.durationText)} →</a>`;
+      wrap.innerHTML = `<a class="sms-btn" href="${data.sms}" style="padding:8px 16px; font-size:0.8rem; background:var(--green);">🚗 Text ETA — ${esc(data.arrivalTime)} →</a>`;
     } catch {
       showErr('Network error calculating ETA.');
       if (btn) { btn.disabled = false; btn.textContent = '🚗 On the Way (' + label + ')'; }
