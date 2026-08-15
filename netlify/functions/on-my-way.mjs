@@ -71,16 +71,36 @@ export default async (request) => {
     }
 
     const durationText = (element.duration_in_traffic || element.duration).text;
+    const durationSeconds = (element.duration_in_traffic || element.duration).value;
+    const arrivalTime = formatArrivalTime(new Date(Date.now() + durationSeconds * 1000));
+
     const first = (rental.name || "there").split(" ")[0];
     const action = type === "delivery" ? "deliver your totes" : "pick up your totes";
-    const message = `Hi ${first}, it's Chris with Ready Tote Oklahoma! We're on our way to ${action} and should be there in about ${durationText}. See you soon!`;
+    const message = `Hi ${first}, it's Chris with Ready Tote Oklahoma! We're on our way to ${action} and should be there around ${arrivalTime}. See you soon!`;
 
-    return json({ message, sms: smsLink(rental.phone, message), durationText, origin, destination });
+    return json({ message, sms: smsLink(rental.phone, message), arrivalTime, durationText, origin, destination });
   } catch (e) {
     console.error("Distance Matrix fetch failed:", e.message);
     return json({ error: "Network error calculating travel time" }, 500);
   }
 };
+
+// Formats a Date as a friendly clock time in Central time, e.g. "12pm" or
+// "12:15pm" (drops ":00" for on-the-hour times).
+function formatArrivalTime(date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).formatToParts(date);
+
+  const hour = parts.find((p) => p.type === "hour").value;
+  const minute = parts.find((p) => p.type === "minute").value;
+  const period = parts.find((p) => p.type === "dayPeriod").value.toLowerCase();
+
+  return minute === "00" ? `${hour}${period}` : `${hour}:${minute}${period}`;
+}
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
