@@ -77,6 +77,8 @@
     <div id="delivery"></div>
     <h2>📦 Pickup in 2 days <button type="button" class="section-toggle" onclick="toggleAllSection('pickup', this)">Expand all</button></h2>
     <div id="pickup"></div>
+    <h2>📍 Confirm pickup address <span class="h2-note">5 days before pickup</span> <button type="button" class="section-toggle" onclick="toggleAllSection('addressCheck', this)">Expand all</button></h2>
+    <div id="addressCheck"></div>
     <h2>⭐ Review requests <span class="h2-note">picked up 3 days ago</span> <button type="button" class="section-toggle" onclick="toggleAllSection('review', this)">Expand all</button></h2>
     <div id="review"></div>
     <h2>💬 Invoice follow-ups <span class="h2-note">invoiced 3 days ago</span> <button type="button" class="section-toggle" onclick="toggleAllSection('followup', this)">Expand all</button></h2>
@@ -128,6 +130,7 @@
         PAID_FLAGS = data.paidFlags || {};
         render('delivery', data.reminders.delivery);
         render('pickup', data.reminders.pickup);
+        render('addressCheck', data.reminders.addressCheck);
         render('review', data.reminders.review);
         render('followup', data.reminders.followup);
         renderEmailDue(data.reminders.emailReminder || []);
@@ -274,6 +277,7 @@
           <div class="actions">
             ${textBtn('delivery', r.key, r.deliverySms, '🚚', 'Delivery', 'var(--green)')}
             ${textBtn('pickup', r.key, r.pickupSms, '📦', 'Pickup', 'var(--gold)')}
+            ${r.serviceType !== 'self' ? textBtn('addressCheck', r.key, r.addressCheckSms, '📍', 'Confirm address', 'var(--green)') : ''}
             ${textBtn('review', r.key, r.reviewSms, '⭐', 'Review', 'var(--green)')}
             ${textBtn('followup', r.key, r.followupSms, '💬', 'Follow-up', 'var(--gold)')}
           </div>
