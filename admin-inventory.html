@@ -41,20 +41,9 @@
   .exp-day.booked{background:var(--red-bg); border-color:var(--red); color:var(--red);}
   .exp-day .n{font-weight:bold; font-size:0.68rem;}
   .exp-day .a{font-size:0.62rem; margin-top:1px;}
+  .exp-day.today{outline:2px solid var(--ink); outline-offset:-2px;}
+  .exp-day.past{opacity:0.82;}
   .exp-scroll{max-height:520px; overflow-y:auto; padding-right:4px;}
-
-  /* Search Rentals */
-  #rentalSearch{margin-bottom:0;}
-  .hit{border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-top:10px; background:var(--white);}
-  .hit-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;}
-  .hit-name{font-weight:bold; font-size:0.95rem;}
-  .hit-pkg{font-size:0.8rem; color:var(--steel); margin-top:2px;}
-  .hit-dates{font-family:'JetBrains Mono',monospace; font-size:0.78rem; color:var(--steel); margin-top:8px;}
-  .hit-counts{font-family:'JetBrains Mono',monospace; font-size:0.82rem; margin-top:4px;}
-  .hit-warn{font-size:0.8rem; color:var(--crate-red); margin-top:8px; font-weight:600;}
-  .pill.done{background:var(--line); color:var(--steel); border:1px solid var(--line);}
-  .search-hint{color:var(--steel); font-size:0.85rem; margin-top:10px;}
-  .search-count{font-size:0.78rem; color:var(--steel); margin-top:10px; font-family:'JetBrains Mono',monospace;}
 </style>
 </head>
 <body>
@@ -81,13 +70,6 @@
   <div id="results" style="display:none;">
     <div class="rem stats" id="statCards"></div>
 
-    <h2>Search Rentals</h2>
-    <div class="rem">
-      <p class="note" style="margin:0 0 10px;">Look up any rental by name, email, or phone. Useful for spot-checking whether a specific booking is counted as active, how many totes it's contributing, and whether it needs attention.</p>
-      <input type="text" id="rentalSearch" placeholder="Search by name, email, or phone…" autocomplete="off">
-      <div id="rentalSearchResults"></div>
-    </div>
-
     <h2>Data cleanup</h2>
     <div class="rem">
       <p class="note" style="margin:0 0 10px;">Sets Tote/Dolly counts on older rentals from before those fields existed, by parsing the package text. Skips anything it can't confidently parse (e.g. "Custom Package") so it never guesses a wrong number — you'll get a list to fix by hand.</p>
@@ -95,14 +77,15 @@
       <div id="backfillResult" style="margin-top:10px;"></div>
     </div>
 
-    <h2>Expected Inventory (Next 60 Days)</h2>
+    <h2>Inventory Calendar (Past 60 Days → Next 60 Days)</h2>
     <div class="rem">
       <div class="exp-legend">
         <span><i class="exp-dot open"></i>Plenty free</span>
         <span><i class="exp-dot limited"></i>Under 20 free</span>
         <span><i class="exp-dot booked"></i>Zero or oversold</span>
+        <span><i class="exp-dot" style="background:var(--white); border:2px solid var(--ink);"></i>Today</span>
       </div>
-      <p class="note" style="margin:0 0 12px;">Each cell is totes owned minus everything scheduled to be out that day, across all logged rentals (not just currently active ones), so you can see upcoming crunches before they happen.</p>
+      <p class="note" style="margin:0 0 12px;">Each cell is totes owned minus everything scheduled to be out that day. Past days are reconstructed from your logged rentals and stock events, so this is only as accurate as what's been logged. Future days project forward using every rental on the books (not just currently active ones) and your current tote count, so you can see upcoming crunches before they happen.</p>
       <div class="exp-scroll" id="expectedCal"></div>
     </div>
 
@@ -144,7 +127,6 @@
 
   $('loadBtn').addEventListener('click', load);
   if ($('secret').value) load();
-  $('rentalSearch').addEventListener('input', renderRentalSearch);
 
   async function load() {
     const secret = $('secret').value.trim();
@@ -172,7 +154,6 @@
 
       render();
       renderExpected();
-      renderRentalSearch();
       $('results').style.display = 'block';
       $('status').style.display = 'none';
     } catch { showErr('Network error — use this page on the live site.'); }
@@ -235,100 +216,40 @@
     }).join('') : '<p class="empty">No inventory events logged yet.</p>';
   }
 
-  // ---- Search Rentals ----
-  // Client-side lookup against ALL_RENTALS (already loaded by Load inventory).
-  // Surfaces the same red flags found while diagnosing count discrepancies:
-  // zero tote count while active, and a pickup date that already passed.
-  function daysAgo(dateStr) {
-    if (!dateStr) return null;
-    const then = new Date(dateStr + 'T12:00:00');
-    const now = new Date();
-    return Math.round((now - then) / 86400000);
-  }
-
-  function rentalStatus(r) {
-    if (!r.dropoffDate || !r.pickupDate) return { label: 'Unknown', cls: 'done' };
-    if (r.dropoffDate <= TODAY && r.pickupDate >= TODAY) return { label: 'Active now', cls: 'ok' };
-    if (r.dropoffDate > TODAY) return { label: 'Upcoming', cls: 'pending' };
-    return { label: 'Completed', cls: 'done' };
-  }
-
-  function renderRentalSearch() {
-    const box = $('rentalSearchResults');
-    const q = $('rentalSearch').value.trim().toLowerCase();
-
-    if (!q) {
-      box.innerHTML = '<p class="search-hint">Start typing a name, email, or phone to look up a rental.</p>';
-      return;
-    }
-
-    const matches = ALL_RENTALS.filter(r => {
-      const haystack = `${r.name || ''} ${r.email || ''} ${r.phone || ''} ${r.package || ''}`.toLowerCase();
-      return haystack.includes(q);
-    }).sort((a, b) => (b.dropoffDate || '').localeCompare(a.dropoffDate || ''));
-
-    if (!matches.length) {
-      box.innerHTML = '<p class="search-hint">No rentals match that search.</p>';
-      return;
-    }
-
-    box.innerHTML = matches.map(r => {
-      const status = rentalStatus(r);
-      const totes = toteQty(r);
-      const dollies = dollyQty(r);
-      const warnings = [];
-
-      if (status.label === 'Active now' && totes === 0) {
-        warnings.push('⚠ Contributing 0 totes to Inventory — check package text or run the backfill.');
-      }
-      if (status.label === 'Completed') {
-        const age = daysAgo(r.pickupDate);
-        if (age !== null && age <= 10) {
-          warnings.push(`⚠ Pickup was ${age}d ago — confirm totes actually came back.`);
-        }
-      }
-
-      return `
-      <div class="hit">
-        <div class="hit-top">
-          <div>
-            <div class="hit-name">${esc(r.name || 'Unnamed')}</div>
-            <div class="hit-pkg">${esc(r.package || '—')}${r.email ? ' · ' + esc(r.email) : ''}${r.phone ? ' · ' + esc(r.phone) : ''}</div>
-          </div>
-          <span class="pill ${status.cls}">${status.label}</span>
-        </div>
-        <div class="hit-dates">${esc(fmtDate(r.dropoffDate))} → ${esc(fmtDate(r.pickupDate))}</div>
-        <div class="hit-counts">${totes} tote${totes === 1 ? '' : 's'} · ${dollies} doll${dollies === 1 ? 'y' : 'ies'}</div>
-        ${warnings.map(w => `<div class="hit-warn">${esc(w)}</div>`).join('')}
-      </div>`;
-    }).join('') + `<div class="search-count">${matches.length} match${matches.length === 1 ? '' : 'es'}</div>`;
-  }
-
-  // ---- Expected Inventory (forward-looking calendar) ----
-  // Same math as the public availability.mjs function, but run client-side here
-  // against ALL logged rentals (not just active ones) so future crunches show up
-  // before they happen, and with exact counts shown since this page is internal-only.
+  // ---- Inventory Calendar (past 60 days reconstructed + next 60 days projected) ----
+  // Same math as the public availability.mjs function for future days. Past
+  // days are reconstructed the same way the CLI diagnostic script does: owned
+  // count as of that date from the event ledger, deployed count from every
+  // rental whose date range covered that day. This is only as good as your
+  // logged events/rentals, it's not a saved historical snapshot.
   function shiftDate(iso, n) {
     const d = new Date(iso + 'T12:00:00Z');
     d.setUTCDate(d.getUTCDate() + n);
     return d.toISOString().slice(0, 10);
   }
 
+  function ownedAsOf(dateStr) {
+    return EVENTS.reduce((t, e) => {
+      if (e.date > dateStr) return t; // hasn't happened yet as of this date
+      return t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity);
+    }, 0);
+  }
+
   function renderExpected() {
-    const totalOwned = EVENTS.reduce((t, e) => t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity), 0);
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
-    const DAYS_AHEAD = 60;
+    const PAST_DAYS = 60;
+    const FUTURE_DAYS = 60;
 
     const days = [];
-    for (let i = 0; i < DAYS_AHEAD; i++) {
-      const date = shiftDate(today, i);
+    for (let i = -PAST_DAYS; i < FUTURE_DAYS; i++) {
+      const date = shiftDate(TODAY, i);
+      const owned = ownedAsOf(date);
       const deployed = ALL_RENTALS.reduce((t, r) => {
         if (r.dropoffDate && r.pickupDate && r.dropoffDate <= date && r.pickupDate >= date) {
           return t + toteQty(r);
         }
         return t;
       }, 0);
-      days.push({ date, available: totalOwned - deployed });
+      days.push({ date, available: owned - deployed, isToday: date === TODAY, isPast: date < TODAY });
     }
 
     const wrap = $('expectedCal');
@@ -376,8 +297,10 @@
         if (entry.available <= 0) cls += ' booked';
         else if (entry.available < 20) cls += ' limited';
         else cls += ' open';
+        if (entry.isPast) cls += ' past';
+        if (entry.isToday) cls += ' today';
         cell.className = cls;
-        cell.title = entry.date + ': ' + entry.available + ' available';
+        cell.title = entry.date + ': ' + entry.available + ' available' + (entry.isToday ? ' (today)' : entry.isPast ? ' (reconstructed)' : '');
         cell.innerHTML = `<span class="n">${dayNum}</span><span class="a">${entry.available}</span>`;
         grid.appendChild(cell);
       });
@@ -385,6 +308,9 @@
       monthDiv.appendChild(grid);
       wrap.appendChild(monthDiv);
     });
+
+    const todayCell = wrap.querySelector('.exp-day.today');
+    if (todayCell) todayCell.scrollIntoView({ block: 'center' });
   }
 
   function labelFor(type) {
