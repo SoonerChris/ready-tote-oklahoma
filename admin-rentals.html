@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>All Rentals — Ready Tote Oklahoma (Internal)</title>
+<link rel="stylesheet" href="admin-shared.css?v=20260804">
+<script src="admin-shared.js?v=20260818"></script>
+<script src="admin-rentals-shared.js?v=20260818"></script>
+<style>
+  .rem .who{font-weight:bold;}
+  .rem .meta{color:var(--steel);font-size:0.82rem;margin:3px 0 0;font-family:inherit;line-height:1.45;}
+  .rem .meta.addr{margin-top:2px;}
+  #results h2{margin:16px 0 6px; font-size:0.9rem;}
+  #results .empty{margin:0 0 0 2px; font-size:0.85rem;}
+  .rem{margin-bottom:8px;}
+  .rem .msg{background:var(--cream);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:12px 14px;font-size:0.88rem;color:var(--ink);line-height:1.55;margin-bottom:10px;}
+  .sms-btn{display:inline-block;background:var(--green);color:#fff;font-weight:bold;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:0.88rem;transition:opacity 0.12s ease;}
+  .sms-btn:hover{opacity:0.88;}
+  /* Group related row buttons so each group wraps independently and
+     lines up the same way regardless of which buttons are "Sent" */
+  .rem .actions{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px;}
+  .rem .actions:last-child{margin-bottom:0;}
+  .rem .actions.delete-row{margin-top:2px; padding-top:10px; border-top:1px solid var(--line);}
+  .delete-btn{width:auto; padding:8px 16px; font-size:0.8rem; background:var(--red-bg); color:var(--red); border:1px solid rgba(192,57,43,0.35); border-radius:6px; cursor:pointer;}
+
+  /* Collapsible card: summary always visible, tap to reveal the buttons */
+  .rem-summary{display:flex; align-items:flex-start; gap:10px; cursor:pointer; user-select:none;}
+  .rem-summary .chevron{flex:none; color:var(--gold); font-size:0.75rem; line-height:1.6; width:12px; text-align:center; transition:transform 0.15s ease;}
+  .rem.open .rem-summary .chevron{transform:rotate(90deg);}
+  .rem-details{display:none; margin-top:10px;}
+  .rem.open .rem-details{display:block;}
+  h2{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .section-toggle{width:auto; margin:0; padding:2px 10px; font-size:0.7rem; font-weight:bold; background:none; border:1px solid var(--line); color:var(--steel); border-radius:20px; cursor:pointer;}
+  .section-toggle:hover{border-color:var(--gold); color:var(--gold);}
+
+  .date-edit-block{display:none; margin-top:10px; padding-top:12px; border-top:1px dashed var(--line);}
+  .date-edit-block .grid2{margin-bottom:10px;}
+  .date-edit-block label{font-size:0.75rem; margin:0 0 4px; display:block;}
+  .date-edit-block button{margin-top:6px; width:auto; padding:7px 14px; font-size:0.8rem;}
+</style>
+</head>
+<body>
+<nav class="admin-nav" aria-label="Admin tools">
+  <a href="admin.html">Dashboard</a>
+  <a href="admin-requests.html">Requests</a>
+  <a href="admin-invoice.html">Send Invoice</a>
+  <a href="admin-add-rental.html">Add Rental</a>
+  <a href="admin-reminders.html">Reminders</a>
+  <a href="admin-rentals.html" aria-current="page">All Rentals</a>
+  <a href="admin-contacts.html">Contacts</a>
+  <a href="admin-finance.html">Finance</a>
+  <a href="admin-outreach.html">Outreach</a>
+  <a href="admin-inventory.html">Inventory</a>
+</nav>
+<div class="card">
+  <h1>All Rentals</h1>
+  <p class="sub">Search, edit, and manage every rental on the books — payment status, photos, dates, and more. For today's due texts, see the Reminders page instead.</p>
+
+  <label>Admin secret</label>
+  <input type="password" id="secret" placeholder="Your INVOICE_SECRET value">
+
+  <label>Starting from (optional, for "On the Way" texts)</label>
+  <input type="text" id="startFrom" placeholder="Leave blank to use your home address">
+
+  <button id="loadBtn">Load rentals</button>
+  <div class="status" id="status"></div>
+  <input type="file" id="photoFileInput" accept="image/*" capture="environment" style="display:none">
+
+  <div id="results" style="display:none;">
+    <h2>📋 All rentals <button type="button" class="section-toggle" onclick="toggleAllSection('allRentals', this)">Expand all</button></h2>
+    <p class="empty" style="margin:0 0 10px;">Delete an entry to remove a cancellation or to re-add one with corrected details.</p>
+    <div id="unpaidSummary"></div>
+    <div id="allRentals"></div>
+  </div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  // Restore shared secret
+  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
+  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+
+  $('startFrom').value = sessionStorage.getItem('rto-admin-startfrom') || '';
+  $('startFrom').addEventListener('input', () => sessionStorage.setItem('rto-admin-startfrom', $('startFrom').value));
+
+  let ALL_RENTALS = [];
+
+  $('loadBtn').addEventListener('click', load);
+  // Auto-load if a secret is already saved (matches admin.html behavior)
+  if ($('secret').value) load();
+
+  async function load() {
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret.');
+    const btn = $('loadBtn');
+    btn.disabled = true; btn.textContent = 'Loading…';
+    try {
+      const resp = await fetch('/.netlify/functions/get-rentals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret }),
+      });
+      if (resp.status === 401) { showErr('Wrong admin secret.'); }
+      else if (!resp.ok) { showErr('Load failed (' + resp.status + ').'); }
+      else {
+        const data = await resp.json();
+        ALL_RENTALS = data.rentals || [];
+        SENT_FLAGS = data.sentFlags || {};
+        PAID_FLAGS = data.paidFlags || {};
+        renderAll(ALL_RENTALS);
+        $('results').style.display = 'block';
+        $('status').style.display = 'none';
+      }
+    } catch { showErr('Network error — use this page on the live site.'); }
+    btn.disabled = false; btn.textContent = 'Load rentals';
+  }
+
+  // Builds the compact two-line summary for an "All rentals" card: a short
+  // date-range line that never wraps, plus an address line shown once when
+  // drop-off and pickup share the same address (the common case), or as
+  // one line per address when they differ. Omitted entirely for self-service
+  // rentals with no address on file.
+  function rentalMetaHtml(r) {
+    const dOff = r.dropoffAddress || r.address || '';
+    const pOff = r.pickupAddress || r.address || '';
+    const dateLine = `${esc(r.package)} · 🚚 ${esc(fmtDate(r.dropoffDate))} → 📦 ${esc(fmtDate(r.pickupDate))}`;
+    let addrLine = '';
+    if (dOff && dOff === pOff) {
+      addrLine = esc(dOff);
+    } else if (dOff || pOff) {
+      addrLine = [dOff ? '🚚 ' + esc(dOff) : '', pOff ? '📦 ' + esc(pOff) : ''].filter(Boolean).join(' · ');
+    }
+    return `<div class="meta">${dateLine}</div>${addrLine ? `<div class="meta addr">${addrLine}</div>` : ''}`;
+  }
+
+  // ---- All rentals management ----
+  function renderAll(rentals){
+    const el = $('allRentals');
+    if (!rentals.length) { el.innerHTML = '<p class="empty">No rentals logged yet.</p>'; $('unpaidSummary').innerHTML = ''; return; }
+    const sorted = [...rentals].sort((a,b) => (b.dropoffDate||'').localeCompare(a.dropoffDate||''));
+
+    const unpaidCount = sorted.filter(isUnpaid).length;
+    $('unpaidSummary').innerHTML = unpaidCount
+      ? `<p style="margin:0 0 10px; padding:8px 12px; background:var(--red-bg); color:var(--red); font-weight:bold; font-size:0.85rem; border-radius:8px;">⚠️ ${unpaidCount} invoice${unpaidCount === 1 ? '' : 's'} sent, awaiting payment</p>`
+      : '';
+
+    el.innerHTML = sorted.map(r => {
+      const paymentControls = payBtn(r) + emailReminderBtn(r) + textReminderBtn(r);
+      return `
+      <div class="rem">
+        <div class="rem-summary" onclick="this.closest('.rem').classList.toggle('open')">
+          <span class="chevron">▸</span>
+          <div>
+            <div class="who">${esc(r.name)} — ${fmtPrice(r.price)} ${paymentBadge(r)} ${tosBadge(r)} ${countBadge(r)}</div>
+            ${rentalMetaHtml(r)}
+          </div>
+        </div>
+        <div class="rem-details">
+          ${r.notes ? `<div class="msg" style="margin-bottom:8px;">📝 ${esc(r.notes)}</div>` : ''}
+          <div class="actions">
+            ${textBtn('delivery', r.key, r.deliverySms, '🚚', 'Delivery', 'var(--green)')}
+            ${textBtn('pickup', r.key, r.pickupSms, '📦', 'Pickup', 'var(--gold)')}
+            ${r.serviceType !== 'self' ? textBtn('addressCheck', r.key, r.addressCheckSms, '📍', 'Confirm address', 'var(--green)') : ''}
+            ${textBtn('review', r.key, r.reviewSms, '⭐', 'Review', 'var(--green)')}
+            ${textBtn('followup', r.key, r.followupSms, '💬', 'Follow-up', 'var(--gold)')}
+          </div>
+          ${r.serviceType !== 'self' ? `<div class="actions">
+            ${(r.dropoffAddress || r.address) ? onTheWayBtn('delivery', r.key) : ''}
+            ${(r.pickupAddress || r.address) ? onTheWayBtn('pickup', r.key) : ''}
+          </div>` : ''}
+          <div class="actions">
+            ${photoBtn(r, 'delivery')}
+            ${photoBtn(r, 'pickup')}
+          </div>
+          ${paymentControls ? `<div class="actions">${paymentControls}</div>` : ''}
+          <div class="actions delete-row">
+            <button type="button" class="edit-contact-btn" data-key="${esc(r.key)}" data-name="${esc(r.name || '')}" data-phone="${esc(r.phone || '')}" data-email="${esc(r.email || '')}" data-dropoff="${esc(r.dropoffAddress || '')}" data-pickup="${esc(r.pickupAddress || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">👤 Edit contact</button>
+            <button type="button" class="edit-pkg-btn" data-key="${esc(r.key)}" data-pkg="${esc(r.package || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">✏️ Edit package</button>
+            <button type="button" class="edit-count-btn" data-key="${esc(r.key)}" data-totes="${typeof r.toteCount === 'number' ? r.toteCount : ''}" data-dollies="${typeof r.dollyCount === 'number' ? r.dollyCount : ''}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">🔢 Edit tote/dolly count</button>
+            <button type="button" class="edit-notes-btn" data-key="${esc(r.key)}" data-notes="${esc(r.notes || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📝 ${r.notes ? 'Edit' : 'Add'} notes</button>
+            <button type="button" class="toggle-dates-btn" data-target="dates-${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📅 Edit dates</button>
+            <button type="button" class="delete-btn" onclick="deleteRental('${esc(r.key)}', '${esc(r.name)}')">Delete</button>
+          </div>
+          <div class="date-edit-block" id="dates-${esc(r.key)}">
+            <div class="grid2">
+              <div><label>Drop-off date</label><input type="date" data-df="dropoffDate" value="${esc(r.dropoffDate || '')}"></div>
+              <div><label>Drop-off time</label><input type="time" data-df="dropoffTime" value="${esc(r.dropoffTime || '')}"></div>
+            </div>
+            <div class="grid2">
+              <div><label>Pickup date</label><input type="date" data-df="pickupDate" value="${esc(r.pickupDate || '')}"></div>
+              <div><label>Pickup time</label><input type="time" data-df="pickupTime" value="${esc(r.pickupTime || '')}"></div>
+            </div>
+            <button type="button" class="save-dates-btn" data-key="${esc(r.key)}">Save dates</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Wire up pay/unpay and email-reminder buttons via delegation
+    el.querySelectorAll('.pay-btn').forEach(btn => {
+      btn.addEventListener('click', () => togglePaid(btn.dataset.key, btn.dataset.setpaid === 'true'));
+    });
+    el.querySelectorAll('.email-reminder-btn').forEach(btn => {
+      btn.addEventListener('click', () => sendEmailReminder(btn.dataset.key));
+    });
+    el.querySelectorAll('.otw-btn').forEach(btn => {
+      btn.addEventListener('click', () => onTheWay(btn.dataset.key, btn.dataset.type));
+    });
+    el.querySelectorAll('.unsend-btn').forEach(btn => {
+      btn.addEventListener('click', () => unmarkSent(btn.dataset.flagid));
+    });
+    el.querySelectorAll('.edit-pkg-btn').forEach(btn => {
+      btn.addEventListener('click', () => editPackage(btn.dataset.key, btn.dataset.pkg));
+    });
+    el.querySelectorAll('.edit-contact-btn').forEach(btn => {
+      btn.addEventListener('click', () => editContact(btn.dataset.key, btn.dataset.name, btn.dataset.phone, btn.dataset.email, btn.dataset.dropoff, btn.dataset.pickup));
+    });
+    el.querySelectorAll('.edit-notes-btn').forEach(btn => {
+      btn.addEventListener('click', () => editNotes(btn.dataset.key, btn.dataset.notes));
+    });
+    el.querySelectorAll('.edit-count-btn').forEach(btn => {
+      btn.addEventListener('click', () => editCounts(btn.dataset.key, btn.dataset.totes, btn.dataset.dollies));
+    });
+    el.querySelectorAll('.toggle-dates-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const block = document.getElementById(btn.dataset.target);
+        block.style.display = block.style.display === 'block' ? 'none' : 'block';
+      });
+    });
+    el.querySelectorAll('.save-dates-btn').forEach(btn => {
+      btn.addEventListener('click', () => saveDates(btn));
+    });
+    el.querySelectorAll('.add-photo-btn').forEach(btn => {
+      btn.addEventListener('click', () => triggerPhotoCapture(btn.dataset.key, btn.dataset.type));
+    });
+    el.querySelectorAll('.view-photo-btn').forEach(btn => {
+      btn.addEventListener('click', () => viewPhoto(btn.dataset.key, btn.dataset.type));
+    });
+  }
+
+  // Delivery/pickup proof-of-photo button: "Add" if none on file yet, or
+  // "View" (which also lets you retake) once one's been uploaded.
+  function photoBtn(r, type) {
+    const has = type === 'delivery' ? r.hasDeliveryPhoto : r.hasPickupPhoto;
+    const label = type === 'delivery' ? 'Delivery' : 'Pickup';
+    if (has) {
+      return `<button type="button" class="view-photo-btn" data-key="${esc(r.key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px; cursor:pointer;">📷 View ${label} photo</button>`;
+    }
+    return `<button type="button" class="add-photo-btn" data-key="${esc(r.key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📷 Add ${label} photo</button>`;
+  }
+
+  // Shows the authoritative counts Inventory reads. Flags records logged
+  // before toteCount/dollyCount existed so they can be backfilled.
+  function countBadge(r) {
+    const hasTote = typeof r.toteCount === 'number';
+    const hasDolly = typeof r.dollyCount === 'number';
+    if (!hasTote && !hasDolly) {
+      return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--red-bg); color:var(--red); border-radius:20px; vertical-align:middle;">⚠️ No tote/dolly count set</span>`;
+    }
+    const toteText = hasTote ? `🧺 ${r.toteCount}` : '🧺 —';
+    const dollyText = hasDolly ? `🛒 ${r.dollyCount}` : '🛒 —';
+    return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--gold-bg); color:var(--gold); border-radius:20px; vertical-align:middle;">${toteText} · ${dollyText}</span>`;
+  }
+
+  // "On the Way" button: starts as a plain button, calculates a live ETA via
+  // the on-my-way function, then swaps in a ready-to-tap text link.
+  function onTheWayBtn(type, key) {
+    const label = type === 'delivery' ? 'Delivery' : 'Pickup';
+    return `<span id="otw-wrap-${type}-${key}"><button type="button" id="otw-${type}-${key}" class="otw-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">🚗 On the Way (${label})</button></span>`;
+  }
+
+  window.onTheWay = async (key, type) => {
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    const origin = $('startFrom').value.trim();
+    const label = type === 'delivery' ? 'Delivery' : 'Pickup';
+    const btn = $('otw-' + type + '-' + key);
+    const wrap = $('otw-wrap-' + type + '-' + key);
+    if (btn) { btn.disabled = true; btn.textContent = '🚗 Calculating ETA…'; }
+    try {
+      const resp = await fetch('/.netlify/functions/on-my-way', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key, type, origin }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || data.error) {
+        showErr(data.error || ('On the Way calculation failed (' + resp.status + ').'));
+        if (btn) { btn.disabled = false; btn.textContent = '🚗 On the Way (' + label + ')'; }
+        return;
+      }
+      wrap.innerHTML = `<a class="sms-btn" href="${data.sms}" style="padding:8px 16px; font-size:0.8rem; background:var(--green);">🚗 Text ETA — ${esc(data.arrivalTime)} →</a>`;
+    } catch {
+      showErr('Network error calculating ETA.');
+      if (btn) { btn.disabled = false; btn.textContent = '🚗 On the Way (' + label + ')'; }
+    }
+  };
+
+  // An invoice counts as "unpaid" once it's actually been emailed (invoicedAt,
+  // not a backfilled record) and no paid flag has been set for it.
+  function isUnpaid(r) {
+    return !!r.invoicedAt && !r.backfilled && !PAID_FLAGS[r.key];
+  }
+
+  function paymentBadge(r) {
+    if (PAID_FLAGS[r.key]) {
+      return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--green-bg); color:var(--green); border-radius:20px; vertical-align:middle;">✓ Paid</span>`;
+    }
+    if (!r.invoicedAt || r.backfilled) return '';
+    return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--red-bg); color:var(--red); border-radius:20px; vertical-align:middle;">🧾 Invoiced — Unpaid</span>`;
+  }
+
+  // Shows only once the customer has checked the terms-of-service box at
+  // Stripe checkout (set by stripe-webhook.mjs when session.consent.terms_of_service === "accepted").
+  function tosBadge(r) {
+    if (!r.tosAccepted) return '';
+    const acceptedDate = esc(fmtDate((r.tosAcceptedAt || '').slice(0, 10)));
+    return `<span title="Accepted ${acceptedDate}" style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--gold-bg); color:var(--gold); border-radius:20px; vertical-align:middle;">📝 Terms Accepted</span>`;
+  }
+
+  function payBtn(r) {
+    if (PAID_FLAGS[r.key]) {
+      return `<button type="button" class="pay-btn" data-key="${esc(r.key)}" data-setpaid="false" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--steel); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">Mark unpaid</button>`;
+    }
+    return `<button type="button" class="pay-btn" data-key="${esc(r.key)}" data-setpaid="true" style="width:auto; padding:8px 16px; font-size:0.8rem; background:var(--green); color:#fff; border:none; border-radius:8px; cursor:pointer;">✓ Mark paid</button>`;
+  }
+
+  window.togglePaid = async (key, setPaid) => {
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const resp = await fetch('/.netlify/functions/mark-paid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key, paid: setPaid }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Update failed (' + resp.status + '): ' + detail);
+      }
+    } catch { showErr('Network error.'); }
+  };
+
+  window.saveDates = async (btn) => {
+    const key = btn.dataset.key;
+    const block = btn.closest('.date-edit-block');
+    const fields = {};
+    block.querySelectorAll('[data-df]').forEach(inp => { fields[inp.dataset.df] = inp.value; });
+
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const resp = await fetch('/.netlify/functions/edit-rental', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key, ...fields }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Edit failed (' + resp.status + '): ' + detail);
+      }
+    } catch { showErr('Network error.'); }
+  };
+
+  window.editContact = async (key, currentName, currentPhone, currentEmail, currentDropoff, currentPickup) => {
+    const newName = prompt('Name:', currentName || '');
+    if (newName === null) return; // cancelled
+    const newPhone = prompt('Phone:', currentPhone || '');
+    if (newPhone === null) return;
+    const newEmail = prompt('Email:', currentEmail || '');
+    if (newEmail === null) return;
+    const newDropoff = prompt('Drop-off address:', currentDropoff || '');
+    if (newDropoff === null) return;
+    // Defaults to whatever was just entered for drop-off, so if pickup is
+    // the same address (the common case), just hitting OK copies it over.
+    const newPickup = prompt('Pickup address (edit if different from drop-off):', currentPickup || newDropoff);
+    if (newPickup === null) return;
+
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const resp = await fetch('/.netlify/functions/edit-rental', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret, key,
+          name: newName.trim(), phone: newPhone.trim(), email: newEmail.trim(),
+          dropoffAddress: newDropoff.trim(), pickupAddress: newPickup.trim(),
+        }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Edit failed (' + resp.status + '): ' + detail);
+      }
+    } catch { showErr('Network error.'); }
+  };
+
+  window.editPackage = async (key, currentPkg) => {
+    const newPkg = prompt('Update package description (include the tote count, e.g. "10 Totes", so Inventory can count it correctly):', currentPkg || '');
+    if (newPkg === null) return; // cancelled
+    if (!newPkg.trim()) return showErr('Package description cannot be empty.');
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const resp = await fetch('/.netlify/functions/edit-rental', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key, package: newPkg.trim() }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Edit failed (' + resp.status + '): ' + detail);
+      }
+    } catch { showErr('Network error.'); }
+  };
+
+  window.editNotes = async (key, currentNotes) => {
+    const newNotes = prompt('Update notes for this rental (leave blank to clear):', currentNotes || '');
+    if (newNotes === null) return; // cancelled
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const resp = await fetch('/.netlify/functions/edit-rental', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key, notes: newNotes.trim() }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Edit failed (' + resp.status + '): ' + detail);
+      }
+    } catch { showErr('Network error.'); }
+  };
+
+  window.editCounts = async (key, currentTotes, currentDollies) => {
+    const toteStr = prompt('Tote count for this rental (whole number):', currentTotes || '0');
+    if (toteStr === null) return; // cancelled
+    const toteCount = Number(toteStr);
+    if (!Number.isInteger(toteCount) || toteCount < 0) return showErr('Tote count must be a whole number (0 or more).');
+
+    const dollyStr = prompt('Dolly count for this rental (whole number):', currentDollies || '0');
+    if (dollyStr === null) return; // cancelled
+    const dollyCount = Number(dollyStr);
+    if (!Number.isInteger(dollyCount) || dollyCount < 0) return showErr('Dolly count must be a whole number (0 or more).');
+
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const resp = await fetch('/.netlify/functions/edit-rental', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key, toteCount, dollyCount }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Edit failed (' + resp.status + '): ' + detail);
+      }
+    } catch { showErr('Network error.'); }
+  };
+
+  window.deleteRental = async (key, name) => {
+    if (!confirm('Delete the rental for ' + name + '? This cannot be undone.')) return;
+    const secret = $('secret').value.trim();
+    try {
+      const resp = await fetch('/.netlify/functions/delete-rental', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key }),
+      });
+      if (resp.ok) {
+        $('loadBtn').click(); // reload everything
+      } else {
+        showErr('Delete failed (' + resp.status + ').');
+      }
+    } catch { showErr('Network error.'); }
+  };
+
+  // ---- Delivery / pickup proof photos ----
+  // Tapping "Add photo" opens the phone camera (or file picker on desktop);
+  // the image is downsized client-side before upload to keep it well under
+  // the function payload limit.
+  let PENDING_PHOTO = null;
+
+  window.triggerPhotoCapture = (key, type) => {
+    PENDING_PHOTO = { key, type };
+    $('photoFileInput').value = '';
+    $('photoFileInput').click();
+  };
+
+  $('photoFileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    const pending = PENDING_PHOTO;
+    PENDING_PHOTO = null;
+    if (!file || !pending) return;
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const dataUrl = await compressImage(file, 1600, 0.72);
+      const base64 = dataUrl.split(',')[1];
+      const resp = await fetch('/.netlify/functions/upload-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key: pending.key, type: pending.type, imageBase64: base64, mimeType: 'image/jpeg' }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Photo upload failed (' + resp.status + '): ' + detail);
+      }
+    } catch (err) {
+      showErr('Could not process photo: ' + (err.message || err));
+    }
+  });
+
+  // Resizes/compresses an image file client-side via canvas, returns a JPEG data URL.
+  function compressImage(file, maxDim, quality) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width >= height) { height = Math.round(height * (maxDim / width)); width = maxDim; }
+            else { width = Math.round(width * (maxDim / height)); height = maxDim; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => reject(new Error('Could not read image.'));
+        img.src = reader.result;
+      };
+      reader.onerror = () => reject(new Error('Could not read file.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Opens a blank tab immediately (before the async fetch) so mobile Safari
+  // doesn't treat it as a popup, then fills it in once the photo loads.
+  window.viewPhoto = async (key, type) => {
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    const label = type === 'delivery' ? 'Delivery' : 'Pickup';
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(`<title>${label} photo</title><body style="margin:0;background:#111;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;">Loading…</body>`);
+    }
+    try {
+      const resp = await fetch('/.netlify/functions/get-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key, type }),
+      });
+      if (!resp.ok) {
+        const detail = await resp.text().catch(() => '');
+        const msg = 'Could not load photo (' + resp.status + '): ' + detail;
+        if (win) win.document.body.textContent = msg; else showErr(msg);
+        return;
+      }
+      const data = await resp.json();
+      if (win) {
+        win.document.body.innerHTML = `<img src="data:${data.mimeType};base64,${data.imageBase64}" style="max-width:100%;max-height:100vh;">`;
+      }
+    } catch {
+      if (win) win.document.body.textContent = 'Network error loading photo.'; else showErr('Network error loading photo.');
+    }
+  };
+
+  function showErr(m){const s=$('status');s.style.display='block';s.className='status err';s.textContent=m;}
+</script>
+</body>
+</html>

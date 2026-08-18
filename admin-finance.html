@@ -9,6 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Finance — Ready Tote Oklahoma (Internal)</title>
 <link rel="stylesheet" href="admin-shared.css?v=20260804">
+<script src="admin-shared.js?v=20260818"></script>
 </head>
 <body>
 <nav class="admin-nav" aria-label="Admin tools">
@@ -17,6 +18,7 @@
   <a href="admin-invoice.html">Send Invoice</a>
   <a href="admin-add-rental.html">Add Rental</a>
   <a href="admin-reminders.html">Reminders</a>
+  <a href="admin-rentals.html">All Rentals</a>
   <a href="admin-contacts.html">Contacts</a>
   <a href="admin-finance.html" aria-current="page">Finance</a>
   <a href="admin-outreach.html">Outreach</a>
@@ -151,14 +153,7 @@
     btn.disabled = false; btn.textContent = 'Load finance data';
   }
 
-  function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML;}
-  function fmtDate(iso) {
-    if (!iso) return '';
-    const parts = String(iso).slice(0, 10).split('-');
-    if (parts.length !== 3) return iso;
-    const [y, m, d] = parts;
-    return m + '/' + d + '/' + y.slice(2);
-  }
+
   function fmtPrice(p){ const s=String(p||'').trim(); return s ? (s.startsWith('$') ? esc(s) : '$'+esc(s)) : ''; }
   function showErr(m){const s=$('status');s.className='status err';s.textContent=m;}
   function thisYear(d){ return (d||'').slice(0,4) === String(new Date().getFullYear()); }
