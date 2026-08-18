@@ -9,6 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Contacts — Ready Tote Oklahoma (Internal)</title>
 <link rel="stylesheet" href="admin-shared.css?v=20260804">
+<script src="admin-shared.js?v=20260818"></script>
 <style>
   .wrap{max-width:1000px;margin:0 auto;}
   .secret-bar{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
@@ -48,6 +49,7 @@
     <a href="admin-invoice.html">Send Invoice</a>
     <a href="admin-add-rental.html">Add Rental</a>
     <a href="admin-reminders.html">Reminders</a>
+  <a href="admin-rentals.html">All Rentals</a>
     <a href="admin-contacts.html" aria-current="page">Contacts</a>
     <a href="admin-finance.html">Finance</a>
     <a href="admin-outreach.html">Outreach</a>
@@ -158,16 +160,6 @@
       </tr>`;
     }).join('');
   }
-
-  function fmtDate(iso) {
-    if (!iso) return '';
-    const parts = String(iso).slice(0, 10).split('-');
-    if (parts.length !== 3) return iso;
-    const [y, m, d] = parts;
-    return m + '/' + d + '/' + y.slice(2);
-  }
-  function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
-  function escAttr(s) { return String(s ?? '').replace(/"/g, '&quot;'); }
   function showErr(m) { const s = $('status'); s.className = 'status err'; s.textContent = m; }
 </script>
 </body>

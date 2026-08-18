@@ -9,6 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Admin Dashboard — Ready Tote Oklahoma</title>
 <link rel="stylesheet" href="admin-shared.css?v=20260804">
+<script src="admin-shared.js?v=20260818"></script>
 <style>
   .wrap{max-width:840px;margin:0 auto;}
   .header{display:flex;align-items:center;gap:14px;margin-bottom:6px;}
@@ -88,6 +89,7 @@
     <a href="admin-invoice.html">Send Invoice</a>
     <a href="admin-add-rental.html">Add Rental</a>
     <a href="admin-reminders.html">Reminders</a>
+    <a href="admin-rentals.html">All Rentals</a>
     <a href="admin-contacts.html">Contacts</a>
     <a href="admin-finance.html">Finance</a>
     <a href="admin-outreach.html">Outreach</a>
@@ -125,7 +127,8 @@
       <a class="tile" href="admin-requests.html"><div class="icon">📥</div><div><h3>Booking Requests <span class="badge" id="reqBadge" style="display:none;">0</span></h3><p>Review new requests, confirm with customers, then invoice</p></div></a>
       <a class="tile" href="admin-invoice.html"><div class="icon">🧾</div><div><h3>Send Invoice</h3><p>Parse booking email, send branded Stripe invoice</p></div></a>
       <a class="tile" href="admin-add-rental.html"><div class="icon">➕</div><div><h3>Add Rental</h3><p>Log a rental without sending an email</p></div></a>
-      <a class="tile" href="admin-reminders.html"><div class="icon">🚚</div><div><h3>Reminders &amp; Rentals</h3><p>Full reminder queue, all rentals, mark sent</p></div></a>
+      <a class="tile" href="admin-reminders.html"><div class="icon">🚚</div><div><h3>Reminders</h3><p>Today's due texts — delivery, pickup, address checks, follow-ups</p></div></a>
+      <a class="tile" href="admin-rentals.html"><div class="icon">📋</div><div><h3>All Rentals</h3><p>Search, edit, mark paid, photos — every rental on the books</p></div></a>
       <a class="tile" href="admin-contacts.html"><div class="icon">📇</div><div><h3>Contacts</h3><p>Search every renter's phone, email, and address</p></div></a>
       <a class="tile" href="admin-finance.html"><div class="icon">💰</div><div><h3>Finance</h3><p>Sales, expenses, mileage, CSV exports</p></div></a>
     </div>
@@ -295,19 +298,11 @@
     d.setUTCDate(d.getUTCDate() + days);
     return d.toISOString().slice(0, 10);
   }
-  function fmtDate(iso) {
-    if (!iso) return '';
-    const parts = String(iso).slice(0, 10).split('-');
-    if (parts.length !== 3) return iso;
-    const [y, m, d] = parts;
-    return m + '/' + d + '/' + y.slice(2);
-  }
   function fmtDay(iso) {
     const d = new Date(iso + 'T12:00:00');
     const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
     return weekday + ' ' + fmtDate(iso);
   }
-  function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
   function showErr(m) { const s = $('status'); s.className = 'status err'; s.textContent = m; }
 </script>
 </body>

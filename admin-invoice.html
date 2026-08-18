@@ -9,6 +9,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Send Invoice — Ready Tote Oklahoma (Internal)</title>
 <link rel="stylesheet" href="admin-shared.css?v=20260804">
+<script src="admin-shared.js?v=20260818"></script>
 <style>
   body{padding:32px 16px;}
   .card{padding:32px;}
@@ -23,6 +24,7 @@
   <a href="admin-invoice.html" aria-current="page">Send Invoice</a>
   <a href="admin-add-rental.html">Add Rental</a>
   <a href="admin-reminders.html">Reminders</a>
+  <a href="admin-rentals.html">All Rentals</a>
   <a href="admin-contacts.html">Contacts</a>
   <a href="admin-finance.html">Finance</a>
   <a href="admin-outreach.html">Outreach</a>
@@ -446,19 +448,10 @@
     s.textContent = msg;
   }
 
-  // Same phone/SMS-link logic used server-side in lib-reminders.mjs, kept
-  // in sync intentionally — this page doesn't load rentals through
-  // get-rentals, so it can't reuse the pre-built sms fields those get.
-  function normalizePhone(raw) {
-    const digits = String(raw || '').replace(/\D/g, '');
-    if (digits.length === 10) return '+1' + digits;
-    if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
-    return digits ? '+' + digits : '';
-  }
-  function smsLink(phone, message) {
-    return `sms:${normalizePhone(phone)}?&body=${encodeURIComponent(message)}`;
-  }
-  function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+  // esc(), normalizePhone(), and smsLink() now live in admin-shared.js —
+  // this page used to carry its own copies since it doesn't load rentals
+  // through get-rentals (so it couldn't reuse pre-built sms fields), but
+  // the actual link-building logic didn't need to be duplicated too.
 
   // Right after an invoice email goes out, offer a one-tap text that
   // includes the email address on file — if a customer typo'd their email
