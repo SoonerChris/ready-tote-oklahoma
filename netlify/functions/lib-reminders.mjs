@@ -30,13 +30,24 @@ function friendlyDate(isoDate) {
 
 export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags = {}) {
   const today = todayInOklahoma();
-  const out = { delivery: [], pickupTomorrow: [], pickup: [], review: [], followup: [], emailReminder: [] };
+  const out = { delivery: [], pickupTomorrow: [], pickup: [], review: [], followup: [], emailReminder: [], addressCheck: [] };
 
   for (const r of rentals) {
     const first = (r.name || "there").split(" ")[0];
     const dropAddr = r.dropoffAddress || r.address || "";
     const pickAddr = r.pickupAddress || r.address || "";
     const self = r.serviceType === "self";
+
+    // Confirm pickup address: 5 days out from pickup, delivery-service rentals
+    // only (self-service has no real pickup address to confirm). Catches
+    // cases where the address on file was a placeholder or has since changed.
+    if (!self && r.pickupDate === shiftDate(today, 5)) {
+      const flagId = "addressCheck:" + (r.key || r.phone + r.pickupDate);
+      if (!sentFlags[flagId]) {
+        const { message, sms } = pickupAddressRequestMessageFor(r);
+        out.addressCheck.push({ ...r, flagId, address: pickAddr, message, sms });
+      }
+    }
 
     // Invoice follow-up: invoiced 3 days ago, skip historical backfilled entries
     if (!r.backfilled && r.invoicedAt) {
@@ -98,6 +109,13 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
     }
   }
   return out;
+}
+
+export function pickupAddressRequestMessageFor(rental) {
+  const first = (rental.name || "there").split(" ")[0];
+  const onFile = rental.pickupAddress || rental.address || "the address on file";
+  const msg = `Hi ${first}, it's Ready Tote Oklahoma! Quick check before we pick up your totes on ${friendlyDate(rental.pickupDate)} — we have your pickup address as ${onFile}. Let us know if that's still correct, or send us the right address if it's changed!`;
+  return { message: msg, sms: smsLink(rental.phone, msg) };
 }
 
 export function reviewMessageFor(rental, reviewLink) {
