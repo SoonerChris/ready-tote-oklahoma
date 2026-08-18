@@ -34,7 +34,7 @@ body{
   background:var(--cream);
   color:var(--ink);
   margin:0;
-  padding:24px 14px;
+  padding:70px 14px 24px;
 }
 h1{font-family:'Archivo Black', sans-serif; font-size:1.3rem; margin:0 0 4px; letter-spacing:-0.01em;}
 .sub{color:var(--steel);font-size:0.88rem;margin:0 0 20px;}
@@ -117,28 +117,44 @@ button.secondary:hover{background:var(--gold-bg);}
 .money-field.compact > input{padding-left:22px;}
 .money-field.compact::before{left:9px; font-size:0.85rem;}
 
-/* Shared admin nav bar -- lets Chris jump directly between admin tools */
-.admin-nav{
-  max-width:640px;margin:0 auto 14px;
-  display:flex; flex-wrap:wrap; gap:4px; justify-content:center;
-  background:var(--white); border:1px solid var(--line); border-radius:8px;
-  padding:6px;
+/* Left-side hamburger navigation. Built to wrap whatever .admin-nav it
+   finds (see the DOMContentLoaded block in admin-shared.js) so none of
+   the 10 admin-*.html pages needed markup changes for this. */
+.admin-nav-toggle{
+  position:fixed; top:14px; left:14px; z-index:1000;
+  width:42px; height:42px; padding:0; border:none; border-radius:8px;
+  background:var(--ink); cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
 }
-.admin-nav.wide{max-width:840px;}
+.admin-nav-toggle span{
+  display:block; width:20px; height:2px; background:var(--white);
+  transition:transform .2s ease, opacity .2s ease;
+}
+body.admin-nav-open .admin-nav-toggle span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+body.admin-nav-open .admin-nav-toggle span:nth-child(2){opacity:0;}
+body.admin-nav-open .admin-nav-toggle span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+
+.admin-nav-overlay{
+  position:fixed; inset:0; background:rgba(30,27,24,0.45);
+  opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:998;
+}
+body.admin-nav-open .admin-nav-overlay{opacity:1; pointer-events:auto;}
+
+.admin-nav{
+  position:fixed; top:0; left:0; bottom:0; z-index:999;
+  width:min(78vw, 260px); max-width:260px; margin:0;
+  background:var(--white); border-right:1px solid var(--line);
+  display:flex; flex-direction:column; gap:2px;
+  padding:70px 10px 20px; overflow-y:auto;
+  transform:translateX(-100%);
+  transition:transform .25s ease;
+}
+body.admin-nav-open .admin-nav{transform:translateX(0);}
 .admin-nav a{
   position:relative;
-  flex:0 1 auto; text-align:center; white-space:nowrap;
-  padding:10px 12px 8px; font-size:0.82rem; font-weight:600;
-  color:var(--steel); text-decoration:none; border-radius:6px;
+  padding:12px 14px; font-size:0.88rem; font-weight:600;
+  color:var(--steel); text-decoration:none; border-radius:0 6px 6px 0;
+  border-left:3px solid transparent;
 }
 .admin-nav a:hover{background:var(--gold-bg); color:var(--ink);}
-.admin-nav a[aria-current="page"]{background:none; color:var(--ink); font-weight:700;}
-.admin-nav a[aria-current="page"]::after{
-  content:''; position:absolute; left:12px; right:12px; bottom:2px; height:3px;
-  background:var(--gold); border-radius:2px;
-}
-@media(max-width:500px){
-  .admin-nav{gap:4px;}
-  .admin-nav a{flex:1 1 40%; font-size:0.78rem; padding:8px 6px 7px;}
-  .admin-nav a[aria-current="page"]::after{left:6px; right:6px;}
-}
+.admin-nav a[aria-current="page"]{background:var(--gold-bg); color:var(--ink); font-weight:700; border-left-color:var(--gold);}

@@ -47,3 +47,37 @@ function normalizePhone(raw) {
 function smsLink(phone, message) {
   return `sms:${normalizePhone(phone)}?&body=${encodeURIComponent(message)}`;
 }
+
+// ---- Left-side hamburger navigation ----
+// Every admin page already has a <nav class="admin-nav"> with a flat list
+// of links (see admin-shared.css for the drawer/overlay styling). Rather
+// than editing markup in 10 HTML files, this builds the hamburger button
+// and backdrop once here and wraps whatever nav it finds on the page.
+document.addEventListener('DOMContentLoaded', () => {
+  const nav = document.querySelector('.admin-nav');
+  if (!nav) return;
+
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'admin-nav-toggle';
+  toggle.setAttribute('aria-label', 'Open menu');
+  toggle.setAttribute('aria-expanded', 'false');
+  toggle.innerHTML = '<span></span><span></span><span></span>';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'admin-nav-overlay';
+
+  document.body.prepend(overlay);
+  document.body.prepend(toggle);
+
+  function setOpen(open) {
+    document.body.classList.toggle('admin-nav-open', open);
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  }
+
+  toggle.addEventListener('click', () => setOpen(!document.body.classList.contains('admin-nav-open')));
+  overlay.addEventListener('click', () => setOpen(false));
+  nav.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => setOpen(false)));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
+});
