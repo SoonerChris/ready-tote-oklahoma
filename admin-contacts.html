@@ -8,8 +8,8 @@
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Contacts — Ready Tote Oklahoma (Internal)</title>
-<link rel="stylesheet" href="admin-shared.css?v=20260804">
-<script src="admin-shared.js?v=20260818"></script>
+<link rel="stylesheet" href="admin-shared.css?v=20260819">
+<script src="admin-shared.js?v=20260819"></script>
 <style>
   .wrap{max-width:1000px;margin:0 auto;}
   .secret-bar{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
@@ -60,8 +60,7 @@
   <p class="sub">Every renter's phone, email, and address in one searchable table. Sorted by most recent rental first.</p>
 
   <div class="secret-bar">
-    <label for="secret">Admin secret</label>
-    <input type="password" id="secret" placeholder="Your INVOICE_SECRET value" autocomplete="current-password">
+  <input type="hidden" id="secret">
     <button id="loadBtn">Load contacts</button>
   </div>
   <div class="status" id="status"></div>
@@ -88,8 +87,7 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
-  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
-  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+  $('secret').value = localStorage.getItem('rto-admin-password') || '';
 
   let ALL_ROWS = [];
 

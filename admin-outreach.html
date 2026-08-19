@@ -8,8 +8,8 @@
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Outreach Tracker — Ready Tote Oklahoma (Internal)</title>
-<link rel="stylesheet" href="admin-shared.css?v=20260804">
-<script src="admin-shared.js?v=20260818"></script>
+<link rel="stylesheet" href="admin-shared.css?v=20260819">
+<script src="admin-shared.js?v=20260819"></script>
 <style>
   .wrap{max-width:900px;margin:0 auto;}
   body{padding:24px 14px;}
@@ -75,8 +75,7 @@
   <p class="sub">Apartment communities, realtor, remodeler &amp; moving company partnerships — tracks status so nothing falls through the cracks.</p>
 
   <div class="secret-bar">
-    <label for="secret">Admin secret</label>
-    <input type="password" id="secret" placeholder="Your INVOICE_SECRET value">
+  <input type="hidden" id="secret">
     <button id="loadBtn">Load</button>
   </div>
 
@@ -189,8 +188,7 @@
     showStatus('ok', added ? `Imported ${added} remodeler contact(s).` : 'All 9 remodelers already in your list.');
   }
 
-  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
-  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+  $('secret').value = localStorage.getItem('rto-admin-password') || '';
   $('loadBtn').addEventListener('click', loadAll);
 
   function secret() { return $('secret').value.trim(); }
