@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Log In — Ready Tote Oklahoma (Internal)</title>
+<link rel="stylesheet" href="admin-shared.css?v=20260819">
+<script src="admin-shared.js?v=20260819"></script>
+<style>
+  body{display:flex; align-items:center; justify-content:center; min-height:100vh;}
+  .login-card{max-width:360px; width:100%;}
+</style>
+</head>
+<body>
+<div class="card login-card">
+  <h1>Ready Tote Oklahoma</h1>
+  <p class="sub">Sign in to the admin tools.</p>
+
+  <form id="loginForm" method="post">
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" autocomplete="username" required autofocus>
+
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" autocomplete="current-password" required>
+
+    <button type="submit" id="loginBtn">Log In</button>
+  </form>
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  // Only allow redirecting back to another admin-*.html page on this same
+  // site — never an arbitrary URL — so a crafted ?redirect= link can't be
+  // used to bounce someone off to a phishing page after they log in.
+  function safeRedirectTarget() {
+    const raw = new URLSearchParams(location.search).get('redirect') || '';
+    return /^admin[\w-]*\.html$/.test(raw) ? raw : 'admin.html';
+  }
+
+  $('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = $('username').value.trim();
+    const password = $('password').value;
+    const btn = $('loginBtn');
+    const status = $('status');
+    status.style.display = 'none';
+    btn.disabled = true; btn.textContent = 'Logging in…';
+
+    try {
+      const resp = await fetch('/.netlify/functions/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await resp.json().catch(() => ({ ok: false }));
+
+      if (resp.ok && data.ok) {
+        localStorage.setItem('rto-admin-username', username);
+        localStorage.setItem('rto-admin-password', password);
+
+        // Chrome/Edge: explicitly ask to save this in Google Password
+        // Manager. Not supported everywhere (Firefox/Safari), so this is
+        // a bonus on top of the form's autocomplete attributes, not a
+        // requirement for the login itself to work.
+        if (window.PasswordCredential) {
+          try {
+            const cred = new PasswordCredential($('loginForm'));
+            await navigator.credentials.store(cred);
+          } catch { /* best-effort only */ }
+        }
+
+        location.href = safeRedirectTarget();
+      } else {
+        status.className = 'status err';
+        status.textContent = 'Wrong username or password.';
+        status.style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Log In';
+      }
+    } catch {
+      status.className = 'status err';
+      status.textContent = 'Network error — try again.';
+      status.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Log In';
+    }
+  });
+</script>
+</body>
+</html>

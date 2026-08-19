@@ -8,8 +8,8 @@
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Booking Requests — Ready Tote Oklahoma (Internal)</title>
-<link rel="stylesheet" href="admin-shared.css?v=20260806">
-<script src="admin-shared.js?v=20260818"></script>
+<link rel="stylesheet" href="admin-shared.css?v=20260819">
+<script src="admin-shared.js?v=20260819"></script>
 <style>
   .wrap{max-width:820px;margin:0 auto;}
   .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
@@ -65,8 +65,7 @@
   <p class="sub">Every request lands here first. Review it, confirm with the customer, then send the invoice — nothing skips straight from request to invoice anymore.</p>
 
   <div class="secret-bar">
-    <label for="secret">Admin secret</label>
-    <input type="password" id="secret" placeholder="Your INVOICE_SECRET value" autocomplete="current-password">
+  <input type="hidden" id="secret">
     <button id="loadBtn">Load requests</button>
   </div>
   <div class="status" id="status"></div>
@@ -94,8 +93,7 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
-  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
-  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+  $('secret').value = localStorage.getItem('rto-admin-password') || '';
 
   let ALL = [];
   const STATUS_META = {

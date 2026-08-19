@@ -137,6 +137,8 @@ button.secondary:hover{background:var(--gold-bg);}
   content:''; position:absolute; left:12px; right:12px; bottom:2px; height:3px;
   background:var(--gold); border-radius:2px;
 }
+.admin-nav a.logout-link{color:var(--red); border:1px solid rgba(192,57,43,0.3);}
+.admin-nav a.logout-link:hover{background:var(--red-bg);}
 @media(max-width:500px){
   .admin-nav{gap:4px;}
   .admin-nav a{flex:1 1 40%; font-size:0.78rem; padding:8px 6px 7px;}
