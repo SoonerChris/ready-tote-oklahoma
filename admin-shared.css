@@ -47,6 +47,12 @@ h2{font-family:'Archivo Black', sans-serif; font-size:0.95rem;margin:26px 0 10px
 }
 
 label{display:block;font-size:0.85rem;font-weight:bold;margin:14px 0 6px;}
+.forget-secret-btn{
+  display:inline-block; margin:6px 0 0; padding:0; border:none; background:none;
+  font-family:inherit; font-size:0.78rem; color:var(--steel); text-decoration:underline;
+  cursor:pointer;
+}
+.forget-secret-btn:hover{color:var(--crate-red);}
 input, select, textarea{width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:6px;background:var(--cream);font-family:inherit;}
 input:focus, select:focus, textarea:focus{outline:2px solid var(--gold);}
 button{margin-top:16px;width:100%;padding:14px;font-size:0.95rem;font-weight:bold;font-family:'Barlow',sans-serif;background:var(--gold);color:var(--ink);border:none;border-radius:8px;cursor:pointer;transition:background 0.12s ease, transform 0.05s ease;}

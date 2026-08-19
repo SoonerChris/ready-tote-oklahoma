@@ -57,6 +57,7 @@
 
   <label>Admin secret</label>
   <input type="password" id="secret" placeholder="Your INVOICE_SECRET value">
+  <button type="button" id="forgetSecret" class="forget-secret-btn">Forget saved password</button>
 
   <button id="loadBtn">Load today's reminders</button>
   <div class="status" id="status"></div>
@@ -83,8 +84,12 @@
 <script>
   const $ = (id) => document.getElementById(id);
   // Restore shared secret
-  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
-  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+  $('secret').value = localStorage.getItem('rto-admin-secret') || '';
+  $('secret').addEventListener('input', () => localStorage.setItem('rto-admin-secret', $('secret').value));
+  $('forgetSecret').addEventListener('click', () => {
+    localStorage.removeItem('rto-admin-secret');
+    $('secret').value = '';
+  });
 
   let ALL_RENTALS = [];
 

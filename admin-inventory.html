@@ -66,6 +66,7 @@
 
   <label>Admin secret</label>
   <input type="password" id="secret" placeholder="Your INVOICE_SECRET value">
+  <button type="button" id="forgetSecret" class="forget-secret-btn">Forget saved password</button>
   <button id="loadBtn">Load inventory</button>
   <div class="status" id="status"></div>
 
@@ -117,8 +118,12 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
-  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
-  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+  $('secret').value = localStorage.getItem('rto-admin-secret') || '';
+  $('secret').addEventListener('input', () => localStorage.setItem('rto-admin-secret', $('secret').value));
+  $('forgetSecret').addEventListener('click', () => {
+    localStorage.removeItem('rto-admin-secret');
+    $('secret').value = '';
+  });
   $('evDate').value = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
 
   const ADD_TYPES = ['purchased', 'returned-to-service'];

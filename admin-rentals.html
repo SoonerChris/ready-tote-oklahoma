@@ -63,6 +63,7 @@
 
   <label>Admin secret</label>
   <input type="password" id="secret" placeholder="Your INVOICE_SECRET value">
+  <button type="button" id="forgetSecret" class="forget-secret-btn">Forget saved password</button>
 
   <label>Starting from (optional, for "On the Way" texts)</label>
   <input type="text" id="startFrom" placeholder="Leave blank to use your home address">
@@ -82,11 +83,15 @@
 <script>
   const $ = (id) => document.getElementById(id);
   // Restore shared secret
-  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
-  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+  $('secret').value = localStorage.getItem('rto-admin-secret') || '';
+  $('secret').addEventListener('input', () => localStorage.setItem('rto-admin-secret', $('secret').value));
+  $('forgetSecret').addEventListener('click', () => {
+    localStorage.removeItem('rto-admin-secret');
+    $('secret').value = '';
+  });
 
-  $('startFrom').value = sessionStorage.getItem('rto-admin-startfrom') || '';
-  $('startFrom').addEventListener('input', () => sessionStorage.setItem('rto-admin-startfrom', $('startFrom').value));
+  $('startFrom').value = localStorage.getItem('rto-admin-startfrom') || '';
+  $('startFrom').addEventListener('input', () => localStorage.setItem('rto-admin-startfrom', $('startFrom').value));
 
   let ALL_RENTALS = [];
 

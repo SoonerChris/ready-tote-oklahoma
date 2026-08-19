@@ -36,6 +36,7 @@
 
   <label>Admin secret</label>
   <input type="password" id="secret" placeholder="Your INVOICE_SECRET value" autocomplete="current-password">
+  <button type="button" id="forgetSecret" class="forget-secret-btn">Forget saved password</button>
 
   <div class="grid2">
     <div>
@@ -181,8 +182,12 @@
 <script>
   const $ = (id) => document.getElementById(id);
   let PACKAGES = []; // declared early: matchPrefillPackage() can run before the fetch below finishes
-  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
-  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+  $('secret').value = localStorage.getItem('rto-admin-secret') || '';
+  $('secret').addEventListener('input', () => localStorage.setItem('rto-admin-secret', $('secret').value));
+  $('forgetSecret').addEventListener('click', () => {
+    localStorage.removeItem('rto-admin-secret');
+    $('secret').value = '';
+  });
 
   // ---- Prefill from a confirmed Booking Request (admin-requests.html handoff) ----
   let PREFILL_REQUEST_KEY = null;
