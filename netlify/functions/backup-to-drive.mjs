@@ -12,18 +12,24 @@
 // and including them would balloon this into binary/base64 territory for
 // comparatively low value. Worth adding later if it turns out to matter.
 //
-// Setup required (see the PR notes for full walkthrough):
-//   GOOGLE_SERVICE_ACCOUNT_JSON   - paste the entire downloaded service
-//                                   account JSON key as this variable's value
-//   GOOGLE_DRIVE_BACKUP_FOLDER_ID - the ID of the Drive folder shared with
-//                                   that service account's email
+// Authenticates as a real Google account via OAuth, not a service account —
+// service accounts have zero storage quota on a personal Drive and can only
+// write into Shared Drives, which aren't available on a plain personal
+// account. See oauth-setup.mjs for the one-time authorization step.
 //
-// No admin-secret auth on this function, matching daily-reminders.mjs —
-// only Netlify's own scheduler is expected to call it. Can also be tested
-// manually by visiting its URL directly after deploying.
+// Setup required:
+//   GOOGLE_OAUTH_CLIENT_ID       - from a Web application OAuth client
+//   GOOGLE_OAUTH_CLIENT_SECRET   - from that same OAuth client
+//   GOOGLE_OAUTH_REFRESH_TOKEN   - obtained once via oauth-setup.mjs
+//   GOOGLE_DRIVE_BACKUP_FOLDER_ID - the ID of the destination Drive folder
+//
+// No admin-secret auth on this function, matching daily-reminders.mjs — it
+// has no public HTTP URL in production at all (Netlify's own scheduler is
+// the only thing that invokes it there). Test manually with the "Run now"
+// button on the Functions page in the Netlify dashboard, not by visiting a
+// URL — scheduled functions don't have one once deployed.
 
 import { getStore } from "@netlify/blobs";
-import crypto from "node:crypto";
 
 const STORES_TO_BACK_UP = ["rentals", "requests", "inventory", "finance", "outreach"];
 
@@ -49,38 +55,21 @@ async function dumpMetaFlags() {
   return { paidFlags, sentFlags };
 }
 
-// Signs a service-account JWT and exchanges it for a short-lived access
-// token. Hand-rolled with Node's built-in crypto rather than adding the
-// googleapis/google-auth-library dependency — this project only pulls in
-// @netlify/blobs today, and RS256 JWT signing is a small, well-understood
-// piece of code, not worth a new dependency for.
+// Exchanges a long-lived refresh token for a short-lived access token.
+// Authenticates as a real Google account (via the one-time authorization
+// done through oauth-setup.mjs) rather than a service account — service
+// accounts turned out to have zero storage quota on a personal Drive and
+// can only write into Shared Drives, which aren't available on a plain
+// personal Google account.
 async function getGoogleAccessToken() {
-  const creds = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-  const now = Math.floor(Date.now() / 1000);
-
-  const header = { alg: "RS256", typ: "JWT" };
-  const claims = {
-    iss: creds.client_email,
-    // drive.file: only files this service account creates/opens — not
-    // full access to the whole shared Drive. Least privilege for a
-    // service that only ever needs to create new backup files.
-    scope: "https://www.googleapis.com/auth/drive.file",
-    aud: "https://oauth2.googleapis.com/token",
-    iat: now,
-    exp: now + 3600,
-  };
-
-  const b64url = (obj) => Buffer.from(JSON.stringify(obj)).toString("base64url");
-  const unsigned = `${b64url(header)}.${b64url(claims)}`;
-  const signature = crypto.sign("RSA-SHA256", Buffer.from(unsigned), creds.private_key);
-  const jwt = `${unsigned}.${signature.toString("base64url")}`;
-
   const resp = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt,
+      client_id: process.env.GOOGLE_OAUTH_CLIENT_ID,
+      client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+      refresh_token: process.env.GOOGLE_OAUTH_REFRESH_TOKEN,
+      grant_type: "refresh_token",
     }),
   });
   if (!resp.ok) throw new Error("Google auth failed: " + (await resp.text()));
@@ -114,9 +103,11 @@ async function uploadToDrive(accessToken, filename, jsonText, folderId) {
 }
 
 export default async () => {
-  if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON || !process.env.GOOGLE_DRIVE_BACKUP_FOLDER_ID) {
-    console.error("Backup skipped: GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_DRIVE_BACKUP_FOLDER_ID not set.");
-    return new Response("Missing configuration", { status: 500, headers: { "Content-Type": "text/plain" } });
+  const required = ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_OAUTH_REFRESH_TOKEN", "GOOGLE_DRIVE_BACKUP_FOLDER_ID"];
+  const missing = required.filter((k) => !process.env[k]);
+  if (missing.length) {
+    console.error("Backup skipped: missing " + missing.join(", "));
+    return new Response("Missing configuration: " + missing.join(", "), { status: 500, headers: { "Content-Type": "text/plain" } });
   }
 
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
