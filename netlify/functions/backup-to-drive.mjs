@@ -116,28 +116,32 @@ async function uploadToDrive(accessToken, filename, jsonText, folderId) {
 export default async () => {
   if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON || !process.env.GOOGLE_DRIVE_BACKUP_FOLDER_ID) {
     console.error("Backup skipped: GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_DRIVE_BACKUP_FOLDER_ID not set.");
-    return new Response("Missing configuration", { status: 500 });
+    return new Response("Missing configuration", { status: 500, headers: { "Content-Type": "text/plain" } });
   }
 
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
 
-  const dump = { exportedAt: new Date().toISOString(), exportedForDate: today };
-  for (const storeName of STORES_TO_BACK_UP) {
-    dump[storeName] = await dumpStore(storeName);
-  }
-  dump.meta = await dumpMetaFlags();
-
-  const jsonText = JSON.stringify(dump, null, 2);
-  const filename = `ready-tote-backup-${today}.json`;
-
   try {
+    const dump = { exportedAt: new Date().toISOString(), exportedForDate: today };
+    for (const storeName of STORES_TO_BACK_UP) {
+      dump[storeName] = await dumpStore(storeName);
+    }
+    dump.meta = await dumpMetaFlags();
+
+    const jsonText = JSON.stringify(dump, null, 2);
+    const filename = `ready-tote-backup-${today}.json`;
+
     const accessToken = await getGoogleAccessToken();
     const uploaded = await uploadToDrive(accessToken, filename, jsonText, process.env.GOOGLE_DRIVE_BACKUP_FOLDER_ID);
     console.log(`Backup uploaded: ${filename} (Drive file id ${uploaded.id})`);
-    return new Response(`Backup uploaded: ${filename}`, { status: 200 });
+    return new Response(`Backup uploaded: ${filename}`, { status: 200, headers: { "Content-Type": "text/plain" } });
   } catch (err) {
-    console.error("Backup failed:", err.message || err);
-    return new Response("Backup failed: " + (err.message || err), { status: 500 });
+    // Covers failures reading Blobs, signing the Google JWT, or the Drive
+    // upload itself — previously only the Drive-upload half was caught,
+    // so a Blobs read failure crashed uncaught with an empty response
+    // instead of a message explaining what went wrong.
+    console.error("Backup failed:", err.stack || err.message || err);
+    return new Response("Backup failed: " + (err.message || err), { status: 500, headers: { "Content-Type": "text/plain" } });
   }
 };
 
