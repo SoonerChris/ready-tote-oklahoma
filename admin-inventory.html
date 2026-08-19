@@ -62,7 +62,7 @@
 </nav>
 <div class="card">
   <h1>Tote Inventory</h1>
-  <p class="sub">Track totes owned and estimate how many are out on rental right now — and project availability forward using every rental on the books (not just active ones). Uses the Tote/Dolly count set on each rental; older rentals without one fall back to parsing the package name.</p>
+  <p class="sub">Track totes owned and estimate how many are out on rental right now — including confirmed bookings that haven't been invoiced yet — and project availability forward using every rental on the books. Uses the Tote/Dolly count set on each rental; older rentals without one fall back to parsing the package name.</p>
 
   <input type="hidden" id="secret">
   <button id="loadBtn">Load inventory</button>
@@ -70,6 +70,12 @@
 
   <div id="results" style="display:none;">
     <div class="rem stats" id="statCards"></div>
+
+    <h2>Confirmed, Not Yet Invoiced</h2>
+    <div class="rem">
+      <p class="note" style="margin:0 0 10px;">Bookings marked Confirmed on the Requests page don't count anywhere else until they're actually invoiced — this is the gap that caused the count to drift before. Totes here are estimated from the package name, since requests don't have a set tote count the way rentals do.</p>
+      <div id="pendingConfirmed"></div>
+    </div>
 
     <h2>Data cleanup</h2>
     <div class="rem">
@@ -123,6 +129,7 @@
   let EVENTS = [];
   let ACTIVE_RENTALS = [];
   let ALL_RENTALS = [];
+  let PENDING_CONFIRMED = [];
   let TODAY = '';
 
   $('loadBtn').addEventListener('click', load);
@@ -134,9 +141,12 @@
     const btn = $('loadBtn');
     btn.disabled = true; btn.textContent = 'Loading…';
     try {
-      const [invResp, rentalsResp] = await Promise.all([
+      const [invResp, rentalsResp, requestsResp] = await Promise.all([
         invCall({ action: 'list' }),
         fetch('/.netlify/functions/get-rentals', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret }),
+        }),
+        fetch('/.netlify/functions/get-requests', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret }),
         }),
       ]);
@@ -152,12 +162,42 @@
       ALL_RENTALS = rd.rentals || [];
       ACTIVE_RENTALS = ALL_RENTALS.filter(r => r.dropoffDate <= today && r.pickupDate >= today);
 
+      // Confirmed bookings only get written to the rentals store once Send
+      // Invoice or Add Rental actually runs — until then they're invisible
+      // to every count above, even if totes are already out the door. This
+      // finds the ones that fell into that gap.
+      PENDING_CONFIRMED = requestsResp.ok
+        ? findPendingConfirmed((await requestsResp.json()).requests || [], ALL_RENTALS)
+        : [];
+
       render();
       renderExpected();
       $('results').style.display = 'block';
       $('status').style.display = 'none';
     } catch { showErr('Network error — use this page on the live site.'); }
     btn.disabled = false; btn.textContent = 'Load inventory';
+  }
+
+  // Matches on email+date first, falling back to name+date — same
+  // best-effort heuristic used by the CLI diagnostic script this fix grew
+  // out of. A request only counts as "pending" if neither match finds an
+  // existing rental record, meaning it's genuinely never been invoiced.
+  function findPendingConfirmed(requests, rentals) {
+    const byEmail = new Set(rentals.map(r => `${(r.email || '').toLowerCase()}|${r.dropoffDate}`));
+    const byName = new Set(rentals.map(r => `${(r.name || '').toLowerCase()}|${r.dropoffDate}`));
+
+    return requests
+      .filter(req => req.status === 'confirmed')
+      .filter(req => {
+        const emailKey = `${(req.email || '').toLowerCase()}|${req.deliveryDate}`;
+        const nameKey = `${(req.name || '').toLowerCase()}|${req.deliveryDate}`;
+        return !byEmail.has(emailKey) && !byName.has(nameKey);
+      })
+      // estTotes: parsed from the request's free-text package, since
+      // requests never get a real numeric toteCount field. 0 means it
+      // couldn't be confidently parsed (e.g. "Custom Package") — flagged
+      // separately below rather than guessed at.
+      .map(req => ({ ...req, estTotes: totesInPackage(req.package) }));
   }
 
   // Legacy fallback: parse counts out of the package text, used only for
@@ -187,18 +227,25 @@
     const totalOwned = EVENTS.reduce((t, e) => t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity), 0);
     const deployed = ACTIVE_RENTALS.reduce((t, r) => t + toteQty(r), 0);
     const dolliesOut = ACTIVE_RENTALS.reduce((t, r) => t + dollyQty(r), 0);
-    const available = totalOwned - deployed;
+    // Only the estimable ones (parsed package text > 0) affect the numbers —
+    // an unparseable one is still listed below, just not guessed at here.
+    const pendingEstimable = PENDING_CONFIRMED.filter(p => p.estTotes > 0);
+    const pendingTotes = pendingEstimable.reduce((t, p) => t + p.estTotes, 0);
+    const available = totalOwned - deployed - pendingTotes;
     // Lifetime total: every rental ever logged, any status, not just active ones.
     const lifetimeTotes = ALL_RENTALS.reduce((t, r) => t + toteQty(r), 0);
 
     $('statCards').innerHTML = `
       <div class="stat"><div class="num">${totalOwned}</div><div class="lbl">Total owned</div></div>
       <div class="stat"><div class="num gold">${deployed}</div><div class="lbl">Out on rental (est.)</div></div>
+      <div class="stat"><div class="num ${PENDING_CONFIRMED.length ? 'warn' : ''}">${pendingTotes}</div><div class="lbl">Confirmed, not invoiced (est.)</div></div>
       <div class="stat"><div class="num ${available < 0 ? 'warn' : 'green'}">${available}</div><div class="lbl">Available now</div></div>
       <div class="stat"><div class="num">${ACTIVE_RENTALS.length}</div><div class="lbl">Active rentals</div></div>
       <div class="stat"><div class="num green">${lifetimeTotes}</div><div class="lbl">Lifetime totes rented</div></div>
       <div class="stat"><div class="num gold">${dolliesOut}</div><div class="lbl">Dollies out (est.)</div></div>
     `;
+
+    renderPendingConfirmed();
 
     const sorted = [...EVENTS].sort((a, b) => (b.date + b.key).localeCompare(a.date + a.key));
     $('evList').innerHTML = sorted.length ? sorted.map(e => {
@@ -214,6 +261,29 @@
           onclick="invDelete('${esc(e.key)}')">Delete</button>
       </div>`;
     }).join('') : '<p class="empty">No inventory events logged yet.</p>';
+  }
+
+  // The actionable list behind the "Confirmed, not invoiced" stat — each
+  // one links straight to Send Invoice so closing the gap is one tap away,
+  // not just a number to be curious about.
+  function renderPendingConfirmed() {
+    const el = $('pendingConfirmed');
+    if (!el) return;
+    if (!PENDING_CONFIRMED.length) {
+      el.innerHTML = '<p class="empty">None right now — every confirmed booking has been invoiced.</p>';
+      return;
+    }
+    el.innerHTML = PENDING_CONFIRMED.map(p => `
+      <div class="rem" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:bold; font-size:0.9rem;">
+            ${esc(p.name || 'Unnamed')}
+            ${p.estTotes > 0 ? ` — ~${p.estTotes} tote${p.estTotes === 1 ? '' : 's'}` : ' — <span style="color:var(--crate-red);">⚠ couldn\'t estimate count</span>'}
+          </div>
+          <div style="font-size:0.78rem; color:var(--steel); margin:0;">${esc(p.package || '—')} · ${esc(fmtDate(p.deliveryDate))} → ${esc(fmtDate(p.pickupDate))}</div>
+        </div>
+        <a href="admin-invoice.html" style="width:auto; padding:8px 14px; font-size:0.78rem; background:var(--gold); color:var(--ink); border-radius:8px; text-decoration:none; font-weight:bold;">Invoice it →</a>
+      </div>`).join('');
   }
 
   // ---- Inventory Calendar (past 60 days reconstructed + next 60 days projected) ----
@@ -238,17 +308,30 @@
   function renderExpected() {
     const PAST_DAYS = 60;
     const FUTURE_DAYS = 60;
+    // Same estimable-only subset used in the stat cards above.
+    const pendingEstimable = PENDING_CONFIRMED.filter(p => p.estTotes > 0);
 
     const days = [];
     for (let i = -PAST_DAYS; i < FUTURE_DAYS; i++) {
       const date = shiftDate(TODAY, i);
       const owned = ownedAsOf(date);
-      const deployed = ALL_RENTALS.reduce((t, r) => {
+      let deployed = ALL_RENTALS.reduce((t, r) => {
         if (r.dropoffDate && r.pickupDate && r.dropoffDate <= date && r.pickupDate >= date) {
           return t + toteQty(r);
         }
         return t;
       }, 0);
+      // Confirmed-but-not-invoiced bookings only apply today onward — there's
+      // no reliable record of when (or if) a request was in Confirmed status
+      // on a past date, so history stays rental-only, same as before.
+      if (date >= TODAY) {
+        deployed += pendingEstimable.reduce((t, p) => {
+          if (p.deliveryDate && p.pickupDate && p.deliveryDate <= date && p.pickupDate >= date) {
+            return t + p.estTotes;
+          }
+          return t;
+        }, 0);
+      }
       days.push({ date, available: owned - deployed, isToday: date === TODAY, isPast: date < TODAY });
     }
 
