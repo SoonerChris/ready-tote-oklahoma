@@ -8,8 +8,8 @@
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Tote Inventory — Ready Tote Oklahoma (Internal)</title>
-<link rel="stylesheet" href="admin-shared.css?v=20260804">
-<script src="admin-shared.js?v=20260818"></script>
+<link rel="stylesheet" href="admin-shared.css?v=20260819">
+<script src="admin-shared.js?v=20260819"></script>
 <style>
   .stats{display:flex; gap:20px; flex-wrap:wrap;}
   .stats .stat{flex:1; min-width:120px;}
@@ -64,8 +64,7 @@
   <h1>Tote Inventory</h1>
   <p class="sub">Track totes owned and estimate how many are out on rental right now — and project availability forward using every rental on the books (not just active ones). Uses the Tote/Dolly count set on each rental; older rentals without one fall back to parsing the package name.</p>
 
-  <label>Admin secret</label>
-  <input type="password" id="secret" placeholder="Your INVOICE_SECRET value">
+  <input type="hidden" id="secret">
   <button id="loadBtn">Load inventory</button>
   <div class="status" id="status"></div>
 
@@ -117,8 +116,7 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
-  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
-  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+  $('secret').value = localStorage.getItem('rto-admin-password') || '';
   $('evDate').value = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
 
   const ADD_TYPES = ['purchased', 'returned-to-service'];

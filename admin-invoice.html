@@ -8,8 +8,8 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="robots" content="noindex, nofollow">
 <title>Send Invoice — Ready Tote Oklahoma (Internal)</title>
-<link rel="stylesheet" href="admin-shared.css?v=20260804">
-<script src="admin-shared.js?v=20260818"></script>
+<link rel="stylesheet" href="admin-shared.css?v=20260819">
+<script src="admin-shared.js?v=20260819"></script>
 <style>
   body{padding:32px 16px;}
   .card{padding:32px;}
@@ -34,8 +34,7 @@
   <h1>Send Customer Invoice</h1>
   <p class="sub">Internal tool — fills out and sends the branded invoice email with a Stripe payment button.</p>
 
-  <label>Admin secret</label>
-  <input type="password" id="secret" placeholder="Your INVOICE_SECRET value" autocomplete="current-password">
+  <input type="hidden" id="secret">
 
   <div class="grid2">
     <div>
@@ -181,8 +180,7 @@
 <script>
   const $ = (id) => document.getElementById(id);
   let PACKAGES = []; // declared early: matchPrefillPackage() can run before the fetch below finishes
-  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
-  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+  $('secret').value = localStorage.getItem('rto-admin-password') || '';
 
   // ---- Prefill from a confirmed Booking Request (admin-requests.html handoff) ----
   let PREFILL_REQUEST_KEY = null;

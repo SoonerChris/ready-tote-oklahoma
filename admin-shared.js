@@ -47,3 +47,42 @@ function normalizePhone(raw) {
 function smsLink(phone, message) {
   return `sms:${normalizePhone(phone)}?&body=${encodeURIComponent(message)}`;
 }
+
+// ---- Auth guard ----
+// Runs immediately (this script is a blocking, non-deferred <script src>
+// in <head>, so this executes before <body> is even parsed) rather than
+// waiting for DOMContentLoaded — an unauthenticated visitor should never
+// see a flash of a protected page's content before being redirected.
+//
+// admin-login.html is exempt (it's what everyone gets sent to). Every
+// other admin-*.html page requires a saved username + password.
+(function authGuard() {
+  const page = location.pathname.split('/').pop();
+  if (page === 'admin-login.html') return;
+  const username = localStorage.getItem('rto-admin-username');
+  const password = localStorage.getItem('rto-admin-password');
+  if (!username || !password) {
+    location.replace('admin-login.html?redirect=' + encodeURIComponent(page || 'admin.html'));
+  }
+})();
+
+// ---- Log out ----
+// Every protected page already has a <nav class="admin-nav">. Rather than
+// adding a logout link's markup to all 10 HTML files, this appends one
+// here once the nav exists, same technique used for the section-toggle
+// buttons injected elsewhere in this project.
+document.addEventListener('DOMContentLoaded', () => {
+  const nav = document.querySelector('.admin-nav');
+  if (!nav) return;
+  const logout = document.createElement('a');
+  logout.href = '#';
+  logout.className = 'logout-link';
+  logout.textContent = 'Log out';
+  logout.addEventListener('click', (e) => {
+    e.preventDefault();
+    localStorage.removeItem('rto-admin-username');
+    localStorage.removeItem('rto-admin-password');
+    location.href = 'admin-login.html';
+  });
+  nav.appendChild(logout);
+});

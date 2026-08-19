@@ -8,8 +8,8 @@
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Add Rental — Ready Tote Oklahoma (Internal)</title>
-<link rel="stylesheet" href="admin-shared.css?v=20260804">
-<script src="admin-shared.js?v=20260818"></script>
+<link rel="stylesheet" href="admin-shared.css?v=20260819">
+<script src="admin-shared.js?v=20260819"></script>
 <style>
   body{padding:32px 16px;}
   .card{padding:32px;}
@@ -32,8 +32,7 @@
   <h1>Add Rental to Log</h1>
   <p class="sub">Records a rental directly — <strong>no email is sent</strong>. Use for backfilling bookings made before the log existed. Logged rentals feed the reminders page, review requests, and the sales CSV.</p>
 
-  <label>Admin secret</label>
-  <input type="password" id="secret" placeholder="Your INVOICE_SECRET value">
+  <input type="hidden" id="secret">
 
   <div class="grid2">
     <div>
@@ -115,8 +114,7 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
-  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
-  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+  $('secret').value = localStorage.getItem('rto-admin-password') || '';
 
   $('addBtn').addEventListener('click', async () => {
     const req = ['secret','name','phone','package','price','dropoffDate','pickupDate'];

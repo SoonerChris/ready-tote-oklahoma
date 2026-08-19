@@ -8,8 +8,8 @@
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Today's Reminders — Ready Tote Oklahoma (Internal)</title>
-<link rel="stylesheet" href="admin-shared.css?v=20260804">
-<script src="admin-shared.js?v=20260818"></script>
+<link rel="stylesheet" href="admin-shared.css?v=20260819">
+<script src="admin-shared.js?v=20260819"></script>
 <script src="admin-rentals-shared.js?v=20260818"></script>
 <style>
   .rem .who{font-weight:bold;}
@@ -55,8 +55,7 @@
   <h1>Today's Reminder Texts</h1>
   <p class="sub">Tap a green button to open Messages with the text pre-filled. Best used on your phone. For searching, editing, or managing any rental directly, see All Rentals.</p>
 
-  <label>Admin secret</label>
-  <input type="password" id="secret" placeholder="Your INVOICE_SECRET value">
+  <input type="hidden" id="secret">
 
   <button id="loadBtn">Load today's reminders</button>
   <div class="status" id="status"></div>
@@ -83,8 +82,7 @@
 <script>
   const $ = (id) => document.getElementById(id);
   // Restore shared secret
-  $('secret').value = sessionStorage.getItem('rto-admin-secret') || '';
-  $('secret').addEventListener('input', () => sessionStorage.setItem('rto-admin-secret', $('secret').value));
+  $('secret').value = localStorage.getItem('rto-admin-password') || '';
 
   let ALL_RENTALS = [];
 
