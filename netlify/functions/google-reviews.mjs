@@ -15,6 +15,7 @@ export default async (request) => {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   let placeId = process.env.GOOGLE_PLACE_ID || "";
   const placeName = process.env.GOOGLE_PLACE_NAME || "Ready Tote Oklahoma";
+  const placePhone = process.env.GOOGLE_PLACE_PHONE || ""; // E.164 format, e.g. +15803993202
 
   if (!apiKey) {
     return json({ reviews: [], error: "Missing GOOGLE_PLACES_API_KEY env var" });
@@ -38,21 +39,39 @@ export default async (request) => {
     } catch {}
   }
 
-  // If no Place ID, find it by business name
+  // If no Place ID, find it by business name (or phone, which is more
+  // reliable for service-area businesses without a public address)
   if (!placeId) {
     try {
-      // Try Find Place first
-      const findUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(placeName)}&inputtype=textquery&fields=place_id&key=${apiKey}`;
-      const findResp = await fetch(findUrl);
-      const findData = await findResp.json();
+      let findData = { candidates: [] };
 
-      if (findData.candidates && findData.candidates.length > 0) {
-        placeId = findData.candidates[0].place_id;
-      } else {
-        console.error("Find Place returned no candidates. status:", findData.status, "error_message:", findData.error_message);
+      // Phone number match first, if we have one. Exact match, much more
+      // reliable than fuzzy name search for service-area listings.
+      if (placePhone) {
+        const phoneUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(placePhone)}&inputtype=phonenumber&fields=place_id&key=${apiKey}`;
+        const phoneResp = await fetch(phoneUrl);
+        findData = await phoneResp.json();
+        if (findData.candidates && findData.candidates.length > 0) {
+          placeId = findData.candidates[0].place_id;
+        } else {
+          console.error("Find Place by phone returned no candidates. status:", findData.status, "error_message:", findData.error_message);
+        }
       }
 
-      // Fallback: Text Search with location bias (better for new listings)
+      // Try Find Place by name next
+      if (!placeId) {
+        const findUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(placeName)}&inputtype=textquery&fields=place_id&key=${apiKey}`;
+        const findResp = await fetch(findUrl);
+        findData = await findResp.json();
+
+        if (findData.candidates && findData.candidates.length > 0) {
+          placeId = findData.candidates[0].place_id;
+        } else {
+          console.error("Find Place returned no candidates. status:", findData.status, "error_message:", findData.error_message);
+        }
+      }
+
+      // Fallback: Text Search (legacy) with location bias (better for new listings)
       let searchData = null;
       if (!placeId) {
         const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(placeName + " Oklahoma")}&location=35.327,-97.555&radius=50000&key=${apiKey}`;
@@ -62,6 +81,33 @@ export default async (request) => {
           placeId = searchData.results[0].place_id;
         } else {
           console.error("Text Search returned no results. status:", searchData.status, "error_message:", searchData.error_message);
+        }
+      }
+
+      // Second fallback: new Places API Text Search. Its index tends to be
+      // fresher than the legacy endpoints above, especially for service-area
+      // businesses without a public street address.
+      let newApiStatus = null;
+      if (!placeId) {
+        try {
+          const newSearchResp = await fetch("https://places.googleapis.com/v1/places:searchText", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Goog-Api-Key": apiKey,
+              "X-Goog-FieldMask": "places.id",
+            },
+            body: JSON.stringify({ textQuery: placeName + " Oklahoma" }),
+          });
+          newApiStatus = newSearchResp.status;
+          const newSearchData = await newSearchResp.json();
+          if (newSearchData.places && newSearchData.places.length > 0) {
+            placeId = newSearchData.places[0].id;
+          } else {
+            console.error("New Places API searchText returned nothing. status:", newSearchResp.status, "body:", JSON.stringify(newSearchData));
+          }
+        } catch (e) {
+          console.error("New Places API searchText failed:", e.message);
         }
       }
 
@@ -75,13 +121,15 @@ export default async (request) => {
           reviews: [],
           error: "Business not found on Google",
           debug: debug ? {
+            phoneLookupAttempted: !!placePhone,
             findPlaceStatus: findStatus,
             textSearchStatus: searchStatus,
+            newApiSearchHttpStatus: newApiStatus,
             googleErrorMessage: errMsg,
             hint: errMsg
               ? "See googleErrorMessage above, that's Google's actual reason."
               : (findStatus === "ZERO_RESULTS" && searchStatus === "ZERO_RESULTS"
-                  ? "Google genuinely has no listing matching this name. Check Google Maps directly and/or set GOOGLE_PLACE_ID once you find the correct Place ID."
+                  ? "All search methods came up empty. Strongly recommend setting GOOGLE_PLACE_ID directly via the Place ID Finder tool rather than relying on name search."
                   : "Non-ZERO_RESULTS status usually means REQUEST_DENIED (key restrictions, API not enabled, or billing not enabled) or INVALID_REQUEST. Check Netlify function logs for the full status.")
           } : undefined,
         });
