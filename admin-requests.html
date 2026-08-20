@@ -171,8 +171,8 @@
       </div>
       <div class="req-body">
         <div><span class="lbl">Package</span>${r.package ? `<span class="tag">${esc(r.package)}</span>` : '—'}</div>
-        <div><span class="lbl">Delivery</span>${esc(fmtDate(r.deliveryDate))}${r.deliveryWindow && !/no preference/i.test(r.deliveryWindow) ? ' — pref: ' + esc(r.deliveryWindow) : ''}</div>
-        <div><span class="lbl">Pickup</span>${esc(fmtDate(r.pickupDate))}${r.pickupWindow && !/no preference/i.test(r.pickupWindow) ? ' — pref: ' + esc(r.pickupWindow) : ''}</div>
+        <div><span class="lbl">Delivery</span>${esc(fmtReqDate(r.deliveryDate))}${r.deliveryWindow && !/no preference/i.test(r.deliveryWindow) ? ' — pref: ' + esc(r.deliveryWindow) : ''}</div>
+        <div><span class="lbl">Pickup</span>${esc(fmtReqDate(r.pickupDate))}${r.pickupWindow && !/no preference/i.test(r.pickupWindow) ? ' — pref: ' + esc(r.pickupWindow) : ''}</div>
         <div><span class="lbl">Address</span>${esc(r.deliveryAddress || '—')}</div>
         <div><span class="lbl">Phone</span>${r.phone ? `<a href="tel:${escAttr(phoneDigits)}">${esc(r.phone)}</a>` : '—'}</div>
         <div><span class="lbl">Email</span>${r.email ? `<a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : '—'}</div>
@@ -316,15 +316,20 @@
   function confirmMessage(r) {
     const first = (r.name || 'there').split(' ')[0];
     const pkg = r.package || 'your package';
-    return `Hi ${first}, Ready Tote Oklahoma here! Got your request for ${pkg}. Your dates, ${fmtDate(r.deliveryDate)} to ${fmtDate(r.pickupDate)}, work on our end. Reply YES to confirm and we will send you an invoice shortly.`;
+    return `Hi ${first}, Ready Tote Oklahoma here! Got your request for ${pkg}. Your dates, ${fmtReqDate(r.deliveryDate)} to ${fmtReqDate(r.pickupDate)}, work on our end. Reply YES to confirm and we will send you an invoice shortly.`;
   }
 
   // normalizePhone() and smsLink() now live in admin-shared.js.
 
   // This page shows an em dash rather than blank for a missing date —
   // wraps the shared fmtDate (from admin-shared.js) with that fallback.
+  // Named differently on purpose: naming this fmtDate would shadow the
+  // global admin-shared.js function of the same name (function declarations
+  // hoist to global scope in a plain script), making sharedFmtDate below
+  // resolve to this wrapper itself instead of the real one, infinite
+  // self-recursion on every call.
   const sharedFmtDate = window.fmtDate;
-  function fmtDate(iso) { return sharedFmtDate(iso, '\u2014'); }
+  function fmtReqDate(iso) { return sharedFmtDate(iso, '\u2014'); }
   function fmtDateTime(iso) {
     if (!iso) return '';
     const d = new Date(iso);
