@@ -39,15 +39,44 @@ export default async (request) => {
     } catch {}
   }
 
-  // If no Place ID, find it by business name (or phone, which is more
-  // reliable for service-area businesses without a public address)
+  // If no Place ID, find it. Ready Tote Oklahoma is a Service Area Business
+  // (no public storefront address), and Google's Places API excludes those
+  // by default. The new Places API Text Search endpoint requires an explicit
+  // opt-in flag to include them, confirmed via Google Maps Platform Support
+  // case, Aug 2026.
   if (!placeId) {
     try {
       let findData = { candidates: [] };
+      let newApiStatus = null;
 
-      // Phone number match first, if we have one. Exact match, much more
-      // reliable than fuzzy name search for service-area listings.
-      if (placePhone) {
+      // Primary method: new Places API Text Search with the service-area
+      // business flag. This is the one that actually works for this listing.
+      try {
+        const sabResp = await fetch("https://places.googleapis.com/v1/places:searchText", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": "places.id",
+          },
+          body: JSON.stringify({
+            textQuery: placeName,
+            includePureServiceAreaBusinesses: true,
+          }),
+        });
+        newApiStatus = sabResp.status;
+        const sabData = await sabResp.json();
+        if (sabData.places && sabData.places.length > 0) {
+          placeId = sabData.places[0].id;
+        } else {
+          console.error("SAB-aware Text Search returned nothing. status:", sabResp.status, "body:", JSON.stringify(sabData));
+        }
+      } catch (e) {
+        console.error("SAB-aware Text Search failed:", e.message);
+      }
+
+      // Phone number match, exact match fallback.
+      if (!placeId && placePhone) {
         const phoneUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(placePhone)}&inputtype=phonenumber&fields=place_id&key=${apiKey}`;
         const phoneResp = await fetch(phoneUrl);
         findData = await phoneResp.json();
@@ -58,7 +87,8 @@ export default async (request) => {
         }
       }
 
-      // Try Find Place by name next
+      // Legacy Find Place by name (won't find pure SABs, kept as a safety
+      // net in case the business later adds a public address)
       if (!placeId) {
         const findUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(placeName)}&inputtype=textquery&fields=place_id&key=${apiKey}`;
         const findResp = await fetch(findUrl);
@@ -71,7 +101,8 @@ export default async (request) => {
         }
       }
 
-      // Fallback: Text Search (legacy) with location bias (better for new listings)
+      // Legacy Text Search as a last resort (also won't find pure SABs, but
+      // harmless to try)
       let searchData = null;
       if (!placeId) {
         const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(placeName + " Oklahoma")}&location=35.327,-97.555&radius=50000&key=${apiKey}`;
@@ -81,33 +112,6 @@ export default async (request) => {
           placeId = searchData.results[0].place_id;
         } else {
           console.error("Text Search returned no results. status:", searchData.status, "error_message:", searchData.error_message);
-        }
-      }
-
-      // Second fallback: new Places API Text Search. Its index tends to be
-      // fresher than the legacy endpoints above, especially for service-area
-      // businesses without a public street address.
-      let newApiStatus = null;
-      if (!placeId) {
-        try {
-          const newSearchResp = await fetch("https://places.googleapis.com/v1/places:searchText", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Goog-Api-Key": apiKey,
-              "X-Goog-FieldMask": "places.id",
-            },
-            body: JSON.stringify({ textQuery: placeName + " Oklahoma" }),
-          });
-          newApiStatus = newSearchResp.status;
-          const newSearchData = await newSearchResp.json();
-          if (newSearchData.places && newSearchData.places.length > 0) {
-            placeId = newSearchData.places[0].id;
-          } else {
-            console.error("New Places API searchText returned nothing. status:", newSearchResp.status, "body:", JSON.stringify(newSearchData));
-          }
-        } catch (e) {
-          console.error("New Places API searchText failed:", e.message);
         }
       }
 
@@ -121,16 +125,14 @@ export default async (request) => {
           reviews: [],
           error: "Business not found on Google",
           debug: debug ? {
+            sabSearchHttpStatus: newApiStatus,
             phoneLookupAttempted: !!placePhone,
             findPlaceStatus: findStatus,
             textSearchStatus: searchStatus,
-            newApiSearchHttpStatus: newApiStatus,
             googleErrorMessage: errMsg,
             hint: errMsg
               ? "See googleErrorMessage above, that's Google's actual reason."
-              : (findStatus === "ZERO_RESULTS" && searchStatus === "ZERO_RESULTS"
-                  ? "All search methods came up empty. Strongly recommend setting GOOGLE_PLACE_ID directly via the Place ID Finder tool rather than relying on name search."
-                  : "Non-ZERO_RESULTS status usually means REQUEST_DENIED (key restrictions, API not enabled, or billing not enabled) or INVALID_REQUEST. Check Netlify function logs for the full status.")
+              : "Even the SAB-aware search (includePureServiceAreaBusinesses) found nothing. Double check GOOGLE_PLACE_NAME matches the Business Profile name exactly, or set GOOGLE_PLACE_ID directly."
           } : undefined,
         });
       }
