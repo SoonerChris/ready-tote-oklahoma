@@ -174,7 +174,7 @@
       renderExpected();
       $('results').style.display = 'block';
       $('status').style.display = 'none';
-    } catch { showErr('Network error — use this page on the live site.'); }
+    } catch (e) { console.error('Load inventory failed:', e); showErr('Load failed — check the console for details.'); }
     btn.disabled = false; btn.textContent = 'Load inventory';
   }
 
@@ -406,10 +406,16 @@
     }[type] || type;
   }
 
-  const invCall = (payload) => fetch('/.netlify/functions/tote-stock', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ secret: $('secret').value.trim(), ...payload }),
-  });
+  // A function declaration (not const) so it's hoisted and available even
+  // when load() calls it from the auto-load path (line 136, which runs
+  // before this line would otherwise execute) — a const here would throw
+  // "Cannot access 'invCall' before initialization" on every auto-load.
+  function invCall(payload) {
+    return fetch('/.netlify/functions/tote-stock', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: $('secret').value.trim(), ...payload }),
+    });
+  }
 
   async function reload() {
     const resp = await invCall({ action: 'list' });
