@@ -1,0 +1,5 @@
+# Force real 301 redirects for the readytoteok.com domain aliases
+# (readytoteok.com is a Netlify domain alias on this same project,
+# so it serves live content instead of redirecting unless told to here)
+https://readytoteok.com/*      https://www.readytoteokc.com/:splat   301!
+https://www.readytoteok.com/*  https://www.readytoteokc.com/:splat   301!
