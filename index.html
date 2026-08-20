@@ -210,10 +210,13 @@
 
   /* HERO */
   .hero{
-    background:var(--ink); color:var(--white);
+    color:var(--white);
     padding:64px 0 56px;
     position:relative;
     overflow:hidden;
+    background:
+      linear-gradient(180deg, rgba(30,27,24,0.88), rgba(30,27,24,0.82) 55%, rgba(30,27,24,0.93)),
+      url('images/totes-brick-driveway.jpg') center center / cover no-repeat;
   }
   .hero .wrap{
     display:block; max-width:860px; margin:0 auto;
@@ -246,18 +249,6 @@
   }
   .price-tag .num{font-family:'Archivo Black', sans-serif; font-size:1.55rem;}
   .cta-row{display:flex; flex-wrap:wrap; gap:14px; justify-content:center;}
-  .hero-photo-row{
-    display:flex; flex-wrap:wrap; gap:20px; justify-content:center;
-    margin-top:44px;
-  }
-  .hero-photo-row img{
-    width:380px; height:460px; object-fit:cover;
-    border-radius:18px; flex:none;
-    box-shadow:0 20px 44px -18px rgba(0,0,0,0.5);
-  }
-  @media(max-width:850px){
-    .hero-photo-row img{width:100%; max-width:380px; height:400px;}
-  }
   .trust-band{
     background:var(--yellow); width:100%; overflow-x:auto;
   }
@@ -391,23 +382,17 @@
   .price-note{margin-top:22px; font-size:0.9rem; color:var(--steel);}
 
   /* Feature highlight */
-  .feature-split{display:grid; gap:44px; align-items:start;}
-  @media(min-width:900px){.feature-split{grid-template-columns:1fr 1fr;}}
-  .feature-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:18px;}
-  .feature-list li{display:flex; gap:14px; align-items:flex-start; font-size:1rem;}
-  .feature-list .icon{font-size:1.3rem; flex:none;}
-  .tote-graphic{
-    width:100%; max-width:440px; margin:0 auto; border-radius:18px;
-    background:var(--white); border:1.5px solid var(--line-dark); padding:14px;
-    box-shadow:0 24px 50px -20px rgba(30,27,24,0.4);
+  .feature-grid{display:grid; grid-template-columns:1fr; gap:16px;}
+  @media(min-width:700px){.feature-grid{grid-template-columns:1fr 1fr;}}
+  @media(min-width:1000px){.feature-grid{grid-template-columns:1fr 1fr 1fr;}}
+  .feature-card{
+    background:var(--white); border:1.5px solid var(--line-dark); border-radius:14px;
+    padding:26px 22px; display:flex; flex-direction:column; gap:8px;
+    box-shadow:0 16px 32px -22px rgba(30,27,24,0.35);
   }
-  /* At the 2-column breakpoint, match the graphic's height to the feature
-     list beside it instead of letting it size off its own width. Below
-     900px the two stack vertically, so the mobile rule above (auto height
-     off a 440px-max width) still applies as before. */
-  @media(min-width:900px){
-    .tote-graphic{ width:auto; height:250px; max-width:100%; }
-  }
+  .feature-card .icon{font-size:1.9rem; line-height:1;}
+  .feature-card h3{font-family:'Archivo Black', sans-serif; font-size:0.98rem; margin:0; line-height:1.3;}
+  .feature-card p{margin:0; font-size:0.9rem; color:var(--steel); line-height:1.5;}
 
   /* Photo band */
   .photo-band{position:relative; height:340px; overflow:hidden;}
@@ -668,10 +653,6 @@
           <a href="#book" class="btn btn-primary">Reserve in 2 Minutes →</a>
           <a href="#pricing" class="btn btn-ghost">See All Packages</a>
         </div>
-        <div class="hero-photo-row">
-          <img src="images/totes-stack-large.jpg?v=20260820b" alt="Ten Ready Tote Oklahoma bins stacked in a driveway" width="380" height="460" decoding="async">
-          <img src="images/totes-delivery-door.jpg?v=20260820b" alt="Ready Tote Oklahoma tote delivered to a front porch" width="380" height="460" decoding="async">
-        </div>
       </div>
     </div>
   </section>
@@ -931,20 +912,13 @@
         <span class="eyebrow">The Totes</span>
         <h2>Built Tough. Made to Stack.</h2>
       </div>
-      <div class="feature-split">
-        <div>
-          <ul class="feature-list">
-            <li><span class="icon">🔒</span> Snap-tight lids, no tape needed</li>
-            <li><span class="icon">📐</span> Recessed lid for easy stacking</li>
-            <li><span class="icon">💪</span> Reinforced construction, holds up to 65 lbs</li>
-            <li><span class="icon">💧</span> Waterproof, your stuff stays dry</li>
-            <li><span class="icon">🧼</span> Cleaned and sanitized after every rental</li>
-            <li><span class="icon">♻️</span> Reused hundreds of times, far less waste</li>
-          </ul>
-        </div>
-        <div>
-          <img class="tote-graphic" src="images/tote-features.jpg?v=20260820d" alt="Diagram of tote features: snap-tight lid, padlock holes, recessed stacking lid, reinforced heavy-duty NSF-certified construction" width="600" height="600" loading="lazy" decoding="async">
-        </div>
+      <div class="feature-grid">
+        <div class="feature-card"><span class="icon">🔒</span><h3>Snap-tight lids</h3><p>No tape needed, ever.</p></div>
+        <div class="feature-card"><span class="icon">📐</span><h3>Recessed stacking lid</h3><p>Stacks clean, stays put.</p></div>
+        <div class="feature-card"><span class="icon">💪</span><h3>Reinforced construction</h3><p>Holds up to 65 lbs.</p></div>
+        <div class="feature-card"><span class="icon">💧</span><h3>Fully waterproof</h3><p>Your stuff stays dry.</p></div>
+        <div class="feature-card"><span class="icon">🧼</span><h3>Cleaned every rental</h3><p>Sanitized before it reaches you.</p></div>
+        <div class="feature-card"><span class="icon">♻️</span><h3>Reused, not landfilled</h3><p>Hundreds of trips per tote.</p></div>
       </div>
     </div>
   </section>
