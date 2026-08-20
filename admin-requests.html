@@ -129,8 +129,9 @@
       $('results').style.display = 'block';
       $('status').style.display = 'none';
       render();
-    } catch {
-      showErr('Network error — use this page on the live site.');
+    } catch (e) {
+      console.error('Load requests failed:', e);
+      showErr('Load failed — check the console for details.');
     } finally {
       btn.disabled = false; btn.textContent = 'Load requests';
     }
@@ -286,8 +287,9 @@
       if (idx >= 0) ALL[idx] = data.request;
       showOk(okMsg);
       render();
-    } catch {
-      showErr('Network error — try again.');
+    } catch (e) {
+      console.error('Update request failed:', e);
+      showErr('Update failed — check the console for details.');
     }
   }
 
@@ -305,8 +307,9 @@
       if (idx >= 0) ALL[idx] = data.request;
       showOk(okMsg);
       render();
-    } catch {
-      showErr('Network error — try again.');
+    } catch (e) {
+      console.error('Save failed:', e);
+      showErr('Save failed — check the console for details.');
     }
   }
 
