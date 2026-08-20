@@ -391,7 +391,7 @@
   .price-note{margin-top:22px; font-size:0.9rem; color:var(--steel);}
 
   /* Feature highlight */
-  .feature-split{display:grid; gap:44px; align-items:center;}
+  .feature-split{display:grid; gap:44px; align-items:start;}
   @media(min-width:900px){.feature-split{grid-template-columns:1fr 1fr;}}
   .feature-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:18px;}
   .feature-list li{display:flex; gap:14px; align-items:flex-start; font-size:1rem;}
@@ -400,6 +400,13 @@
     width:100%; max-width:440px; margin:0 auto; border-radius:18px;
     background:var(--white); border:1.5px solid var(--line-dark); padding:14px;
     box-shadow:0 24px 50px -20px rgba(30,27,24,0.4);
+  }
+  /* At the 2-column breakpoint, match the graphic's height to the feature
+     list beside it instead of letting it size off its own width. Below
+     900px the two stack vertically, so the mobile rule above (auto height
+     off a 440px-max width) still applies as before. */
+  @media(min-width:900px){
+    .tote-graphic{ width:auto; height:250px; max-width:100%; }
   }
 
   /* Photo band */
