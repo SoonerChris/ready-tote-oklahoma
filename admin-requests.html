@@ -313,10 +313,26 @@
     }
   }
 
+  // Rush = delivery date is today or tomorrow relative to when this is sent.
+  // deliveryDate is a date-only string (YYYY-MM-DD), so "under 24 hrs notice"
+  // is approximated as same-day or next-day rather than an exact hour count.
+  function isRushRequest(r) {
+    if (!r.deliveryDate) return false;
+    const delivery = new Date(r.deliveryDate + 'T00:00:00');
+    if (isNaN(delivery)) return false;
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diffDays = Math.round((delivery - today) / (1000 * 60 * 60 * 24));
+    return diffDays <= 1;
+  }
+
   function confirmMessage(r) {
     const first = (r.name || 'there').split(' ')[0];
     const pkg = r.package || 'your package';
-    return `Hi ${first}, Ready Tote Oklahoma here! Got your request for ${pkg}. Your dates, ${fmtReqDate(r.deliveryDate)} to ${fmtReqDate(r.pickupDate)}, work on our end. Reply YES to confirm and we will send you an invoice shortly.`;
+    const rushNote = isRushRequest(r)
+      ? ` Since that's a rush request (under 24 hrs out), a $25 expedite fee applies, it'll show as its own line on your invoice.`
+      : '';
+    return `Hi ${first}, Ready Tote Oklahoma here! Got your request for ${pkg}. Your dates, ${fmtReqDate(r.deliveryDate)} to ${fmtReqDate(r.pickupDate)}, work on our end.${rushNote} Reply YES to confirm and we will send you an invoice shortly.`;
   }
 
   // normalizePhone() and smsLink() now live in admin-shared.js.
