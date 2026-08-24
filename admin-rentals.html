@@ -42,6 +42,11 @@
   .date-edit-block .grid2{margin-bottom:10px;}
   .date-edit-block label{font-size:0.75rem; margin:0 0 4px; display:block;}
   .date-edit-block button{margin-top:6px; width:auto; padding:7px 14px; font-size:0.8rem;}
+
+  /* Currently active rentals (dropped off, not yet picked up) get a light
+     green tint + left border so they stand out at a glance in the list,
+     same green used for the "Active rentals" stat on Dashboard/Inventory. */
+  .rem.active-rental{background:var(--green-bg); border-left:4px solid var(--green); padding-left:12px;}
 </style>
 </head>
 <body>
@@ -142,6 +147,11 @@
     if (!rentals.length) { el.innerHTML = '<p class="empty">No rentals logged yet.</p>'; $('unpaidSummary').innerHTML = ''; return; }
     const sorted = [...rentals].sort((a,b) => (b.dropoffDate||'').localeCompare(a.dropoffDate||''));
 
+    // Same "active" definition used on Dashboard and Inventory: dropped off,
+    // not yet picked up, as of today (Central time).
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+    const isActive = (r) => r.dropoffDate && r.pickupDate && r.dropoffDate <= today && r.pickupDate >= today;
+
     const unpaidCount = sorted.filter(isUnpaid).length;
     $('unpaidSummary').innerHTML = unpaidCount
       ? `<p style="margin:0 0 10px; padding:8px 12px; background:var(--red-bg); color:var(--red); font-weight:bold; font-size:0.85rem; border-radius:8px;">⚠️ ${unpaidCount} invoice${unpaidCount === 1 ? '' : 's'} sent, awaiting payment</p>`
@@ -150,7 +160,7 @@
     el.innerHTML = sorted.map(r => {
       const paymentControls = payBtn(r) + emailReminderBtn(r) + textReminderBtn(r);
       return `
-      <div class="rem">
+      <div class="rem${isActive(r) ? ' active-rental' : ''}">
         <div class="rem-summary" onclick="this.closest('.rem').classList.toggle('open')">
           <span class="chevron">▸</span>
           <div>
