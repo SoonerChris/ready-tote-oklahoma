@@ -22,7 +22,7 @@
       "duration": "2 Weeks",
       "toteCount": 40,
       "dollyCount": 2,
-      "stripeUrl": "REPLACE_WITH_NEW_169_PAYMENT_LINK"
+      "stripeUrl": "https://buy.stripe.com/fZu3cv73v6ntfAtbUg4ko0i"
     },
     {
       "name": "60 Totes + 3 Dollies",
@@ -30,7 +30,7 @@
       "duration": "2 Weeks",
       "toteCount": 60,
       "dollyCount": 3,
-      "stripeUrl": "REPLACE_WITH_NEW_219_PAYMENT_LINK"
+      "stripeUrl": "https://buy.stripe.com/fZufZh1Jb4flbkd5vS4ko0j"
     }
   ]
 }
