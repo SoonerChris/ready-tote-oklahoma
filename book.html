@@ -105,23 +105,24 @@
   .status-banner.neutral{ background:var(--cream); color:var(--steel); border:1px solid var(--line-dark); }
 
   /* Calendar */
-  .cal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px; }
-  .cal-legend{ display:flex; gap:14px; font-size:0.78rem; color:var(--steel); flex-wrap:wrap; }
-  .cal-legend span{ display:inline-flex; align-items:center; gap:5px; }
-  .dot{ width:10px; height:10px; border-radius:50%; display:inline-block; }
+  #calendarWrap{ max-width:380px; margin:0 auto; }
+  .cal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; flex-wrap:wrap; gap:6px; }
+  .cal-legend{ display:flex; gap:10px; font-size:0.7rem; color:var(--steel); flex-wrap:wrap; }
+  .cal-legend span{ display:inline-flex; align-items:center; gap:4px; }
+  .dot{ width:8px; height:8px; border-radius:50%; display:inline-block; }
   .dot.open{ background:var(--green); }
   .dot.limited{ background:var(--yellow); }
   .dot.booked{ background:var(--crate-red); }
   .dot.past{ background:#D8D2C4; }
 
-  .month{ margin-bottom:22px; }
-  .month h3{ font-size:1rem; margin-bottom:10px; }
-  .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
-  .cal-dow{ font-size:0.7rem; color:var(--steel); text-align:center; font-weight:bold; }
+  .month{ margin-bottom:14px; }
+  .month h3{ font-size:0.85rem; margin-bottom:6px; }
+  .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+  .cal-dow{ font-size:0.62rem; color:var(--steel); text-align:center; font-weight:bold; }
   .cal-day{
-    aspect-ratio:1; border-radius:8px; border:1px solid var(--line-dark);
+    aspect-ratio:1; border-radius:5px; border:1px solid var(--line-dark);
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    font-size:0.78rem; cursor:pointer; background:var(--cream); position:relative;
+    font-size:0.65rem; cursor:pointer; background:var(--cream); position:relative;
   }
   .cal-day.blank{ visibility:hidden; cursor:default; }
   .cal-day.past{ color:#B7B0A2; cursor:default; background:transparent; border-color:transparent; }
@@ -130,7 +131,7 @@
   .cal-day.booked{ background:#FBEAE6; border-color:var(--crate-red); color:var(--crate-red); }
   .cal-day.selected{ outline:2px solid var(--ink); outline-offset:1px; font-weight:bold; }
   .cal-day .n{ font-weight:bold; }
-  .cal-day .a{ font-size:0.58rem; margin-top:1px; text-transform:uppercase; letter-spacing:0.02em; }
+  .cal-day .a{ font-size:0.5rem; margin-top:0; text-transform:uppercase; letter-spacing:0.02em; }
 
   /* Form */
   .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
@@ -430,9 +431,9 @@
     const wrap = $('calendarWrap');
     wrap.innerHTML = '';
 
-    // group the next ~90 days by month
+    // group the next ~45 days by month
     const byMonth = {};
-    AVAIL.days.slice(0, 90).forEach(d => {
+    AVAIL.days.slice(0, 45).forEach(d => {
       const monthKey = d.date.slice(0,7);
       (byMonth[monthKey] = byMonth[monthKey] || []).push(d);
     });
