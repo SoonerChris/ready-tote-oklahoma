@@ -1,5 +1,5 @@
 // POST /.netlify/functions/finance
-// Expense + mileage tracking. Actions: list, addExpense, addMileage, delete, setRate.
+// Expense + mileage tracking. Actions: list, addExpense, editExpense, addMileage, delete, setRate.
 // Protected by INVOICE_SECRET.
 
 import { getStore } from "@netlify/blobs";
@@ -45,6 +45,26 @@ export default async (request) => {
         const recurring = ["monthly", "yearly"].includes(body.recurring) ? body.recurring : "one-time";
         const key = `exp_${body.date}_${Date.now()}`;
         await store.setJSON(key, {
+          date: body.date,
+          category: body.category,
+          vendor: body.vendor || "",
+          description: body.description || "",
+          amount: Number(body.amount) || 0,
+          paymentMethod: body.paymentMethod || "",
+          recurring,
+        });
+        return json({ ok: true });
+      }
+
+      case "editExpense": {
+        if (!body.key) return new Response("Missing key", { status: 400 });
+        for (const f of ["date", "category", "amount"]) {
+          if (!body[f]) return new Response("Missing field: " + f, { status: 400 });
+        }
+        const existing = await store.get(body.key, { type: "json" });
+        if (!existing) return new Response("Expense not found", { status: 404 });
+        const recurring = ["monthly", "yearly"].includes(body.recurring) ? body.recurring : "one-time";
+        await store.setJSON(body.key, {
           date: body.date,
           category: body.category,
           vendor: body.vendor || "",
