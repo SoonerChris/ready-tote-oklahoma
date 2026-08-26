@@ -93,6 +93,14 @@
         <button type="button" id="expCancelBtn" class="secondary" onclick="finEditCancel()" style="display:none; flex:1;">Cancel edit</button>
       </div>
     </div>
+    <div class="rem" style="display:flex; gap:10px; flex-wrap:wrap;">
+      <select id="expFilterMonth" style="flex:1; min-width:140px;"><option value="">All months</option></select>
+      <select id="expFilterCategory" style="flex:1; min-width:140px;"><option value="">All categories</option></select>
+      <select id="expFilterPayment" style="flex:1; min-width:160px;"><option value="">All payment methods</option></select>
+      <input type="text" id="expFilterSearch" placeholder="Search vendor / notes…" style="flex:2; min-width:160px;">
+      <button type="button" id="expFilterClear" class="secondary" style="width:auto; margin:0; padding:11px 16px; flex:0 0 auto;">Clear</button>
+    </div>
+    <p class="note" id="expCount" style="margin:2px 0 10px;"></p>
     <div id="expList"></div>
     <button type="button" id="expCsvBtn" style="background:var(--ink); color:#fff;">Download expenses (CSV)</button>
 
@@ -307,20 +315,8 @@
         return `<div><div style="font-size:0.9rem;font-weight:bold;">${sub}</div><div style="font-size:0.72rem;color:var(--steel);">${esc(cat)}</div></div>`;
       }).join('');
 
-    const expSorted = [...FIN.expenses].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-    $('expList').innerHTML = expSorted.slice(0,15).map(e => `
-      <div class="rem" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
-        <div>
-          <div style="font-weight:bold; font-size:0.9rem;">${money(e.amount)} — ${esc(e.category)}${(e.recurring === 'monthly' || e.recurring === 'yearly') ? ` <span style="font-weight:normal; font-size:0.72rem; color:var(--gold); background:rgba(201,154,50,0.12); border:1px solid rgba(201,154,50,0.4); padding:1px 8px; border-radius:999px; margin-left:6px; vertical-align:middle;">${e.recurring}</span>` : ''}</div>
-          <div style="font-size:0.78rem; color:var(--steel); margin:0;">${esc(fmtDate(e.date))}${e.vendor ? ' · ' + esc(e.vendor) : ''}${e.paymentMethod ? ' · ' + esc(e.paymentMethod) : ''}${e.description ? ' · ' + esc(e.description) : ''}</div>
-        </div>
-        <div style="display:flex; gap:6px; flex-shrink:0;">
-          <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:var(--cream); color:var(--ink); border:1px solid var(--line); border-radius:8px;"
-            onclick="finEditStart('${esc(e.key)}')">Edit</button>
-          <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
-            onclick="finDelete('${esc(e.key)}')">Delete</button>
-        </div>
-      </div>`).join('') || '<p class="empty">No expenses logged yet.</p>';
+    populateExpenseFilters();
+    renderExpenseTable();
 
     const ytdMiles = FIN.mileage.filter(m => thisYear(m.date)).reduce((t,m)=>t+m.miles,0);
     const rate = FIN.mileageRate;
@@ -412,6 +408,74 @@
         </table>
       </div>`;
   }
+
+  // Keeps each filter's own selection intact while refreshing the option
+  // lists from whatever categories/payment methods/months actually exist
+  // in the data (so renamed or old payment method values still show up).
+  function populateExpenseFilters(){
+    const prevCat = $('expFilterCategory').value, prevPay = $('expFilterPayment').value, prevMonth = $('expFilterMonth').value;
+    const cats = [...new Set(FIN.expenses.map(e => e.category).filter(Boolean))].sort();
+    const pays = [...new Set(FIN.expenses.map(e => e.paymentMethod).filter(Boolean))].sort();
+    const months = [...new Set(FIN.expenses.map(e => monthKey(e.date)).filter(Boolean))].sort().reverse();
+
+    $('expFilterCategory').innerHTML = '<option value="">All categories</option>' +
+      cats.map(c => `<option${c === prevCat ? ' selected' : ''}>${esc(c)}</option>`).join('');
+    $('expFilterPayment').innerHTML = '<option value="">All payment methods</option>' +
+      pays.map(p => `<option${p === prevPay ? ' selected' : ''}>${esc(p)}</option>`).join('');
+    $('expFilterMonth').innerHTML = '<option value="">All months</option>' +
+      months.map(m => `<option value="${m}"${m === prevMonth ? ' selected' : ''}>${esc(monthLabel(m))}</option>`).join('');
+  }
+
+  function renderExpenseTable(){
+    const fMonth = $('expFilterMonth').value, fCat = $('expFilterCategory').value,
+          fPay = $('expFilterPayment').value, search = $('expFilterSearch').value.trim().toLowerCase();
+
+    const filtered = FIN.expenses.filter(e => {
+      if (fMonth && monthKey(e.date) !== fMonth) return false;
+      if (fCat && e.category !== fCat) return false;
+      if (fPay && e.paymentMethod !== fPay) return false;
+      if (search && !`${e.vendor||''} ${e.description||''}`.toLowerCase().includes(search)) return false;
+      return true;
+    }).sort((a,b) => (b.date||'').localeCompare(a.date||''));
+
+    const total = filtered.reduce((t,e) => t + Number(e.amount||0), 0);
+    $('expCount').textContent = FIN.expenses.length
+      ? `Showing ${filtered.length} of ${FIN.expenses.length} expenses · ${money(total)} total`
+      : '';
+
+    $('expList').innerHTML = filtered.length ? `
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Category</th><th>Vendor</th><th>Payment</th><th>Amount</th><th>Notes</th><th></th></tr></thead>
+          <tbody>
+            ${filtered.map(e => `
+              <tr>
+                <td style="white-space:nowrap;">${esc(fmtDate(e.date))}</td>
+                <td>${esc(e.category)}${(e.recurring === 'monthly' || e.recurring === 'yearly') ? ` <span class="pill pending" style="font-size:0.65rem;">${e.recurring}</span>` : ''}</td>
+                <td>${esc(e.vendor || '—')}</td>
+                <td>${esc(e.paymentMethod || '—')}</td>
+                <td class="mono" style="white-space:nowrap;">${money(e.amount)}</td>
+                <td style="max-width:220px; color:var(--steel); font-size:0.82rem;">${esc(e.description || '')}</td>
+                <td style="white-space:nowrap;">
+                  <button type="button" style="width:auto; margin:0; padding:5px 10px; font-size:0.72rem; background:var(--cream); color:var(--ink); border:1px solid var(--line); border-radius:6px;"
+                    onclick="finEditStart('${esc(e.key)}')">Edit</button>
+                  <button type="button" style="width:auto; margin:0 0 0 4px; padding:5px 10px; font-size:0.72rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:6px;"
+                    onclick="finDelete('${esc(e.key)}')">Delete</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>` : `<p class="empty">${FIN.expenses.length ? 'No expenses match these filters.' : 'No expenses logged yet.'}</p>`;
+  }
+
+  $('expFilterMonth').addEventListener('change', renderExpenseTable);
+  $('expFilterCategory').addEventListener('change', renderExpenseTable);
+  $('expFilterPayment').addEventListener('change', renderExpenseTable);
+  $('expFilterSearch').addEventListener('input', renderExpenseTable);
+  $('expFilterClear').addEventListener('click', () => {
+    $('expFilterMonth').value = ''; $('expFilterCategory').value = ''; $('expFilterPayment').value = ''; $('expFilterSearch').value = '';
+    renderExpenseTable();
+  });
 
   function renderNetIncome(){
     const thisYearStr = new Date().getFullYear().toString();
