@@ -78,14 +78,20 @@
         <input type="text" id="expVendor" placeholder="Vendor (e.g., Amazon, Home Depot)">
         <select id="expPayment" style="width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);">
           <option value="">Payment method…</option>
-          <option>Prime CC</option>
-          <option>AAdvantage CC</option>
-          <option>TFCU CC</option>
+          <option>Chris's Prime CC</option>
+          <option>Lendy's Prime CC</option>
+          <option>Chris's AAdvantage CC</option>
+          <option>Lendy's AAdvantage CC</option>
+          <option>TFCU Checking Account</option>
           <option>Other</option>
         </select>
       </div>
       <input type="text" id="expDesc" placeholder="Description / notes (optional)" style="margin-top:10px;">
-      <button type="button" id="expAddBtn">Add expense</button>
+      <input type="hidden" id="expEditKey" value="">
+      <div style="display:flex; gap:10px;">
+        <button type="button" id="expAddBtn" style="flex:1;">Add expense</button>
+        <button type="button" id="expCancelBtn" class="secondary" onclick="finEditCancel()" style="display:none; flex:1;">Cancel edit</button>
+      </div>
     </div>
     <div id="expList"></div>
     <button type="button" id="expCsvBtn" style="background:var(--ink); color:#fff;">Download expenses (CSV)</button>
@@ -308,8 +314,12 @@
           <div style="font-weight:bold; font-size:0.9rem;">${money(e.amount)} — ${esc(e.category)}${(e.recurring === 'monthly' || e.recurring === 'yearly') ? ` <span style="font-weight:normal; font-size:0.72rem; color:var(--gold); background:rgba(201,154,50,0.12); border:1px solid rgba(201,154,50,0.4); padding:1px 8px; border-radius:999px; margin-left:6px; vertical-align:middle;">${e.recurring}</span>` : ''}</div>
           <div style="font-size:0.78rem; color:var(--steel); margin:0;">${esc(fmtDate(e.date))}${e.vendor ? ' · ' + esc(e.vendor) : ''}${e.paymentMethod ? ' · ' + esc(e.paymentMethod) : ''}${e.description ? ' · ' + esc(e.description) : ''}</div>
         </div>
-        <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
-          onclick="finDelete('${esc(e.key)}')">Delete</button>
+        <div style="display:flex; gap:6px; flex-shrink:0;">
+          <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:var(--cream); color:var(--ink); border:1px solid var(--line); border-radius:8px;"
+            onclick="finEditStart('${esc(e.key)}')">Edit</button>
+          <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
+            onclick="finDelete('${esc(e.key)}')">Delete</button>
+        </div>
       </div>`).join('') || '<p class="empty">No expenses logged yet.</p>';
 
     const ytdMiles = FIN.mileage.filter(m => thisYear(m.date)).reduce((t,m)=>t+m.miles,0);
@@ -432,15 +442,43 @@
     if (resp.ok) reloadFinance(); else showErr('Rate must be $/mile, like 0.70.');
   };
 
+  window.finEditStart = (key) => {
+    const e = FIN.expenses.find(x => x.key === key);
+    if (!e) return;
+    $('expDate').value = e.date || '';
+    $('expCategory').value = e.category || 'Equipment';
+    $('expRecurring').value = e.recurring || 'one-time';
+    $('expAmount').value = e.amount || '';
+    $('expVendor').value = e.vendor || '';
+    $('expPayment').value = e.paymentMethod || '';
+    $('expDesc').value = e.description || '';
+    $('expEditKey').value = key;
+    $('expAddBtn').textContent = 'Save changes';
+    $('expCancelBtn').style.display = 'block';
+    $('expDate').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+  window.finEditCancel = () => {
+    $('expEditKey').value = '';
+    $('expDate').value = ''; $('expAmount').value = ''; $('expVendor').value = ''; $('expDesc').value = '';
+    $('expCategory').selectedIndex = 0; $('expRecurring').value = 'one-time'; $('expPayment').value = '';
+    $('expAddBtn').textContent = 'Add expense';
+    $('expCancelBtn').style.display = 'none';
+  };
+
   $('expAddBtn').addEventListener('click', async () => {
     const date = $('expDate').value, category = $('expCategory').value,
           description = $('expDesc').value.trim(), amount = $('expAmount').value,
           recurring = $('expRecurring').value, vendor = $('expVendor').value.trim(),
-          paymentMethod = $('expPayment').value;
+          paymentMethod = $('expPayment').value, editKey = $('expEditKey').value;
     if (!date || !amount) return showErr('Expense needs a date and amount.');
-    const resp = await finCall({ action: 'addExpense', date, category, description, amount, recurring, vendor, paymentMethod });
-    if (resp.ok) { $('expDesc').value=''; $('expAmount').value=''; $('expVendor').value=''; reloadFinance(); }
-    else showErr('Add expense failed.');
+    const resp = editKey
+      ? await finCall({ action: 'editExpense', key: editKey, date, category, description, amount, recurring, vendor, paymentMethod })
+      : await finCall({ action: 'addExpense', date, category, description, amount, recurring, vendor, paymentMethod });
+    if (resp.ok) {
+      if (editKey) finEditCancel();
+      else { $('expDesc').value=''; $('expAmount').value=''; $('expVendor').value=''; }
+      reloadFinance();
+    } else showErr(editKey ? 'Update expense failed.' : 'Add expense failed.');
   });
   $('mileAddBtn').addEventListener('click', async () => {
     const date = $('mileDate').value, purpose = $('milePurpose').value.trim(), miles = $('mileMiles').value;
