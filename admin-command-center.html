@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Command Center — Ready Tote Oklahoma</title>
+<link rel="stylesheet" href="admin-shared.css?v=20260819">
+<script src="admin-shared.js?v=20260819"></script>
+<style>
+  /* Command Center layout — sits on top of admin-shared.css's tokens
+     (--ink, --gold, --cream, --steel, --green, --red, --crate-red, --line).
+     No new colors are introduced here, only a different arrangement:
+     a sidebar + card dashboard instead of the single-column admin-* pages. */
+  :root{
+    --disp:'Archivo Black', sans-serif;
+    --mono:'JetBrains Mono', monospace;
+    --grad:linear-gradient(150deg,#8A6420 0%,var(--gold) 52%,#E9C97B 100%);
+  }
+  html,body{margin:0;padding:0 !important;background:var(--cream);}
+  .app{display:flex;min-height:100vh;align-items:stretch;}
+
+  /* Sidebar */
+  .side{width:214px;flex:none;background:linear-gradient(190deg,#EFE1BC,var(--cream));
+    padding:20px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;
+    height:100vh;border-right:1px solid var(--line);}
+  .brand{display:flex;align-items:center;gap:10px;padding:4px 8px 18px;}
+  .brand img{height:28px;width:auto;}
+  .brand b{font-family:var(--disp);font-size:14px;letter-spacing:-0.01em;}
+  .snav{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;
+    font-size:13.5px;font-weight:600;color:var(--ink-2);cursor:pointer;transition:.15s;}
+  .snav .ic{width:16px;text-align:center;opacity:.85;}
+  .snav:hover{background:rgba(255,255,255,.5);}
+  .snav.on{background:var(--ink);color:#fff;}
+  .side .foot{margin-top:auto;display:flex;flex-direction:column;gap:2px;}
+  .side .backlink{font-size:11.5px;color:var(--steel);padding:9px 12px;}
+  .side .backlink a{color:var(--gold);font-weight:700;}
+  .side .logoutlink{font-size:11.5px;color:var(--red);padding:7px 12px;cursor:pointer;font-weight:600;}
+
+  /* Main */
+  .main{flex:1;min-width:0;padding:26px 30px 60px;max-width:1180px;}
+  .head{margin-bottom:20px;}
+  .head h1{font-family:var(--disp);font-size:1.55rem;margin:0 0 3px;letter-spacing:-0.01em;}
+  .head p{margin:0;font-size:0.85rem;color:var(--steel);}
+
+  .page{display:none;}
+  .page.on{display:block;}
+  .grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;}
+  @media(max-width:900px){.grid{grid-template-columns:1fr;}}
+  .ccard{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:18px;
+    box-shadow:0 1px 2px rgba(30,27,24,0.04);}
+  .ccard h2{font-family:var(--disp);font-size:0.9rem;margin:0 0 14px;letter-spacing:-0.005em;
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  .ccard h2 .hint{font-family:'Barlow',sans-serif;font-weight:500;font-size:0.7rem;color:var(--steel);}
+  .empty{font-size:0.82rem;color:var(--steel);padding:8px 2px;}
+
+  /* Alerts (same pattern as admin.html) */
+  .alert{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:8px;
+    margin-bottom:8px;font-size:0.85rem;font-weight:500;}
+  .alert.warn{background:var(--gold-bg);border:1px solid var(--gold);color:var(--ink);}
+  .alert.info{background:var(--green-bg);border:1px solid var(--green);color:var(--green);}
+  .alert.danger{background:var(--red-bg);border:1px solid var(--red);color:var(--red);}
+
+  /* Pipeline (requests) accordion rows */
+  .pflow{border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-bottom:8px;
+    cursor:pointer;transition:.15s;}
+  .pflow:hover{border-color:var(--gold);}
+  .pfrow{display:flex;align-items:center;gap:11px;}
+  .pfav{width:32px;height:32px;border-radius:9px;background:var(--grad);color:#fff;flex:none;
+    display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:11px;}
+  .pfmid{flex:1;min-width:0;}
+  .pfn{font-size:13px;font-weight:700;}
+  .pfd{font-size:11px;color:var(--steel);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pfcaret{color:var(--steel);font-size:13px;transition:transform .18s;flex:none;}
+  .pflow.open .pfcaret{transform:rotate(90deg);}
+  .pfbody{max-height:0;overflow:hidden;transition:max-height .25s ease;}
+  .pflow.open .pfbody{max-height:220px;}
+  .pfbody .inner{padding:11px 2px 2px 43px;}
+  .pfstep{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:11.5px;color:var(--steel);}
+  .pfstep.done{color:var(--ink);}
+  .pfstep.now{color:var(--gold);font-weight:700;}
+  .pfstep .dot{width:6px;height:6px;border-radius:50%;background:var(--line);flex:none;}
+  .pfstep.done .dot,.pfstep.now .dot{background:var(--gold);}
+
+  /* Growth / net income panel */
+  .growth{border-radius:14px;padding:20px;color:#fff;background:var(--grad);}
+  .growth .gt{font-family:var(--disp);font-size:14px;}
+  .growth .gs{font-size:11.5px;color:#FBF3DE;margin-bottom:6px;}
+  .gbig{font-family:var(--disp);text-align:center;font-size:1.55rem;margin:8px 0 2px;}
+  .gsub{text-align:center;font-size:10.5px;color:#FBF3DE;font-family:var(--mono);}
+  .gtiles{display:flex;gap:8px;margin-top:16px;}
+  .gtile{flex:1;background:rgba(255,255,255,.18);border-radius:10px;padding:9px 6px;text-align:center;}
+  .gtile .k{font-size:9px;color:#FBF3DE;}
+  .gtile .v{font-family:var(--disp);font-size:13px;margin-top:3px;}
+
+  /* Rentals (project) cards + timeline */
+  .rcard{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:15px 17px;
+    margin-bottom:10px;cursor:pointer;transition:.15s;}
+  .rcard:hover{border-color:var(--gold);box-shadow:0 6px 16px rgba(30,27,24,.06);}
+  .rctop{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .rcname{font-family:var(--disp);font-size:14.5px;}
+  .rcdue{margin-left:auto;font-size:10.5px;color:var(--steel);background:var(--cream);
+    border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-family:var(--mono);}
+  .rcrow2{display:flex;align-items:center;gap:10px;margin-top:9px;flex-wrap:wrap;}
+  .openp{font-size:11px;color:var(--gold);font-weight:700;margin-left:auto;}
+  .rcnow{font-size:12.5px;color:var(--ink-2);margin-top:10px;}
+  .rcbar{height:7px;border-radius:999px;background:var(--gold-bg);overflow:hidden;margin-top:10px;}
+  .rcbar i{display:block;height:100%;border-radius:999px;background:var(--grad);}
+
+  .backb{display:inline-flex;align-items:center;gap:6px;background:var(--white);
+    border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:12px;
+    font-weight:700;cursor:pointer;float:right;}
+  .backb:hover{background:var(--cream);}
+  .dtl-card{background:var(--white);border:1px solid var(--line);border-radius:14px;
+    padding:12px 24px;margin-top:8px;}
+  .tstep{display:flex;gap:16px;padding:14px 0;position:relative;}
+  .tstep:not(:last-child)::before{content:"";position:absolute;left:8px;top:24px;bottom:-4px;
+    width:2px;background:var(--line);}
+  .tdot{width:16px;height:16px;border-radius:50%;border:3px solid var(--line);background:#fff;
+    flex:none;margin-top:2px;z-index:1;}
+  .tstep.now .tdot,.tstep.done .tdot{border-color:var(--gold);background:var(--gold);}
+  .tt{font-family:var(--disp);font-size:14.5px;}
+  .tstep.now .tt{color:var(--gold);}
+  .tsub{font-size:12px;color:var(--steel);margin-top:2px;}
+  .nowb{margin-left:auto;align-self:flex-start;background:var(--gold);color:var(--ink);
+    font-size:10px;font-weight:700;padding:4px 11px;border-radius:999px;}
+
+  /* Schedule (day strip) */
+  .strip{display:flex;gap:11px;overflow-x:auto;padding:4px 2px 12px;}
+  .dcard{flex:none;width:104px;background:var(--white);border:1px solid var(--line);
+    border-radius:14px;padding:12px 12px 10px;cursor:pointer;transition:.15s;}
+  .dcard:hover{border-color:var(--gold);}
+  .dcard.sel{border:2px solid var(--gold);}
+  .dnum{font-family:var(--disp);font-size:30px;line-height:.9;}
+  .ddow{font-family:var(--disp);font-size:12.5px;margin-top:6px;}
+  .dmon{font-size:10.5px;color:var(--steel);}
+  .dupd{margin-top:9px;font-size:10px;font-weight:700;color:var(--gold);background:var(--gold-bg);
+    border-radius:999px;padding:3px 9px;display:inline-block;}
+  .dphead{font-family:var(--disp);font-size:15.5px;margin:16px 2px 12px;}
+  .entry{display:flex;gap:12px;align-items:center;padding:12px 15px;border:1px solid var(--line);
+    border-radius:12px;margin-bottom:9px;background:var(--white);}
+  .erole{font-size:10px;font-weight:700;color:#fff;background:var(--grad);border-radius:7px;
+    padding:4px 9px;white-space:nowrap;flex:none;}
+  .et{font-size:13.5px;font-weight:600;}
+  .esub{font-size:11px;color:var(--steel);margin-top:2px;}
+  .entry .txt{margin-left:auto;background:var(--green);color:#fff;font-weight:700;
+    text-decoration:none;padding:7px 13px;border-radius:8px;font-size:11.5px;flex:none;}
+
+  /* Finance */
+  .kpi-toggle{display:flex;gap:6px;flex-wrap:wrap;}
+  .kpi-toggle button{margin:0;width:auto;padding:7px 12px;font-size:0.72rem;font-weight:bold;
+    background:var(--cream);color:var(--ink);border:1px solid var(--line);border-radius:999px;
+    cursor:pointer;font-family:'Barlow',sans-serif;}
+  .kpi-toggle button.active{background:var(--gold);border-color:var(--gold);}
+  .net-bubble{text-align:center;background:var(--cream);border:2px solid var(--gold);
+    border-radius:10px;padding:16px;margin-bottom:14px;}
+  .net-lbl{font-size:0.68rem;color:var(--steel);font-weight:bold;letter-spacing:0.05em;
+    text-transform:uppercase;font-family:var(--mono);}
+  .net-amt{font-family:var(--disp);font-size:1.7rem;margin:7px 0 2px;}
+  .net-sub{font-size:0.74rem;color:var(--steel);font-family:var(--mono);}
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  @media(max-width:560px){.stat-row{grid-template-columns:1fr;}}
+  .scard{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:15px 13px;
+    text-align:center;box-shadow:0 1px 2px rgba(30,27,24,.04);}
+  .scard .num{font-family:var(--disp);font-size:1.25rem;line-height:1.1;}
+  .scard .lbl{font-size:0.66rem;color:var(--steel);margin-top:4px;text-transform:uppercase;
+    letter-spacing:.04em;font-family:var(--mono);}
+  .scard.gold{border-color:var(--gold);background:var(--gold-bg);}
+  .scard.gold .num{color:var(--gold);}
+  .barsWrap{display:flex;gap:6px;align-items:flex-end;height:110px;margin-top:14px;}
+  .barcol{flex:1;height:100%;display:flex;align-items:flex-end;}
+  .barcol .fill{width:100%;border-radius:4px 4px 0 0;background:var(--grad);min-height:2px;}
+  .barlbls{display:flex;gap:6px;margin-top:5px;}
+  .barlbls span{flex:1;text-align:center;font-size:9px;color:var(--steel);}
+  .catrow{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);
+    font-size:12.5px;}
+  .catrow:last-child{border-bottom:none;}
+  .catrow b{font-family:var(--mono);font-weight:700;}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><img src="images/logo.png" alt=""><b>Command Center</b></div>
+    <div class="snav on" data-p="overview"><span class="ic">▦</span>Overview</div>
+    <div class="snav" data-p="pipeline"><span class="ic">〜</span>Pipeline</div>
+    <div class="snav" data-p="schedule"><span class="ic">◫</span>Schedule</div>
+    <div class="snav" data-p="rentals"><span class="ic">▢</span>Rentals</div>
+    <div class="snav" data-p="finance"><span class="ic">◎</span>Finance</div>
+    <div class="foot">
+      <div class="backlink">← <a href="admin.html">All admin tools</a></div>
+      <div class="logoutlink" id="logoutBtn">Log out</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="head">
+      <h1 id="ptitle">Overview</h1>
+      <p id="psub">Everything at a glance</p>
+    </div>
+    <div class="status" id="statusMsg" style="display:none;"></div>
+
+    <section class="page on" id="overview">
+      <div class="alerts" id="ov-alerts"></div>
+      <div class="grid">
+        <div class="ccard"><h2>Pipeline <span class="hint">requests in progress</span></h2>
+          <div id="ov-pipeline"><div class="empty">Loading…</div></div></div>
+        <div>
+          <div class="growth">
+            <div class="gt">Net income</div><div class="gs">This month</div>
+            <div class="gbig" id="ov-net">$0.00</div>
+            <div class="gsub" id="ov-netsub"></div>
+            <div class="gtiles" id="ov-tiles"></div>
+          </div>
+          <div class="ccard" style="margin-top:16px;"><h2>This week</h2>
+            <div id="ov-week"><div class="empty">Loading…</div></div></div>
+        </div>
+      </div>
+      <div class="ccard" style="margin-top:16px;"><h2>Active &amp; upcoming rentals <span class="hint">click to open</span></h2>
+        <div id="ov-rentals"><div class="empty">Loading…</div></div></div>
+    </section>
+
+    <section class="page" id="pipeline">
+      <div class="ccard"><h2>All booking requests</h2>
+        <div id="pg-pipeline"><div class="empty">Loading…</div></div></div>
+      <div class="ccard" style="margin-top:16px;"><h2>B2B outreach <span class="hint">apartments · realtors · movers</span></h2>
+        <div id="pg-outreach"><div class="empty">Loading…</div></div></div>
+    </section>
+
+    <section class="page" id="schedule">
+      <div class="strip" id="sch-strip"></div>
+      <div class="dphead" id="sch-dphead"></div>
+      <div id="sch-entries"></div>
+      <div id="sch-texts-wrap" style="margin-top:20px;display:none;">
+        <div class="dphead" style="margin-top:0;">Texts to send today</div>
+        <div id="sch-texts"></div>
+      </div>
+    </section>
+
+    <section class="page" id="rentals">
+      <div id="pg-rentals"><div class="empty">Loading…</div></div>
+    </section>
+
+    <section class="page" id="rdetail">
+      <div class="backb" id="backb">← Rentals</div>
+      <h3 style="font-family:var(--disp);font-size:1.25rem;margin:0 0 4px;clear:none;" id="rdtl-name"></h3>
+      <p style="color:var(--steel);font-size:0.85rem;margin:0 0 16px;" id="rdtl-sub"></p>
+      <div class="dtl-card"><div id="rtl"></div></div>
+    </section>
+
+    <section class="page" id="finance">
+      <div class="ccard">
+        <h2>Snapshot
+          <span class="kpi-toggle" id="finToggle">
+            <button type="button" data-period="week">7 Days</button>
+            <button type="button" data-period="month" class="active">Month</button>
+            <button type="button" data-period="year">Year</button>
+            <button type="button" data-period="all">All</button>
+          </span>
+        </h2>
+        <div class="net-bubble">
+          <div class="net-lbl" id="finNetLbl">Net Income — This Month</div>
+          <div class="net-amt" id="finNetAmt">$0.00</div>
+          <div class="net-sub" id="finNetSub"></div>
+        </div>
+        <div class="stat-row" id="finTiles"></div>
+      </div>
+      <div class="ccard" style="margin-top:16px;">
+        <h2>Revenue by month <span class="hint" id="finYearLbl"></span></h2>
+        <div class="barsWrap" id="finBars"></div>
+        <div class="barlbls" id="finBarLbls"></div>
+      </div>
+      <div class="grid" style="margin-top:16px;">
+        <div class="ccard"><h2>Expenses by category</h2><div id="finCats"></div></div>
+        <div class="ccard"><h2>Mileage</h2><div id="finMileage" style="font-size:13px;color:var(--ink-2);"></div></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+
+  function post(fn, body) {
+    return fetch('/.netlify/functions/' + fn, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+  }
+  function fmtPrice(p) { const s = String(p || '').trim(); return s ? (s.startsWith('$') ? s : '$' + s) : ''; }
+  function money(n) { return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 }); }
+  function moneyDec(n) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  const priceNum = p => { const m = String(p || '').replace(/[^0-9.]/g, ''); return m ? parseFloat(m) : 0; };
+  const sumPrice = arr => arr.reduce((t, r) => t + priceNum(r.price), 0);
+  function shiftDate(iso, days) { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); }
+  function ymd(s) { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d); }
+  function fmtMD(ds) { const d = new Date(ymd(ds)); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }); }
+
+  let DATA = { rentals: [], reminders: { delivery: [], pickup: [], review: [] }, expenses: [], mileage: [], mileageRate: null, invEvents: [], requests: [], outreach: [] };
+  let TODAY = '';
+  let PERIOD = 'month';
+  let selDay = '';
+
+  async function loadAll() {
+    const secret = localStorage.getItem('rto-admin-password') || '';
+    if (!secret) { showErr('Session expired — log in again.'); return; }
+    try {
+      const [rResp, fResp, iResp, qResp, oResp] = await Promise.all([
+        post('get-rentals', { secret }),
+        post('finance', { secret, action: 'list' }),
+        post('tote-stock', { secret, action: 'list' }),
+        post('get-requests', { secret }),
+        post('get-outreach', { secret }),
+      ]);
+      const resps = [rResp, fResp, iResp, qResp, oResp];
+      if (resps.some(r => r.status === 401)) return showErr('Wrong admin secret — log in again.');
+      if (!resps.every(r => r.ok)) return showErr('Load failed.');
+
+      const [rd, fd, idata, qd, od] = await Promise.all(resps.map(r => r.json()));
+      DATA.rentals = rd.rentals || [];
+      DATA.reminders = rd.reminders || { delivery: [], pickup: [], review: [] };
+      DATA.expenses = fd.expenses || [];
+      DATA.mileage = fd.mileage || [];
+      DATA.mileageRate = fd.mileageRate ?? null;
+      DATA.invEvents = idata.events || [];
+      DATA.requests = qd.requests || [];
+      DATA.outreach = od.entries || [];
+      TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+      selDay = TODAY;
+
+      $('statusMsg').style.display = 'none';
+      renderAll();
+    } catch (e) { showErr('Network error — use on the live site.'); }
+  }
+  function showErr(m) { const s = $('statusMsg'); s.style.display = 'block'; s.className = 'status err'; s.textContent = m; }
+
+  // ---- Totes / alerts (mirrors admin.html) ----
+  const ADD_TYPES = ['purchased', 'returned-to-service'];
+  function totesInPackage(p) { const m = String(p || '').match(/(\d+)\s*totes?/i); return m ? parseInt(m[1], 10) : 0; }
+  function computeTotesAvailable() {
+    const totalOwned = DATA.invEvents.reduce((t, e) => t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity), 0);
+    const active = DATA.rentals.filter(r => r.dropoffDate <= TODAY && r.pickupDate >= TODAY);
+    const deployed = active.reduce((t, r) => t + totesInPackage(r.package), 0);
+    return totalOwned - deployed;
+  }
+  function computeAlerts() {
+    const alerts = [];
+    const textsToday = DATA.reminders.delivery.length + DATA.reminders.pickup.length + DATA.reminders.review.length;
+    if (textsToday > 0) alerts.push({ type: 'warn', msg: `📱 ${textsToday} reminder text${textsToday > 1 ? 's' : ''} to send today` });
+    const tomorrow = shiftDate(TODAY, 1);
+    const tmDeliveries = DATA.rentals.filter(r => r.dropoffDate === tomorrow);
+    if (tmDeliveries.length > 0) alerts.push({ type: 'info', msg: `🚚 ${tmDeliveries.length} deliver${tmDeliveries.length > 1 ? 'ies' : 'y'} tomorrow` });
+    const totesAvailable = computeTotesAvailable();
+    if (totesAvailable < 0) alerts.push({ type: 'danger', msg: `📦 ${Math.abs(totesAvailable)} totes oversold — check availability before booking more` });
+    return alerts;
+  }
+
+  // ---- Pipeline (booking requests) ----
+  const STATUS_META = {
+    new: { label: 'New', pill: 'pending' },
+    reviewed: { label: 'Reviewed', pill: 'pending' },
+    awaiting_confirmation: { label: 'Awaiting confirmation', pill: 'pending' },
+    confirmed: { label: 'Confirmed', pill: 'ok' },
+    declined: { label: 'Declined', pill: 'err' },
+    invoiced: { label: 'Invoiced', pill: 'ok' },
+  };
+  const STAGE_ORDER = ['new', 'reviewed', 'awaiting_confirmation', 'confirmed', 'invoiced'];
+  const ACTIVE_STATUSES = ['new', 'reviewed', 'awaiting_confirmation', 'confirmed'];
+
+  function pflowRow(r) {
+    const meta = STATUS_META[r.status] || STATUS_META.new;
+    const initials = (r.name || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+    const stageIdx = STAGE_ORDER.indexOf(r.status);
+    const stepsHtml = r.status === 'declined'
+      ? `<div class="pfstep now"><span class="dot"></span>Declined${r.declineReason ? ' — ' + esc(r.declineReason) : ''}</div>`
+      : STAGE_ORDER.map((s, i) => {
+          const cls = stageIdx < 0 ? '' : i < stageIdx ? 'done' : i === stageIdx ? 'now' : '';
+          return `<div class="pfstep ${cls}"><span class="dot"></span>${STATUS_META[s].label}</div>`;
+        }).join('');
+    return `<div class="pflow" data-key="${escAttr(r.key)}">
+      <div class="pfrow">
+        <span class="pfav">${esc(initials)}</span>
+        <span class="pfmid"><span class="pfn">${esc(r.name || 'Unnamed request')}</span>
+          <div class="pfd">${r.package ? esc(r.package) + ' · ' : ''}${meta.label}</div></span>
+        <span class="pill ${meta.pill}">${meta.label}</span>
+        <span class="pfcaret">▸</span>
+      </div>
+      <div class="pfbody"><div class="inner">${stepsHtml}</div></div>
+    </div>`;
+  }
+  function bindPflow(host) {
+    host.querySelectorAll('.pflow').forEach(el => {
+      el.querySelector('.pfrow').onclick = () => el.classList.toggle('open');
+    });
+  }
+  function renderPipeline() {
+    const sorted = [...DATA.requests].sort((a, b) => String(b.submittedAt || '').localeCompare(String(a.submittedAt || '')));
+    const host = $('pg-pipeline');
+    host.innerHTML = sorted.length ? sorted.map(pflowRow).join('') : '<div class="empty">No booking requests yet.</div>';
+    bindPflow(host);
+    const active = sorted.filter(r => ACTIVE_STATUSES.includes(r.status)).slice(0, 5);
+    const ov = $('ov-pipeline');
+    ov.innerHTML = active.length ? active.map(pflowRow).join('') : '<div class="empty">No requests in progress.</div>';
+    bindPflow(ov);
+  }
+  function renderOutreach() {
+    const sorted = [...DATA.outreach].sort((a, b) => (a.category || '').localeCompare(b.category || '') || (a.name || '').localeCompare(b.name || ''));
+    $('pg-outreach').innerHTML = sorted.length ? sorted.map(o => `
+      <div class="catrow">
+        <span><span class="tag" style="text-transform:capitalize;margin-right:8px;">${esc(o.category || '')}</span>${esc(o.name)}</span>
+        <span style="color:var(--steel);font-weight:normal;">${esc(o.status || '')}</span>
+      </div>`).join('') : '<div class="empty">No outreach contacts yet.</div>';
+  }
+
+  // ---- Rentals (projects) ----
+  function dayDiff(ds) { return Math.round((ymd(ds) - ymd(TODAY)) / 864e5); }
+  function stepDone(s) { return dayDiff(s.date) < 0; }
+  function rentalSteps(r) {
+    const self = r.serviceType === 'self';
+    const bookedDate = (r.invoicedAt || '').slice(0, 10) || r.dropoffDate;
+    return [
+      { t: 'Booked', date: bookedDate },
+      { t: self ? 'Picked up by customer' : 'Delivered', date: r.dropoffDate },
+      { t: self ? 'Returned' : 'Picked up', date: r.pickupDate },
+    ];
+  }
+  function stepCurrent(steps) { for (let i = 0; i < steps.length; i++) { if (!stepDone(steps[i])) return i; } return steps.length - 1; }
+  function stepLabel(s) {
+    const md = fmtMD(s.date), df = dayDiff(s.date);
+    if (df < 0) return 'Done · ' + md;
+    if (df === 0) return 'Today · ' + md;
+    if (df === 1) return 'Tomorrow · ' + md;
+    if (df <= 13) return 'In ' + df + ' days · ' + md;
+    return md;
+  }
+  function rentalStatus(r) {
+    if (r.dropoffDate > TODAY) return { label: 'Upcoming', pill: 'pending' };
+    if (r.pickupDate >= TODAY) return { label: 'Active', pill: 'ok' };
+    return { label: 'Overdue', pill: 'err' };
+  }
+  function rcard(r) {
+    const steps = rentalSteps(r);
+    const cur = stepCurrent(steps);
+    const pct = Math.round(steps.filter(stepDone).length / steps.length * 100);
+    const st = rentalStatus(r);
+    const dueLbl = r.dropoffDate > TODAY ? 'Arrives ' + fmtMD(r.dropoffDate)
+      : dayDiff(r.pickupDate) === 0 ? 'Due today'
+      : dayDiff(r.pickupDate) === 1 ? 'Due tomorrow'
+      : 'Due ' + fmtMD(r.pickupDate);
+    return `<div class="rcard" data-key="${escAttr(r.key)}">
+      <div class="rctop"><span class="rcname">${esc(r.name)}</span><span class="rcdue">${dueLbl}</span></div>
+      <div class="rcrow2"><span class="pill ${st.pill}">${st.label}</span>${r.package ? `<span class="tag">${esc(r.package)}</span>` : ''}<span class="openp">Open →</span></div>
+      <div class="rcnow">${esc(steps[cur].t)}</div>
+      <div class="rcbar"><i style="width:${pct}%"></i></div>
+    </div>`;
+  }
+  function renderRentals() {
+    const list = DATA.rentals.filter(r => r.pickupDate >= TODAY).sort((a, b) => String(a.dropoffDate).localeCompare(String(b.dropoffDate)));
+    const host = $('pg-rentals');
+    host.innerHTML = list.length ? list.map(rcard).join('') : '<div class="empty">No active or upcoming rentals.</div>';
+    host.querySelectorAll('.rcard').forEach(c => c.onclick = () => openRental(c.dataset.key));
+    const ov = $('ov-rentals');
+    ov.innerHTML = list.length ? list.slice(0, 4).map(rcard).join('') : '<div class="empty">No active or upcoming rentals.</div>';
+    ov.querySelectorAll('.rcard').forEach(c => c.onclick = () => openRental(c.dataset.key));
+  }
+  function openRental(key) {
+    const r = DATA.rentals.find(x => x.key === key); if (!r) return;
+    const steps = rentalSteps(r), cur = stepCurrent(steps);
+    $('rdtl-name').textContent = r.name;
+    $('rdtl-sub').textContent = `${r.package || ''} · ${r.serviceType === 'self' ? 'Self pickup' : 'Delivery'} · ${fmtPrice(r.price)}`;
+    $('rtl').innerHTML = steps.map((s, i) => {
+      const done = stepDone(s), isNow = i === cur, cls = done ? 'done' : isNow ? 'now' : '';
+      return `<div class="tstep ${cls}"><span class="tdot"></span>
+        <div><div class="tt">${esc(s.t)}</div><div class="tsub">${stepLabel(s)}</div></div>
+        ${isNow ? '<span class="nowb">NOW</span>' : ''}</div>`;
+    }).join('');
+    setNav('rentals'); showPage('rdetail');
+  }
+  $('backb').onclick = () => { setNav('rentals'); showPage('rentals'); };
+
+  // ---- Schedule ----
+  function scheduleEvents() {
+    const events = [];
+    for (const r of DATA.rentals) {
+      const self = r.serviceType === 'self';
+      events.push({ date: r.dropoffDate, time: r.dropoffTime || '', type: self ? 'Customer pickup' : 'Deliver',
+        name: r.name, pkg: r.package, addr: self ? '' : (r.dropoffAddress || r.address || ''), sms: r.deliverySms });
+      events.push({ date: r.pickupDate, time: r.pickupTime || '', type: self ? 'Customer return' : 'Pick up',
+        name: r.name, pkg: r.package, addr: self ? '' : (r.pickupAddress || r.address || ''), sms: r.pickupSms });
+    }
+    return events;
+  }
+  function renderStrip() {
+    const s = $('sch-strip');
+    const days = []; for (let i = 0; i < 7; i++) days.push(shiftDate(TODAY, i));
+    const events = scheduleEvents();
+    s.innerHTML = days.map((d, i) => {
+      const n = events.filter(e => e.date === d).length;
+      const dt = new Date(ymd(d));
+      return `<div class="dcard${d === selDay ? ' sel' : ''}" data-d="${d}">
+        <div class="dnum">${dt.getUTCDate()}</div><div class="ddow">${i === 0 ? 'Today' : dt.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })}</div>
+        <div class="dmon">${dt.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })}</div>
+        <div class="dupd">${n ? n + ' event' + (n > 1 ? 's' : '') : '—'}</div></div>`;
+    }).join('');
+    s.querySelectorAll('.dcard').forEach(c => c.onclick = () => { selDay = c.dataset.d; renderStrip(); renderScheduleDay(); });
+  }
+  function renderScheduleDay() {
+    const events = scheduleEvents().filter(e => e.date === selDay).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    const dt = new Date(ymd(selDay));
+    $('sch-dphead').textContent = (selDay === TODAY ? 'Today · ' : '') + dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' });
+    $('sch-entries').innerHTML = events.length ? events.map(e => `
+      <div class="entry"><span class="erole">${esc(e.type)}</span>
+        <span><div class="et">${esc(e.name)}${e.time ? ` <span style="color:var(--steel);font-size:11.5px;">${esc(e.time)}</span>` : ''}</div>
+        <div class="esub">${[e.pkg, e.addr].filter(Boolean).map(esc).join(' · ')}</div></span>
+        ${e.sms ? `<a class="txt" href="${e.sms}">Text →</a>` : ''}</div>`).join('') : '<div class="empty">Nothing scheduled.</div>';
+
+    if (selDay === TODAY) {
+      const allTexts = [
+        ...DATA.reminders.delivery.map(r => ({ ...r, cat: '🚚 Delivery tomorrow' })),
+        ...DATA.reminders.pickup.map(r => ({ ...r, cat: '📦 Pickup in 2 days' })),
+        ...DATA.reminders.review.map(r => ({ ...r, cat: '⭐ Review request' })),
+      ];
+      $('sch-texts-wrap').style.display = allTexts.length ? 'block' : 'none';
+      $('sch-texts').innerHTML = allTexts.map(r => `
+        <div class="entry"><span class="erole" style="background:var(--ink);">${esc(r.cat)}</span>
+          <span><div class="et">${esc(r.name)}</div><div class="esub">${[r.phone, r.package].filter(Boolean).map(esc).join(' · ')}</div></span>
+          <a class="txt" href="${r.sms}">Text →</a></div>`).join('');
+    } else {
+      $('sch-texts-wrap').style.display = 'none';
+    }
+  }
+
+  // ---- Overview extras ----
+  function renderOverview() {
+    $('ov-alerts').innerHTML = computeAlerts().map(a => `<div class="alert ${a.type}">${a.msg}</div>`).join('');
+    const active = DATA.rentals.filter(r => r.dropoffDate <= TODAY && r.pickupDate >= TODAY);
+    const totesAvailable = computeTotesAvailable();
+    const pending = DATA.requests.filter(r => ACTIVE_STATUSES.includes(r.status)).length;
+    const k = computeKPIs('month');
+    $('ov-net').textContent = (k.net >= 0 ? '' : '−') + moneyDec(Math.abs(k.net));
+    $('ov-netsub').textContent = `${moneyDec(k.revenue)} revenue − ${moneyDec(k.expTotal)} expenses`;
+    $('ov-tiles').innerHTML = `
+      <div class="gtile"><div class="k">Active rentals</div><div class="v">${active.length}</div></div>
+      <div class="gtile"><div class="k">Totes available</div><div class="v">${totesAvailable}</div></div>
+      <div class="gtile"><div class="k">Requests pending</div><div class="v">${pending}</div></div>`;
+  }
+  function renderOverviewWeek() {
+    const events = scheduleEvents().filter(e => e.date >= TODAY).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).slice(0, 3);
+    $('ov-week').innerHTML = events.length ? events.map(e => `
+      <div class="entry" style="margin-bottom:8px;"><span class="erole">${esc(e.type)}</span>
+        <span><div class="et" style="font-size:13px;">${esc(e.name)}</div><div class="esub">${fmtMD(e.date)}${e.time ? ' · ' + esc(e.time) : ''}</div></span></div>`).join('')
+      : '<div class="empty">Nothing scheduled this week.</div>';
+  }
+
+  // ---- Finance (mirrors admin.html's KPI math) ----
+  function periodRange(period, todayISO) {
+    const d = new Date(todayISO + 'T12:00:00Z');
+    if (period === 'week') {
+      const start = shiftDate(todayISO, -6);
+      return { start, end: todayISO, prevStart: shiftDate(start, -7), prevEnd: shiftDate(start, -1) };
+    }
+    if (period === 'month') {
+      const y = d.getUTCFullYear(), m = d.getUTCMonth();
+      const start = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
+      const prevStart = new Date(Date.UTC(y, m - 1, 1)).toISOString().slice(0, 10);
+      const prevEnd = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+      return { start, end: todayISO, prevStart, prevEnd };
+    }
+    if (period === 'year') {
+      const y = d.getUTCFullYear();
+      return { start: `${y}-01-01`, end: todayISO, prevStart: `${y - 1}-01-01`, prevEnd: `${y - 1}-12-31` };
+    }
+    return { start: '0000-01-01', end: todayISO, prevStart: null, prevEnd: null };
+  }
+  function computeKPIs(period) {
+    const range = periodRange(period, TODAY);
+    const inRange = (dateStr, s, e) => dateStr && dateStr >= s && dateStr <= e;
+    const rentalsIn = DATA.rentals.filter(r => inRange(r.dropoffDate, range.start, range.end));
+    const expensesIn = DATA.expenses.filter(e => inRange(e.date, range.start, range.end));
+    const revenue = sumPrice(rentalsIn);
+    const expTotal = expensesIn.reduce((t, e) => t + (e.amount || 0), 0);
+    let trendPct = null;
+    if (range.prevStart) {
+      const prevRevenue = sumPrice(DATA.rentals.filter(r => inRange(r.dropoffDate, range.prevStart, range.prevEnd)));
+      if (prevRevenue > 0) trendPct = Math.round(((revenue - prevRevenue) / prevRevenue) * 100);
+    }
+    return { revenue, expTotal, net: revenue - expTotal, count: rentalsIn.length, trendPct };
+  }
+  function monthlyRevenue() {
+    const year = new Date(TODAY + 'T12:00:00Z').getUTCFullYear();
+    const totals = new Array(12).fill(0);
+    for (const r of DATA.rentals) {
+      if (!r.dropoffDate) continue;
+      const [y, m] = r.dropoffDate.split('-').map(Number);
+      if (y === year) totals[m - 1] += priceNum(r.price);
+    }
+    return { year, totals };
+  }
+  function expenseCategories() {
+    const map = {};
+    for (const e of DATA.expenses) map[e.category] = (map[e.category] || 0) + (e.amount || 0);
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+  }
+  const PERIOD_LABEL = { week: 'Last 7 Days', month: 'This Month', year: 'This Year', all: 'All Time' };
+  function renderFinance() {
+    const k = computeKPIs(PERIOD);
+    $('finNetLbl').textContent = `Net Income — ${PERIOD_LABEL[PERIOD]}`;
+    $('finNetAmt').textContent = (k.net >= 0 ? '' : '−') + moneyDec(Math.abs(k.net));
+    $('finNetAmt').style.color = k.net >= 0 ? 'var(--green)' : 'var(--red)';
+    $('finNetSub').textContent = `${moneyDec(k.revenue)} revenue − ${moneyDec(k.expTotal)} expenses`;
+    const trend = k.trendPct === null ? '' : `<div style="font-size:11px;font-weight:700;margin-top:4px;color:${k.trendPct >= 0 ? 'var(--green)' : 'var(--red)'}">${k.trendPct >= 0 ? '▲' : '▼'} ${Math.abs(k.trendPct)}% vs prior period</div>`;
+    $('finTiles').innerHTML = `
+      <div class="scard gold"><div class="num">${money(k.revenue)}</div><div class="lbl">Revenue</div>${trend}</div>
+      <div class="scard"><div class="num">${k.count}</div><div class="lbl">Rentals</div></div>
+      <div class="scard"><div class="num">${moneyDec(k.expTotal)}</div><div class="lbl">Expenses</div></div>`;
+
+    const MONS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const { year, totals } = monthlyRevenue();
+    $('finYearLbl').textContent = String(year);
+    const max = Math.max(1, ...totals);
+    $('finBars').innerHTML = totals.map((v, i) => `<div class="barcol"><div class="fill" style="height:${Math.max(2, Math.round(v / max * 100))}%" title="${MONS[i]}: ${money(v)}"></div></div>`).join('');
+    $('finBarLbls').innerHTML = MONS.map(m => `<span>${m}</span>`).join('');
+
+    const cats = expenseCategories();
+    $('finCats').innerHTML = cats.length ? cats.map(([c, amt]) => `<div class="catrow"><span>${esc(c)}</span><b>${moneyDec(amt)}</b></div>`).join('') : '<div class="empty">No expenses logged yet.</div>';
+
+    const totalMiles = DATA.mileage.reduce((t, m) => t + (m.miles || 0), 0);
+    const rate = DATA.mileageRate;
+    $('finMileage').textContent = totalMiles ? `${totalMiles.toLocaleString()} mi logged${rate ? ` · ${moneyDec(totalMiles * rate)} deduction @ $${rate}/mi` : ''}` : 'No mileage logged yet.';
+  }
+  document.querySelectorAll('#finToggle button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#finToggle button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      PERIOD = btn.dataset.period;
+      renderFinance();
+    });
+  });
+
+  function renderAll() {
+    renderOverview();
+    renderOverviewWeek();
+    renderPipeline();
+    renderOutreach();
+    renderRentals();
+    renderStrip();
+    renderScheduleDay();
+    renderFinance();
+  }
+
+  // ---- Nav / routing ----
+  const TITLES = {
+    overview: ['Overview', 'Everything at a glance'],
+    pipeline: ['Pipeline', 'Booking requests, new to invoiced'],
+    schedule: ['Schedule', 'Today and the week ahead'],
+    rentals: ['Rentals', 'Every active and upcoming booking'],
+    rdetail: ['Rentals', 'Rental detail'],
+    finance: ['Finance', 'Revenue, expenses, and trend'],
+  };
+  function showPage(p) {
+    document.querySelectorAll('.page').forEach(pg => pg.classList.toggle('on', pg.id === p));
+    $('ptitle').textContent = TITLES[p][0];
+    $('psub').textContent = TITLES[p][1];
+  }
+  function setNav(p) {
+    document.querySelectorAll('.snav[data-p]').forEach(x => x.classList.toggle('on', x.dataset.p === p));
+  }
+  document.querySelectorAll('.snav[data-p]').forEach(n => n.onclick = () => { setNav(n.dataset.p); showPage(n.dataset.p); });
+
+  $('logoutBtn').addEventListener('click', () => {
+    localStorage.removeItem('rto-admin-username');
+    localStorage.removeItem('rto-admin-password');
+    location.href = 'admin-login.html';
+  });
+
+  loadAll();
+</script>
+</body>
+</html>
