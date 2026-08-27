@@ -10,6 +10,26 @@
 <title>Finance — Ready Tote Oklahoma (Internal)</title>
 <link rel="stylesheet" href="admin-shared.css?v=20260819">
 <script src="admin-shared.js?v=20260819"></script>
+<style>
+  /* Collapsible finance sections -- Sales/Expenses/Mileage can each get
+     long, so the whole block folds away via <details>/<summary> instead of
+     forcing a scroll past data Chris isn't looking at right now. */
+  details.fin-section{border-top:1px solid var(--line); margin-top:22px; padding-top:18px;}
+  details.fin-section:first-of-type{border-top:none; margin-top:0; padding-top:0;}
+  details.fin-section > summary{
+    list-style:none; cursor:pointer; user-select:none;
+    display:flex; align-items:center; gap:8px;
+    font-family:'Archivo Black', sans-serif; font-size:0.95rem; margin:0;
+  }
+  details.fin-section > summary::-webkit-details-marker{display:none;}
+  details.fin-section > summary::before{
+    content:'▸'; color:var(--gold); font-size:0.8rem; flex:none;
+    transition:transform 0.15s ease;
+  }
+  details.fin-section[open] > summary::before{transform:rotate(90deg);}
+  details.fin-section > summary:hover{color:var(--gold);}
+  details.fin-section .fin-section-body{margin-top:14px;}
+</style>
 </head>
 <body>
 <nav class="admin-nav" aria-label="Admin tools">
@@ -39,85 +59,97 @@
       <div id="netIncomeSub" style="font-size:0.78rem; color:var(--steel); font-family:'JetBrains Mono',monospace;"></div>
     </div>
 
-    <h2>💰 Sales</h2>
-    <div class="rem" id="salesSummary" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
-    <div id="salesByMonth"></div>
+    <details class="fin-section" open>
+      <summary>💰 Sales</summary>
+      <div class="fin-section-body">
+        <div class="rem" id="salesSummary" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
+        <div id="salesByMonth"></div>
 
-    <h3 style="font-size:0.88rem; margin:22px 0 8px;">📊 Monthly Breakdown</h3>
-    <div id="monthlyBreakdown"></div>
+        <h3 style="font-size:0.88rem; margin:22px 0 8px;">📊 Monthly Breakdown</h3>
+        <div id="monthlyBreakdown"></div>
 
-    <div class="grid2" id="salesDetails">
-      <div>
-        <h3 style="font-size:0.88rem; margin:16px 0 8px;">📦 By Package</h3>
-        <div id="salesByPackage"></div>
+        <div class="grid2" id="salesDetails">
+          <div>
+            <h3 style="font-size:0.88rem; margin:16px 0 8px;">📦 By Package</h3>
+            <div id="salesByPackage"></div>
+          </div>
+          <div>
+            <h3 style="font-size:0.88rem; margin:16px 0 8px;">🕐 Recent Rentals</h3>
+            <div id="recentRentals"></div>
+          </div>
+        </div>
+        <button type="button" id="csvBtn" style="background:var(--ink); color:#fff; margin-top:14px;">Download rental log (CSV)</button>
       </div>
-      <div>
-        <h3 style="font-size:0.88rem; margin:16px 0 8px;">🕐 Recent Rentals</h3>
-        <div id="recentRentals"></div>
-      </div>
-    </div>
-    <button type="button" id="csvBtn" style="background:var(--ink); color:#fff; margin-top:14px;">Download rental log (CSV)</button>
+    </details>
 
-    <h2>💵 Expenses</h2>
-    <div class="rem" id="expTotals" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
-    <div class="rem">
-      <div class="grid2" style="gap:10px;">
-        <input type="date" id="expDate">
-        <select id="expCategory">
-          <option>Equipment</option><option>Supplies</option><option>Fuel</option>
-          <option>Software &amp; Fees</option><option>Insurance</option><option>Marketing</option><option>Other</option>
-        </select>
-        <select id="expRecurring">
-          <option value="one-time">One-time cost</option>
-          <option value="monthly">Recurring — monthly</option>
-          <option value="yearly">Recurring — yearly</option>
-        </select>
-        <div class="money-field"><input type="number" id="expAmount" placeholder="Amount" step="0.01" min="0"></div>
+    <details class="fin-section" open>
+      <summary>💵 Expenses</summary>
+      <div class="fin-section-body">
+        <div class="rem" id="expTotals" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
+        <div class="rem">
+          <div class="grid2" style="gap:10px;">
+            <input type="date" id="expDate">
+            <select id="expCategory">
+              <option>Equipment</option><option>Supplies</option><option>Fuel</option>
+              <option>Software &amp; Fees</option><option>Insurance</option><option>Marketing</option><option>Other</option>
+            </select>
+            <select id="expRecurring">
+              <option value="one-time">One-time cost</option>
+              <option value="monthly">Recurring — monthly</option>
+              <option value="yearly">Recurring — yearly</option>
+            </select>
+            <div class="money-field"><input type="number" id="expAmount" placeholder="Amount" step="0.01" min="0"></div>
+          </div>
+          <div class="grid2" style="gap:10px; margin-top:10px;">
+            <input type="text" id="expVendor" placeholder="Vendor (e.g., Amazon, Home Depot)">
+            <select id="expPayment" style="width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);">
+              <option value="">Payment method…</option>
+              <option>Chris's Prime CC</option>
+              <option>Lendy's Prime CC</option>
+              <option>Chris's AAdvantage CC</option>
+              <option>Lendy's AAdvantage CC</option>
+              <option>TFCU Checking Account</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <input type="text" id="expDesc" placeholder="Description / notes (optional)" style="margin-top:10px;">
+          <input type="hidden" id="expEditKey" value="">
+          <div style="display:flex; gap:10px;">
+            <button type="button" id="expAddBtn" style="flex:1;">Add expense</button>
+            <button type="button" id="expCancelBtn" class="secondary" onclick="finEditCancel()" style="display:none; flex:1;">Cancel edit</button>
+          </div>
+        </div>
+        <div class="rem" style="display:flex; gap:10px; flex-wrap:wrap;">
+          <select id="expFilterMonth" style="flex:1; min-width:140px;"><option value="">All months</option></select>
+          <select id="expFilterCategory" style="flex:1; min-width:140px;"><option value="">All categories</option></select>
+          <select id="expFilterPayment" style="flex:1; min-width:160px;"><option value="">All payment methods</option></select>
+          <input type="text" id="expFilterSearch" placeholder="Search vendor / notes…" style="flex:2; min-width:160px;">
+          <button type="button" id="expFilterClear" class="secondary" style="width:auto; margin:0; padding:11px 16px; flex:0 0 auto;">Clear</button>
+        </div>
+        <p class="note" id="expCount" style="margin:2px 0 10px;"></p>
+        <div id="expList"></div>
+        <button type="button" id="expCsvBtn" style="background:var(--ink); color:#fff;">Download expenses (CSV)</button>
       </div>
-      <div class="grid2" style="gap:10px; margin-top:10px;">
-        <input type="text" id="expVendor" placeholder="Vendor (e.g., Amazon, Home Depot)">
-        <select id="expPayment" style="width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);">
-          <option value="">Payment method…</option>
-          <option>Chris's Prime CC</option>
-          <option>Lendy's Prime CC</option>
-          <option>Chris's AAdvantage CC</option>
-          <option>Lendy's AAdvantage CC</option>
-          <option>TFCU Checking Account</option>
-          <option>Other</option>
-        </select>
-      </div>
-      <input type="text" id="expDesc" placeholder="Description / notes (optional)" style="margin-top:10px;">
-      <input type="hidden" id="expEditKey" value="">
-      <div style="display:flex; gap:10px;">
-        <button type="button" id="expAddBtn" style="flex:1;">Add expense</button>
-        <button type="button" id="expCancelBtn" class="secondary" onclick="finEditCancel()" style="display:none; flex:1;">Cancel edit</button>
-      </div>
-    </div>
-    <div class="rem" style="display:flex; gap:10px; flex-wrap:wrap;">
-      <select id="expFilterMonth" style="flex:1; min-width:140px;"><option value="">All months</option></select>
-      <select id="expFilterCategory" style="flex:1; min-width:140px;"><option value="">All categories</option></select>
-      <select id="expFilterPayment" style="flex:1; min-width:160px;"><option value="">All payment methods</option></select>
-      <input type="text" id="expFilterSearch" placeholder="Search vendor / notes…" style="flex:2; min-width:160px;">
-      <button type="button" id="expFilterClear" class="secondary" style="width:auto; margin:0; padding:11px 16px; flex:0 0 auto;">Clear</button>
-    </div>
-    <p class="note" id="expCount" style="margin:2px 0 10px;"></p>
-    <div id="expList"></div>
-    <button type="button" id="expCsvBtn" style="background:var(--ink); color:#fff;">Download expenses (CSV)</button>
+    </details>
 
-    <h2>🚗 Mileage</h2>
-    <div class="rem" id="mileTotals" style="display:flex; gap:20px; flex-wrap:wrap; align-items:center;"></div>
-    <div class="rem">
-      <p class="empty" style="margin:0 0 8px;">Quick-fill from recent trips:</p>
-      <div id="tripChips" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
-      <div class="grid2" style="gap:10px;">
-        <input type="date" id="mileDate">
-        <input type="number" id="mileMiles" placeholder="Miles" step="0.1" min="0">
+    <details class="fin-section" open>
+      <summary>🚗 Mileage</summary>
+      <div class="fin-section-body">
+        <div class="rem" id="mileTotals" style="display:flex; gap:20px; flex-wrap:wrap; align-items:center;"></div>
+        <div class="rem">
+          <p class="empty" style="margin:0 0 8px;">Quick-fill from recent trips:</p>
+          <div id="tripChips" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
+          <div class="grid2" style="gap:10px;">
+            <input type="date" id="mileDate">
+            <input type="number" id="mileMiles" placeholder="Miles" step="0.1" min="0">
+          </div>
+          <input type="text" id="milePurpose" placeholder="Purpose (e.g., Deliver — Jane Smith, Moore)" style="margin-top:10px;">
+          <button type="button" id="mileAddBtn">Add trip</button>
+        </div>
+        <div id="mileList"></div>
+        <button type="button" id="mileCsvBtn" style="background:var(--ink); color:#fff;">Download mileage (CSV)</button>
       </div>
-      <input type="text" id="milePurpose" placeholder="Purpose (e.g., Deliver — Jane Smith, Moore)" style="margin-top:10px;">
-      <button type="button" id="mileAddBtn">Add trip</button>
-    </div>
-    <div id="mileList"></div>
-    <button type="button" id="mileCsvBtn" style="background:var(--ink); color:#fff;">Download mileage (CSV)</button>
+    </details>
   </div>
 </div>
 

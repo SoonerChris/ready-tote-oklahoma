@@ -117,28 +117,54 @@ button.secondary:hover{background:var(--gold-bg);}
 .money-field.compact > input{padding-left:22px;}
 .money-field.compact::before{left:9px; font-size:0.85rem;}
 
-/* Shared admin nav bar -- lets Chris jump directly between admin tools */
+/* Shared admin nav bar -- lets Chris jump directly between admin tools.
+   Desktop: a fixed sidebar down the left edge (out of normal flow, so it
+   doesn't matter whether a given page nests <nav> inside .wrap or drops it
+   right after <body> -- both patterns exist across the admin-*.html files).
+   body gets padding-left to reserve room for it; !important because a few
+   pages set their own body{padding:...} shorthand in a later <style> block,
+   which would otherwise zero the left padding back out.
+   Narrow screens revert to the original horizontal top bar -- a fixed
+   sidebar eats too much width on a phone to be worth it there. */
 .admin-nav{
-  max-width:640px;margin:0 auto 14px;
-  display:flex; flex-wrap:wrap; gap:4px; justify-content:center;
-  background:var(--white); border:1px solid var(--line); border-radius:8px;
-  padding:6px;
+  position:fixed; top:0; left:0; bottom:0;
+  width:190px;
+  display:flex; flex-direction:column; gap:2px;
+  background:var(--white); border-right:1px solid var(--line);
+  padding:20px 10px; margin:0;
+  overflow-y:auto;
 }
-.admin-nav.wide{max-width:840px;}
+.admin-nav.wide{max-width:none;}
 .admin-nav a{
   position:relative;
-  flex:0 1 auto; text-align:center; white-space:nowrap;
-  padding:10px 12px 8px; font-size:0.82rem; font-weight:600;
+  flex:none; text-align:left; white-space:nowrap;
+  padding:10px 12px; font-size:0.82rem; font-weight:600;
   color:var(--steel); text-decoration:none; border-radius:6px;
 }
 .admin-nav a:hover{background:var(--gold-bg); color:var(--ink);}
-.admin-nav a[aria-current="page"]{background:none; color:var(--ink); font-weight:700;}
+.admin-nav a[aria-current="page"]{background:var(--gold-bg); color:var(--ink); font-weight:700;}
 .admin-nav a[aria-current="page"]::after{
-  content:''; position:absolute; left:12px; right:12px; bottom:2px; height:3px;
+  content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px;
   background:var(--gold); border-radius:2px;
 }
-.admin-nav a.logout-link{color:var(--red); border:1px solid rgba(192,57,43,0.3);}
+.admin-nav a.logout-link{margin-top:auto; color:var(--red); border:1px solid rgba(192,57,43,0.3);}
 .admin-nav a.logout-link:hover{background:var(--red-bg);}
+
+body{padding-left:214px !important;}
+
+@media(max-width:760px){
+  body{padding-left:14px !important;}
+  .admin-nav{
+    position:static; width:auto; max-width:640px; margin:0 auto 14px;
+    flex-direction:row; flex-wrap:wrap; justify-content:center;
+    border:1px solid var(--line); border-radius:8px;
+    padding:6px; gap:4px; bottom:auto; overflow-y:visible;
+  }
+  .admin-nav.wide{max-width:840px;}
+  .admin-nav a{flex:0 1 auto; text-align:center; padding:10px 12px 8px;}
+  .admin-nav a[aria-current="page"]::after{left:12px; right:12px; top:auto; bottom:2px; width:auto; height:3px;}
+  .admin-nav a.logout-link{margin-top:0;}
+}
 @media(max-width:500px){
   .admin-nav{gap:4px;}
   .admin-nav a{flex:1 1 40%; font-size:0.78rem; padding:8px 6px 7px;}
