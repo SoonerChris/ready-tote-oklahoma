@@ -1212,6 +1212,10 @@
 
   const form = document.getElementById('bookingForm');
   const formSuccess = document.getElementById('formSuccess');
+  // Guards the Meta Pixel Lead event so it fires at most once per page load:
+  // the success state is terminal (the form is hidden and never re-shown), so
+  // one successful submission = one Lead event, never a duplicate.
+  let leadTracked = false;
 
   function encodeForNetlify(formEl) {
     const data = new FormData(formEl);
@@ -1236,8 +1240,14 @@
         form.style.display = 'none';
         formSuccess.style.display = 'block';
         formSuccess.focus();
-        if (typeof fbq === 'function') {
-          fbq('track', 'Lead');
+        if (!leadTracked) {
+          leadTracked = true;
+          if (typeof fbq !== 'undefined') {
+            fbq('track', 'Lead', {
+              content_name: 'Tote Rental Booking Request',
+              content_category: 'Booking Request'
+            });
+          }
         }
       })
       .catch(() => {
