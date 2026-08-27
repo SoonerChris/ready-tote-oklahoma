@@ -137,10 +137,12 @@ button.secondary:hover{background:var(--gold-bg);}
 .admin-nav.wide{max-width:none;}
 .admin-nav a{
   position:relative;
+  display:flex; align-items:center; gap:8px;
   flex:none; text-align:left; white-space:nowrap;
   padding:10px 12px; font-size:0.82rem; font-weight:600;
   color:var(--steel); text-decoration:none; border-radius:6px;
 }
+.admin-nav .nav-icon{flex:none; font-size:0.92rem; line-height:1;}
 .admin-nav a:hover{background:var(--gold-bg); color:var(--ink);}
 .admin-nav a[aria-current="page"]{background:var(--gold-bg); color:var(--ink); font-weight:700;}
 .admin-nav a[aria-current="page"]::after{
@@ -161,7 +163,7 @@ body{padding-left:214px !important;}
     padding:6px; gap:4px; bottom:auto; overflow-y:visible;
   }
   .admin-nav.wide{max-width:840px;}
-  .admin-nav a{flex:0 1 auto; text-align:center; padding:10px 12px 8px;}
+  .admin-nav a{flex:0 1 auto; justify-content:center; text-align:center; padding:10px 12px 8px;}
   .admin-nav a[aria-current="page"]::after{left:12px; right:12px; top:auto; bottom:2px; width:auto; height:3px;}
   .admin-nav a.logout-link{margin-top:0;}
 }
