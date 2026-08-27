@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Finance — Ready Tote Oklahoma (Internal)</title>
+<link rel="stylesheet" href="admin-shared.css?v=20260819">
+<script src="admin-shared.js?v=20260819"></script>
+<style>
+  /* Collapsible finance sections -- Sales/Expenses/Mileage can each get
+     long, so the whole block folds away via <details>/<summary> instead of
+     forcing a scroll past data Chris isn't looking at right now. */
+  details.fin-section{border-top:1px solid var(--line); margin-top:22px; padding-top:18px;}
+  details.fin-section:first-of-type{border-top:none; margin-top:0; padding-top:0;}
+  details.fin-section > summary{
+    list-style:none; cursor:pointer; user-select:none;
+    display:flex; align-items:center; gap:8px;
+    font-family:'Archivo Black', sans-serif; font-size:0.95rem; margin:0;
+  }
+  details.fin-section > summary::-webkit-details-marker{display:none;}
+  details.fin-section > summary::before{
+    content:'▸'; color:var(--gold); font-size:0.8rem; flex:none;
+    transition:transform 0.15s ease;
+  }
+  details.fin-section[open] > summary::before{transform:rotate(90deg);}
+  details.fin-section > summary:hover{color:var(--gold);}
+  details.fin-section .fin-section-body{margin-top:14px;}
+</style>
+</head>
+<body>
+<nav class="admin-nav" aria-label="Admin tools">
+  <a href="admin.html">Dashboard</a>
+  <a href="admin-requests.html">Requests</a>
+  <a href="admin-invoice.html">Send Invoice</a>
+  <a href="admin-add-rental.html">Add Rental</a>
+  <a href="admin-reminders.html">Reminders</a>
+  <a href="admin-rentals.html">All Rentals</a>
+  <a href="admin-contacts.html">Contacts</a>
+  <a href="admin-finance.html" aria-current="page">Finance</a>
+  <a href="admin-outreach.html">Outreach</a>
+  <a href="admin-inventory.html">Inventory</a>
+</nav>
+<div class="card">
+  <h1>Finance</h1>
+  <p class="sub">Sales totals, expenses, and mileage. All amounts in USD.</p>
+
+  <input type="hidden" id="secret">
+  <button id="loadBtn">Load finance data</button>
+  <div class="status" id="status"></div>
+
+  <div id="results" style="display:none;">
+    <div class="rem" id="netIncomeBubble" style="text-align:center; background:var(--cream); border:2px solid var(--gold); margin-bottom:20px;">
+      <div style="font-size:0.7rem; color:var(--steel); font-weight:bold; letter-spacing:0.05em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">📈 Net Income (YTD)</div>
+      <div id="netIncomeAmount" style="font-family:'Archivo Black',sans-serif; font-size:2rem; margin:8px 0 2px;">$0.00</div>
+      <div id="netIncomeSub" style="font-size:0.78rem; color:var(--steel); font-family:'JetBrains Mono',monospace;"></div>
+    </div>
+
+    <details class="fin-section" open>
+      <summary>💰 Sales</summary>
+      <div class="fin-section-body">
+        <div class="rem" id="salesSummary" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
+        <div id="salesByMonth"></div>
+
+        <h3 style="font-size:0.88rem; margin:22px 0 8px;">📊 Monthly Breakdown</h3>
+        <div id="monthlyBreakdown"></div>
+
+        <div class="grid2" id="salesDetails">
+          <div>
+            <h3 style="font-size:0.88rem; margin:16px 0 8px;">📦 By Package</h3>
+            <div id="salesByPackage"></div>
+          </div>
+          <div>
+            <h3 style="font-size:0.88rem; margin:16px 0 8px;">🕐 Recent Rentals</h3>
+            <div id="recentRentals"></div>
+          </div>
+        </div>
+        <button type="button" id="csvBtn" style="background:var(--ink); color:#fff; margin-top:14px;">Download rental log (CSV)</button>
+      </div>
+    </details>
+
+    <details class="fin-section" open>
+      <summary>💵 Expenses</summary>
+      <div class="fin-section-body">
+        <div class="rem" id="expTotals" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
+        <div class="rem">
+          <div class="grid2" style="gap:10px;">
+            <input type="date" id="expDate">
+            <select id="expCategory">
+              <option>Equipment</option><option>Supplies</option><option>Fuel</option>
+              <option>Software &amp; Fees</option><option>Insurance</option><option>Marketing</option><option>Other</option>
+            </select>
+            <select id="expRecurring">
+              <option value="one-time">One-time cost</option>
+              <option value="monthly">Recurring — monthly</option>
+              <option value="yearly">Recurring — yearly</option>
+            </select>
+            <div class="money-field"><input type="number" id="expAmount" placeholder="Amount" step="0.01" min="0"></div>
+          </div>
+          <div class="grid2" style="gap:10px; margin-top:10px;">
+            <input type="text" id="expVendor" placeholder="Vendor (e.g., Amazon, Home Depot)">
+            <select id="expPayment" style="width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);">
+              <option value="">Payment method…</option>
+              <option>Chris's Prime CC</option>
+              <option>Lendy's Prime CC</option>
+              <option>Chris's AAdvantage CC</option>
+              <option>Lendy's AAdvantage CC</option>
+              <option>TFCU Checking Account</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <input type="text" id="expDesc" placeholder="Description / notes (optional)" style="margin-top:10px;">
+          <input type="hidden" id="expEditKey" value="">
+          <div style="display:flex; gap:10px;">
+            <button type="button" id="expAddBtn" style="flex:1;">Add expense</button>
+            <button type="button" id="expCancelBtn" class="secondary" onclick="finEditCancel()" style="display:none; flex:1;">Cancel edit</button>
+          </div>
+        </div>
+        <div class="rem" style="display:flex; gap:10px; flex-wrap:wrap;">
+          <select id="expFilterMonth" style="flex:1; min-width:140px;"><option value="">All months</option></select>
+          <select id="expFilterCategory" style="flex:1; min-width:140px;"><option value="">All categories</option></select>
+          <select id="expFilterPayment" style="flex:1; min-width:160px;"><option value="">All payment methods</option></select>
+          <input type="text" id="expFilterSearch" placeholder="Search vendor / notes…" style="flex:2; min-width:160px;">
+          <button type="button" id="expFilterClear" class="secondary" style="width:auto; margin:0; padding:11px 16px; flex:0 0 auto;">Clear</button>
+        </div>
+        <p class="note" id="expCount" style="margin:2px 0 10px;"></p>
+        <div id="expList"></div>
+        <button type="button" id="expCsvBtn" style="background:var(--ink); color:#fff;">Download expenses (CSV)</button>
+      </div>
+    </details>
+
+    <details class="fin-section" open>
+      <summary>🚗 Mileage</summary>
+      <div class="fin-section-body">
+        <div class="rem" id="mileTotals" style="display:flex; gap:20px; flex-wrap:wrap; align-items:center;"></div>
+        <div class="rem">
+          <p class="empty" style="margin:0 0 8px;">Quick-fill from recent trips:</p>
+          <div id="tripChips" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
+          <div class="grid2" style="gap:10px;">
+            <input type="date" id="mileDate">
+            <input type="number" id="mileMiles" placeholder="Miles" step="0.1" min="0">
+          </div>
+          <input type="text" id="milePurpose" placeholder="Purpose (e.g., Deliver — Jane Smith, Moore)" style="margin-top:10px;">
+          <button type="button" id="mileAddBtn">Add trip</button>
+        </div>
+        <div id="mileList"></div>
+        <button type="button" id="mileCsvBtn" style="background:var(--ink); color:#fff;">Download mileage (CSV)</button>
+      </div>
+    </details>
+  </div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  // Restore shared secret from admin hub
+  $('secret').value = localStorage.getItem('rto-admin-password') || '';
+
+  let ALL_RENTALS = [];
+  let FIN = { expenses: [], mileage: [], mileageRate: null };
+
+  $('loadBtn').addEventListener('click', load);
+  // Auto-load if a secret is already saved (matches admin.html behavior)
+  if ($('secret').value) load();
+
+  async function load() {
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret.');
+    const btn = $('loadBtn');
+    btn.disabled = true; btn.textContent = 'Loading…';
+    try {
+      const [rentalsResp, finResp] = await Promise.all([
+        fetch('/.netlify/functions/get-rentals', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret }),
+        }),
+        fetch('/.netlify/functions/finance', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret, action: 'list' }),
+        }),
+      ]);
+      if (rentalsResp.status === 401 || finResp.status === 401) { showErr('Wrong admin secret.'); }
+      else if (!rentalsResp.ok || !finResp.ok) { showErr('Load failed.'); }
+      else {
+        const rd = await rentalsResp.json();
+        ALL_RENTALS = rd.rentals || [];
+        FIN = await finResp.json();
+        renderSales(ALL_RENTALS);
+        renderFinance();
+        renderNetIncome();
+        renderMonthlyBreakdown(ALL_RENTALS, FIN.expenses);
+        $('results').style.display = 'block';
+        $('status').style.display = 'none';
+      }
+    } catch { showErr('Network error — use this page on the live site.'); }
+    btn.disabled = false; btn.textContent = 'Load finance data';
+  }
+
+
+  function fmtPrice(p){ const s=String(p||'').trim(); return s ? (s.startsWith('$') ? esc(s) : '$'+esc(s)) : ''; }
+  function showErr(m){const s=$('status');s.className='status err';s.textContent=m;}
+  function thisYear(d){ return (d||'').slice(0,4) === String(new Date().getFullYear()); }
+  const money = n => '$' + Number(n||0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  function priceNum(p){ const m = String(p||'').replace(/[^0-9.]/g,''); return m ? parseFloat(m) : 0; }
+  function renderSales(rentals){
+    const now = new Date();
+    const thisMonth = now.toISOString().slice(0,7);
+    const thisYear = now.getFullYear().toString();
+    const today = now.toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+
+    const pn = p => { const m = String(p||'').replace(/[^0-9.]/g,''); return m ? parseFloat(m) : 0; };
+    const sum = arr => arr.reduce((t,r) => t + pn(r.price), 0);
+    const fmt = n => '$' + n.toLocaleString('en-US', {maximumFractionDigits:0});
+
+    const monthRentals = rentals.filter(r => (r.dropoffDate||'').slice(0,7) === thisMonth);
+    const ytdRentals = rentals.filter(r => (r.dropoffDate||'').slice(0,4) === thisYear);
+    const activeRentals = rentals.filter(r => r.dropoffDate <= today && r.pickupDate >= today);
+    const avgValue = rentals.length ? sum(rentals) / rentals.length : 0;
+
+    // Previous month comparison
+    const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonth = prevDate.toISOString().slice(0,7);
+    const prevRentals = rentals.filter(r => (r.dropoffDate||'').slice(0,7) === prevMonth);
+    const monthDiff = sum(monthRentals) - sum(prevRentals);
+    const monthDiffPct = sum(prevRentals) > 0 ? ((monthDiff / sum(prevRentals)) * 100).toFixed(0) : null;
+
+    // Summary cards
+    $('salesSummary').innerHTML = `
+      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--green);">${activeRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">Active Now</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${monthRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">This Month</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--gold);">${fmt(sum(monthRentals))}</div><div style="font-size:0.72rem;color:var(--steel);">Month Revenue</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${ytdRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">YTD Rentals</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--gold);">${fmt(sum(ytdRentals))}</div><div style="font-size:0.72rem;color:var(--steel);">YTD Revenue</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${rentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">All Time</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--gold);">${fmt(sum(rentals))}</div><div style="font-size:0.72rem;color:var(--steel);">Total Invoiced</div></div>
+      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${fmt(avgValue)}</div><div style="font-size:0.72rem;color:var(--steel);">Avg Order</div></div>
+    `;
+
+    // Monthly revenue (last 6 months)
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(d.toISOString().slice(0,7));
+    }
+    const monthlyData = months.map(m => {
+      const mrs = rentals.filter(r => (r.dropoffDate||'').slice(0,7) === m);
+      return { month: m, count: mrs.length, revenue: sum(mrs) };
+    });
+    const maxRev = Math.max(...monthlyData.map(m => m.revenue), 1);
+    const monthLabel = m => {
+      const d = new Date(m + '-01T12:00:00');
+      return d.toLocaleDateString('en-US', { month: 'short' });
+    };
+
+    $('salesByMonth').innerHTML = `
+      <h3 style="font-size:0.88rem; margin:16px 0 8px;">📊 Monthly Revenue (Last 6 Months)${monthDiffPct !== null ? ` <span style="font-size:0.75rem; color:${monthDiff >= 0 ? 'var(--green)' : 'var(--red)'}; margin-left:8px;">${monthDiff >= 0 ? '▲' : '▼'} ${Math.abs(monthDiffPct)}% vs last month</span>` : ''}</h3>
+      <div style="display:flex; align-items:flex-end; gap:8px; height:120px; padding:8px 0; border-bottom:1px solid var(--line);">
+        ${monthlyData.map(m => `
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
+            <div style="font-size:0.7rem; font-weight:bold; color:var(--ink);">${m.revenue > 0 ? fmt(m.revenue) : ''}</div>
+            <div style="width:100%; max-width:50px; background:${m.month === thisMonth ? 'var(--gold)' : 'var(--cream)'}; border:1px solid ${m.month === thisMonth ? 'var(--gold)' : 'var(--line)'}; border-radius:4px 4px 0 0; height:${Math.max(m.revenue / maxRev * 80, 4)}px;"></div>
+            <div style="font-size:0.68rem; color:var(--steel);">${monthLabel(m.month)}</div>
+            <div style="font-size:0.65rem; color:var(--steel);">${m.count} rental${m.count !== 1 ? 's' : ''}</div>
+          </div>
+        `).join('')}
+      </div>`;
+
+    // By package type
+    const byPkg = {};
+    for (const r of rentals) {
+      const pkg = r.package || 'Unknown';
+      if (!byPkg[pkg]) byPkg[pkg] = { count: 0, revenue: 0 };
+      byPkg[pkg].count++;
+      byPkg[pkg].revenue += pn(r.price);
+    }
+    const pkgEntries = Object.entries(byPkg).sort((a,b) => b[1].revenue - a[1].revenue);
+    $('salesByPackage').innerHTML = pkgEntries.length ? pkgEntries.map(([pkg, d]) => `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); font-size:0.82rem;">
+        <div>
+          <div style="font-weight:bold;">${esc(pkg)}</div>
+          <div style="color:var(--steel); font-size:0.75rem;">${d.count} rental${d.count !== 1 ? 's' : ''}</div>
+        </div>
+        <div style="font-weight:bold; color:var(--gold);">${fmt(d.revenue)}</div>
+      </div>`).join('') : '<div style="color:var(--steel);font-size:0.82rem;">No data yet.</div>';
+
+    // Recent rentals (last 8)
+    const recent = [...rentals].sort((a,b) => (b.invoicedAt||'').localeCompare(a.invoicedAt||'')).slice(0, 8);
+    $('recentRentals').innerHTML = recent.length ? recent.map(r => {
+      const invoiceDate = fmtDate((r.invoicedAt||'').slice(0,10));
+      const isActive = r.dropoffDate <= today && r.pickupDate >= today;
+      const isPast = r.pickupDate < today;
+      const status = isActive ? '<span style="color:var(--green);font-size:0.7rem;font-weight:bold;">● Active</span>'
+                   : isPast ? '<span style="color:var(--steel);font-size:0.7rem;">Completed</span>'
+                   : '<span style="color:var(--gold);font-size:0.7rem;font-weight:bold;">Upcoming</span>';
+      return `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); font-size:0.82rem;">
+        <div>
+          <div style="font-weight:bold;">${esc(r.name)} ${status}</div>
+          <div style="color:var(--steel); font-size:0.75rem;">${esc(invoiceDate)} · ${esc(r.package || '')}</div>
+        </div>
+        <div style="font-weight:bold;">${fmtPrice(r.price)}</div>
+      </div>`;
+    }).join('') : '<div style="color:var(--steel);font-size:0.82rem;">No rentals yet.</div>';
+  }
+
+  $('csvBtn').addEventListener('click', () => {
+    if (!ALL_RENTALS.length) return showErr('No rentals to export yet.');
+    const cols = ['invoicedAt','name','email','phone','package','price','duration','dropoffDate','dropoffTime','dropoffAddress','pickupDate','pickupTime','pickupAddress'];
+    const rows = [...ALL_RENTALS].sort((a,b) => (b.invoicedAt||'').localeCompare(a.invoicedAt||''))
+      .map(r => ({ ...r, invoicedAt: fmtDate((r.invoicedAt||'').slice(0,10)), dropoffDate: fmtDate(r.dropoffDate), pickupDate: fmtDate(r.pickupDate) }));
+    dlCsv('ready-tote-rentals', cols, rows);
+  });
+
+  // ---- Finance ----
+  const finCall = (payload) => fetch('/.netlify/functions/finance', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ secret: $('secret').value.trim(), ...payload }),
+  });
+  async function reloadFinance(){
+    const resp = await finCall({ action: 'list' });
+    if (resp.ok) { FIN = await resp.json(); renderFinance(); renderNetIncome(); renderMonthlyBreakdown(ALL_RENTALS, FIN.expenses); }
+  }
+
+  function renderFinance() {
+    const ytdExp = FIN.expenses.filter(e => thisYear(e.date));
+    let ytdTotal = 0, monthlyOverhead = 0;
+    const byCat = {};
+    for (const e of FIN.expenses) {
+      if (e.recurring === 'monthly') monthlyOverhead += e.amount;
+      else if (e.recurring === 'yearly') monthlyOverhead += e.amount / 12;
+    }
+    for (const e of ytdExp) {
+      ytdTotal += e.amount;
+      const b = byCat[e.category] || { oneTime: 0, monthly: 0 };
+      if (e.recurring === 'one-time' || !e.recurring) b.oneTime += e.amount;
+      else b.monthly += e.amount;
+      byCat[e.category] = b;
+    }
+    $('expTotals').innerHTML =
+      `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${money(ytdTotal)}</div><div style="font-size:0.75rem;color:var(--steel);">YTD expenses</div></div>` +
+      `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--gold);">${money(monthlyOverhead)}/mo</div><div style="font-size:0.75rem;color:var(--steel);">Est. monthly overhead</div></div>` +
+      Object.entries(byCat).map(([cat,amt]) => {
+        const sub = amt.monthly > 0 && amt.oneTime > 0 ? `${money(amt.oneTime)} + ${money(amt.monthly)} recurring`
+                  : amt.monthly > 0 ? `${money(amt.monthly)} recurring` : money(amt.oneTime);
+        return `<div><div style="font-size:0.9rem;font-weight:bold;">${sub}</div><div style="font-size:0.72rem;color:var(--steel);">${esc(cat)}</div></div>`;
+      }).join('');
+
+    populateExpenseFilters();
+    renderExpenseTable();
+
+    const ytdMiles = FIN.mileage.filter(m => thisYear(m.date)).reduce((t,m)=>t+m.miles,0);
+    const rate = FIN.mileageRate;
+    $('mileTotals').innerHTML =
+      `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${ytdMiles.toLocaleString('en-US',{maximumFractionDigits:1})} mi</div><div style="font-size:0.75rem;color:var(--steel);">YTD business miles</div></div>` +
+      (rate ? `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${money(ytdMiles*rate)}</div><div style="font-size:0.75rem;color:var(--steel);">Est. deduction @ $${rate}/mi</div></div>` : '') +
+      `<div style="display:flex; align-items:center; gap:6px;">
+        <div class="money-field compact" style="display:inline-block;">
+          <input type="number" id="rateInput" step="0.005" min="0" placeholder="0.65" value="${rate ?? ''}" style="width:110px; padding:8px 10px 8px 22px;">
+        </div>
+        <span style="font-size:0.78rem; color:var(--steel);">/mi</span>
+        <button type="button" onclick="saveRate()" style="width:auto; margin:0; padding:8px 14px; font-size:0.8rem;">Save rate</button>
+      </div>`;
+
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+    const lo = new Date(today+'T12:00:00Z'); lo.setUTCDate(lo.getUTCDate()-7);
+    const hi = new Date(today+'T12:00:00Z'); hi.setUTCDate(hi.getUTCDate()+7);
+    const loS = lo.toISOString().slice(0,10), hiS = hi.toISOString().slice(0,10);
+    const trips = [];
+    for (const r of ALL_RENTALS) {
+      if (r.serviceType === 'self') continue;
+      if (r.dropoffDate >= loS && r.dropoffDate <= hiS)
+        trips.push({ date: r.dropoffDate, purpose: 'Deliver — ' + r.name + (r.dropoffAddress||r.address ? ', ' + (r.dropoffAddress||r.address) : '') });
+      if (r.pickupDate >= loS && r.pickupDate <= hiS)
+        trips.push({ date: r.pickupDate, purpose: 'Pick up — ' + r.name + (r.pickupAddress||r.address ? ', ' + (r.pickupAddress||r.address) : '') });
+    }
+    trips.sort((a,b)=>b.date.localeCompare(a.date));
+    $('tripChips').innerHTML = trips.slice(0,8).map(t => `
+      <button type="button" style="width:auto; margin:0; padding:7px 12px; font-size:0.75rem; background:var(--cream); color:var(--ink); border:1px solid var(--line); border-radius:999px;"
+        onclick="fillTrip('${esc(t.date)}', '${esc(t.purpose).replaceAll("'","&#39;")}')">${esc(fmtDate(t.date).slice(0,5))} · ${esc(t.purpose.slice(0,34))}${t.purpose.length>34?'…':''}</button>`).join('')
+      || '<span class="empty">No rental trips in the last/next 7 days.</span>';
+
+    const mileSorted = [...FIN.mileage].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    $('mileList').innerHTML = mileSorted.slice(0,15).map(m => `
+      <div class="rem" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <div>
+          <div style="font-weight:bold; font-size:0.9rem;">${m.miles} mi</div>
+          <div style="font-size:0.78rem; color:var(--steel); margin:0;">${esc(fmtDate(m.date))} · ${esc(m.purpose)}</div>
+        </div>
+        <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
+          onclick="finDelete('${esc(m.key)}')">Delete</button>
+      </div>`).join('') || '<p class="empty">No trips logged yet.</p>';
+  }
+
+  function monthKey(d){ return (d||'').slice(0,7); }
+  function monthLabel(m){
+    const d = new Date(m + '-01T12:00:00');
+    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }
+
+  // Splits revenue, expenses, and net income out by calendar month, from the
+  // earliest rental/expense on record through the current month -- so this
+  // stays accurate whether there's 1 month of data or several years of it.
+  function renderMonthlyBreakdown(rentals, expenses){
+    const currentMonth = new Date().toISOString().slice(0,7);
+    const seen = [...rentals.map(r => monthKey(r.dropoffDate)), ...expenses.map(e => monthKey(e.date))].filter(Boolean);
+    const firstMonth = seen.length ? seen.sort()[0] : currentMonth;
+
+    const months = [];
+    let [y, m] = firstMonth.split('-').map(Number);
+    const [cy, cm] = currentMonth.split('-').map(Number);
+    while (y < cy || (y === cy && m <= cm)) {
+      months.push(`${y}-${String(m).padStart(2,'0')}`);
+      m++; if (m > 12) { m = 1; y++; }
+    }
+
+    const fmt = n => '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    const rows = months.map(mo => {
+      const rev = rentals.filter(r => monthKey(r.dropoffDate) === mo).reduce((t,r) => t + priceNum(r.price), 0);
+      const exp = expenses.filter(e => monthKey(e.date) === mo).reduce((t,e) => t + Number(e.amount||0), 0);
+      const count = rentals.filter(r => monthKey(r.dropoffDate) === mo).length;
+      return { month: mo, count, rev, exp, net: rev - exp };
+    });
+
+    $('monthlyBreakdown').innerHTML = `
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Month</th><th>Rentals</th><th>Revenue</th><th>Expenses</th><th>Net Income</th></tr></thead>
+          <tbody>
+            ${rows.slice().reverse().map(r => `
+              <tr${r.month === currentMonth ? ' style="background:var(--gold-bg);"' : ''}>
+                <td style="font-weight:bold;">${monthLabel(r.month)}${r.month === currentMonth ? ' <span class="pill pending">Current</span>' : ''}</td>
+                <td class="mono">${r.count}</td>
+                <td class="mono">${fmt(r.rev)}</td>
+                <td class="mono">${fmt(r.exp)}</td>
+                <td class="mono" style="font-weight:bold;color:${r.net >= 0 ? 'var(--green)' : 'var(--crate-red)'};">${r.net >= 0 ? '' : '−'}${fmt(Math.abs(r.net))}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  // Keeps each filter's own selection intact while refreshing the option
+  // lists from whatever categories/payment methods/months actually exist
+  // in the data (so renamed or old payment method values still show up).
+  function populateExpenseFilters(){
+    const prevCat = $('expFilterCategory').value, prevPay = $('expFilterPayment').value, prevMonth = $('expFilterMonth').value;
+    const cats = [...new Set(FIN.expenses.map(e => e.category).filter(Boolean))].sort();
+    const pays = [...new Set(FIN.expenses.map(e => e.paymentMethod).filter(Boolean))].sort();
+    const months = [...new Set(FIN.expenses.map(e => monthKey(e.date)).filter(Boolean))].sort().reverse();
+
+    $('expFilterCategory').innerHTML = '<option value="">All categories</option>' +
+      cats.map(c => `<option${c === prevCat ? ' selected' : ''}>${esc(c)}</option>`).join('');
+    $('expFilterPayment').innerHTML = '<option value="">All payment methods</option>' +
+      pays.map(p => `<option${p === prevPay ? ' selected' : ''}>${esc(p)}</option>`).join('');
+    $('expFilterMonth').innerHTML = '<option value="">All months</option>' +
+      months.map(m => `<option value="${m}"${m === prevMonth ? ' selected' : ''}>${esc(monthLabel(m))}</option>`).join('');
+  }
+
+  function renderExpenseTable(){
+    const fMonth = $('expFilterMonth').value, fCat = $('expFilterCategory').value,
+          fPay = $('expFilterPayment').value, search = $('expFilterSearch').value.trim().toLowerCase();
+
+    const filtered = FIN.expenses.filter(e => {
+      if (fMonth && monthKey(e.date) !== fMonth) return false;
+      if (fCat && e.category !== fCat) return false;
+      if (fPay && e.paymentMethod !== fPay) return false;
+      if (search && !`${e.vendor||''} ${e.description||''}`.toLowerCase().includes(search)) return false;
+      return true;
+    }).sort((a,b) => (b.date||'').localeCompare(a.date||''));
+
+    const total = filtered.reduce((t,e) => t + Number(e.amount||0), 0);
+    $('expCount').textContent = FIN.expenses.length
+      ? `Showing ${filtered.length} of ${FIN.expenses.length} expenses · ${money(total)} total`
+      : '';
+
+    $('expList').innerHTML = filtered.length ? filtered.map(e => `
+      <div class="rem" style="padding:10px 14px;">
+        <div style="font-weight:bold; font-size:0.9rem;">${money(e.amount)} — ${esc(e.category)}${(e.recurring === 'monthly' || e.recurring === 'yearly') ? ` <span class="pill pending" style="font-size:0.65rem;">${e.recurring}</span>` : ''}</div>
+        <div style="font-size:0.78rem; color:var(--steel); margin:2px 0 8px;">${esc(fmtDate(e.date))}${e.vendor ? ' · ' + esc(e.vendor) : ''}${e.paymentMethod ? ' · ' + esc(e.paymentMethod) : ''}${e.description ? ' · ' + esc(e.description) : ''}</div>
+        <div style="display:flex; gap:6px;">
+          <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:var(--cream); color:var(--ink); border:1px solid var(--line); border-radius:8px;"
+            onclick="finEditStart('${esc(e.key)}')">Edit</button>
+          <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
+            onclick="finDelete('${esc(e.key)}')">Delete</button>
+        </div>
+      </div>`).join('') : `<p class="empty">${FIN.expenses.length ? 'No expenses match these filters.' : 'No expenses logged yet.'}</p>`;
+  }
+
+  $('expFilterMonth').addEventListener('change', renderExpenseTable);
+  $('expFilterCategory').addEventListener('change', renderExpenseTable);
+  $('expFilterPayment').addEventListener('change', renderExpenseTable);
+  $('expFilterSearch').addEventListener('input', renderExpenseTable);
+  $('expFilterClear').addEventListener('click', () => {
+    $('expFilterMonth').value = ''; $('expFilterCategory').value = ''; $('expFilterPayment').value = ''; $('expFilterSearch').value = '';
+    renderExpenseTable();
+  });
+
+  function renderNetIncome(){
+    const thisYearStr = new Date().getFullYear().toString();
+    const ytdRevenue = ALL_RENTALS
+      .filter(r => (r.dropoffDate||'').slice(0,4) === thisYearStr)
+      .reduce((t,r) => t + priceNum(r.price), 0);
+    const ytdExpenses = FIN.expenses
+      .filter(e => (e.date||'').slice(0,4) === thisYearStr)
+      .reduce((t,e) => t + Number(e.amount||0), 0);
+    const net = ytdRevenue - ytdExpenses;
+    const positive = net >= 0;
+    const color = positive ? 'var(--green)' : 'var(--red)';
+    $('netIncomeBubble').style.borderColor = color;
+    $('netIncomeAmount').style.color = color;
+    $('netIncomeAmount').textContent = (positive ? '' : '−') + money(Math.abs(net));
+    $('netIncomeSub').textContent = `${money(ytdRevenue)} revenue − ${money(ytdExpenses)} expenses`;
+  }
+
+  window.fillTrip = (date, purpose) => { $('mileDate').value = date; $('milePurpose').value = purpose; $('mileMiles').focus(); };
+  window.finDelete = async (key) => {
+    if (!confirm('Delete this entry?')) return;
+    const resp = await finCall({ action: 'delete', key });
+    if (resp.ok) reloadFinance(); else showErr('Delete failed.');
+  };
+  window.saveRate = async () => {
+    const rate = document.getElementById('rateInput').value;
+    const resp = await finCall({ action: 'setRate', rate });
+    if (resp.ok) reloadFinance(); else showErr('Rate must be $/mile, like 0.70.');
+  };
+
+  window.finEditStart = (key) => {
+    const e = FIN.expenses.find(x => x.key === key);
+    if (!e) return;
+    $('expDate').value = e.date || '';
+    $('expCategory').value = e.category || 'Equipment';
+    $('expRecurring').value = e.recurring || 'one-time';
+    $('expAmount').value = e.amount || '';
+    $('expVendor').value = e.vendor || '';
+    $('expPayment').value = e.paymentMethod || '';
+    $('expDesc').value = e.description || '';
+    $('expEditKey').value = key;
+    $('expAddBtn').textContent = 'Save changes';
+    $('expCancelBtn').style.display = 'block';
+    $('expDate').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+  window.finEditCancel = () => {
+    $('expEditKey').value = '';
+    $('expDate').value = ''; $('expAmount').value = ''; $('expVendor').value = ''; $('expDesc').value = '';
+    $('expCategory').selectedIndex = 0; $('expRecurring').value = 'one-time'; $('expPayment').value = '';
+    $('expAddBtn').textContent = 'Add expense';
+    $('expCancelBtn').style.display = 'none';
+  };
+
+  $('expAddBtn').addEventListener('click', async () => {
+    const date = $('expDate').value, category = $('expCategory').value,
+          description = $('expDesc').value.trim(), amount = $('expAmount').value,
+          recurring = $('expRecurring').value, vendor = $('expVendor').value.trim(),
+          paymentMethod = $('expPayment').value, editKey = $('expEditKey').value;
+    if (!date || !amount) return showErr('Expense needs a date and amount.');
+    const resp = editKey
+      ? await finCall({ action: 'editExpense', key: editKey, date, category, description, amount, recurring, vendor, paymentMethod })
+      : await finCall({ action: 'addExpense', date, category, description, amount, recurring, vendor, paymentMethod });
+    if (resp.ok) {
+      if (editKey) finEditCancel();
+      else { $('expDesc').value=''; $('expAmount').value=''; $('expVendor').value=''; }
+      reloadFinance();
+    } else showErr(editKey ? 'Update expense failed.' : 'Add expense failed.');
+  });
+  $('mileAddBtn').addEventListener('click', async () => {
+    const date = $('mileDate').value, purpose = $('milePurpose').value.trim(), miles = $('mileMiles').value;
+    if (!date || !purpose || !miles) return showErr('Trip needs date, purpose, and miles.');
+    const resp = await finCall({ action: 'addMileage', date, purpose, miles });
+    if (resp.ok) { $('milePurpose').value=''; $('mileMiles').value=''; reloadFinance(); }
+    else showErr('Add trip failed.');
+  });
+
+  function dlCsv(name, cols, rows){
+    const cell = v => '"' + String(v ?? '').replaceAll('"','""') + '"';
+    const lines = [cols.join(',')].concat(rows.map(r => cols.map(cc => cell(r[cc])).join(',')));
+    const blob = new Blob([lines.join('\r\n')], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name + '-' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click(); URL.revokeObjectURL(a.href);
+  }
+  $('expCsvBtn').addEventListener('click', () =>
+    dlCsv('ready-tote-expenses', ['date','category','vendor','recurring','paymentMethod','description','amount'],
+      [...FIN.expenses].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(e => ({ ...e, date: fmtDate(e.date) }))));
+  $('mileCsvBtn').addEventListener('click', () =>
+    dlCsv('ready-tote-mileage', ['date','purpose','miles'],
+      [...FIN.mileage].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(m => ({ ...m, date: fmtDate(m.date) }))));
+</script>
+</body>
+</html>

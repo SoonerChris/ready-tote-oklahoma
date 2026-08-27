@@ -1,0 +1,172 @@
+/* admin-shared.css
+   Shared design tokens, resets, and components for all admin-*.html pages
+   (admin.html, admin-invoice.html, admin-add-rental.html, admin-reminders.html,
+   admin-contacts.html, admin-finance.html, admin-outreach.html, admin-inventory.html).
+   Keeps look/behavior consistent and avoids re-defining the same CSS in every
+   file. Page-specific styles stay inline in each page's own <style> block.
+
+   Design refresh (Aug 2026): brought the admin tool in line with the public
+   readytoteokc.com brand system (Archivo Black / Barlow / JetBrains Mono,
+   crate-red accent) instead of the generic Arial/soft-SaaS look it started with. */
+
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root{
+  --ink:#1E1B18;
+  --ink-2:#2B2620;
+  --gold:#C99A32;
+  --gold-2:#D9AE4E;
+  --gold-bg:rgba(201,154,50,0.10);
+  --cream:#F5F1E7;
+  --steel:#6B6259;
+  --green:#1E8E52;
+  --green-bg:rgba(30,142,82,0.08);
+  --red:#C0392B;
+  --red-bg:rgba(192,57,43,0.07);
+  --crate-red:#B3481D;
+  --crate-red-bg:rgba(179,72,29,0.08);
+  --line:rgba(30,27,24,0.14);
+  --white:#FFFFFF;
+}
+*{box-sizing:border-box;}
+body{
+  font-family:'Barlow', Arial, sans-serif;
+  background:var(--cream);
+  color:var(--ink);
+  margin:0;
+  padding:24px 14px;
+}
+h1{font-family:'Archivo Black', sans-serif; font-size:1.3rem; margin:0 0 4px; letter-spacing:-0.01em;}
+.sub{color:var(--steel);font-size:0.88rem;margin:0 0 20px;}
+h2{font-family:'Archivo Black', sans-serif; font-size:0.95rem;margin:26px 0 10px; letter-spacing:-0.005em;}
+
+.card{
+  max-width:640px;margin:0 auto;background:#fff;border-radius:8px;
+  border:1px solid var(--line);padding:26px;
+  box-shadow:0 1px 2px rgba(30,27,24,0.04), 0 4px 14px rgba(30,27,24,0.04);
+}
+
+label{display:block;font-size:0.85rem;font-weight:bold;margin:14px 0 6px;}
+input, select, textarea{width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:6px;background:var(--cream);font-family:inherit;}
+input:focus, select:focus, textarea:focus{outline:2px solid var(--gold);}
+button{margin-top:16px;width:100%;padding:14px;font-size:0.95rem;font-weight:bold;font-family:'Barlow',sans-serif;background:var(--gold);color:var(--ink);border:none;border-radius:8px;cursor:pointer;transition:background 0.12s ease, transform 0.05s ease;}
+button:hover{background:var(--gold-2);}
+button:active{transform:translateY(1px);}
+button:disabled{opacity:0.6;cursor:wait;}
+button.secondary{background:transparent;border:1px solid var(--ink);color:var(--ink);}
+button.secondary:hover{background:var(--gold-bg);}
+
+.rem{border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 2px rgba(30,27,24,0.03);}
+.empty{color:var(--steel);font-size:0.88rem;}
+.note{font-size:0.78rem;color:var(--steel);margin-top:6px;}
+
+.status{margin-top:12px;padding:10px 14px;border-radius:6px;font-size:0.88rem;display:none;}
+.status.err{display:block;background:var(--red-bg);border:1px solid rgba(192,57,43,0.35);color:var(--red);}
+.status.ok{display:block;background:var(--green-bg);border:1px solid rgba(30,142,82,0.4);color:var(--green);}
+
+/* Tote-tag badge -- the one signature detail, used for package/tier tags.
+   The small notch reads like a hole-punched rental tag. Status pills
+   (paid/unpaid, sent/pending, etc.) stay plain on purpose -- one signature
+   element, not decoration everywhere. */
+.tag{
+  position:relative;display:inline-flex;align-items:center;
+  padding:4px 10px 4px 18px;
+  font-family:'JetBrains Mono', monospace; font-size:0.72rem; font-weight:700;
+  letter-spacing:0.02em;
+  background:var(--gold-bg); color:var(--ink-2); border:1px solid var(--gold);
+  border-radius:3px 10px 10px 3px;
+}
+.tag::before{
+  content:''; position:absolute; left:6px; top:50%; transform:translateY(-50%);
+  width:5px;height:5px;border-radius:50%;
+  background:var(--white); border:1px solid var(--gold);
+}
+.tag.red{background:var(--crate-red-bg); border-color:var(--crate-red); color:var(--crate-red);}
+.tag.red::before{border-color:var(--crate-red);}
+
+.pill{display:inline-block;font-size:0.72rem;font-weight:bold;padding:3px 10px;border-radius:999px;}
+.pill.ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green);}
+.pill.err{background:var(--red-bg);color:var(--red);border:1px solid var(--red);}
+.pill.pending{background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold);}
+
+/* Data-dense text (phone, email, dates, codes, IDs) reads better in mono */
+.mono{font-family:'JetBrains Mono', monospace;}
+
+/* Reusable data table (contacts, monthly breakdowns, etc.) */
+.tbl-wrap{background:var(--white);border:1px solid var(--line);border-radius:8px;overflow-x:auto;box-shadow:0 1px 2px rgba(30,27,24,0.04);}
+.tbl-wrap table{width:100%;border-collapse:collapse;font-size:0.86rem;}
+.tbl-wrap thead th{text-align:left;padding:12px 14px;background:var(--cream);border-bottom:1px solid var(--line);font-size:0.7rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;color:var(--steel);white-space:nowrap;}
+.tbl-wrap tbody td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top;}
+.tbl-wrap tbody tr:last-child td{border-bottom:none;}
+.tbl-wrap tbody tr:hover{background:var(--gold-bg);}
+
+/* Two-column form rows that collapse to one column on phones */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:560px){.grid2{grid-template-columns:1fr;}}
+
+/* Money input wrapper -- visual $ prefix for type="number" amount fields
+   (their value can't contain a literal $, so the sign lives outside the
+   input rather than pre-filled into it). Text-type price fields instead
+   default value="$" directly since they store a plain string. */
+.money-field{position:relative;}
+.money-field > input{padding-left:26px;}
+.money-field::before{
+  content:'$'; position:absolute; left:12px; top:50%; transform:translateY(-50%);
+  color:var(--steel); font-weight:600; font-size:0.95rem; pointer-events:none;
+}
+.money-field.compact > input{padding-left:22px;}
+.money-field.compact::before{left:9px; font-size:0.85rem;}
+
+/* Shared admin nav bar -- lets Chris jump directly between admin tools.
+   Desktop: a fixed sidebar down the left edge (out of normal flow, so it
+   doesn't matter whether a given page nests <nav> inside .wrap or drops it
+   right after <body> -- both patterns exist across the admin-*.html files).
+   body gets padding-left to reserve room for it; !important because a few
+   pages set their own body{padding:...} shorthand in a later <style> block,
+   which would otherwise zero the left padding back out.
+   Narrow screens revert to the original horizontal top bar -- a fixed
+   sidebar eats too much width on a phone to be worth it there. */
+.admin-nav{
+  position:fixed; top:0; left:0; bottom:0;
+  width:190px;
+  display:flex; flex-direction:column; gap:2px;
+  background:var(--white); border-right:1px solid var(--line);
+  padding:20px 10px; margin:0;
+  overflow-y:auto;
+}
+.admin-nav.wide{max-width:none;}
+.admin-nav a{
+  position:relative;
+  flex:none; text-align:left; white-space:nowrap;
+  padding:10px 12px; font-size:0.82rem; font-weight:600;
+  color:var(--steel); text-decoration:none; border-radius:6px;
+}
+.admin-nav a:hover{background:var(--gold-bg); color:var(--ink);}
+.admin-nav a[aria-current="page"]{background:var(--gold-bg); color:var(--ink); font-weight:700;}
+.admin-nav a[aria-current="page"]::after{
+  content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px;
+  background:var(--gold); border-radius:2px;
+}
+.admin-nav a.logout-link{margin-top:auto; color:var(--red); border:1px solid rgba(192,57,43,0.3);}
+.admin-nav a.logout-link:hover{background:var(--red-bg);}
+
+body{padding-left:214px !important;}
+
+@media(max-width:760px){
+  body{padding-left:14px !important;}
+  .admin-nav{
+    position:static; width:auto; max-width:640px; margin:0 auto 14px;
+    flex-direction:row; flex-wrap:wrap; justify-content:center;
+    border:1px solid var(--line); border-radius:8px;
+    padding:6px; gap:4px; bottom:auto; overflow-y:visible;
+  }
+  .admin-nav.wide{max-width:840px;}
+  .admin-nav a{flex:0 1 auto; text-align:center; padding:10px 12px 8px;}
+  .admin-nav a[aria-current="page"]::after{left:12px; right:12px; top:auto; bottom:2px; width:auto; height:3px;}
+  .admin-nav a.logout-link{margin-top:0;}
+}
+@media(max-width:500px){
+  .admin-nav{gap:4px;}
+  .admin-nav a{flex:1 1 40%; font-size:0.78rem; padding:8px 6px 7px;}
+  .admin-nav a[aria-current="page"]::after{left:6px; right:6px;}
+}
