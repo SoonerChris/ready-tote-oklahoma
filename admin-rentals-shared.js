@@ -86,7 +86,7 @@ function emailReminderBtn(r) {
     return `<span style="display:inline-block; font-size:0.78rem; color:var(--steel);">📧 No payment link on file — resend the invoice instead</span>`;
   }
   if (sent) {
-    return `<span style="display:inline-block; padding:8px 16px; font-size:0.8rem; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px;">📧 ✓ Emailed ${esc(fmtDate(sent))}</span>`;
+    return `<button type="button" class="email-reminder-btn" data-key="${esc(r.key)}" title="Resends with whatever price and payment link are currently on file" style="width:auto; padding:8px 16px; font-size:0.8rem; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px; cursor:pointer;">📧 ✓ Emailed ${esc(fmtDate(sent))} · Resend</button>`;
   }
   return `<button type="button" class="email-reminder-btn" data-key="${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:var(--gold); color:var(--ink); border:none; border-radius:8px; cursor:pointer;">📧 Send reminder</button>`;
 }
