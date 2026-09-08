@@ -331,15 +331,16 @@
     if (period === 'month') {
       const y = d.getUTCFullYear(), m = d.getUTCMonth();
       const start = new Date(Date.UTC(y, m, 1)).toISOString().slice(0,10);
+      const end = new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0,10); // last day of this month
       const prevStart = new Date(Date.UTC(y, m-1, 1)).toISOString().slice(0,10);
       const prevEnd = new Date(Date.UTC(y, m, 0)).toISOString().slice(0,10);
-      return { start, end: todayISO, prevStart, prevEnd };
+      return { start, end, prevStart, prevEnd };
     }
     if (period === 'year') {
       const y = d.getUTCFullYear();
-      return { start: `${y}-01-01`, end: todayISO, prevStart: `${y-1}-01-01`, prevEnd: `${y-1}-12-31` };
+      return { start: `${y}-01-01`, end: `${y}-12-31`, prevStart: `${y-1}-01-01`, prevEnd: `${y-1}-12-31` };
     }
-    return { start: '0000-01-01', end: todayISO, prevStart: null, prevEnd: null };
+    return { start: '0000-01-01', end: '9999-12-31', prevStart: null, prevEnd: null };
   }
 
   function computeKPIs(period) {
