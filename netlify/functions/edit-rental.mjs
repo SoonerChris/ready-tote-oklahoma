@@ -9,7 +9,7 @@ import { getStore } from "@netlify/blobs";
 const EDITABLE_FIELDS = [
   "name", "email", "phone", "package", "price", "duration",
   "dropoffDate", "dropoffTime", "pickupDate", "pickupTime",
-  "dropoffAddress", "pickupAddress", "serviceType", "notes",
+  "dropoffAddress", "pickupAddress", "serviceType", "notes", "stripeUrl",
 ];
 // Notes can be intentionally cleared (saved as blank); every other text
 // field is skipped if blank so a stray empty submit can't wipe real data.
@@ -40,6 +40,15 @@ export default async (request) => {
       if (body[f] === undefined || body[f] === null) continue;
       const isBlank = String(body[f]).trim() === "";
       if (isBlank && !CLEARABLE_FIELDS.includes(f)) continue;
+      if (f === "stripeUrl" && !isBlank) {
+        const url = String(body[f]).trim();
+        if (!/^https:\/\/([a-z0-9-]+\.)?stripe\.com\//.test(url)) {
+          return new Response("stripeUrl must be a stripe.com link", { status: 400 });
+        }
+        updated[f] = url;
+        changed = true;
+        continue;
+      }
       updated[f] = isBlank ? "" : body[f];
       changed = true;
     }
