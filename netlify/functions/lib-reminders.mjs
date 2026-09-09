@@ -131,6 +131,18 @@ export function followupMessageFor(rental) {
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
 
+// "Just sent your invoice" nudge: on-demand only (no due date of its own),
+// meant to go out right when an invoice is sent, before the 3-day follow-up
+// or 5-day payment reminder would ever fire.
+export function invoiceSentMessageFor(rental) {
+  const first = (rental.name || "there").split(" ")[0];
+  const link = rental.stripeUrl || "";
+  const msg = link
+    ? `Hi ${first}, it's Chris with Ready Tote Oklahoma! Just sent your invoice over — here's the payment link: ${link} Let me know if you have any questions!`
+    : `Hi ${first}, it's Chris with Ready Tote Oklahoma! Just sent your invoice over — check your email for the payment link. Let me know if you have any questions!`;
+  return { message: msg, sms: smsLink(rental.phone, msg) };
+}
+
 export function paymentReminderMessageFor(rental) {
   const first = (rental.name || "there").split(" ")[0];
   const link = rental.stripeUrl || "";
