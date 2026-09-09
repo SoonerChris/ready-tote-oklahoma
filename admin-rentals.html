@@ -158,7 +158,7 @@
       : '';
 
     el.innerHTML = sorted.map(r => {
-      const paymentControls = payBtn(r) + emailReminderBtn(r) + textReminderBtn(r);
+      const paymentControls = payBtn(r) + invoiceReminderBtn(r) + emailReminderBtn(r) + textReminderBtn(r);
       return `
       <div class="rem${isActive(r) ? ' active-rental' : ''}">
         <div class="rem-summary" onclick="this.closest('.rem').classList.toggle('open')">

@@ -101,6 +101,16 @@ function textReminderBtn(r) {
   return textBtn('textReminder', r.key, link, '💬', 'Text reminder', 'var(--green)');
 }
 
+// "Just sent your invoice" text — on-demand only, meant for right after
+// invoicing (before the 3-day follow-up or 5-day payment reminder would
+// ever fire). Tracked under its own 'invoiceSent' flag, independent of
+// the follow-up and payment-reminder flags.
+function invoiceReminderBtn(r) {
+  if (!r.invoicedAt || r.backfilled || PAID_FLAGS[r.key]) return '';
+  if (!r.phone || !r.invoiceSentSms) return '';
+  return textBtn('invoiceSent', r.key, r.invoiceSentSms, '🧾', 'Text invoice sent', 'var(--green)');
+}
+
 window.sendEmailReminder = async (key) => {
   const secret = $('secret').value.trim();
   if (!secret) return showErr('Enter the admin secret first.');
