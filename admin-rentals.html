@@ -34,6 +34,13 @@
      rows up evenly no matter how many buttons are present. */
   .rem .actions.payment-actions{display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px; align-items:stretch;}
   .rem .actions.payment-actions > *{width:100% !important; box-sizing:border-box; text-align:center; margin:0; display:flex; align-items:center; justify-content:center; min-height:38px; line-height:1.2;}
+  /* Text row (Delivery/Pickup/Confirm address/Review/Follow-up): always
+     exactly one row, however narrow the card. flex-wrap:nowrap plus
+     flex:1 1 0 on each button splits the row evenly between however many
+     buttons are present (4 for self-service, 5 otherwise) and shrinks
+     them together instead of letting the row wrap to a second line. */
+  .rem .actions.text-actions{display:flex; flex-wrap:nowrap; gap:6px;}
+  .rem .actions.text-actions > *{flex:1 1 0; min-width:0; box-sizing:border-box; text-align:center; margin:0; display:flex; align-items:center; justify-content:center; padding:6px 4px !important; font-size:0.7rem !important; line-height:1.15; white-space:normal;}
   .delete-btn{width:auto; padding:8px 16px; font-size:0.8rem; background:var(--red-bg); color:var(--red); border:1px solid rgba(192,57,43,0.35); border-radius:6px; cursor:pointer;}
 
   /* Collapsible card: summary always visible, tap to reveal the buttons */
@@ -187,7 +194,7 @@
         <div class="rem-details">
           ${r.notes ? `<div class="msg" style="margin-bottom:8px;">📝 ${esc(r.notes)}</div>` : ''}
           ${progressStrip(r)}
-          <div class="actions">
+          <div class="actions text-actions">
             ${textBtn('delivery', r.key, r.deliverySms, '🚚', 'Delivery', 'var(--green)')}
             ${textBtn('pickup', r.key, r.pickupSms, '📦', 'Pickup', 'var(--gold)')}
             ${r.serviceType !== 'self' ? textBtn('addressCheck', r.key, r.addressCheckSms, '📍', 'Confirm address', 'var(--green)') : ''}
@@ -198,8 +205,11 @@
             ${(r.dropoffAddress || r.address) ? onTheWayBtn('delivery', r.key) : ''}
             ${(r.pickupAddress || r.address) ? onTheWayBtn('pickup', r.key) : ''}
           </div>` : ''}
-          <div class="actions">
+          ${paymentControls ? `<div class="actions payment-actions">${paymentControls}</div>` : ''}
+          <div class="actions delete-row">
+            <button type="button" class="toggle-panel-btn" data-target="edit-${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">✏️ Edit rental</button>
             <button type="button" class="toggle-panel-btn" data-target="photos-${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📷 Photos</button>
+            <button type="button" class="toggle-panel-btn" data-target="more-${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">⋯ More</button>
           </div>
           <div class="photo-panel" id="photos-${esc(r.key)}">
             <div class="actions">
@@ -207,11 +217,6 @@
               ${photoBtn(r, 'pickup')}
               ${photoBtn(r, 'military_id')}
             </div>
-          </div>
-          ${paymentControls ? `<div class="actions payment-actions">${paymentControls}</div>` : ''}
-          <div class="actions delete-row">
-            <button type="button" class="toggle-panel-btn" data-target="edit-${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">✏️ Edit rental</button>
-            <button type="button" class="toggle-panel-btn" data-target="more-${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">⋯ More</button>
           </div>
           <div class="edit-panel" id="edit-${esc(r.key)}">
             <div class="actions">
