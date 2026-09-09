@@ -26,6 +26,14 @@
   .rem .actions{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px;}
   .rem .actions:last-child{margin-bottom:0;}
   .rem .actions.delete-row{margin-top:2px; padding-top:10px; border-top:1px solid var(--line);}
+  /* Payment-control row (Mark paid / Text invoice sent / Send reminder /
+     Text reminder): button count varies (1-4) and labels are different
+     lengths, so plain flex-wrap left them wrapping unevenly on phones
+     (e.g. two buttons on one line, two dangling lower, misaligned). A
+     self-arranging grid keeps every button the same width and lines
+     rows up evenly no matter how many buttons are present. */
+  .rem .actions.payment-actions{display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px; align-items:stretch;}
+  .rem .actions.payment-actions > *{width:100% !important; box-sizing:border-box; text-align:center; margin:0; display:flex; align-items:center; justify-content:center; min-height:38px; line-height:1.2;}
   .delete-btn{width:auto; padding:8px 16px; font-size:0.8rem; background:var(--red-bg); color:var(--red); border:1px solid rgba(192,57,43,0.35); border-radius:6px; cursor:pointer;}
 
   /* Collapsible card: summary always visible, tap to reveal the buttons */
@@ -185,7 +193,7 @@
             ${photoBtn(r, 'delivery')}
             ${photoBtn(r, 'pickup')}
           </div>
-          ${paymentControls ? `<div class="actions">${paymentControls}</div>` : ''}
+          ${paymentControls ? `<div class="actions payment-actions">${paymentControls}</div>` : ''}
           <div class="actions delete-row">
             <button type="button" class="edit-contact-btn" data-key="${esc(r.key)}" data-name="${esc(r.name || '')}" data-phone="${esc(r.phone || '')}" data-email="${esc(r.email || '')}" data-dropoff="${esc(r.dropoffAddress || '')}" data-pickup="${esc(r.pickupAddress || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">👤 Edit contact</button>
             <button type="button" class="edit-pkg-btn" data-key="${esc(r.key)}" data-pkg="${esc(r.package || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">✏️ Edit package</button>
