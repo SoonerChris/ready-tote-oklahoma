@@ -1,11 +1,14 @@
 // POST /.netlify/functions/get-photo
-// Returns a stored delivery/pickup proof photo as base64, so the admin page
-// can display it (no email attached to a URL — kept internal, same secret
-// pattern as every other admin function). Protected by INVOICE_SECRET.
+// Returns a stored delivery/pickup proof photo, or a military ID photo, as
+// base64, so the admin page can display it (no email attached to a URL —
+// kept internal, same secret pattern as every other admin function).
+// Protected by INVOICE_SECRET. This is the only way a military ID photo
+// can ever be read back — the public upload-military-id.mjs endpoint is
+// write-only, so an uploaded ID is never retrievable outside the admin.
 
 import { getStore } from "@netlify/blobs";
 
-const ALLOWED_TYPES = ["delivery", "pickup"];
+const ALLOWED_TYPES = ["delivery", "pickup", "military_id"];
 
 export default async (request) => {
   if (request.method !== "POST") {

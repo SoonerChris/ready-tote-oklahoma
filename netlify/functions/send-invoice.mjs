@@ -229,6 +229,8 @@ export default async (request) => {
       notes: body.notes || "",
       invoicedAt: new Date().toISOString(),
       stripeUrl,
+      isMilitary: !!body.isMilitary,
+      militaryIdKey: body.militaryIdKey || "",
     });
   } catch (e) {
     console.error("Rental log failed (invoice still sent):", e.message);

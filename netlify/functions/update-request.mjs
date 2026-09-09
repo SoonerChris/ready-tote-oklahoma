@@ -13,7 +13,7 @@ import { getStore } from "@netlify/blobs";
 const EDITABLE_FIELDS = [
   "name", "email", "phone", "package",
   "deliveryDate", "pickupDate", "deliveryWindow", "pickupWindow", "deliveryAddress",
-  "reviewNotes", "declineReason", "invoiceRentalKey",
+  "reviewNotes", "declineReason", "invoiceRentalKey", "isMilitary",
 ];
 
 const VALID_ACTIONS = new Set(["review", "send-confirmation", "confirm", "decline", "reopen", "invoice"]);

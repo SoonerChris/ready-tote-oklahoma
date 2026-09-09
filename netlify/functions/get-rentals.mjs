@@ -45,6 +45,13 @@ export default async (request) => {
   for (const r of rentals) {
     r.hasDeliveryPhoto = photoKeys.has(`${r.key}:delivery`);
     r.hasPickupPhoto = photoKeys.has(`${r.key}:pickup`);
+    // A rental's militaryIdKey is only set when it was carried over from a
+    // booking request that had a customer self-uploaded ID (a client-
+    // generated key, since no rental record existed yet at that point);
+    // it falls back to the rental's own key otherwise, so a staff-added
+    // photo (uploaded directly from admin-rentals.html) is found the same way.
+    r.militaryIdKey = r.militaryIdKey || r.key;
+    r.hasMilitaryIdPhoto = photoKeys.has(`${r.militaryIdKey}:military_id`);
   }
 
   // On-demand text links for every rental (All Rentals list)

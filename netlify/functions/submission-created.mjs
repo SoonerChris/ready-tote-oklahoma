@@ -55,6 +55,8 @@ export default async (request) => {
       deliveryWindow: data.delivery_window || "",
       pickupWindow: data.pickup_window || "",
       deliveryAddress: data.delivery_address || "",
+      isMilitary: data.is_military === "true",
+      militaryIdKey: data.military_id_key || "",
       status: "new",
       submittedAt: new Date().toISOString(),
     });

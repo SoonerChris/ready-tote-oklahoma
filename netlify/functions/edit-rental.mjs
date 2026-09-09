@@ -10,6 +10,7 @@ const EDITABLE_FIELDS = [
   "name", "email", "phone", "package", "price", "duration",
   "dropoffDate", "dropoffTime", "pickupDate", "pickupTime",
   "dropoffAddress", "pickupAddress", "serviceType", "notes", "stripeUrl",
+  "isMilitary",
 ];
 // Notes can be intentionally cleared (saved as blank); every other text
 // field is skipped if blank so a stray empty submit can't wipe real data.
