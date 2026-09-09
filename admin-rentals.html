@@ -277,14 +277,23 @@
   // retake) once one's been uploaded. Delivery/pickup are always keyed to
   // the rental itself; military ID uses r.militaryIdKey, which falls back
   // to the rental's own key server-side when no distinct upload key exists.
+  //
+  // Military ID also gets a "Replace" button once one's on file — a wrong
+  // ID photo has real consequences (verifying the wrong person), so it
+  // needs an easy fix, not just a view. Delivery/pickup proof photos stay
+  // view-only on purpose, that's a lower-stakes mistake. Replace reuses
+  // the same key, so upload-photo.mjs just overwrites the existing blob.
   function photoBtn(r, type) {
     const has = type === 'delivery' ? r.hasDeliveryPhoto : type === 'pickup' ? r.hasPickupPhoto : r.hasMilitaryIdPhoto;
     const label = type === 'delivery' ? 'Delivery' : type === 'pickup' ? 'Pickup' : 'Military ID';
     const key = type === 'military_id' ? r.militaryIdKey : r.key;
-    if (has) {
-      return `<button type="button" class="view-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px; cursor:pointer;">📷 View ${label} photo</button>`;
+    if (!has) {
+      return `<button type="button" class="add-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📷 Add ${label} photo</button>`;
     }
-    return `<button type="button" class="add-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📷 Add ${label} photo</button>`;
+    const viewBtn = `<button type="button" class="view-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px; cursor:pointer;">📷 View ${label} photo</button>`;
+    if (type !== 'military_id') return viewBtn;
+    const replaceBtn = `<button type="button" class="add-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">🔄 Replace ID photo</button>`;
+    return viewBtn + replaceBtn;
   }
 
   // Shows the authoritative counts Inventory reads. Flags records logged

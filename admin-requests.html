@@ -186,9 +186,8 @@
 
       <div class="req-actions">
         <button type="button" class="linklike" data-toggle-military>${r.isMilitary ? '🎖️ Military ✓ (tap to unmark)' : '🎖️ Mark as military'}</button>
-        ${r.hasMilitaryIdPhoto
-          ? '<button type="button" class="linklike" data-view-id>📷 View ID photo</button>'
-          : '<button type="button" class="secondary" data-add-id>📷 Add ID photo</button>'}
+        ${r.hasMilitaryIdPhoto ? '<button type="button" class="linklike" data-view-id>📷 View ID photo</button>' : ''}
+        <button type="button" class="secondary" data-add-id>${r.hasMilitaryIdPhoto ? '🔄 Replace ID photo' : '📷 Add ID photo'}</button>
       </div>
 
       <button type="button" class="toggle-note" data-toggle="edit">Edit details</button>
