@@ -33,7 +33,7 @@ function textBtn(type, key, smsLink, icon, label, color) {
   if (sent) {
     return `<button type="button" class="unsend-btn" data-flagid="${flagId}" title="Click to mark as unsent" style="width:auto; padding:8px 16px; font-size:0.8rem; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px; cursor:pointer;">${icon} ✓ Sent ↩</button>`;
   }
-  return `<a class="sms-btn" href="${smsLink}" onclick="setTimeout(()=>confirmSent('${flagId}'),500)" style="padding:8px 16px; font-size:0.8rem; background:${color};${color==='var(--gold)'?' color:var(--ink);':''}">${icon} ${label}</a>`;
+  return `<a class="sms-btn" href="${smsLink}" onclick="setTimeout(()=>confirmSent('${flagId}'),500)" style="padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line);">${icon} ${label}</a>`;
 }
 
 window.confirmSent = async (flagId) => {
@@ -88,7 +88,7 @@ function emailReminderBtn(r) {
   if (sent) {
     return `<button type="button" class="email-reminder-btn" data-key="${esc(r.key)}" title="Resends with whatever price and payment link are currently on file" style="width:auto; padding:8px 16px; font-size:0.8rem; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px; cursor:pointer;">📧 ✓ Emailed ${esc(fmtDate(sent))} · Resend</button>`;
   }
-  return `<button type="button" class="email-reminder-btn" data-key="${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:var(--gold); color:var(--ink); border:none; border-radius:8px; cursor:pointer;">📧 Send reminder</button>`;
+  return `<button type="button" class="email-reminder-btn" data-key="${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📧 Send reminder</button>`;
 }
 
 // Text version of the same nudge. Independent of the email reminder —
