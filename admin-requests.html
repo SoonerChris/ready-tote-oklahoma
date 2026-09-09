@@ -69,6 +69,7 @@
     <button id="loadBtn">Load requests</button>
   </div>
   <div class="status" id="status"></div>
+  <input type="file" id="idFileInput" accept="image/*" style="display:none">
 
   <div id="results" style="display:none;">
     <div class="toolbar">
@@ -168,6 +169,7 @@
           <div class="req-sub">Submitted ${esc(fmtDateTime(r.submittedAt))}</div>
         </div>
         <span class="pill ${meta.pill}">${meta.label}</span>
+        ${r.isMilitary ? '<span class="pill ok">🎖️ Military</span>' : ''}
       </div>
       <div class="req-body">
         <div><span class="lbl">Package</span>${r.package ? `<span class="tag">${esc(r.package)}</span>` : '—'}</div>
@@ -181,6 +183,13 @@
       </div>
 
       <div class="req-actions" data-actions></div>
+
+      <div class="req-actions">
+        <button type="button" class="linklike" data-toggle-military>${r.isMilitary ? '🎖️ Military ✓ (tap to unmark)' : '🎖️ Mark as military'}</button>
+        ${r.hasMilitaryIdPhoto
+          ? '<button type="button" class="linklike" data-view-id>📷 View ID photo</button>'
+          : '<button type="button" class="secondary" data-add-id>📷 Add ID photo</button>'}
+      </div>
 
       <button type="button" class="toggle-note" data-toggle="edit">Edit details</button>
       <div class="edit-block" data-edit>
@@ -231,6 +240,12 @@
       patch(r.key, fields, 'Details updated.');
     });
 
+    card.querySelector('[data-toggle-military]')?.addEventListener('click', () => {
+      patch(r.key, { isMilitary: !r.isMilitary }, r.isMilitary ? 'Unmarked military.' : 'Marked as military.');
+    });
+    card.querySelector('[data-add-id]')?.addEventListener('click', () => triggerIdCapture(r.militaryIdKey));
+    card.querySelector('[data-view-id]')?.addEventListener('click', () => viewIdPhoto(r.militaryIdKey));
+
     const actions = card.querySelector('[data-actions]');
     actions.innerHTML = '';
 
@@ -267,6 +282,99 @@
       act(key, 'decline', 'Marked declined.', { declineReason: reason });
     }
   }
+
+  // ---- Military ID photo (staff-added) ----
+  // Same upload-photo / get-photo pattern used for delivery/pickup proof
+  // photos on admin-rentals.html. r.militaryIdKey already falls back to
+  // r.key server-side (get-requests.mjs) when no customer self-upload
+  // happened, so a staff-added photo is keyed to the request itself.
+  let PENDING_ID_KEY = null;
+
+  window.triggerIdCapture = (idKey) => {
+    PENDING_ID_KEY = idKey;
+    $('idFileInput').value = '';
+    $('idFileInput').click();
+  };
+
+  $('idFileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    const idKey = PENDING_ID_KEY;
+    PENDING_ID_KEY = null;
+    if (!file || !idKey) return;
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const dataUrl = await compressImage(file, 1600, 0.72);
+      const base64 = dataUrl.split(',')[1];
+      const resp = await fetch('/.netlify/functions/upload-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key: idKey, type: 'military_id', imageBase64: base64, mimeType: 'image/jpeg' }),
+      });
+      if (resp.ok) { load(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('ID upload failed (' + resp.status + '): ' + detail);
+      }
+    } catch (err) {
+      showErr('Could not process photo: ' + (err.message || err));
+    }
+  });
+
+  // Resizes/compresses an image file client-side via canvas, returns a JPEG data URL.
+  function compressImage(file, maxDim, quality) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width >= height) { height = Math.round(height * (maxDim / width)); width = maxDim; }
+            else { width = Math.round(width * (maxDim / height)); height = maxDim; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => reject(new Error('Could not read image.'));
+        img.src = reader.result;
+      };
+      reader.onerror = () => reject(new Error('Could not read file.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Opens a blank tab immediately (before the async fetch) so mobile Safari
+  // doesn't treat it as a popup, then fills it in once the photo loads.
+  window.viewIdPhoto = async (idKey) => {
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(`<title>Military ID photo</title><body style="margin:0;background:#111;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;">Loading…</body>`);
+    }
+    try {
+      const resp = await fetch('/.netlify/functions/get-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key: idKey, type: 'military_id' }),
+      });
+      if (!resp.ok) {
+        const detail = await resp.text().catch(() => '');
+        const msg = 'Could not load photo (' + resp.status + '): ' + detail;
+        if (win) win.document.body.textContent = msg; else showErr(msg);
+        return;
+      }
+      const data = await resp.json();
+      if (win) {
+        win.document.body.innerHTML = `<img src="data:${data.mimeType};base64,${data.imageBase64}" style="max-width:100%;max-height:100vh;">`;
+      }
+    } catch {
+      if (win) win.document.body.textContent = 'Network error loading photo.'; else showErr('Network error loading photo.');
+    }
+  };
 
   function goToInvoice(r) {
     sessionStorage.setItem('rto-prefill-request', JSON.stringify(r));

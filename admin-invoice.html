@@ -169,6 +169,11 @@
   <input type="url" id="stripeUrl" placeholder="https://buy.stripe.com/...">
   <p class="note">Paste the Stripe Payment Link for this package. Tip: edit this file to hard-code your three links in the package dropdown (data-stripe attributes) so this auto-fills.</p>
 
+  <label style="display:flex; align-items:center; gap:8px; font-weight:normal; margin-top:18px;">
+    <input type="checkbox" id="isMilitary" style="width:auto;"> Military discount (ID on file or being verified)
+  </label>
+  <p class="note">If this came from a booking request with an ID photo already attached, it carries over automatically. Otherwise, add the photo from All Rentals once this rental is logged.</p>
+
   <label>Notes (optional)</label>
   <textarea id="notes" rows="3" placeholder="Gate code, dog on property, special instructions…" style="width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:6px;background:var(--cream);font-family:inherit;resize:vertical;"></textarea>
 
@@ -184,6 +189,7 @@
 
   // ---- Prefill from a confirmed Booking Request (admin-requests.html handoff) ----
   let PREFILL_REQUEST_KEY = null;
+  let PREFILL_MILITARY_ID_KEY = null;
   let PENDING_PREFILL = null;
   (function loadPrefill() {
     const raw = sessionStorage.getItem('rto-prefill-request');
@@ -195,6 +201,8 @@
 
   function applyPrefill(r) {
     PREFILL_REQUEST_KEY = r.key || null;
+    PREFILL_MILITARY_ID_KEY = r.militaryIdKey || null;
+    $('isMilitary').checked = !!r.isMilitary;
     if (r.name) $('name').value = r.name;
     if (r.email) $('email').value = r.email;
     if (r.phone) $('phone').value = r.phone;
@@ -396,6 +404,8 @@
 
     payload.serviceType = $('serviceType').value;
     payload.notes = $('notes').value.trim();
+    payload.isMilitary = $('isMilitary').checked;
+    if (PREFILL_MILITARY_ID_KEY) payload.militaryIdKey = PREFILL_MILITARY_ID_KEY;
     if (payload.serviceType === 'self') {
       payload.dropoffAddress = 'Customer pickup';
       payload.pickupAddress = 'Customer return';
@@ -474,6 +484,7 @@
       body: JSON.stringify({ secret: $('secret').value.trim(), key, action: 'invoice' }),
     }).catch(() => {});
     PREFILL_REQUEST_KEY = null;
+    PREFILL_MILITARY_ID_KEY = null;
   }
 
   // "14:30" -> "2:30 PM", "09:00" -> "9:00 AM"

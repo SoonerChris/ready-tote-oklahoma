@@ -276,6 +276,19 @@
         <label>Delivery Address*
           <input type="text" name="delivery_address" placeholder="Street, City, Zip" required>
         </label>
+
+        <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;">
+          <input type="checkbox" name="is_military" value="true" id="isMilitaryCheck" style="width:auto; margin:3px 0 0;">
+          <span>I qualify for our 15% military discount (active duty, veteran, or immediate family)</span>
+        </label>
+        <div id="militaryIdBlock" style="display:none; margin:-6px 0 14px;">
+          <label>Upload a photo of your military ID <span class="mono" style="font-weight:400; color:var(--steel);">(optional — helps us verify faster)</span>
+            <input type="file" id="militaryIdFile" accept="image/*">
+          </label>
+          <p class="form-note" id="militaryIdStatus" style="text-align:left; margin-top:-8px;"></p>
+          <input type="hidden" name="military_id_key" id="militaryIdKeyField">
+        </div>
+
         <input type="hidden" name="delivery_date" id="hiddenDeliveryDate">
         <input type="hidden" name="pickup_date" id="hiddenPickupDate">
 
@@ -498,6 +511,77 @@
     });
   }
 
+  // ---- Military discount: optional ID photo upload ----
+  // Uploaded immediately (before the main form submits) via the public,
+  // write-only upload-military-id function, since no request record exists
+  // yet to key the photo to. The generated key rides along as a hidden
+  // form field so submission-created.mjs can save it on the request once
+  // it's created, and admin pages can look the photo up later.
+  $('isMilitaryCheck').addEventListener('change', () => {
+    const checked = $('isMilitaryCheck').checked;
+    $('militaryIdBlock').style.display = checked ? 'block' : 'none';
+    if (!checked) {
+      $('militaryIdFile').value = '';
+      $('militaryIdKeyField').value = '';
+      $('militaryIdStatus').textContent = '';
+    }
+  });
+
+  $('militaryIdFile').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    $('militaryIdKeyField').value = '';
+    $('militaryIdStatus').textContent = 'Uploading…';
+    try {
+      const dataUrl = await compressImage(file, 1600, 0.72);
+      const base64 = dataUrl.split(',')[1];
+      const key = genMilitaryKey();
+      const resp = await fetch('/.netlify/functions/upload-military-id', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, imageBase64: base64, mimeType: 'image/jpeg' }),
+      });
+      if (resp.ok) {
+        $('militaryIdKeyField').value = key;
+        $('militaryIdStatus').textContent = '✓ Photo attached.';
+      } else {
+        $('militaryIdStatus').textContent = 'Could not upload — you can still submit your request and we\'ll follow up about the ID.';
+      }
+    } catch {
+      $('militaryIdStatus').textContent = 'Could not process that photo — you can still submit your request and we\'ll follow up about the ID.';
+    }
+  });
+
+  // Resizes/compresses an image file client-side via canvas, returns a JPEG data URL.
+  function compressImage(file, maxDim, quality) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width >= height) { height = Math.round(height * (maxDim / width)); width = maxDim; }
+            else { width = Math.round(width * (maxDim / height)); height = maxDim; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => reject(new Error('Could not read image.'));
+        img.src = reader.result;
+      };
+      reader.onerror = () => reject(new Error('Could not read file.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function genMilitaryKey() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'mid-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+  }
+
   // ---- Form submit (Netlify Forms via AJAX, same pattern as the homepage) ----
   const form = $('bookingForm');
   form.addEventListener('submit', (e) => {
@@ -520,6 +604,8 @@
         status.className = 'form-status show ok';
         status.textContent = 'Request received! Check your email — we\'ll confirm your dates and send an invoice shortly. No payment due now.';
         form.reset();
+        $('militaryIdBlock').style.display = 'none';
+        $('militaryIdStatus').textContent = '';
         btn.textContent = 'Request Booking';
       })
       .catch(() => {
