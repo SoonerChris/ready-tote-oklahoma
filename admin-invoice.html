@@ -82,6 +82,8 @@
     <div>
       <label>Rental price</label>
       <input type="text" id="price" placeholder="$99" value="$">
+      <button type="button" id="recalcBtn" style="margin-top:6px;width:auto;padding:7px 14px;font-size:0.78rem;background:var(--cream);color:var(--ink);border:1px solid var(--line);">🔄 Recalculate (package + rush + military)</button>
+      <p class="note" id="estimateNote" style="display:none;"></p>
     </div>
     <div>
       <label>Duration</label>
@@ -190,6 +192,7 @@
   // ---- Prefill from a confirmed Booking Request (admin-requests.html handoff) ----
   let PREFILL_REQUEST_KEY = null;
   let PREFILL_MILITARY_ID_KEY = null;
+  let PREFILL_SUBMITTED_AT = null;
   let PENDING_PREFILL = null;
   (function loadPrefill() {
     const raw = sessionStorage.getItem('rto-prefill-request');
@@ -202,6 +205,7 @@
   function applyPrefill(r) {
     PREFILL_REQUEST_KEY = r.key || null;
     PREFILL_MILITARY_ID_KEY = r.militaryIdKey || null;
+    PREFILL_SUBMITTED_AT = r.submittedAt || null;
     $('isMilitary').checked = !!r.isMilitary;
     if (r.name) $('name').value = r.name;
     if (r.email) $('email').value = r.email;
@@ -249,13 +253,69 @@
     if (idx >= 0) {
       $('package').value = String(idx);
       $('package').dispatchEvent(new Event('change'));
+      recalcEstimate();
     }
+  }
+
+  // Estimates an invoice total from the current package price, the $25
+  // rush fee, and the 15% military discount — a starting point only. It
+  // fills the price field but the field stays a normal editable input,
+  // so adjusting it by hand afterward (to true up net income, fix a
+  // rounding difference, whatever) always just works.
+  //
+  // Rush fee is based on how much notice the ORIGINAL request gave —
+  // delivery within 24 hours of when the customer submitted it — not on
+  // when this invoice happens to get sent. That keeps it accurate
+  // whether you invoice the same day or a week later, and matches what
+  // the booking form itself promises ("requests within 24 hours of
+  // delivery include a $25 expedite fee"). Without a submission
+  // timestamp (no prefilled request — a from-scratch invoice), there's
+  // no basis to judge rush eligibility, so that part is skipped; add it
+  // by hand if it applies.
+  function recalcEstimate() {
+    const pkgVal = $('package').value;
+    if (!pkgVal || pkgVal === 'custom') return showStatus('err', 'Pick a package first to calculate an estimate.');
+    const p = PACKAGES[Number(pkgVal)];
+    if (!p || !p.price) return;
+    const base = Number(String(p.price).replace(/[^0-9.]/g, ''));
+    if (!Number.isFinite(base)) return;
+
+    let total = base;
+    const notes = [`$${trimZeros(base)} package`];
+
+    if (PREFILL_SUBMITTED_AT && $('dropoffDate').value) {
+      const dropoffTime = $('dropoffTime').value || '10:00';
+      const deliveryDt = new Date(`${$('dropoffDate').value}T${dropoffTime}:00`);
+      const submittedDt = new Date(PREFILL_SUBMITTED_AT);
+      const hoursNotice = (deliveryDt - submittedDt) / (1000 * 60 * 60);
+      if (hoursNotice >= 0 && hoursNotice < 24) {
+        total += 25;
+        notes.push('+$25 rush (requested within 24hrs of delivery)');
+      }
+    }
+
+    if ($('isMilitary').checked) {
+      const discount = total * 0.15;
+      total -= discount;
+      notes.push(`\u2212$${discount.toFixed(2)} military (15%)`);
+    }
+
+    $('price').value = '$' + trimZeros(total);
+    $('estimateNote').textContent = notes.join('  \u00b7  ') + `  =  $${trimZeros(total)}`;
+    $('estimateNote').style.display = 'block';
+  }
+
+  // "169" -> "169", "164.9" -> "164.90", "164" -> "164"
+  function trimZeros(n) {
+    return Number.isInteger(n) ? String(n) : n.toFixed(2);
   }
 
   // Toggle pickup address block
   $('sameAddress').addEventListener('change', (e) => {
     $('pickupAddressBlock').style.display = e.target.checked ? 'none' : 'block';
   });
+
+  $('recalcBtn').addEventListener('click', recalcEstimate);
 
   // Hide address section entirely for customer self pickup/return
   $('serviceType').addEventListener('change', (e) => {
