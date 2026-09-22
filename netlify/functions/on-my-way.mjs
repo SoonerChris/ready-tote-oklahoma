@@ -15,7 +15,7 @@
 //   HOME_ADDRESS           - optional; overrides the hardcoded default below
 
 import { getStore } from "@netlify/blobs";
-import { smsLink } from "./lib-reminders.mjs";
+import { smsLink, dropoffAddressOf, pickupAddressOf } from "./lib-reminders.mjs";
 
 const DEFAULT_HOME_ADDRESS = "313 SW 166th St, Oklahoma City, OK 73170";
 
@@ -46,9 +46,7 @@ export default async (request) => {
   try { rental = await store.get(key, { type: "json" }); } catch {}
   if (!rental) return json({ error: "Rental not found" }, 404);
 
-  const destination = type === "delivery"
-    ? (rental.dropoffAddress || rental.address || "")
-    : (rental.pickupAddress || rental.address || "");
+  const destination = type === "delivery" ? dropoffAddressOf(rental) : pickupAddressOf(rental);
   if (!destination) {
     return json({ error: "No address on file for this rental" }, 400);
   }

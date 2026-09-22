@@ -12,7 +12,9 @@ import { getStore } from "@netlify/blobs";
 
 const EDITABLE_FIELDS = [
   "name", "email", "phone", "package",
-  "deliveryDate", "pickupDate", "deliveryWindow", "pickupWindow", "deliveryAddress",
+  "deliveryDate", "pickupDate", "deliveryWindow", "pickupWindow",
+  "deliveryAddress", "deliveryAddressStreet", "deliveryAddressCity",
+  "deliveryAddressState", "deliveryAddressZip",
   "reviewNotes", "declineReason", "invoiceRentalKey", "isMilitary",
 ];
 

@@ -34,6 +34,8 @@ export default async (request) => {
   const pkg = escapeHtml(data.package || "your selected package");
   const deliveryDate = formatDate(data.delivery_date) || "your requested date";
   const pickupDate = formatDate(data.pickup_date) || "your requested date";
+  const isMilitary = data.is_military === "true";
+  const militaryIdKey = data.military_id_key || "";
 
   const from = process.env.RESEND_FROM || FROM_FALLBACK;
 
@@ -54,15 +56,44 @@ export default async (request) => {
       pickupDate: data.pickup_date || "",
       deliveryWindow: data.delivery_window || "",
       pickupWindow: data.pickup_window || "",
-      deliveryAddress: data.delivery_address || "",
-      isMilitary: data.is_military === "true",
-      militaryIdKey: data.military_id_key || "",
+      deliveryAddressStreet: data.delivery_address_street || "",
+      deliveryAddressCity: data.delivery_address_city || "",
+      deliveryAddressState: data.delivery_address_state || "",
+      deliveryAddressZip: data.delivery_address_zip || "",
+      isMilitary,
+      militaryIdKey,
       status: "new",
       submittedAt: new Date().toISOString(),
     });
   } catch (e) {
     console.error("Booking request log failed (auto-reply still sent):", e.message);
   }
+
+  // Only shown when the "military discount" checkbox was checked. If they
+  // already uploaded a photo on the booking form (militaryIdKey set), just
+  // confirm we have it. If they checked the box but skipped the upload,
+  // ask for it here so it isn't a follow-up email later.
+  const militaryBlock = !isMilitary ? "" : militaryIdKey ? `
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                   style="background-color:#F5F1E7; border-radius:12px; border:1px solid #E5DFD2; margin-top:16px;">
+              <tr>
+                <td style="padding:16px 20px; font-family: Arial, Helvetica, sans-serif;">
+                  <p style="margin:0; font-size:14px; line-height:1.6; color:#1E1B18;">
+                    <strong>&#127894; Military discount:</strong> Got your ID photo, thank you for your service! We'll verify it and apply the discount to your invoice.
+                  </p>
+                </td>
+              </tr>
+            </table>` : `
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                   style="background-color:#FBF4E2; border-radius:12px; border:1px solid #E8D9A8; margin-top:16px;">
+              <tr>
+                <td style="padding:16px 20px; font-family: Arial, Helvetica, sans-serif;">
+                  <p style="margin:0; font-size:14px; line-height:1.6; color:#1E1B18;">
+                    <strong>&#127894; Military discount:</strong> Looks like you qualify &mdash; thank you for your service! To apply it, just reply to this email with a photo of your military ID (active duty, veteran, or immediate family) and we'll take care of the rest.
+                  </p>
+                </td>
+              </tr>
+            </table>`;
 
   const html = `
 <!DOCTYPE html>
@@ -123,6 +154,7 @@ export default async (request) => {
                 </td>
               </tr>
             </table>
+${militaryBlock}
 
             <!-- What happens next -->
             <p style="margin:28px 0 10px; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#C99A32; font-weight:bold;">
