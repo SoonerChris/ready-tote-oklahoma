@@ -157,10 +157,10 @@
       const self = r.serviceType === 'self';
       if (r.dropoffDate >= today && r.dropoffDate <= endStr)
         events.push({ date: r.dropoffDate, time: r.dropoffTime, label: self ? 'Customer pickup' : 'Deliver', r,
-                      addr: self ? '' : (r.dropoffAddress || r.address || '') });
+                      addr: self ? '' : dropoffAddressOf(r) });
       if (r.pickupDate >= today && r.pickupDate <= endStr)
         events.push({ date: r.pickupDate, time: r.pickupTime, label: self ? 'Customer return' : 'Pick up', r,
-                      addr: self ? '' : (r.pickupAddress || r.address || '') });
+                      addr: self ? '' : pickupAddressOf(r) });
     }
     if (!events.length) { el.innerHTML = '<p class="empty">Nothing scheduled in the next 7 days.</p>'; return; }
     events.sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time));

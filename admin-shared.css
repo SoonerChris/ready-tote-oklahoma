@@ -104,6 +104,10 @@ button.secondary:hover{background:var(--gold-bg);}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 @media(max-width:560px){.grid2{grid-template-columns:1fr;}}
 
+/* City/State/Zip row -- wider first column for the city name */
+.grid3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;}
+@media(max-width:560px){.grid3{grid-template-columns:1fr;}}
+
 /* Money input wrapper -- visual $ prefix for type="number" amount fields
    (their value can't contain a literal $, so the sign lives outside the
    input rather than pre-filled into it). Text-type price fields instead

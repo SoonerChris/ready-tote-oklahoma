@@ -9,7 +9,10 @@ import { getStore } from "@netlify/blobs";
 const EDITABLE_FIELDS = [
   "name", "email", "phone", "package", "price", "duration",
   "dropoffDate", "dropoffTime", "pickupDate", "pickupTime",
-  "dropoffAddress", "pickupAddress", "serviceType", "notes", "stripeUrl",
+  "dropoffAddress", "pickupAddress",
+  "dropoffAddressStreet", "dropoffAddressCity", "dropoffAddressState", "dropoffAddressZip",
+  "pickupAddressStreet", "pickupAddressCity", "pickupAddressState", "pickupAddressZip",
+  "serviceType", "notes", "stripeUrl",
   "isMilitary",
 ];
 // Notes can be intentionally cleared (saved as blank); every other text

@@ -281,12 +281,12 @@
       if (r.dropoffDate >= today && r.dropoffDate <= endDate) {
         events.push({ date: r.dropoffDate, time: r.dropoffTime || '', type: self ? 'Customer pickup' : 'Deliver',
           typeClass: self ? 'self' : 'deliver', name: r.name, pkg: r.package,
-          addr: self ? '' : (r.dropoffAddress || r.address || '') });
+          addr: self ? '' : dropoffAddressOf(r) });
       }
       if (r.pickupDate >= today && r.pickupDate <= endDate) {
         events.push({ date: r.pickupDate, time: r.pickupTime || '', type: self ? 'Customer return' : 'Pick up',
           typeClass: self ? 'self' : 'pickup', name: r.name, pkg: r.package,
-          addr: self ? '' : (r.pickupAddress || r.address || '') });
+          addr: self ? '' : pickupAddressOf(r) });
       }
     }
     events.sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time));

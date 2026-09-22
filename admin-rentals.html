@@ -53,10 +53,12 @@
   .section-toggle{width:auto; margin:0; padding:2px 10px; font-size:0.7rem; font-weight:bold; background:none; border:1px solid var(--line); color:var(--steel); border-radius:20px; cursor:pointer;}
   .section-toggle:hover{border-color:var(--gold); color:var(--gold);}
 
-  .date-edit-block{display:none; margin-top:10px; padding-top:12px; border-top:1px dashed var(--line);}
-  .date-edit-block .grid2{margin-bottom:10px;}
-  .date-edit-block label{font-size:0.75rem; margin:0 0 4px; display:block;}
-  .date-edit-block button{margin-top:6px; width:auto; padding:7px 14px; font-size:0.8rem;}
+  .date-edit-block, .addr-edit-block{display:none; margin-top:10px; padding-top:12px; border-top:1px dashed var(--line);}
+  .date-edit-block .grid2, .addr-edit-block .grid2, .addr-edit-block .grid3{margin-bottom:10px;}
+  .date-edit-block label, .addr-edit-block label{font-size:0.75rem; margin:0 0 4px; display:block;}
+  .date-edit-block button, .addr-edit-block button{margin-top:6px; width:auto; padding:7px 14px; font-size:0.8rem;}
+  .addr-edit-block h4{font-size:0.78rem; margin:10px 0 6px; color:var(--steel); text-transform:uppercase; letter-spacing:0.03em;}
+  .addr-edit-block h4:first-child{margin-top:0;}
 
   /* Edit rental / More: the per-rental edit fields and rare/destructive
      actions (military flag, delete) used to sit in the open as 9 buttons
@@ -64,7 +66,7 @@
      toggles so the everyday actions (text buttons, photos, payment) are
      what you see first. */
   .edit-panel, .more-panel, .photo-panel{display:none; margin-top:10px; padding-top:12px; border-top:1px dashed var(--line);}
-  .edit-panel .date-edit-block{border-top:none; padding-top:0;}
+  .edit-panel .date-edit-block, .edit-panel .addr-edit-block{border-top:none; padding-top:0;}
 
   /* Currently active rentals (dropped off, not yet picked up) get a light
      green tint + left border so they stand out at a glance in the list,
@@ -152,8 +154,8 @@
   // one line per address when they differ. Omitted entirely for self-service
   // rentals with no address on file.
   function rentalMetaHtml(r) {
-    const dOff = r.dropoffAddress || r.address || '';
-    const pOff = r.pickupAddress || r.address || '';
+    const dOff = dropoffAddressOf(r);
+    const pOff = pickupAddressOf(r);
     const dateLine = `${esc(r.package)} · 🚚 ${esc(fmtDate(r.dropoffDate))} → 📦 ${esc(fmtDate(r.pickupDate))}`;
     let addrLine = '';
     if (dOff && dOff === pOff) {
@@ -202,8 +204,8 @@
             ${textBtn('followup', r.key, r.followupSms, '💬', 'Follow-up', 'var(--gold)')}
           </div>
           ${r.serviceType !== 'self' ? `<div class="actions">
-            ${(r.dropoffAddress || r.address) ? onTheWayBtn('delivery', r.key) : ''}
-            ${(r.pickupAddress || r.address) ? onTheWayBtn('pickup', r.key) : ''}
+            ${dropoffAddressOf(r) ? onTheWayBtn('delivery', r.key) : ''}
+            ${pickupAddressOf(r) ? onTheWayBtn('pickup', r.key) : ''}
           </div>` : ''}
           ${paymentControls ? `<div class="actions payment-actions">${paymentControls}</div>` : ''}
           <div class="actions delete-row">
@@ -220,12 +222,13 @@
           </div>
           <div class="edit-panel" id="edit-${esc(r.key)}">
             <div class="actions">
-              <button type="button" class="edit-contact-btn" data-key="${esc(r.key)}" data-name="${esc(r.name || '')}" data-phone="${esc(r.phone || '')}" data-email="${esc(r.email || '')}" data-dropoff="${esc(r.dropoffAddress || '')}" data-pickup="${esc(r.pickupAddress || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">👤 Edit contact</button>
+              <button type="button" class="edit-contact-btn" data-key="${esc(r.key)}" data-name="${esc(r.name || '')}" data-phone="${esc(r.phone || '')}" data-email="${esc(r.email || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">👤 Edit contact</button>
               <button type="button" class="edit-pkg-btn" data-key="${esc(r.key)}" data-pkg="${esc(r.package || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">✏️ Edit package</button>
               <button type="button" class="edit-price-btn" data-key="${esc(r.key)}" data-price="${esc(r.price || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">💲 Edit price</button>
               <button type="button" class="edit-count-btn" data-key="${esc(r.key)}" data-totes="${typeof r.toteCount === 'number' ? r.toteCount : ''}" data-dollies="${typeof r.dollyCount === 'number' ? r.dollyCount : ''}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">🔢 Edit tote/dolly count</button>
               <button type="button" class="edit-notes-btn" data-key="${esc(r.key)}" data-notes="${esc(r.notes || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📝 ${r.notes ? 'Edit' : 'Add'} notes</button>
               <button type="button" class="toggle-panel-btn" data-target="dates-${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📅 Edit dates</button>
+              <button type="button" class="toggle-panel-btn" data-target="addr-${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📍 Edit addresses</button>
               <button type="button" class="edit-stripe-btn" data-key="${esc(r.key)}" data-stripe="${esc(r.stripeUrl || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">🔗 ${r.stripeUrl ? 'Edit' : 'Add'} payment link</button>
             </div>
             <div class="date-edit-block" id="dates-${esc(r.key)}">
@@ -238,6 +241,24 @@
                 <div><label>Pickup time</label><input type="time" data-df="pickupTime" value="${esc(r.pickupTime || '')}"></div>
               </div>
               <button type="button" class="save-dates-btn" data-key="${esc(r.key)}">Save dates</button>
+            </div>
+            <div class="addr-edit-block" id="addr-${esc(r.key)}">
+              <h4>Drop-off address</h4>
+              <div><label>Street</label><input type="text" data-af="dropoffAddressStreet" value="${escAttr(r.dropoffAddressStreet || '')}"></div>
+              <div class="grid3">
+                <div><label>City</label><input type="text" data-af="dropoffAddressCity" value="${escAttr(r.dropoffAddressCity || '')}"></div>
+                <div><label>State</label><input type="text" data-af="dropoffAddressState" value="${escAttr(r.dropoffAddressState || 'OK')}" maxlength="2"></div>
+                <div><label>Zip</label><input type="text" data-af="dropoffAddressZip" value="${escAttr(r.dropoffAddressZip || '')}" inputmode="numeric" maxlength="10"></div>
+              </div>
+              <h4>Pickup address</h4>
+              <button type="button" class="copy-addr-btn" data-key="${esc(r.key)}" style="margin-bottom:8px;">Same as drop-off</button>
+              <div><label>Street</label><input type="text" data-af="pickupAddressStreet" value="${escAttr(r.pickupAddressStreet || '')}"></div>
+              <div class="grid3">
+                <div><label>City</label><input type="text" data-af="pickupAddressCity" value="${escAttr(r.pickupAddressCity || '')}"></div>
+                <div><label>State</label><input type="text" data-af="pickupAddressState" value="${escAttr(r.pickupAddressState || 'OK')}" maxlength="2"></div>
+                <div><label>Zip</label><input type="text" data-af="pickupAddressZip" value="${escAttr(r.pickupAddressZip || '')}" inputmode="numeric" maxlength="10"></div>
+              </div>
+              <button type="button" class="save-addr-btn" data-key="${esc(r.key)}">Save addresses</button>
             </div>
           </div>
           <div class="more-panel" id="more-${esc(r.key)}">
@@ -270,7 +291,7 @@
       btn.addEventListener('click', () => editPrice(btn.dataset.key, btn.dataset.price));
     });
     el.querySelectorAll('.edit-contact-btn').forEach(btn => {
-      btn.addEventListener('click', () => editContact(btn.dataset.key, btn.dataset.name, btn.dataset.phone, btn.dataset.email, btn.dataset.dropoff, btn.dataset.pickup));
+      btn.addEventListener('click', () => editContact(btn.dataset.key, btn.dataset.name, btn.dataset.phone, btn.dataset.email));
     });
     el.querySelectorAll('.edit-notes-btn').forEach(btn => {
       btn.addEventListener('click', () => editNotes(btn.dataset.key, btn.dataset.notes));
@@ -286,6 +307,12 @@
     });
     el.querySelectorAll('.save-dates-btn').forEach(btn => {
       btn.addEventListener('click', () => saveDates(btn));
+    });
+    el.querySelectorAll('.save-addr-btn').forEach(btn => {
+      btn.addEventListener('click', () => saveAddresses(btn));
+    });
+    el.querySelectorAll('.copy-addr-btn').forEach(btn => {
+      btn.addEventListener('click', () => copyDropoffToPickup(btn));
     });
     el.querySelectorAll('.edit-stripe-btn').forEach(btn => {
       btn.addEventListener('click', () => editStripeUrl(btn.dataset.key, btn.dataset.stripe));
@@ -486,19 +513,47 @@
     } catch { showErr('Network error.'); }
   };
 
-  window.editContact = async (key, currentName, currentPhone, currentEmail, currentDropoff, currentPickup) => {
+  window.saveAddresses = async (btn) => {
+    const key = btn.dataset.key;
+    const block = btn.closest('.addr-edit-block');
+    const fields = {};
+    block.querySelectorAll('[data-af]').forEach(inp => { fields[inp.dataset.af] = inp.value; });
+
+    const secret = $('secret').value.trim();
+    if (!secret) return showErr('Enter the admin secret first.');
+    try {
+      const resp = await fetch('/.netlify/functions/edit-rental', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, key, ...fields }),
+      });
+      if (resp.ok) { $('loadBtn').click(); }
+      else {
+        const detail = await resp.text().catch(() => '');
+        showErr('Edit failed (' + resp.status + '): ' + detail);
+      }
+    } catch { showErr('Network error.'); }
+  };
+
+  // Convenience for the common case where pickup is the same address as
+  // drop-off: copies the drop-off street/city/state/zip inputs into the
+  // pickup inputs, right in the form, before Save is clicked.
+  window.copyDropoffToPickup = (btn) => {
+    const block = btn.closest('.addr-edit-block');
+    ['Street', 'City', 'State', 'Zip'].forEach(part => {
+      const from = block.querySelector(`[data-af="dropoffAddress${part}"]`);
+      const to = block.querySelector(`[data-af="pickupAddress${part}"]`);
+      if (from && to) to.value = from.value;
+    });
+  };
+
+  window.editContact = async (key, currentName, currentPhone, currentEmail) => {
     const newName = prompt('Name:', currentName || '');
     if (newName === null) return; // cancelled
     const newPhone = prompt('Phone:', currentPhone || '');
     if (newPhone === null) return;
     const newEmail = prompt('Email:', currentEmail || '');
     if (newEmail === null) return;
-    const newDropoff = prompt('Drop-off address:', currentDropoff || '');
-    if (newDropoff === null) return;
-    // Defaults to whatever was just entered for drop-off, so if pickup is
-    // the same address (the common case), just hitting OK copies it over.
-    const newPickup = prompt('Pickup address (edit if different from drop-off):', currentPickup || newDropoff);
-    if (newPickup === null) return;
 
     const secret = $('secret').value.trim();
     if (!secret) return showErr('Enter the admin secret first.');
@@ -509,7 +564,6 @@
         body: JSON.stringify({
           secret, key,
           name: newName.trim(), phone: newPhone.trim(), email: newEmail.trim(),
-          dropoffAddress: newDropoff.trim(), pickupAddress: newPickup.trim(),
         }),
       });
       if (resp.ok) { $('loadBtn').click(); }

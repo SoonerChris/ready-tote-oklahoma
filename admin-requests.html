@@ -175,7 +175,7 @@
         <div><span class="lbl">Package</span>${r.package ? `<span class="tag">${esc(r.package)}</span>` : '—'}</div>
         <div><span class="lbl">Delivery</span>${esc(fmtReqDate(r.deliveryDate))}${r.deliveryWindow && !/no preference/i.test(r.deliveryWindow) ? ' — pref: ' + esc(r.deliveryWindow) : ''}</div>
         <div><span class="lbl">Pickup</span>${esc(fmtReqDate(r.pickupDate))}${r.pickupWindow && !/no preference/i.test(r.pickupWindow) ? ' — pref: ' + esc(r.pickupWindow) : ''}</div>
-        <div><span class="lbl">Address</span>${esc(r.deliveryAddress || '—')}</div>
+        <div><span class="lbl">Address</span>${esc(deliveryAddressOf(r) || '—')}</div>
         <div><span class="lbl">Phone</span>${r.phone ? `<a href="tel:${escAttr(phoneDigits)}">${esc(r.phone)}</a>` : '—'}</div>
         <div><span class="lbl">Email</span>${r.email ? `<a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : '—'}</div>
         ${r.reviewNotes ? `<div><span class="lbl">Notes</span>${esc(r.reviewNotes)}</div>` : ''}
@@ -198,7 +198,15 @@
         </div>
         <div class="grid2">
           <div><label>Email</label><input type="email" data-f="email" value="${escAttr(r.email || '')}"></div>
-          <div><label>Address</label><input type="text" data-f="deliveryAddress" value="${escAttr(r.deliveryAddress || '')}"></div>
+          <div><label>Street Address</label><input type="text" data-f="deliveryAddressStreet" value="${escAttr(r.deliveryAddressStreet || '')}"></div>
+        </div>
+        <div class="grid2">
+          <div><label>City</label><input type="text" data-f="deliveryAddressCity" value="${escAttr(r.deliveryAddressCity || '')}"></div>
+          <div><label>State</label><input type="text" data-f="deliveryAddressState" value="${escAttr(r.deliveryAddressState || 'OK')}" maxlength="2"></div>
+        </div>
+        <div class="grid2">
+          <div><label>Zip</label><input type="text" data-f="deliveryAddressZip" value="${escAttr(r.deliveryAddressZip || '')}" inputmode="numeric" maxlength="10"></div>
+          <div></div>
         </div>
         <div class="grid2">
           <div><label>Delivery date</label><input type="date" data-f="deliveryDate" value="${escAttr(r.deliveryDate || '')}"></div>

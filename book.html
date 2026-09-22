@@ -136,6 +136,8 @@
   /* Form */
   .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
   @media(max-width:560px){ .form-grid{ grid-template-columns:1fr; } }
+  .addr-grid{ display:grid; grid-template-columns:2fr 1fr 1fr; gap:0 16px; }
+  @media(max-width:560px){ .addr-grid{ grid-template-columns:1fr; } }
   .hp{ position:absolute; left:-9999px; }
   button.submit{
     width:100%; margin-top:6px; padding:14px; font-size:1rem; font-weight:bold;
@@ -273,9 +275,20 @@
             </select>
           </label>
         </div>
-        <label>Delivery Address*
-          <input type="text" name="delivery_address" placeholder="Street, City, Zip" required>
+        <label>Street Address*
+          <input type="text" name="delivery_address_street" placeholder="123 Main St" required>
         </label>
+        <div class="addr-grid">
+          <label>City*
+            <input type="text" name="delivery_address_city" placeholder="Oklahoma City" required>
+          </label>
+          <label>State*
+            <input type="text" name="delivery_address_state" value="OK" maxlength="2" required>
+          </label>
+          <label>Zip*
+            <input type="text" name="delivery_address_zip" placeholder="73102" inputmode="numeric" maxlength="10" required>
+          </label>
+        </div>
 
         <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;">
           <input type="checkbox" name="is_military" value="true" id="isMilitaryCheck" style="width:auto; margin:3px 0 0;">

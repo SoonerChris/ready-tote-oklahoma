@@ -23,6 +23,29 @@ export function smsLink(phone, message) {
   return `sms:${normalizePhone(phone)}?&body=${encodeURIComponent(message)}`;
 }
 
+// ---- Address composition ----
+// Rentals store addresses as separate street/city/state/zip fields. This
+// joins them into one display/lookup string, same logic as formatAddress
+// in admin-shared.js, kept in sync intentionally. Returns "" if every
+// part is blank.
+export function formatAddress(street, city, state, zip) {
+  const line2 = [city, state].filter(Boolean).join(", ");
+  return [street, [line2, zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+}
+
+// Records saved before the street/city/state/zip split still have a
+// single combined string under the old field name (dropoffAddress/
+// pickupAddress, or the oldest records' plain address). These fall back
+// to that legacy string so old records keep working without a migration.
+export function dropoffAddressOf(rental) {
+  return formatAddress(rental.dropoffAddressStreet, rental.dropoffAddressCity, rental.dropoffAddressState, rental.dropoffAddressZip)
+    || rental.dropoffAddress || rental.address || "";
+}
+export function pickupAddressOf(rental) {
+  return formatAddress(rental.pickupAddressStreet, rental.pickupAddressCity, rental.pickupAddressState, rental.pickupAddressZip)
+    || rental.pickupAddress || rental.address || "";
+}
+
 function friendlyDate(isoDate) {
   const d = new Date(isoDate + "T12:00:00");
   return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
@@ -34,8 +57,8 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
 
   for (const r of rentals) {
     const first = (r.name || "there").split(" ")[0];
-    const dropAddr = r.dropoffAddress || r.address || "";
-    const pickAddr = r.pickupAddress || r.address || "";
+    const dropAddr = dropoffAddressOf(r);
+    const pickAddr = pickupAddressOf(r);
     const self = r.serviceType === "self";
 
     // Confirm pickup address: 5 days out from pickup, delivery-service rentals
@@ -113,7 +136,7 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
 
 export function pickupAddressRequestMessageFor(rental) {
   const first = (rental.name || "there").split(" ")[0];
-  const onFile = rental.pickupAddress || rental.address || "the address on file";
+  const onFile = pickupAddressOf(rental) || "the address on file";
   const msg = `Hi ${first}, it's Ready Tote Oklahoma! Quick check before we pick up your totes on ${friendlyDate(rental.pickupDate)} — we have your pickup address as ${onFile}. Let us know if that's still correct, or send us the right address if it's changed!`;
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
@@ -249,7 +272,7 @@ export function rentalToICSAttachments(rental) {
     date: rental.dropoffDate,
     time: rental.dropoffTime || '10:00 AM',
     durationMinutes: 30,
-    location: self ? '' : (rental.dropoffAddress || rental.address || ''),
+    location: self ? '' : dropoffAddressOf(rental),
     description: `${rental.package}\\n${self ? 'Customer picks up totes' : 'Deliver totes to customer'}\\nPhone: ${rental.phone || ''}`,
   });
   attachments.push({
@@ -263,7 +286,7 @@ export function rentalToICSAttachments(rental) {
     date: rental.pickupDate,
     time: rental.pickupTime || '10:00 AM',
     durationMinutes: 30,
-    location: self ? '' : (rental.pickupAddress || rental.address || ''),
+    location: self ? '' : pickupAddressOf(rental),
     description: `${rental.package}\\n${self ? 'Customer returns totes' : 'Pick up totes from customer'}\\nPhone: ${rental.phone || ''}`,
   });
   attachments.push({
