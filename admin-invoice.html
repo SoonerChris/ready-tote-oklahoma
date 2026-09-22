@@ -209,7 +209,12 @@
     if (r.deliveryDate) $('dropoffDate').value = r.deliveryDate;
     if (r.pickupDate) $('pickupDate').value = r.pickupDate;
 
-    if (r.deliveryAddress) {
+    if (r.deliveryAddressStreet || r.deliveryAddressCity || r.deliveryAddressZip) {
+      $('street').value = r.deliveryAddressStreet || '';
+      $('city').value = r.deliveryAddressCity || '';
+      $('state').value = r.deliveryAddressState || 'OK';
+      $('zip').value = r.deliveryAddressZip || '';
+    } else if (r.deliveryAddress) {
       const parts = r.deliveryAddress.split(',').map(s => s.trim());
       if (parts.length >= 2) {
         $('street').value = parts[0];
@@ -314,7 +319,11 @@
     const pkgText = grab(['package']);
     const dropDate = grab(['delivery[_ ]?date']);
     const pickDate = grab(['pickup[_ ]?date']);
-    const addr = grab(['delivery[_ ]?address']);
+    const addrStreet = grab(['delivery[_ ]?address[_ ]?street']);
+    const addrCity = grab(['delivery[_ ]?address[_ ]?city']);
+    const addrState = grab(['delivery[_ ]?address[_ ]?state']);
+    const addrZip = grab(['delivery[_ ]?address[_ ]?zip']);
+    const addr = grab(['delivery[_ ]?address']); // legacy combined field, older emails only
     const dropWin = grab(['delivery[_ ]?window']);
     const pickWin = grab(['pickup[_ ]?window']);
 
@@ -325,8 +334,14 @@
     if (dropDate && /^\d{4}-\d{2}-\d{2}/.test(dropDate)) { $('dropoffDate').value = dropDate.slice(0,10); filled.push('drop-off date'); }
     if (pickDate && /^\d{4}-\d{2}-\d{2}/.test(pickDate)) { $('pickupDate').value = pickDate.slice(0,10); filled.push('pickup date'); }
 
-    // Address: split "Street, City, Zip"-style input into the form fields
-    if (addr) {
+    if (addrStreet || addrCity || addrZip) {
+      if (addrStreet) $('street').value = addrStreet;
+      if (addrCity) $('city').value = addrCity;
+      if (addrState) $('state').value = addrState;
+      if (addrZip) $('zip').value = addrZip;
+      filled.push('address');
+    } else if (addr) {
+      // Legacy combined field ("Street, City, Zip") — split it out best-effort
       const parts = addr.split(',').map(s => s.trim());
       if (parts.length >= 2) {
         $('street').value = parts[0];

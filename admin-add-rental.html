@@ -100,10 +100,38 @@
   </select>
 
   <label>Drop-off address (optional)</label>
-  <input type="text" id="dropoffAddress" placeholder="123 Main St, Oklahoma City, OK 73102">
+  <input type="text" id="dropoffAddressStreet" placeholder="123 Main St">
+  <div class="grid3" style="margin-top:14px;">
+    <div>
+      <label>City</label>
+      <input type="text" id="dropoffAddressCity" placeholder="Oklahoma City">
+    </div>
+    <div>
+      <label>State</label>
+      <input type="text" id="dropoffAddressState" value="OK" maxlength="2">
+    </div>
+    <div>
+      <label>Zip</label>
+      <input type="text" id="dropoffAddressZip" placeholder="73102" inputmode="numeric" maxlength="10">
+    </div>
+  </div>
 
-  <label>Pickup address (optional)</label>
-  <input type="text" id="pickupAddress" placeholder="456 Oak Ave, Moore, OK 73160">
+  <label style="margin-top:18px;">Pickup address (optional)</label>
+  <input type="text" id="pickupAddressStreet" placeholder="456 Oak Ave">
+  <div class="grid3" style="margin-top:14px;">
+    <div>
+      <label>City</label>
+      <input type="text" id="pickupAddressCity" placeholder="Moore">
+    </div>
+    <div>
+      <label>State</label>
+      <input type="text" id="pickupAddressState" value="OK" maxlength="2">
+    </div>
+    <div>
+      <label>Zip</label>
+      <input type="text" id="pickupAddressZip" placeholder="73160" inputmode="numeric" maxlength="10">
+    </div>
+  </div>
 
   <label>Notes (optional)</label>
   <textarea id="notes" rows="3" placeholder="Gate code, dog on property, special instructions…" style="width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:6px;background:var(--cream);font-family:inherit;resize:vertical;"></textarea>
@@ -132,8 +160,14 @@
     payload.dropoffTime = to12Hour($('dropoffTime').value || '10:00');
     payload.pickupTime = to12Hour($('pickupTime').value || '10:00');
     payload.serviceType = $('serviceType').value;
-    payload.dropoffAddress = $('dropoffAddress').value.trim();
-    payload.pickupAddress = $('pickupAddress').value.trim();
+    payload.dropoffAddressStreet = $('dropoffAddressStreet').value.trim();
+    payload.dropoffAddressCity = $('dropoffAddressCity').value.trim();
+    payload.dropoffAddressState = $('dropoffAddressState').value.trim();
+    payload.dropoffAddressZip = $('dropoffAddressZip').value.trim();
+    payload.pickupAddressStreet = $('pickupAddressStreet').value.trim();
+    payload.pickupAddressCity = $('pickupAddressCity').value.trim();
+    payload.pickupAddressState = $('pickupAddressState').value.trim();
+    payload.pickupAddressZip = $('pickupAddressZip').value.trim();
     payload.email = $('email').value.trim();
     payload.notes = $('notes').value.trim();
     payload.isMilitary = $('isMilitary').checked;
@@ -159,7 +193,12 @@
       });
       if (resp.ok) {
         showStatus('ok', 'Added ' + payload.name + '. Form cleared for the next one.');
-        ['name','email','phone','package','dropoffDate','pickupDate','dropoffAddress','pickupAddress','notes','toteCount','dollyCount'].forEach(f => $(f).value = '');
+        ['name','email','phone','package','dropoffDate','pickupDate',
+         'dropoffAddressStreet','dropoffAddressCity','dropoffAddressZip',
+         'pickupAddressStreet','pickupAddressCity','pickupAddressZip',
+         'notes','toteCount','dollyCount'].forEach(f => $(f).value = '');
+        $('dropoffAddressState').value = 'OK';
+        $('pickupAddressState').value = 'OK';
         $('price').value = '$';
         $('isMilitary').checked = false;
       } else if (resp.status === 401) {

@@ -48,6 +48,34 @@ function smsLink(phone, message) {
   return `sms:${normalizePhone(phone)}?&body=${encodeURIComponent(message)}`;
 }
 
+// ---- Address composition ----
+// Booking requests and rentals store addresses as separate street/city/
+// state/zip fields. This joins them into one display/lookup string, same
+// logic as formatAddress in netlify/functions/lib-reminders.mjs, kept in
+// sync intentionally. Returns "" if every part is blank.
+function formatAddress(street, city, state, zip) {
+  const line2 = [city, state].filter(Boolean).join(", ");
+  return [street, [line2, zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+}
+
+// Records saved before the street/city/state/zip split still have a
+// single combined string under the old field name (deliveryAddress on
+// requests; dropoffAddress/pickupAddress, or the oldest records' plain
+// address, on rentals). These fall back to that legacy string so old
+// records keep displaying correctly without a data migration.
+function deliveryAddressOf(r) {
+  return formatAddress(r.deliveryAddressStreet, r.deliveryAddressCity, r.deliveryAddressState, r.deliveryAddressZip)
+    || r.deliveryAddress || "";
+}
+function dropoffAddressOf(r) {
+  return formatAddress(r.dropoffAddressStreet, r.dropoffAddressCity, r.dropoffAddressState, r.dropoffAddressZip)
+    || r.dropoffAddress || r.address || "";
+}
+function pickupAddressOf(r) {
+  return formatAddress(r.pickupAddressStreet, r.pickupAddressCity, r.pickupAddressState, r.pickupAddressZip)
+    || r.pickupAddress || r.address || "";
+}
+
 // ---- Auth guard ----
 // Runs immediately (this script is a blocking, non-deferred <script src>
 // in <head>, so this executes before <body> is even parsed) rather than

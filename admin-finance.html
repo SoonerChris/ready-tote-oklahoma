@@ -309,7 +309,8 @@
     if (!ALL_RENTALS.length) return showErr('No rentals to export yet.');
     const cols = ['invoicedAt','name','email','phone','package','price','duration','dropoffDate','dropoffTime','dropoffAddress','pickupDate','pickupTime','pickupAddress'];
     const rows = [...ALL_RENTALS].sort((a,b) => (b.invoicedAt||'').localeCompare(a.invoicedAt||''))
-      .map(r => ({ ...r, invoicedAt: fmtDate((r.invoicedAt||'').slice(0,10)), dropoffDate: fmtDate(r.dropoffDate), pickupDate: fmtDate(r.pickupDate) }));
+      .map(r => ({ ...r, invoicedAt: fmtDate((r.invoicedAt||'').slice(0,10)), dropoffDate: fmtDate(r.dropoffDate), pickupDate: fmtDate(r.pickupDate),
+                    dropoffAddress: dropoffAddressOf(r), pickupAddress: pickupAddressOf(r) }));
     dlCsv('ready-tote-rentals', cols, rows);
   });
 
@@ -371,9 +372,9 @@
     for (const r of ALL_RENTALS) {
       if (r.serviceType === 'self') continue;
       if (r.dropoffDate >= loS && r.dropoffDate <= hiS)
-        trips.push({ date: r.dropoffDate, purpose: 'Deliver — ' + r.name + (r.dropoffAddress||r.address ? ', ' + (r.dropoffAddress||r.address) : '') });
+        trips.push({ date: r.dropoffDate, purpose: 'Deliver — ' + r.name + (dropoffAddressOf(r) ? ', ' + dropoffAddressOf(r) : '') });
       if (r.pickupDate >= loS && r.pickupDate <= hiS)
-        trips.push({ date: r.pickupDate, purpose: 'Pick up — ' + r.name + (r.pickupAddress||r.address ? ', ' + (r.pickupAddress||r.address) : '') });
+        trips.push({ date: r.pickupDate, purpose: 'Pick up — ' + r.name + (pickupAddressOf(r) ? ', ' + pickupAddressOf(r) : '') });
     }
     trips.sort((a,b)=>b.date.localeCompare(a.date));
     $('tripChips').innerHTML = trips.slice(0,8).map(t => `

@@ -127,7 +127,7 @@
     q = q.trim().toLowerCase();
     if (!q) return ALL_ROWS;
     return ALL_ROWS.filter(r => {
-      const hay = [r.name, r.phone, r.email, r.dropoffAddress, r.pickupAddress, r.address, r.package]
+      const hay = [r.name, r.phone, r.email, dropoffAddressOf(r), pickupAddressOf(r), r.package]
         .filter(Boolean).join(' ').toLowerCase();
       return hay.includes(q);
     });
@@ -142,8 +142,8 @@
       return;
     }
     tb.innerHTML = rows.map(r => {
-      const addr = r.dropoffAddress || r.pickupAddress || r.address || '';
-      const pickupAddr = r.pickupAddress || '';
+      const addr = dropoffAddressOf(r) || pickupAddressOf(r);
+      const pickupAddr = pickupAddressOf(r);
       const addrTitle = (pickupAddr && pickupAddr !== addr) ? ` title="Pickup address: ${escAttr(pickupAddr)}"` : '';
       const phoneDigits = (r.phone || '').replace(/[^0-9+]/g, '');
       return `
