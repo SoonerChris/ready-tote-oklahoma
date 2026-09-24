@@ -37,6 +37,21 @@ export default async (request) => {
   const isMilitary = data.is_military === "true";
   const militaryIdKey = data.military_id_key || "";
 
+  // The booking form now collects one "Delivery Address" text box
+  // (delivery_address). Submissions from before that change sent
+  // street/city/state/zip separately, so accept either shape. The raw
+  // text is also kept under the legacy deliveryAddress field, which the
+  // admin pages already fall back to (see deliveryAddressOf in admin-shared.js).
+  const rawAddress = String(data.delivery_address || "").trim();
+  const addr = rawAddress
+    ? splitAddress(rawAddress)
+    : {
+        street: data.delivery_address_street || "",
+        city: data.delivery_address_city || "",
+        state: data.delivery_address_state || "",
+        zip: data.delivery_address_zip || "",
+      };
+
   const from = process.env.RESEND_FROM || FROM_FALLBACK;
 
   // Persist the request itself so it shows up in the Booking Requests admin
@@ -56,10 +71,11 @@ export default async (request) => {
       pickupDate: data.pickup_date || "",
       deliveryWindow: data.delivery_window || "",
       pickupWindow: data.pickup_window || "",
-      deliveryAddressStreet: data.delivery_address_street || "",
-      deliveryAddressCity: data.delivery_address_city || "",
-      deliveryAddressState: data.delivery_address_state || "",
-      deliveryAddressZip: data.delivery_address_zip || "",
+      deliveryAddress: rawAddress,
+      deliveryAddressStreet: addr.street,
+      deliveryAddressCity: addr.city,
+      deliveryAddressState: addr.state,
+      deliveryAddressZip: addr.zip,
       isMilitary,
       militaryIdKey,
       status: "new",
@@ -244,4 +260,36 @@ function formatDate(isoDate) {
   return d.toLocaleDateString("en-US", {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
+}
+
+// Best-effort split of a one-line address into street/city/state/zip so
+// the admin edit panel and invoice prefill get separate fields.
+//   "123 Main St, Moore, OK 73160"  -> 123 Main St | Moore | OK | 73160
+//   "123 Main St Apt 4, Norman"     -> 123 Main St Apt 4 | Norman | OK | ""
+//   "123 Main St Moore OK 73160"    -> 123 Main St Moore | "" | OK | 73160
+// Without commas, city can't be told apart from the street, so it stays in
+// street (still displays correctly). State defaults to OK (service area).
+// The customer's original text is always saved alongside as deliveryAddress.
+function splitAddress(raw) {
+  let rest = String(raw || "").replace(/\s+/g, " ").trim();
+  const out = { street: "", city: "", state: "OK", zip: "" };
+  if (!rest) return out;
+
+  const zipM = rest.match(/[,\s]*\b(\d{5})(?:-\d{4})?\s*$/);
+  if (zipM) { out.zip = zipM[1]; rest = rest.slice(0, zipM.index).trim(); }
+
+  // Only strip an explicit Oklahoma marker; other 2-letter endings like
+  // "St", "Ct", "Dr" are street suffixes, not states.
+  const stM = rest.match(/(?:^|[,\s])(ok|okla\.?|oklahoma)\s*,?\s*$/i);
+  if (stM) rest = rest.slice(0, stM.index).trim();
+  rest = rest.replace(/,\s*$/, "").trim();
+
+  const lastComma = rest.lastIndexOf(",");
+  if (lastComma > 0) {
+    out.street = rest.slice(0, lastComma).trim();
+    out.city = rest.slice(lastComma + 1).trim();
+  } else {
+    out.street = rest;
+  }
+  return out;
 }

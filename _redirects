@@ -3,3 +3,8 @@
 # so it serves live content instead of redirecting unless told to here)
 https://readytoteok.com/*      https://www.readytoteokc.com/:splat   301!
 https://www.readytoteok.com/*  https://www.readytoteokc.com/:splat   301!
+
+# Retired standalone booking page (book.html). The only booking form is now
+# the one on the homepage (#book). Sends old links and search results there.
+/book.html  /#book  301!
+/book       /#book  301!
