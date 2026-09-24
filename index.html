@@ -464,6 +464,10 @@
     padding:36px; max-width:640px;
   }
   .form-grid{display:grid; gap:18px;}
+  /* Let grid cells shrink below their content width, so long package names
+     in the select can't push Email/Package off-screen on phones. */
+  .form-grid > *{min-width:0;}
+  .form-grid select{max-width:100%;}
   @media(min-width:640px){.form-grid.two{grid-template-columns:1fr 1fr;}}
   @media(min-width:640px){.form-grid.three{grid-template-columns:2fr 1fr 1fr;}}
   label{display:flex; flex-direction:column; gap:6px; font-size:0.88rem; font-weight:600;}
@@ -1020,15 +1024,15 @@
         <input class="hp" type="text" name="hp_field" tabindex="-1" autocomplete="off" aria-hidden="true">
         <div class="form-grid two">
           <label>Full Name*
-            <input type="text" name="name" required>
+            <input type="text" name="name" autocomplete="name" required>
           </label>
           <label>Phone Number*
-            <input type="tel" name="phone" required>
+            <input type="tel" name="phone" autocomplete="tel" required>
           </label>
         </div>
         <div class="form-grid two" style="margin-top:18px;">
           <label>Email Address*
-            <input type="email" name="email" required>
+            <input type="email" name="email" autocomplete="email" required>
           </label>
           <label>Rental Package*
             <select name="package" required>
@@ -1042,10 +1046,10 @@
         </div>
         <div class="form-grid two" style="margin-top:18px;">
           <label>Estimated Delivery Date*
-            <input type="date" name="delivery_date" required>
+            <input type="date" name="delivery_date" id="deliveryDate" required>
           </label>
-          <label>Estimated Pickup Date*
-            <input type="date" name="pickup_date" required>
+          <label>Estimated Pickup Date* <span style="font-weight:400; color:var(--steel);">(auto-set 2 weeks out, editable)</span>
+            <input type="date" name="pickup_date" id="pickupDate" required>
           </label>
         </div>
         <p style="color:var(--steel); font-size:0.8rem; margin:8px 0 0;">Need delivery in under 24 hours? A $25 expedite fee applies, we'll confirm the total before sending your invoice.</p>
@@ -1068,32 +1072,14 @@
           </label>
         </div>
         <div class="form-grid" style="margin-top:18px;">
-          <label>Street Address*
-            <input type="text" name="delivery_address_street" placeholder="123 Main St" required>
+          <label>Delivery Address*
+            <input type="text" name="delivery_address" placeholder="Street address, city, state, zip" required>
           </label>
         </div>
-        <div class="form-grid three" style="margin-top:18px;">
-          <label>City*
-            <input type="text" name="delivery_address_city" placeholder="Oklahoma City" required>
-          </label>
-          <label>State*
-            <input type="text" name="delivery_address_state" value="OK" maxlength="2" required>
-          </label>
-          <label>Zip*
-            <input type="text" name="delivery_address_zip" placeholder="73102" inputmode="numeric" maxlength="10" required>
-          </label>
-        </div>
-        <label style="flex-direction:row; align-items:center; gap:8px; font-weight:400; margin-top:18px;">
-          <input type="checkbox" name="is_military" value="true" id="isMilitaryCheck" style="width:auto;">
-          <span>I qualify for our 15% military discount (active duty, veteran, or immediate family)</span>
+        <label style="flex-direction:row; align-items:center; gap:8px; font-weight:400; margin-top:18px; font-size:0.88rem; color:var(--steel);">
+          <input type="checkbox" name="is_military" value="true" style="width:auto;">
+          <span>Military? Check here (optional) and mention it when we call to confirm your 15% discount.</span>
         </label>
-        <div id="militaryIdBlock" style="display:none; margin:10px 0 0;">
-          <label>Upload a photo of your military ID <span class="mono" style="font-weight:400; color:var(--steel);">(optional — helps us verify faster)</span>
-            <input type="file" id="militaryIdFile" accept="image/*">
-          </label>
-          <p class="form-note" id="militaryIdStatus" style="margin-top:-8px;"></p>
-          <input type="hidden" name="military_id_key" id="militaryIdKeyField">
-        </div>
         <button type="submit" class="btn btn-primary form-submit">Request Booking</button>
         <p class="form-note">We'll follow up to confirm your dates and send your invoice. No payment due now.</p>
       </form>
@@ -1236,82 +1222,27 @@
   const form = document.getElementById('bookingForm');
   const formSuccess = document.getElementById('formSuccess');
 
-  // ---- Military discount: optional ID photo upload ----
-  // Uploaded immediately (before the main form submits) via the public,
-  // write-only upload-military-id function, since no request record exists
-  // yet to key the photo to. The generated key rides along as a hidden
-  // form field so submission-created.mjs can save it on the request once
-  // it's created, and admin pages can look the photo up later.
-  const isMilitaryCheck = document.getElementById('isMilitaryCheck');
-  const militaryIdBlock = document.getElementById('militaryIdBlock');
-  const militaryIdFile = document.getElementById('militaryIdFile');
-  const militaryIdStatus = document.getElementById('militaryIdStatus');
-  const militaryIdKeyField = document.getElementById('militaryIdKeyField');
-
-  isMilitaryCheck.addEventListener('change', () => {
-    const checked = isMilitaryCheck.checked;
-    militaryIdBlock.style.display = checked ? 'block' : 'none';
-    if (!checked) {
-      militaryIdFile.value = '';
-      militaryIdKeyField.value = '';
-      militaryIdStatus.textContent = '';
+  // ---- Pickup date auto-fill ----
+  // Saves a second date-picker trip on mobile: picking a delivery date
+  // pre-fills pickup 14 days later (the standard rental). Pickup stays
+  // editable, and once the customer changes it by hand we stop overwriting.
+  const deliveryDateEl = document.getElementById('deliveryDate');
+  const pickupDateEl = document.getElementById('pickupDate');
+  const todayISO = new Date().toLocaleDateString('en-CA');
+  let pickupEditedByHand = false;
+  deliveryDateEl.min = todayISO;
+  pickupDateEl.min = todayISO;
+  deliveryDateEl.addEventListener('change', () => {
+    const d = deliveryDateEl.value;
+    if (!d) return;
+    pickupDateEl.min = d;
+    if (!pickupEditedByHand || !pickupDateEl.value || pickupDateEl.value < d) {
+      const p = new Date(d + 'T12:00:00');
+      p.setDate(p.getDate() + 14);
+      pickupDateEl.value = p.toLocaleDateString('en-CA');
     }
   });
-
-  militaryIdFile.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    militaryIdKeyField.value = '';
-    militaryIdStatus.textContent = 'Uploading…';
-    try {
-      const dataUrl = await compressImage(file, 1600, 0.72);
-      const base64 = dataUrl.split(',')[1];
-      const key = genMilitaryKey();
-      const resp = await fetch('/.netlify/functions/upload-military-id', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, imageBase64: base64, mimeType: 'image/jpeg' }),
-      });
-      if (resp.ok) {
-        militaryIdKeyField.value = key;
-        militaryIdStatus.textContent = '✓ Photo attached.';
-      } else {
-        militaryIdStatus.textContent = 'Could not upload — you can still submit your request and we\'ll follow up about the ID.';
-      }
-    } catch {
-      militaryIdStatus.textContent = 'Could not process that photo — you can still submit your request and we\'ll follow up about the ID.';
-    }
-  });
-
-  // Resizes/compresses an image file client-side via canvas, returns a JPEG data URL.
-  function compressImage(file, maxDim, quality) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-          let { width, height } = img;
-          if (width > maxDim || height > maxDim) {
-            if (width >= height) { height = Math.round(height * (maxDim / width)); width = maxDim; }
-            else { width = Math.round(width * (maxDim / height)); height = maxDim; }
-          }
-          const canvas = document.createElement('canvas');
-          canvas.width = width; canvas.height = height;
-          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', quality));
-        };
-        img.onerror = () => reject(new Error('Could not read image.'));
-        img.src = reader.result;
-      };
-      reader.onerror = () => reject(new Error('Could not read file.'));
-      reader.readAsDataURL(file);
-    });
-  }
-
-  function genMilitaryKey() {
-    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-    return 'mid-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
-  }
+  pickupDateEl.addEventListener('change', () => { pickupEditedByHand = true; });
 
   // Guards the Meta Pixel Lead event so it fires at most once per page load:
   // the success state is terminal (the form is hidden and never re-shown), so
@@ -1341,8 +1272,6 @@
         form.style.display = 'none';
         formSuccess.style.display = 'block';
         formSuccess.focus();
-        militaryIdBlock.style.display = 'none';
-        militaryIdStatus.textContent = '';
         if (!leadTracked) {
           leadTracked = true;
           if (typeof fbq !== 'undefined') {
@@ -1375,12 +1304,8 @@
   <input type="date" name="pickup_date">
   <select name="delivery_window"><option>No preference</option></select>
   <select name="pickup_window"><option>No preference</option></select>
-  <input type="text" name="delivery_address_street">
-  <input type="text" name="delivery_address_city">
-  <input type="text" name="delivery_address_state">
-  <input type="text" name="delivery_address_zip">
+  <input type="text" name="delivery_address">
   <input type="checkbox" name="is_military" value="true">
-  <input type="text" name="military_id_key">
   <input type="text" name="hp_field">
 </form>
 

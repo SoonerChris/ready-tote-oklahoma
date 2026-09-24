@@ -104,7 +104,13 @@
   .status-banner.none{ background:#FBEAE6; color:var(--crate-red); border:1px solid var(--crate-red); }
   .status-banner.neutral{ background:var(--cream); color:var(--steel); border:1px solid var(--line-dark); }
 
-  /* Calendar */
+  /* Calendar (optional, collapsed by default) */
+  details.cal-toggle{ margin-top:16px; border-top:1px solid var(--line-dark); padding-top:14px; }
+  details.cal-toggle > summary{ cursor:pointer; font-weight:600; font-size:0.92rem; list-style:none; padding:6px 0; }
+  details.cal-toggle > summary::-webkit-details-marker{ display:none; }
+  details.cal-toggle > summary::before{ content:'+ '; color:var(--yellow); font-weight:bold; }
+  details.cal-toggle[open] > summary::before{ content:'\2212  '; }
+  details.cal-toggle .cal-legend{ margin:8px 0 10px; }
   #calendarWrap{ max-width:380px; margin:0 auto; }
   .cal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; flex-wrap:wrap; gap:6px; }
   .cal-legend{ display:flex; gap:10px; font-size:0.7rem; color:var(--steel); flex-wrap:wrap; }
@@ -136,8 +142,6 @@
   /* Form */
   .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
   @media(max-width:560px){ .form-grid{ grid-template-columns:1fr; } }
-  .addr-grid{ display:grid; grid-template-columns:2fr 1fr 1fr; gap:0 16px; }
-  @media(max-width:560px){ .addr-grid{ grid-template-columns:1fr; } }
   .hp{ position:absolute; left:-9999px; }
   button.submit{
     width:100%; margin-top:6px; padding:14px; font-size:1rem; font-weight:bold;
@@ -175,7 +179,7 @@
 
   <section class="block wrap">
     <div class="card">
-      <h2 style="font-size:1.05rem; margin-bottom:14px;">1. Choose a package</h2>
+      <h2 style="font-size:1.05rem; margin-bottom:14px;">1. Choose a package &amp; dates</h2>
       <div class="pkg-grid" id="pkgGrid">
         <div class="pkg-card" data-totes="20" data-label="1 Bedroom — 20 Totes + Dolly — $99">
           <div class="name">1 Bedroom</div>
@@ -209,27 +213,23 @@
       </div>
 
       <div class="status-banner neutral" id="statusBanner">Pick a package and delivery date to check availability.</div>
-    </div>
-  </section>
 
-  <section class="block wrap">
-    <div class="card">
-      <div class="cal-head">
-        <h2 style="font-size:1.05rem;">2. Browse open dates</h2>
+      <details class="cal-toggle" id="calToggle">
+        <summary>See open dates on a calendar (optional)</summary>
         <div class="cal-legend">
           <span><i class="dot open"></i>Open</span>
           <span><i class="dot limited"></i>Limited</span>
           <span><i class="dot booked"></i>Booked out</span>
         </div>
-      </div>
-      <p class="note" style="color:var(--steel); font-size:0.8rem; margin:-4px 0 12px;">Once you pick a package above, colors reflect whether <em>that package</em> can be fulfilled on each day. Before you pick one, colors just show general stock levels.</p>
-      <div id="calendarWrap"><div class="loading">Loading live availability…</div></div>
+        <p class="note" style="color:var(--steel); font-size:0.8rem; margin:0 0 12px;">Tap a day to set it as your delivery date. Once you pick a package, colors show whether <em>that package</em> fits each day.</p>
+        <div id="calendarWrap"><div class="loading">Loading live availability…</div></div>
+      </details>
     </div>
   </section>
 
   <section class="block wrap">
     <div class="card">
-      <h2 style="font-size:1.05rem; margin-bottom:14px;">3. Request your booking</h2>
+      <h2 style="font-size:1.05rem; margin-bottom:14px;">2. Request your booking</h2>
 
       <form name="booking" method="POST" data-netlify="true" netlify-honeypot="hp_field" id="bookingForm">
         <input type="hidden" name="form-name" value="booking">
@@ -237,15 +237,15 @@
 
         <div class="form-grid">
           <label>Full Name*
-            <input type="text" name="name" required>
+            <input type="text" name="name" autocomplete="name" required>
           </label>
           <label>Phone Number*
-            <input type="tel" name="phone" required>
+            <input type="tel" name="phone" autocomplete="tel" required>
           </label>
         </div>
         <div class="form-grid">
           <label>Email Address*
-            <input type="email" name="email" required>
+            <input type="email" name="email" autocomplete="email" required>
           </label>
           <label>Package*
             <select name="package" id="packageSelect" required>
@@ -275,32 +275,14 @@
             </select>
           </label>
         </div>
-        <label>Street Address*
-          <input type="text" name="delivery_address_street" placeholder="123 Main St" required>
+        <label>Delivery Address*
+          <input type="text" name="delivery_address" placeholder="Street address, city, state, zip" required>
         </label>
-        <div class="addr-grid">
-          <label>City*
-            <input type="text" name="delivery_address_city" placeholder="Oklahoma City" required>
-          </label>
-          <label>State*
-            <input type="text" name="delivery_address_state" value="OK" maxlength="2" required>
-          </label>
-          <label>Zip*
-            <input type="text" name="delivery_address_zip" placeholder="73102" inputmode="numeric" maxlength="10" required>
-          </label>
-        </div>
 
-        <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;">
-          <input type="checkbox" name="is_military" value="true" id="isMilitaryCheck" style="width:auto; margin:3px 0 0;">
-          <span>I qualify for our 15% military discount (active duty, veteran, or immediate family)</span>
+        <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; font-weight:400; font-size:0.88rem; color:var(--steel);">
+          <input type="checkbox" name="is_military" value="true" style="width:auto; margin:3px 0 0;">
+          <span>Military? Check here (optional) and mention it when we call to confirm your 15% discount.</span>
         </label>
-        <div id="militaryIdBlock" style="display:none; margin:-6px 0 14px;">
-          <label>Upload a photo of your military ID <span class="mono" style="font-weight:400; color:var(--steel);">(optional — helps us verify faster)</span>
-            <input type="file" id="militaryIdFile" accept="image/*">
-          </label>
-          <p class="form-note" id="militaryIdStatus" style="text-align:left; margin-top:-8px;"></p>
-          <input type="hidden" name="military_id_key" id="militaryIdKeyField">
-        </div>
 
         <input type="hidden" name="delivery_date" id="hiddenDeliveryDate">
         <input type="hidden" name="pickup_date" id="hiddenPickupDate">
@@ -524,77 +506,6 @@
     });
   }
 
-  // ---- Military discount: optional ID photo upload ----
-  // Uploaded immediately (before the main form submits) via the public,
-  // write-only upload-military-id function, since no request record exists
-  // yet to key the photo to. The generated key rides along as a hidden
-  // form field so submission-created.mjs can save it on the request once
-  // it's created, and admin pages can look the photo up later.
-  $('isMilitaryCheck').addEventListener('change', () => {
-    const checked = $('isMilitaryCheck').checked;
-    $('militaryIdBlock').style.display = checked ? 'block' : 'none';
-    if (!checked) {
-      $('militaryIdFile').value = '';
-      $('militaryIdKeyField').value = '';
-      $('militaryIdStatus').textContent = '';
-    }
-  });
-
-  $('militaryIdFile').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    $('militaryIdKeyField').value = '';
-    $('militaryIdStatus').textContent = 'Uploading…';
-    try {
-      const dataUrl = await compressImage(file, 1600, 0.72);
-      const base64 = dataUrl.split(',')[1];
-      const key = genMilitaryKey();
-      const resp = await fetch('/.netlify/functions/upload-military-id', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, imageBase64: base64, mimeType: 'image/jpeg' }),
-      });
-      if (resp.ok) {
-        $('militaryIdKeyField').value = key;
-        $('militaryIdStatus').textContent = '✓ Photo attached.';
-      } else {
-        $('militaryIdStatus').textContent = 'Could not upload — you can still submit your request and we\'ll follow up about the ID.';
-      }
-    } catch {
-      $('militaryIdStatus').textContent = 'Could not process that photo — you can still submit your request and we\'ll follow up about the ID.';
-    }
-  });
-
-  // Resizes/compresses an image file client-side via canvas, returns a JPEG data URL.
-  function compressImage(file, maxDim, quality) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-          let { width, height } = img;
-          if (width > maxDim || height > maxDim) {
-            if (width >= height) { height = Math.round(height * (maxDim / width)); width = maxDim; }
-            else { width = Math.round(width * (maxDim / height)); height = maxDim; }
-          }
-          const canvas = document.createElement('canvas');
-          canvas.width = width; canvas.height = height;
-          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', quality));
-        };
-        img.onerror = () => reject(new Error('Could not read image.'));
-        img.src = reader.result;
-      };
-      reader.onerror = () => reject(new Error('Could not read file.'));
-      reader.readAsDataURL(file);
-    });
-  }
-
-  function genMilitaryKey() {
-    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-    return 'mid-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
-  }
-
   // ---- Form submit (Netlify Forms via AJAX, same pattern as the homepage) ----
   const form = $('bookingForm');
   form.addEventListener('submit', (e) => {
@@ -617,8 +528,6 @@
         status.className = 'form-status show ok';
         status.textContent = 'Request received! Check your email — we\'ll confirm your dates and send an invoice shortly. No payment due now.';
         form.reset();
-        $('militaryIdBlock').style.display = 'none';
-        $('militaryIdStatus').textContent = '';
         btn.textContent = 'Request Booking';
       })
       .catch(() => {
