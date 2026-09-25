@@ -150,36 +150,80 @@ export default async (request) => {
     }
   }
 
-  // Fetch reviews using the Place ID.
-  // Legacy Place Details is used FIRST because it's the only endpoint that
-  // supports reviews_sort=newest. The New Places API is a fallback only,
-  // since it can't be sorted and will hand back Google's relevance picks
-  // instead of the actual latest reviews.
+  // Resolve a Place ID the LEGACY API actually recognizes. The `placeId`
+  // above (from GOOGLE_PLACE_ID or the New API's SAB-aware search) is NOT
+  // guaranteed to resolve on Legacy Place Details, confirmed Sept 2026:
+  // legacy returned NOT_FOUND for our SAB place ID even though the New API
+  // resolves that exact same ID fine. So look up a legacy-native ID
+  // independently, by phone then by name, and use THAT for the newest-sort
+  // call. If neither lookup finds anything, legacy genuinely doesn't index
+  // this business (a real possibility for a pure service-area business
+  // with no storefront) and we skip straight to the New API fallback.
+  let legacyPlaceId = "";
+  const legacyLookupDebug = {};
   try {
-    const legacyUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=reviews,rating,user_ratings_total&reviews_sort=newest&key=${apiKey}`;
-    const legacyResp = await fetch(legacyUrl);
-    const legacyData = await legacyResp.json();
-
-    if (legacyResp.ok && legacyData.status === "OK") {
-      const result = legacyData.result || {};
-      const reviews = (result.reviews || []).slice(0, 5).map(r => ({
-        author: r.author_name || "Customer",
-        rating: r.rating || 5,
-        text: r.text || "",
-        time: r.relative_time_description || "",
-        profilePhoto: r.profile_photo_url || "",
-      }));
-      const payload = {
-        reviews,
-        overallRating: result.rating || null,
-        totalReviews: result.user_ratings_total || 0,
-        fetchedAt: new Date().toISOString(),
-      };
-      try { await store.setJSON(CACHE_KEY, payload); } catch {}
-      return json(payload, { noStore: debug });
+    if (placePhone) {
+      const phoneUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(placePhone)}&inputtype=phonenumber&fields=place_id&key=${apiKey}`;
+      const phoneResp = await fetch(phoneUrl);
+      const phoneData = await phoneResp.json();
+      legacyLookupDebug.phoneLookupStatus = phoneData.status;
+      if (phoneData.candidates && phoneData.candidates.length > 0) {
+        legacyPlaceId = phoneData.candidates[0].place_id;
+      }
     }
+    if (!legacyPlaceId) {
+      const findUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(placeName)}&inputtype=textquery&fields=place_id&key=${apiKey}`;
+      const findResp = await fetch(findUrl);
+      const findData = await findResp.json();
+      legacyLookupDebug.nameLookupStatus = findData.status;
+      if (findData.candidates && findData.candidates.length > 0) {
+        legacyPlaceId = findData.candidates[0].place_id;
+      }
+    }
+  } catch (e) {
+    legacyLookupDebug.error = e.message;
+  }
 
-    console.error("Legacy Places API (newest sort) error:", legacyData.status, legacyData.error_message);
+  // Fetch reviews using the Place ID.
+  // Legacy Place Details (with legacyPlaceId, reviews_sort=newest) is
+  // tried FIRST because it's the only endpoint that supports newest-first
+  // sorting at all. The New Places API is a fallback only, since it can't
+  // be sorted and will hand back Google's relevance picks instead of the
+  // actual latest reviews.
+  try {
+    let legacyStatus = null;
+    let legacyErrorMessage = null;
+
+    if (legacyPlaceId) {
+      const legacyUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${legacyPlaceId}&fields=reviews,rating,user_ratings_total&reviews_sort=newest&key=${apiKey}`;
+      const legacyResp = await fetch(legacyUrl);
+      const legacyData = await legacyResp.json();
+      legacyStatus = legacyData.status;
+      legacyErrorMessage = legacyData.error_message || null;
+
+      if (legacyResp.ok && legacyData.status === "OK") {
+        const result = legacyData.result || {};
+        const reviews = (result.reviews || []).slice(0, 5).map(r => ({
+          author: r.author_name || "Customer",
+          rating: r.rating || 5,
+          text: r.text || "",
+          time: r.relative_time_description || "",
+          profilePhoto: r.profile_photo_url || "",
+        }));
+        const payload = {
+          reviews,
+          overallRating: result.rating || null,
+          totalReviews: result.user_ratings_total || 0,
+          fetchedAt: new Date().toISOString(),
+        };
+        try { await store.setJSON(CACHE_KEY, payload); } catch {}
+        return json(payload, { noStore: debug });
+      }
+
+      console.error("Legacy Places API (newest sort) error:", legacyStatus, legacyErrorMessage);
+    } else {
+      console.error("No legacy-compatible Place ID found (phone/name lookup both came up empty), skipping newest-sort attempt.");
+    }
 
     // Fallback: New Places API. No sort control here, this returns
     // Google's relevance picks, not necessarily the newest reviews.
@@ -195,8 +239,10 @@ export default async (request) => {
         reviews: [],
         error: "Google API error",
         debug: debug ? {
-          legacyStatus: legacyData.status,
-          legacyErrorMessage: legacyData.error_message,
+          legacyPlaceId: legacyPlaceId || null,
+          legacyLookupDebug,
+          legacyStatus,
+          legacyErrorMessage,
           newApiStatus: resp.status,
           newApiBody: errBody,
         } : undefined,
@@ -216,11 +262,12 @@ export default async (request) => {
       overallRating: data.rating || null,
       totalReviews: data.userRatingCount || 0,
       fetchedAt: new Date().toISOString(),
-      sortFallback: true, // came from relevance sort, not newest, legacy call failed
+      sortFallback: true, // came from relevance sort, not newest
       debug: debug ? {
-        legacyHttpOk: legacyResp.ok,
-        legacyStatus: legacyData.status,
-        legacyErrorMessage: legacyData.error_message || null,
+        legacyPlaceId: legacyPlaceId || null,
+        legacyLookupDebug,
+        legacyStatus,
+        legacyErrorMessage,
       } : undefined,
     };
     try { await store.setJSON(CACHE_KEY, payload); } catch {}
