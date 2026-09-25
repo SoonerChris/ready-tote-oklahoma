@@ -18,21 +18,23 @@ const CACHE_KEY = "google-reviews-cache";
 const CACHE_HOURS = 24;
 
 export default async (request) => {
+  // Computed first so every response, including error responses, knows
+  // whether to disable caching (see json() below).
+  const url = new URL(request.url);
+  const debug = url.searchParams.has("debug");
+
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   let placeId = process.env.GOOGLE_PLACE_ID || "";
   const placeName = process.env.GOOGLE_PLACE_NAME || "Ready Tote Oklahoma";
   const placePhone = process.env.GOOGLE_PLACE_PHONE || ""; // E.164 format, e.g. +15803993202
 
   if (!apiKey) {
-    return json({ reviews: [], error: "Missing GOOGLE_PLACES_API_KEY env var" });
+    return json({ reviews: [], error: "Missing GOOGLE_PLACES_API_KEY env var" }, { noStore: debug });
   }
 
   const store = getStore("meta");
 
   // Check cache first (skip cache if ?debug=1 is on the URL)
-  const url = new URL(request.url);
-  const debug = url.searchParams.has("debug");
-
   if (!debug) {
     try {
       const cached = await store.get(CACHE_KEY, { type: "json" });
@@ -140,11 +142,11 @@ export default async (request) => {
               ? "See googleErrorMessage above, that's Google's actual reason."
               : "Even the SAB-aware search (includePureServiceAreaBusinesses) found nothing. Double check GOOGLE_PLACE_NAME matches the Business Profile name exactly, or set GOOGLE_PLACE_ID directly."
           } : undefined,
-        });
+        }, { noStore: debug });
       }
     } catch (e) {
       console.error("Find Place failed:", e.message);
-      return json({ reviews: [], error: "Find Place API error", debug: debug ? { message: e.message } : undefined });
+      return json({ reviews: [], error: "Find Place API error", debug: debug ? { message: e.message } : undefined }, { noStore: debug });
     }
   }
 
@@ -174,7 +176,7 @@ export default async (request) => {
         fetchedAt: new Date().toISOString(),
       };
       try { await store.setJSON(CACHE_KEY, payload); } catch {}
-      return json(payload);
+      return json(payload, { noStore: debug });
     }
 
     console.error("Legacy Places API (newest sort) error:", legacyData.status, legacyData.error_message);
@@ -198,7 +200,7 @@ export default async (request) => {
           newApiStatus: resp.status,
           newApiBody: errBody,
         } : undefined,
-      });
+      }, { noStore: debug });
     }
 
     const data = await resp.json();
@@ -215,22 +217,30 @@ export default async (request) => {
       totalReviews: data.userRatingCount || 0,
       fetchedAt: new Date().toISOString(),
       sortFallback: true, // came from relevance sort, not newest, legacy call failed
+      debug: debug ? {
+        legacyHttpOk: legacyResp.ok,
+        legacyStatus: legacyData.status,
+        legacyErrorMessage: legacyData.error_message || null,
+      } : undefined,
     };
     try { await store.setJSON(CACHE_KEY, payload); } catch {}
-    return json(payload);
+    return json(payload, { noStore: debug });
   } catch (e) {
     console.error("Google reviews fetch failed:", e.message);
-    return json({ reviews: [], error: e.message });
+    return json({ reviews: [], error: e.message }, { noStore: debug });
   }
 };
 
-function json(obj) {
+function json(obj, { noStore = false } = {}) {
   return new Response(JSON.stringify(obj), {
     status: 200,
     headers: {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
-      "Cache-Control": "public, max-age=3600",
+      // Debug requests (?debug=1) must never be cached by the CDN edge or
+      // the browser, or a repeat debug check just replays the first
+      // response instead of actually re-running the function.
+      "Cache-Control": noStore ? "no-store" : "public, max-age=3600",
     },
   });
 }
