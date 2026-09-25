@@ -2,6 +2,12 @@
 // Fetches real Google Place reviews via the Places API, caches for 24 hours
 // in Netlify Blobs to avoid hitting the API on every page load.
 //
+// Reviews are fetched newest-first via the Legacy Place Details API
+// (reviews_sort=newest). The New Places API has no sort parameter, it
+// always returns up to 5 reviews chosen by Google's relevance algorithm,
+// which is often NOT the newest ones, so it's kept only as a fallback if
+// the legacy call fails. Confirmed via Google's official docs, Sept 2026.
+//
 // Env vars required:
 //   GOOGLE_PLACES_API_KEY - Google Cloud API key with Places API enabled
 //   GOOGLE_PLACE_ID       - your Google Business Profile's Place ID (recommended, skips search)
@@ -142,38 +148,19 @@ export default async (request) => {
     }
   }
 
-  // Fetch reviews using the Place ID
+  // Fetch reviews using the Place ID.
+  // Legacy Place Details is used FIRST because it's the only endpoint that
+  // supports reviews_sort=newest. The New Places API is a fallback only,
+  // since it can't be sorted and will hand back Google's relevance picks
+  // instead of the actual latest reviews.
   try {
-    const detailsUrl = `https://places.googleapis.com/v1/places/${placeId}?fields=reviews,rating,userRatingCount`;
-    const resp = await fetch(detailsUrl, {
-      headers: { "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "reviews,rating,userRatingCount" },
-    });
+    const legacyUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=reviews,rating,user_ratings_total&reviews_sort=newest&key=${apiKey}`;
+    const legacyResp = await fetch(legacyUrl);
+    const legacyData = await legacyResp.json();
 
-    if (!resp.ok) {
-      const errBody = await resp.text();
-      console.error("New Places API error:", resp.status, errBody);
-
-      // Fallback: try the legacy API
-      const legacyUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=reviews,rating,user_ratings_total&key=${apiKey}`;
-      const legacyResp = await fetch(legacyUrl);
-      const legacyData = await legacyResp.json();
-
-      if (!legacyResp.ok || legacyData.status !== "OK") {
-        console.error("Legacy Places API error:", legacyData.status, legacyData.error_message);
-        return json({
-          reviews: [],
-          error: "Google API error",
-          debug: debug ? {
-            newApiStatus: resp.status,
-            newApiBody: errBody,
-            legacyStatus: legacyData.status,
-            legacyErrorMessage: legacyData.error_message,
-          } : undefined,
-        });
-      }
-
+    if (legacyResp.ok && legacyData.status === "OK") {
       const result = legacyData.result || {};
-      const reviews = (result.reviews || []).map(r => ({
+      const reviews = (result.reviews || []).slice(0, 5).map(r => ({
         author: r.author_name || "Customer",
         rating: r.rating || 5,
         text: r.text || "",
@@ -190,8 +177,32 @@ export default async (request) => {
       return json(payload);
     }
 
+    console.error("Legacy Places API (newest sort) error:", legacyData.status, legacyData.error_message);
+
+    // Fallback: New Places API. No sort control here, this returns
+    // Google's relevance picks, not necessarily the newest reviews.
+    const detailsUrl = `https://places.googleapis.com/v1/places/${placeId}?fields=reviews,rating,userRatingCount`;
+    const resp = await fetch(detailsUrl, {
+      headers: { "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "reviews,rating,userRatingCount" },
+    });
+
+    if (!resp.ok) {
+      const errBody = await resp.text();
+      console.error("New Places API error:", resp.status, errBody);
+      return json({
+        reviews: [],
+        error: "Google API error",
+        debug: debug ? {
+          legacyStatus: legacyData.status,
+          legacyErrorMessage: legacyData.error_message,
+          newApiStatus: resp.status,
+          newApiBody: errBody,
+        } : undefined,
+      });
+    }
+
     const data = await resp.json();
-    const reviews = (data.reviews || []).map(r => ({
+    const reviews = (data.reviews || []).slice(0, 5).map(r => ({
       author: r.authorAttribution?.displayName || "Customer",
       rating: r.rating || 5,
       text: r.text?.text || r.originalText?.text || "",
@@ -203,6 +214,7 @@ export default async (request) => {
       overallRating: data.rating || null,
       totalReviews: data.userRatingCount || 0,
       fetchedAt: new Date().toISOString(),
+      sortFallback: true, // came from relevance sort, not newest, legacy call failed
     };
     try { await store.setJSON(CACHE_KEY, payload); } catch {}
     return json(payload);
