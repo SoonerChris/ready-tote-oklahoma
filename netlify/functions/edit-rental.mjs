@@ -22,6 +22,14 @@ const CLEARABLE_FIELDS = ["notes"];
 // real whole numbers, not arbitrary strings.
 const NUMERIC_FIELDS = ["toteCount", "dollyCount"];
 
+// Always store times as "2:30 PM", even if a client sends "14:30".
+function normalizeTime(v) {
+  const m = String(v).trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return v;
+  const h = parseInt(m[1], 10);
+  return (h % 12 || 12) + ":" + m[2] + " " + (h >= 12 ? "PM" : "AM");
+}
+
 export default async (request) => {
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -53,7 +61,7 @@ export default async (request) => {
         changed = true;
         continue;
       }
-      updated[f] = isBlank ? "" : body[f];
+      updated[f] = isBlank ? "" : (f === "dropoffTime" || f === "pickupTime") ? normalizeTime(body[f]) : body[f];
       changed = true;
     }
     for (const f of NUMERIC_FIELDS) {

@@ -9,6 +9,7 @@
 //   RESEND_FROM    - verified sender
 
 import { getStore } from "@netlify/blobs";
+import { friendlyTime } from "./lib-reminders.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
@@ -52,7 +53,7 @@ export default async (request) => {
   const rawPrice = String(rental.price || "").trim();
   const price = escapeHtml(rawPrice ? (rawPrice.startsWith("$") ? rawPrice : "$" + rawPrice) : "");
   const dropoffKnown = !!(rental.dropoffDate && rental.dropoffTime);
-  const dropoff = dropoffKnown ? `${formatDate(rental.dropoffDate)} at ${escapeHtml(rental.dropoffTime)}` : "";
+  const dropoff = dropoffKnown ? `${formatDate(rental.dropoffDate)} at ${escapeHtml(friendlyTime(rental.dropoffTime))}` : "";
 
   const from = process.env.RESEND_FROM || FROM_FALLBACK;
 
