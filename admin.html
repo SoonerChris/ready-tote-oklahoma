@@ -275,6 +275,22 @@
 
     // ---- This Week schedule ----
     const endDate = shiftDate(today, 7);
+
+    // Any stored time ("14:30" or "2:30 PM") -> "2:30 PM" for display
+    function fmtTime(t) {
+      const m = String(t || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+      if (!m) return t || '';
+      const h = parseInt(m[1], 10);
+      return (h % 12 || 12) + ':' + m[2] + ' ' + (h >= 12 ? 'PM' : 'AM');
+    }
+    // Sort key in minutes since midnight, works for either format
+    function timeKey(t) {
+      const m = String(t || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+      if (!m) return 0;
+      let h = parseInt(m[1], 10);
+      if (m[3]) { const pm = m[3].toUpperCase() === 'PM'; if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
+      return h * 60 + parseInt(m[2], 10);
+    }
     const events = [];
     for (const r of rentals) {
       const self = r.serviceType === 'self';
@@ -289,14 +305,14 @@
           addr: self ? '' : pickupAddressOf(r) });
       }
     }
-    events.sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time));
+    events.sort((a,b) => a.date.localeCompare(b.date) || timeKey(a.time) - timeKey(b.time));
     $('schedCount').textContent = events.length;
     $('schedList').innerHTML = events.length ? events.map(e => `
       <div class="sched-item">
         <div class="sched-day">${fmtDay(e.date)}</div>
         <div class="sched-type ${e.typeClass}">${e.type}</div>
         <div class="sched-who">
-          <div>${esc(e.name)}<span style="color:var(--steel);font-size:0.78rem;margin-left:6px;">${esc(e.time)}</span></div>
+          <div>${esc(e.name)}<span style="color:var(--steel);font-size:0.78rem;margin-left:6px;">${esc(fmtTime(e.time))}</span></div>
           ${e.addr ? `<div class="sched-addr">${esc(e.addr)}</div>` : ''}
         </div>
       </div>`).join('') : '<div style="color:var(--steel);font-size:0.88rem;">Nothing scheduled this week.</div>';

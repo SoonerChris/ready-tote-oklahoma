@@ -152,6 +152,22 @@
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
     const end = new Date(today + 'T12:00:00Z'); end.setUTCDate(end.getUTCDate() + 7);
     const endStr = end.toISOString().slice(0,10);
+
+    // Any stored time ("14:30" or "2:30 PM") -> "2:30 PM" for display
+    function fmtTime(t) {
+      const m = String(t || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+      if (!m) return t || '';
+      const h = parseInt(m[1], 10);
+      return (h % 12 || 12) + ':' + m[2] + ' ' + (h >= 12 ? 'PM' : 'AM');
+    }
+    // Sort key in minutes since midnight, works for either format
+    function timeKey(t) {
+      const m = String(t || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+      if (!m) return 0;
+      let h = parseInt(m[1], 10);
+      if (m[3]) { const pm = m[3].toUpperCase() === 'PM'; if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
+      return h * 60 + parseInt(m[2], 10);
+    }
     const events = [];
     for (const r of rentals) {
       const self = r.serviceType === 'self';
@@ -163,11 +179,11 @@
                       addr: self ? '' : pickupAddressOf(r) });
     }
     if (!events.length) { el.innerHTML = '<p class="empty">Nothing scheduled in the next 7 days.</p>'; return; }
-    events.sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time));
+    events.sort((a,b) => a.date.localeCompare(b.date) || timeKey(a.time) - timeKey(b.time));
     el.innerHTML = events.map(e => `
       <div class="rem" style="padding:10px 14px;">
         <div class="who" style="font-size:0.9rem;">${esc(fmtDay(e.date))} · <span style="color:var(--gold);">${esc(e.label)}</span> — ${esc(e.r.name)}</div>
-        <div class="meta" style="margin:2px 0 0;">${esc(e.time)}${e.addr ? ' · ' + esc(e.addr) : ''} · ${esc(e.r.package)}</div>
+        <div class="meta" style="margin:2px 0 0;">${esc(fmtTime(e.time))}${e.addr ? ' · ' + esc(e.addr) : ''} · ${esc(e.r.package)}</div>
       </div>`).join('');
   }
   function fmtDay(iso){

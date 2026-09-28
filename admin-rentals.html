@@ -234,11 +234,11 @@
             <div class="date-edit-block" id="dates-${esc(r.key)}">
               <div class="grid2">
                 <div><label>Drop-off date</label><input type="date" data-df="dropoffDate" value="${esc(r.dropoffDate || '')}"></div>
-                <div><label>Drop-off time</label><input type="time" data-df="dropoffTime" value="${esc(r.dropoffTime || '')}"></div>
+                <div><label>Drop-off time</label><input type="time" data-df="dropoffTime" value="${esc(to24Hour(r.dropoffTime || ''))}"></div>
               </div>
               <div class="grid2">
                 <div><label>Pickup date</label><input type="date" data-df="pickupDate" value="${esc(r.pickupDate || '')}"></div>
-                <div><label>Pickup time</label><input type="time" data-df="pickupTime" value="${esc(r.pickupTime || '')}"></div>
+                <div><label>Pickup time</label><input type="time" data-df="pickupTime" value="${esc(to24Hour(r.pickupTime || ''))}"></div>
               </div>
               <button type="button" class="save-dates-btn" data-key="${esc(r.key)}">Save dates</button>
             </div>
@@ -491,11 +491,35 @@
     } catch { showErr('Network error.'); }
   };
 
+
+  // "2:30 PM" -> "14:30" (time inputs need 24-hour values to prefill)
+  function to24Hour(t) {
+    const m = String(t || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+    if (!m) return '';
+    let h = parseInt(m[1], 10);
+    if (m[3]) {
+      const pm = m[3].toUpperCase() === 'PM';
+      if (pm && h < 12) h += 12;
+      if (!pm && h === 12) h = 0;
+    }
+    return String(h).padStart(2, '0') + ':' + m[2];
+  }
+
+  // "14:30" -> "2:30 PM"
+  function to12Hour(t) {
+    const m = String(t || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return t;
+    const h = parseInt(m[1], 10);
+    return (h % 12 || 12) + ':' + m[2] + ' ' + (h >= 12 ? 'PM' : 'AM');
+  }
+
   window.saveDates = async (btn) => {
     const key = btn.dataset.key;
     const block = btn.closest('.date-edit-block');
     const fields = {};
-    block.querySelectorAll('[data-df]').forEach(inp => { fields[inp.dataset.df] = inp.value; });
+    block.querySelectorAll('[data-df]').forEach(inp => {
+      fields[inp.dataset.df] = inp.type === 'time' ? to12Hour(inp.value) : inp.value;
+    });
 
     const secret = $('secret').value.trim();
     if (!secret) return showErr('Enter the admin secret first.');
