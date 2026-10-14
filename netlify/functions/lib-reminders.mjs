@@ -54,6 +54,20 @@ export function pickupAddressOf(rental) {
     || rental.pickupAddress || rental.address || "";
 }
 
+// The pickup address on file is often just a copy of the drop-off address
+// (the invoice form defaults to "same as drop-off", and legacy records fall
+// back to one combined address). For the "confirm pickup address" check that
+// copy is never a confirmed pickup address, so it is treated as unknown.
+// Returns "" when the pickup address is blank or matches the drop-off address.
+function normalizeAddress(a) {
+  return String(a || "").toLowerCase().replace(/[\s,.]+/g, " ").trim();
+}
+export function confirmedPickupAddressOf(rental) {
+  const pick = pickupAddressOf(rental);
+  if (!pick) return "";
+  return normalizeAddress(pick) === normalizeAddress(dropoffAddressOf(rental)) ? "" : pick;
+}
+
 function friendlyDate(isoDate) {
   const d = new Date(isoDate + "T12:00:00");
   return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
@@ -76,7 +90,7 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
       const flagId = "addressCheck:" + (r.key || r.phone + r.pickupDate);
       if (!sentFlags[flagId]) {
         const { message, sms } = pickupAddressRequestMessageFor(r);
-        out.addressCheck.push({ ...r, flagId, address: pickAddr, message, sms });
+        out.addressCheck.push({ ...r, flagId, address: confirmedPickupAddressOf(r) || "Pickup address not confirmed yet", message, sms });
       }
     }
 
@@ -144,8 +158,10 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
 
 export function pickupAddressRequestMessageFor(rental) {
   const first = (rental.name || "there").split(" ")[0];
-  const onFile = pickupAddressOf(rental) || "the address on file";
-  const msg = `Hi ${first}, it's Ready Tote Oklahoma! Quick check before we pick up your totes on ${friendlyDate(rental.pickupDate)} — we have your pickup address as ${onFile}. Let us know if that's still correct, or send us the right address if it's changed!`;
+  const onFile = confirmedPickupAddressOf(rental);
+  const msg = onFile
+    ? `Hi ${first}, it's Ready Tote Oklahoma! Quick check before we pick up your totes on ${friendlyDate(rental.pickupDate)} — we have your pickup address as ${onFile}. Let us know if that's still correct, or send us the right address if it's changed!`
+    : `Hi ${first}, it's Ready Tote Oklahoma! Quick check before we pick up your totes on ${friendlyDate(rental.pickupDate)} — what address should we pick them up from? Please reply with the full street address, city, and zip. Thanks!`;
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
 
