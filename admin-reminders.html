@@ -53,7 +53,7 @@
 </nav>
 <div class="card">
   <h1>Today's Reminder Texts</h1>
-  <p class="sub">Tap a green button to open Messages with the text pre-filled. Best used on your phone. For searching, editing, or managing any rental directly, see All Rentals.</p>
+  <p class="sub">Tap a button to open Messages with the text pre-filled, then confirm it was sent. Best used on your phone. For searching, editing, or managing any rental directly, see All Rentals.</p>
 
   <input type="hidden" id="secret">
 
@@ -122,10 +122,26 @@
     btn.disabled = false; btn.textContent = 'Load today\'s reminders';
   }
 
+  // Same per-type text buttons as the All Rentals page (textBtn in
+  // admin-rentals-shared.js): tapping one opens Messages pre-filled, then asks
+  // "Did you send the text?" and marks it sent. Section id -> [flag type, icon, label].
+  const SECTION_BTN = {
+    delivery:     ['delivery',     '🚚', 'Delivery'],
+    pickup:       ['pickup',       '📦', 'Pickup'],
+    addressCheck: ['addressCheck', '📍', 'Confirm address'],
+    review:       ['review',       '⭐', 'Review'],
+    followup:     ['followup',     '💬', 'Follow-up'],
+  };
+
   function render(id, items) {
     const el = $(id);
     if (!items.length) { el.innerHTML = '<p class="empty">None today.</p>'; return; }
-    el.innerHTML = items.map(r => `
+    const [type, icon, label] = SECTION_BTN[id];
+    el.innerHTML = items.map(r => {
+      // r.flagId is "<type>:<key>" as computed by the server. Reuse its key
+      // part so the sent flag set here matches the one the server checks.
+      const key = String(r.flagId || '').slice(type.length + 1);
+      return `
       <div class="rem">
         <div class="rem-summary" onclick="this.closest('.rem').classList.toggle('open')">
           <span class="chevron">▸</span>
@@ -136,14 +152,10 @@
         </div>
         <div class="rem-details">
           <div class="msg">${esc(r.message)}</div>
-          <a class="sms-btn" href="${r.sms}">Text ${esc(r.name.split(' ')[0])} →</a>
-          <button type="button" class="mark-sent-btn" data-flagid="${r.flagId}" style="width:auto; margin-left:10px; padding:10px 16px; font-size:0.82rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">✓ Mark sent</button>
+          <div class="actions">${textBtn(type, key, r.sms, icon, label, 'var(--green)')}</div>
         </div>
-      </div>`).join('');
-    // Wire up mark-sent buttons via delegation
-    el.querySelectorAll('.mark-sent-btn').forEach(btn => {
-      btn.addEventListener('click', () => markSent(btn.dataset.flagid));
-    });
+      </div>`;
+    }).join('');
   }
 
   // ---- This Week lookahead: deliveries and pickups in the next 7 days ----
