@@ -8,120 +8,113 @@
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Outreach Tracker — Ready Tote Oklahoma (Internal)</title>
-<link rel="stylesheet" href="admin-shared.css?v=20261021">
-<script src="admin-shared.js?v=20261021"></script>
+<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<script src="admin-shared.js?v=20261022"></script>
 <style>
-  .wrap{max-width:900px;margin:0 auto;}
-  body{padding:24px 14px;}
-  h1{font-size:1.4rem;margin:0 0 4px;}
+  :root{--col:960px;}
 
-  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:24px;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
   @media(max-width:700px){.summary{grid-template-columns:repeat(2,1fr);}}
-  .scard{background:var(--white);border:1px solid var(--line);border-radius:8px;padding:16px;text-align:center;box-shadow:0 1px 2px rgba(30,27,24,0.04);}
-  .scard .num{font-family:'Archivo Black',sans-serif;font-size:1.5rem;line-height:1.1;}
-  .scard .lbl{font-size:0.68rem;color:var(--steel);margin-top:4px;text-transform:uppercase;letter-spacing:0.04em;font-family:'JetBrains Mono',monospace;}
-  .scard.gold{border-color:var(--gold);background:var(--gold-bg);}
-  .scard.gold .num{color:var(--gold);}
-  .scard.green{border-color:var(--green);background:var(--green-bg);}
-  .scard.green .num{color:var(--green);}
+  .scard{background:var(--white);padding:14px 16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 -1px -1px 0;}
+  .scard .num{font-weight:600;font-size:24px;line-height:1.15;font-variant-numeric:tabular-nums;}
+  .scard .lbl{font-size:14px;color:var(--steel);margin-top:2px;}
 
-  .secret-bar{background:var(--white);border:1px solid var(--line);border-radius:8px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 1px 2px rgba(30,27,24,0.04);}
-  .secret-bar label{font-size:0.82rem;font-weight:bold;white-space:nowrap;}
-  .secret-bar input{flex:1;min-width:200px;padding:10px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:6px;background:var(--cream);}
-  .secret-bar button{margin-top:0;width:auto;padding:10px 18px;font-size:0.85rem;font-weight:bold;background:var(--gold);color:var(--ink);border:none;border-radius:8px;cursor:pointer;white-space:nowrap;}
 
-  .section{background:var(--white);border:1px solid var(--line);border-radius:8px;padding:20px;margin-bottom:20px;box-shadow:0 1px 2px rgba(30,27,24,0.04);}
-  .section h2{font-size:1.05rem;margin:0 0 4px;display:flex;align-items:center;gap:8px;justify-content:space-between;}
-  .section .count-badge{font-size:0.72rem;font-family:'JetBrains Mono',monospace;background:var(--gold-bg);border:1px solid var(--gold);color:var(--gold);padding:2px 10px;border-radius:999px;font-weight:bold;}
+  .section{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:24px;}
+  .section h2{font-size:17px;margin:0 0 12px;display:flex;align-items:center;gap:8px;justify-content:space-between;}
+  .section .count-badge{font-size:15px;font-weight:500;color:var(--steel);margin-right:auto;font-variant-numeric:tabular-nums;}
 
-  .addform{border:1px dashed var(--line);border-radius:8px;padding:14px;margin:14px 0;}
+  .addform{border:1px dashed var(--control);border-radius:8px;padding:14px;margin:14px 0;}
   .addform .grid2{margin-bottom:0;}
-  .addform button{width:auto;padding:10px 18px;font-size:0.85rem;}
+  .addform button{width:auto;padding:10px 18px;font-size:14px;}
 
-  .entry{border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:10px;}
+  .entry{border-top:1px solid #F1EDE4;padding:12px 0;}
   .entry-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
-  .entry-name{font-weight:bold;font-size:0.95rem;}
-  .entry-meta{font-size:0.8rem;color:var(--steel);margin-top:2px;font-family:'JetBrains Mono',monospace;}
-  .entry-notes{font-size:0.82rem;color:var(--steel);margin-top:6px;font-style:italic;}
+  .entry-name{font-weight:600;font-size:16px;}
+  .entry-meta{font-size:14px;color:var(--steel);margin-top:2px;font-variant-numeric:tabular-nums;}
+  .entry-notes{font-size:14px;color:var(--steel);margin-top:6px;}
   .entry-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-  .status-pill{font-size:0.72rem;font-weight:bold;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--cream);}
-  .status-pill.active{border-color:var(--green);background:var(--green-bg);color:var(--green);}
-  .status-pill.contacted, .status-pill.followup{border-color:var(--gold);background:var(--gold-bg);color:var(--gold);}
-  .status-pill.notinterested{border-color:var(--crate-red);background:var(--crate-red-bg);color:var(--crate-red);}
-  select.inline-status{width:auto;padding:6px 8px;font-size:0.78rem;}
-  .small-btn{width:auto;padding:6px 12px;font-size:0.78rem;margin-top:0;background:var(--white);border:1px solid var(--line);color:var(--ink);}
-  .small-btn.danger{color:var(--red);border-color:var(--red);}
+  .status-pill{display:inline-flex;align-items:center;height:22px;font-size:12px;font-weight:600;padding:0 8px;border-radius:4px;background:var(--track);color:#4A433B;}
+  .status-pill.active{background:var(--green-bg);color:#14492F;}
+  .status-pill.contacted, .status-pill.followup{background:var(--gold-bg);color:#6B4C0C;}
+  .status-pill.notinterested{background:var(--crate-red-bg);color:var(--crate-red);}
+  select.inline-status{width:auto;padding:6px 8px;font-size:13px;}
+  .small-btn{width:auto;padding:6px 12px;font-size:13px;margin-top:0;background:var(--white);border:1px solid var(--control);color:var(--ink);}
+  .small-btn:hover{background:var(--white);border-color:var(--ink);}
+  .small-btn.danger{color:var(--red);}
 
-  .empty{color:var(--steel);font-size:0.88rem;padding:8px 0;}
-  .toggle-add{width:auto;padding:8px 16px;font-size:0.85rem;margin:0;}
+  .empty{color:var(--steel);font-size:14px;padding:8px 0;}
+  .toggle-add{width:auto;padding:8px 14px;font-size:14px;margin:0 8px 0 0;background:var(--white);color:var(--ink);border:1px solid var(--control);}
+  .toggle-add:hover{background:var(--white);border-color:var(--ink);}
 </style>
 </head>
 <body>
 <div class="wrap">
   <nav class="admin-nav wide" aria-label="Admin tools">
-    <a href="admin.html"><span class="nav-icon" aria-hidden="true">📊</span> Dashboard</a>
-  <a href="admin-requests.html"><span class="nav-icon" aria-hidden="true">📥</span> Requests</a>
-    <a href="admin-invoice.html"><span class="nav-icon" aria-hidden="true">🧾</span> Send Invoice</a>
-    <a href="admin-add-rental.html"><span class="nav-icon" aria-hidden="true">➕</span> Add Rental</a>
-    <a href="admin-reminders.html"><span class="nav-icon" aria-hidden="true">🚚</span> Reminders</a>
-  <a href="admin-rentals.html"><span class="nav-icon" aria-hidden="true">📋</span> All Rentals</a>
-    <a href="admin-contacts.html"><span class="nav-icon" aria-hidden="true">📇</span> Contacts</a>
-    <a href="admin-finance.html"><span class="nav-icon" aria-hidden="true">💰</span> Finance</a>
-    <a href="admin-outreach.html" aria-current="page"><span class="nav-icon" aria-hidden="true">🤝</span> Outreach</a>
-    <a href="admin-inventory.html"><span class="nav-icon" aria-hidden="true">📦</span> Inventory</a>
+    <a href="admin.html">Dashboard</a>
+  <a href="admin-requests.html">Requests</a>
+    <a href="admin-invoice.html">Send Invoice</a>
+    <a href="admin-add-rental.html">Add Rental</a>
+    <a href="admin-reminders.html">Reminders</a>
+  <a href="admin-rentals.html">All Rentals</a>
+    <a href="admin-contacts.html">Contacts</a>
+    <a href="admin-finance.html">Finance</a>
+    <a href="admin-outreach.html" aria-current="page">Outreach</a>
+    <a href="admin-inventory.html">Inventory</a>
   </nav>
 
-  <h1>B2B Outreach Tracker</h1>
+  <h1>Partner outreach</h1>
   <p class="sub">Apartment communities, realtor, remodeler &amp; moving company partnerships — tracks status so nothing falls through the cracks.</p>
 
   <div class="secret-bar">
   <input type="hidden" id="secret">
-    <button id="loadBtn">Load</button>
+    <button id="loadBtn">Refresh</button>
   </div>
 
+  <div class="status" id="status"></div>
+
   <div class="summary" id="summary">
-    <div class="scard"><div class="num" id="s-apt-total">–</div><div class="lbl">Apartments Contacted</div></div>
-    <div class="scard green"><div class="num" id="s-apt-active">–</div><div class="lbl">Apartment Partners</div></div>
-    <div class="scard"><div class="num" id="s-realtor-total">–</div><div class="lbl">Realtors Contacted</div></div>
-    <div class="scard green"><div class="num" id="s-realtor-active">–</div><div class="lbl">Realtor Partners</div></div>
-    <div class="scard"><div class="num" id="s-remodeler-total">–</div><div class="lbl">Remodelers Contacted</div></div>
-    <div class="scard green"><div class="num" id="s-remodeler-active">–</div><div class="lbl">Remodeler Partners</div></div>
-    <div class="scard"><div class="num" id="s-mover-total">–</div><div class="lbl">Movers Contacted</div></div>
-    <div class="scard green"><div class="num" id="s-mover-active">–</div><div class="lbl">Mover Partners</div></div>
+    <div class="scard"><div class="num" id="s-apt-total">–</div><div class="lbl">Apartments contacted</div></div>
+    <div class="scard green"><div class="num" id="s-apt-active">–</div><div class="lbl">Apartment partners</div></div>
+    <div class="scard"><div class="num" id="s-realtor-total">–</div><div class="lbl">Realtors contacted</div></div>
+    <div class="scard green"><div class="num" id="s-realtor-active">–</div><div class="lbl">Realtor partners</div></div>
+    <div class="scard"><div class="num" id="s-remodeler-total">–</div><div class="lbl">Remodelers contacted</div></div>
+    <div class="scard green"><div class="num" id="s-remodeler-active">–</div><div class="lbl">Remodeler partners</div></div>
+    <div class="scard"><div class="num" id="s-mover-total">–</div><div class="lbl">Movers contacted</div></div>
+    <div class="scard green"><div class="num" id="s-mover-active">–</div><div class="lbl">Mover partners</div></div>
   </div>
 
   <div class="section">
     <h2>Apartment Communities <span class="count-badge" id="apt-count">0</span></h2>
     <button class="toggle-add" onclick="toggleForm('apartment')">+ Add apartment contact</button>
     <div class="addform" id="form-apartment" style="display:none;"></div>
-    <div id="list-apartment"><div class="empty">Load your data to see entries.</div></div>
+    <div id="list-apartment"><div class="empty">Loading…</div></div>
   </div>
 
   <div class="section">
     <h2>Realtors &amp; Brokerages <span class="count-badge" id="realtor-count">0</span></h2>
     <button class="toggle-add" onclick="toggleForm('realtor')">+ Add realtor contact</button>
     <div class="addform" id="form-realtor" style="display:none;"></div>
-    <div id="list-realtor"><div class="empty">Load your data to see entries.</div></div>
+    <div id="list-realtor"><div class="empty">Loading…</div></div>
   </div>
 
   <div class="section">
     <h2>Remodeling Companies <span class="count-badge" id="remodeler-count">0</span></h2>
     <button class="toggle-add" onclick="toggleForm('remodeler')">+ Add remodeler contact</button>
-    <button class="toggle-add" onclick="importTopRemodelers()" style="background:var(--gold-bg);border:1px solid var(--gold);color:var(--gold);">+ Import top 9 remodelers</button>
+    <button class="toggle-add" onclick="importTopRemodelers()">+ Import top 9 remodelers</button>
     <div class="addform" id="form-remodeler" style="display:none;"></div>
-    <div id="list-remodeler"><div class="empty">Load your data to see entries.</div></div>
+    <div id="list-remodeler"><div class="empty">Loading…</div></div>
   </div>
 
   <div class="section">
     <h2>Moving Companies <span class="count-badge" id="mover-count">0</span></h2>
     <button class="toggle-add" onclick="toggleForm('mover')">+ Add mover contact</button>
-    <button class="toggle-add" onclick="importTopMovers()" style="background:var(--gold-bg);border:1px solid var(--gold);color:var(--gold);">+ Import top 5 verified movers</button>
+    <button class="toggle-add" onclick="importTopMovers()">+ Import top 5 verified movers</button>
     <div class="addform" id="form-mover" style="display:none;"></div>
-    <div id="list-mover"><div class="empty">Load your data to see entries.</div></div>
+    <div id="list-mover"><div class="empty">Loading…</div></div>
   </div>
 
-  <div class="status" id="status"></div>
-</div>
+  </div>
 
 <script>
   const $ = (id) => document.getElementById(id);
@@ -215,7 +208,7 @@
 
   async function loadAll() {
     if (!secret()) return showStatus('err', 'Enter your admin secret first.');
-    $('loadBtn').disabled = true; $('loadBtn').textContent = 'Loading…';
+    $('loadBtn').disabled = true; $('loadBtn').textContent = 'Refresh';
     try {
       const data = await api('get-outreach', {});
       ENTRIES = data.entries || [];
@@ -224,7 +217,7 @@
     } catch (e) {
       showStatus('err', e.message);
     }
-    $('loadBtn').disabled = false; $('loadBtn').textContent = 'Load';
+    $('loadBtn').disabled = false; $('loadBtn').textContent = 'Refresh';
   }
 
   function statusClass(status) {

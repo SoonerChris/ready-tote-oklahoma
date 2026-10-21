@@ -8,82 +8,82 @@
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Finance — Ready Tote Oklahoma (Internal)</title>
-<link rel="stylesheet" href="admin-shared.css?v=20261021">
-<script src="admin-shared.js?v=20261021"></script>
+<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<script src="admin-shared.js?v=20261022"></script>
 <style>
   /* Collapsible finance sections -- Sales/Expenses/Mileage can each get
      long, so the whole block folds away via <details>/<summary> instead of
      forcing a scroll past data Chris isn't looking at right now. */
-  details.fin-section{border-top:1px solid var(--line); margin-top:22px; padding-top:18px;}
+  details.fin-section{border-top:1px solid var(--line); margin-top:24px; padding-top:20px;}
   details.fin-section:first-of-type{border-top:none; margin-top:0; padding-top:0;}
   details.fin-section > summary{
     list-style:none; cursor:pointer; user-select:none;
     display:flex; align-items:center; gap:8px;
-    font-family:'Archivo Black', sans-serif; font-size:0.95rem; margin:0;
+    font-weight:700; font-size:17px; margin:0;
   }
   details.fin-section > summary::-webkit-details-marker{display:none;}
   details.fin-section > summary::before{
-    content:'▸'; color:var(--gold); font-size:0.8rem; flex:none;
+    content:'▸'; color:var(--steel); font-size:14px; flex:none;
     transition:transform 0.15s ease;
   }
   details.fin-section[open] > summary::before{transform:rotate(90deg);}
-  details.fin-section > summary:hover{color:var(--gold);}
+  details.fin-section > summary:hover{color:var(--ink-2);}
   details.fin-section .fin-section-body{margin-top:14px;}
 </style>
 </head>
 <body>
 <nav class="admin-nav" aria-label="Admin tools">
-  <a href="admin.html"><span class="nav-icon" aria-hidden="true">📊</span> Dashboard</a>
-  <a href="admin-requests.html"><span class="nav-icon" aria-hidden="true">📥</span> Requests</a>
-  <a href="admin-invoice.html"><span class="nav-icon" aria-hidden="true">🧾</span> Send Invoice</a>
-  <a href="admin-add-rental.html"><span class="nav-icon" aria-hidden="true">➕</span> Add Rental</a>
-  <a href="admin-reminders.html"><span class="nav-icon" aria-hidden="true">🚚</span> Reminders</a>
-  <a href="admin-rentals.html"><span class="nav-icon" aria-hidden="true">📋</span> All Rentals</a>
-  <a href="admin-contacts.html"><span class="nav-icon" aria-hidden="true">📇</span> Contacts</a>
-  <a href="admin-finance.html" aria-current="page"><span class="nav-icon" aria-hidden="true">💰</span> Finance</a>
-  <a href="admin-outreach.html"><span class="nav-icon" aria-hidden="true">🤝</span> Outreach</a>
-  <a href="admin-inventory.html"><span class="nav-icon" aria-hidden="true">📦</span> Inventory</a>
+  <a href="admin.html">Dashboard</a>
+  <a href="admin-requests.html">Requests</a>
+  <a href="admin-invoice.html">Send Invoice</a>
+  <a href="admin-add-rental.html">Add Rental</a>
+  <a href="admin-reminders.html">Reminders</a>
+  <a href="admin-rentals.html">All Rentals</a>
+  <a href="admin-contacts.html">Contacts</a>
+  <a href="admin-finance.html" aria-current="page">Finance</a>
+  <a href="admin-outreach.html">Outreach</a>
+  <a href="admin-inventory.html">Inventory</a>
 </nav>
 <div class="card">
   <h1>Finance</h1>
   <p class="sub">Sales totals, expenses, and mileage. All amounts in USD.</p>
 
   <input type="hidden" id="secret">
-  <button id="loadBtn">Load finance data</button>
+  <button id="loadBtn">Refresh</button>
   <div class="status" id="status"></div>
 
   <div id="results" style="display:none;">
-    <div class="rem" id="netIncomeBubble" style="text-align:center; background:var(--cream); border:2px solid var(--gold); margin-bottom:20px;">
-      <div style="font-size:0.7rem; color:var(--steel); font-weight:bold; letter-spacing:0.05em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">📈 Net Income (YTD)</div>
-      <div id="netIncomeAmount" style="font-family:'Archivo Black',sans-serif; font-size:2rem; margin:8px 0 2px;">$0.00</div>
-      <div id="netIncomeSub" style="font-size:0.78rem; color:var(--steel); font-family:'JetBrains Mono',monospace;"></div>
+    <div class="rem" id="netIncomeBubble" style="margin-bottom:24px;">
+      <div style="font-size:14px; color:var(--steel);">Net income, year to date</div>
+      <div id="netIncomeAmount" style="font-weight:600; font-size:30px; line-height:1.2; margin:2px 0; font-variant-numeric:tabular-nums;">$0.00</div>
+      <div id="netIncomeSub" style="font-size:14px; color:var(--steel); font-variant-numeric:tabular-nums;"></div>
     </div>
 
     <details class="fin-section">
-      <summary>💰 Sales</summary>
+      <summary>Sales</summary>
       <div class="fin-section-body">
         <div class="rem" id="salesSummary" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
         <div id="salesByMonth"></div>
 
-        <h3 style="font-size:0.88rem; margin:22px 0 8px;">📊 Monthly Breakdown</h3>
+        <h3 style="margin:24px 0 8px;">Monthly breakdown</h3>
         <div id="monthlyBreakdown"></div>
 
         <div class="grid2" id="salesDetails">
           <div>
-            <h3 style="font-size:0.88rem; margin:16px 0 8px;">📦 By Package</h3>
+            <h3 style="margin:20px 0 8px;">By package</h3>
             <div id="salesByPackage"></div>
           </div>
           <div>
-            <h3 style="font-size:0.88rem; margin:16px 0 8px;">🕐 Recent Rentals</h3>
+            <h3 style="margin:20px 0 8px;">Recent rentals</h3>
             <div id="recentRentals"></div>
           </div>
         </div>
-        <button type="button" id="csvBtn" style="background:var(--ink); color:#fff; margin-top:14px;">Download rental log (CSV)</button>
+        <button type="button" id="csvBtn" class="secondary" style="width:auto; margin-top:14px;">Download rental log (CSV)</button>
       </div>
     </details>
 
     <details class="fin-section">
-      <summary>💵 Expenses</summary>
+      <summary>Expenses</summary>
       <div class="fin-section-body">
         <div class="rem" id="expTotals" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
         <div class="rem">
@@ -102,7 +102,7 @@
           </div>
           <div class="grid2" style="gap:10px; margin-top:10px;">
             <input type="text" id="expVendor" placeholder="Vendor (e.g., Amazon, Home Depot)">
-            <select id="expPayment" style="width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);">
+            <select id="expPayment">
               <option value="">Payment method…</option>
               <option>Chris's Prime CC</option>
               <option>Lendy's Prime CC</option>
@@ -128,12 +128,12 @@
         </div>
         <p class="note" id="expCount" style="margin:2px 0 10px;"></p>
         <div id="expList"></div>
-        <button type="button" id="expCsvBtn" style="background:var(--ink); color:#fff;">Download expenses (CSV)</button>
+        <button type="button" id="expCsvBtn" class="secondary" style="width:auto;">Download expenses (CSV)</button>
       </div>
     </details>
 
     <details class="fin-section">
-      <summary>🚗 Mileage</summary>
+      <summary>Mileage</summary>
       <div class="fin-section-body">
         <div class="rem" id="mileTotals" style="display:flex; gap:20px; flex-wrap:wrap; align-items:center;"></div>
         <div class="rem">
@@ -147,7 +147,7 @@
           <button type="button" id="mileAddBtn">Add trip</button>
         </div>
         <div id="mileList"></div>
-        <button type="button" id="mileCsvBtn" style="background:var(--ink); color:#fff;">Download mileage (CSV)</button>
+        <button type="button" id="mileCsvBtn" class="secondary" style="width:auto;">Download mileage (CSV)</button>
       </div>
     </details>
   </div>
@@ -170,7 +170,7 @@
     const secret = $('secret').value.trim();
     if (!secret) return showErr('Enter the admin secret.');
     const btn = $('loadBtn');
-    btn.disabled = true; btn.textContent = 'Loading…';
+    btn.disabled = true; btn.textContent = 'Refresh';
     try {
       const [rentalsResp, finResp] = await Promise.all([
         fetch('/.netlify/functions/get-rentals', {
@@ -194,7 +194,7 @@
         $('status').style.display = 'none';
       }
     } catch { showErr('Network error — use this page on the live site.'); }
-    btn.disabled = false; btn.textContent = 'Load finance data';
+    btn.disabled = false; btn.textContent = 'Refresh';
   }
 
 
@@ -228,14 +228,14 @@
 
     // Summary cards
     $('salesSummary').innerHTML = `
-      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--green);">${activeRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">Active Now</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${monthRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">This Month</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--gold);">${fmt(sum(monthRentals))}</div><div style="font-size:0.72rem;color:var(--steel);">Month Revenue</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${ytdRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">YTD Rentals</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--gold);">${fmt(sum(ytdRentals))}</div><div style="font-size:0.72rem;color:var(--steel);">YTD Revenue</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${rentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">All Time</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--gold);">${fmt(sum(rentals))}</div><div style="font-size:0.72rem;color:var(--steel);">Total Invoiced</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${fmt(avgValue)}</div><div style="font-size:0.72rem;color:var(--steel);">Avg Order</div></div>
+      <div><div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;">${activeRentals.length}</div><div style="font-size:13px;color:var(--steel);">Out now</div></div>
+      <div><div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;">${monthRentals.length}</div><div style="font-size:13px;color:var(--steel);">Rentals this month</div></div>
+      <div><div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;">${fmt(sum(monthRentals))}</div><div style="font-size:13px;color:var(--steel);">Revenue this month</div></div>
+      <div><div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;">${ytdRentals.length}</div><div style="font-size:13px;color:var(--steel);">Rentals this year</div></div>
+      <div><div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;">${fmt(sum(ytdRentals))}</div><div style="font-size:13px;color:var(--steel);">Revenue this year</div></div>
+      <div><div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;">${rentals.length}</div><div style="font-size:13px;color:var(--steel);">Rentals, all time</div></div>
+      <div><div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;">${fmt(sum(rentals))}</div><div style="font-size:13px;color:var(--steel);">Total invoiced</div></div>
+      <div><div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;">${fmt(avgValue)}</div><div style="font-size:13px;color:var(--steel);">Average order</div></div>
     `;
 
     // Monthly revenue (last 6 months)
@@ -255,14 +255,14 @@
     };
 
     $('salesByMonth').innerHTML = `
-      <h3 style="font-size:0.88rem; margin:16px 0 8px;">📊 Monthly Revenue (Last 6 Months)${monthDiffPct !== null ? ` <span style="font-size:0.75rem; color:${monthDiff >= 0 ? 'var(--green)' : 'var(--red)'}; margin-left:8px;">${monthDiff >= 0 ? '▲' : '▼'} ${Math.abs(monthDiffPct)}% vs last month</span>` : ''}</h3>
+      <h3 style="font-size:14px; margin:16px 0 8px;">Monthly Revenue (Last 6 Months)${monthDiffPct !== null ? ` <span style="font-size:13px; color:${monthDiff >= 0 ? 'var(--green)' : 'var(--red)'}; margin-left:8px;">${monthDiff >= 0 ? '▲' : '▼'} ${Math.abs(monthDiffPct)}% vs last month</span>` : ''}</h3>
       <div style="display:flex; align-items:flex-end; gap:8px; height:120px; padding:8px 0; border-bottom:1px solid var(--line);">
         ${monthlyData.map(m => `
           <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
-            <div style="font-size:0.7rem; font-weight:bold; color:var(--ink);">${m.revenue > 0 ? fmt(m.revenue) : ''}</div>
-            <div style="width:100%; max-width:50px; background:${m.month === thisMonth ? 'var(--gold)' : 'var(--cream)'}; border:1px solid ${m.month === thisMonth ? 'var(--gold)' : 'var(--line)'}; border-radius:4px 4px 0 0; height:${Math.max(m.revenue / maxRev * 80, 4)}px;"></div>
-            <div style="font-size:0.68rem; color:var(--steel);">${monthLabel(m.month)}</div>
-            <div style="font-size:0.65rem; color:var(--steel);">${m.count} rental${m.count !== 1 ? 's' : ''}</div>
+            <div style="font-size:12px; font-weight:600; color:var(--ink); font-variant-numeric:tabular-nums;">${m.revenue > 0 ? fmt(m.revenue) : ''}</div>
+            <div style="width:100%; max-width:50px; background:${m.month === thisMonth ? '#A87F22' : '#D9D2C3'}; border:none; border-radius:4px 4px 0 0; height:${Math.max(m.revenue / maxRev * 80, 4)}px;"></div>
+            <div style="font-size:12px; color:var(--steel);">${monthLabel(m.month)}</div>
+            <div style="font-size:12px; color:var(--steel);">${m.count} rental${m.count !== 1 ? 's' : ''}</div>
           </div>
         `).join('')}
       </div>`;
@@ -277,13 +277,13 @@
     }
     const pkgEntries = Object.entries(byPkg).sort((a,b) => b[1].revenue - a[1].revenue);
     $('salesByPackage').innerHTML = pkgEntries.length ? pkgEntries.map(([pkg, d]) => `
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); font-size:0.82rem;">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); font-size:14px;">
         <div>
           <div style="font-weight:bold;">${esc(pkg)}</div>
-          <div style="color:var(--steel); font-size:0.75rem;">${d.count} rental${d.count !== 1 ? 's' : ''}</div>
+          <div style="color:var(--steel); font-size:13px;">${d.count} rental${d.count !== 1 ? 's' : ''}</div>
         </div>
-        <div style="font-weight:bold; color:var(--gold);">${fmt(d.revenue)}</div>
-      </div>`).join('') : '<div style="color:var(--steel);font-size:0.82rem;">No data yet.</div>';
+        <div style="font-weight:600; font-variant-numeric:tabular-nums;">${fmt(d.revenue)}</div>
+      </div>`).join('') : '<div style="color:var(--steel);font-size:14px;">No data yet.</div>';
 
     // Recent rentals (last 8)
     const recent = [...rentals].sort((a,b) => (b.invoicedAt||'').localeCompare(a.invoicedAt||'')).slice(0, 8);
@@ -291,18 +291,18 @@
       const invoiceDate = fmtDate((r.invoicedAt||'').slice(0,10));
       const isActive = r.dropoffDate <= today && r.pickupDate >= today;
       const isPast = r.pickupDate < today;
-      const status = isActive ? '<span style="color:var(--green);font-size:0.7rem;font-weight:bold;">● Active</span>'
-                   : isPast ? '<span style="color:var(--steel);font-size:0.7rem;">Completed</span>'
-                   : '<span style="color:var(--gold);font-size:0.7rem;font-weight:bold;">Upcoming</span>';
+      const status = isActive ? '<span class="pill ok">Active</span>'
+                   : isPast ? '<span style="color:var(--steel);font-size:13px;">Completed</span>'
+                   : '<span class="pill pending">Upcoming</span>';
       return `
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); font-size:0.82rem;">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); font-size:14px;">
         <div>
           <div style="font-weight:bold;">${esc(r.name)} ${status}</div>
-          <div style="color:var(--steel); font-size:0.75rem;">${esc(invoiceDate)} · ${esc(r.package || '')}</div>
+          <div style="color:var(--steel); font-size:13px;">${esc(invoiceDate)} · ${esc(r.package || '')}</div>
         </div>
         <div style="font-weight:bold;">${fmtPrice(r.price)}</div>
       </div>`;
-    }).join('') : '<div style="color:var(--steel);font-size:0.82rem;">No rentals yet.</div>';
+    }).join('') : '<div style="color:var(--steel);font-size:14px;">No rentals yet.</div>';
   }
 
   $('csvBtn').addEventListener('click', () => {
@@ -340,12 +340,12 @@
       byCat[e.category] = b;
     }
     $('expTotals').innerHTML =
-      `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${money(ytdTotal)}</div><div style="font-size:0.75rem;color:var(--steel);">YTD expenses</div></div>` +
-      `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--gold);">${money(monthlyOverhead)}/mo</div><div style="font-size:0.75rem;color:var(--steel);">Est. monthly overhead</div></div>` +
+      `<div><div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;">${money(ytdTotal)}</div><div style="font-size:13px;color:var(--steel);">Expenses this year</div></div>` +
+      `<div><div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;">${money(monthlyOverhead)}/mo</div><div style="font-size:13px;color:var(--steel);">Monthly overhead, estimated</div></div>` +
       Object.entries(byCat).map(([cat,amt]) => {
         const sub = amt.monthly > 0 && amt.oneTime > 0 ? `${money(amt.oneTime)} + ${money(amt.monthly)} recurring`
                   : amt.monthly > 0 ? `${money(amt.monthly)} recurring` : money(amt.oneTime);
-        return `<div><div style="font-size:0.9rem;font-weight:bold;">${sub}</div><div style="font-size:0.72rem;color:var(--steel);">${esc(cat)}</div></div>`;
+        return `<div><div style="font-size:15px;font-weight:bold;">${sub}</div><div style="font-size:13px;color:var(--steel);">${esc(cat)}</div></div>`;
       }).join('');
 
     populateExpenseFilters();
@@ -354,14 +354,14 @@
     const ytdMiles = FIN.mileage.filter(m => thisYear(m.date)).reduce((t,m)=>t+m.miles,0);
     const rate = FIN.mileageRate;
     $('mileTotals').innerHTML =
-      `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${ytdMiles.toLocaleString('en-US',{maximumFractionDigits:1})} mi</div><div style="font-size:0.75rem;color:var(--steel);">YTD business miles</div></div>` +
-      (rate ? `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${money(ytdMiles*rate)}</div><div style="font-size:0.75rem;color:var(--steel);">Est. deduction @ $${rate}/mi</div></div>` : '') +
+      `<div><div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;">${ytdMiles.toLocaleString('en-US',{maximumFractionDigits:1})} mi</div><div style="font-size:13px;color:var(--steel);">Business miles this year</div></div>` +
+      (rate ? `<div><div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;">${money(ytdMiles*rate)}</div><div style="font-size:13px;color:var(--steel);">Est. deduction @ $${rate}/mi</div></div>` : '') +
       `<div style="display:flex; align-items:center; gap:6px;">
         <div class="money-field compact" style="display:inline-block;">
           <input type="number" id="rateInput" step="0.005" min="0" placeholder="0.65" value="${rate ?? ''}" style="width:110px; padding:8px 10px 8px 22px;">
         </div>
-        <span style="font-size:0.78rem; color:var(--steel);">/mi</span>
-        <button type="button" onclick="saveRate()" style="width:auto; margin:0; padding:8px 14px; font-size:0.8rem;">Save rate</button>
+        <span style="font-size:13px; color:var(--steel);">/mi</span>
+        <button type="button" onclick="saveRate()" style="width:auto; margin:0; padding:8px 14px; font-size:14px;">Save rate</button>
       </div>`;
 
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
@@ -378,7 +378,7 @@
     }
     trips.sort((a,b)=>b.date.localeCompare(a.date));
     $('tripChips').innerHTML = trips.slice(0,8).map(t => `
-      <button type="button" style="width:auto; margin:0; padding:7px 12px; font-size:0.75rem; background:var(--cream); color:var(--ink); border:1px solid var(--line); border-radius:999px;"
+      <button type="button" style="width:auto; margin:0; padding:7px 12px; font-size:13px; background:var(--white); color:var(--ink); border:1px solid var(--control); border-radius:999px;"
         onclick="fillTrip('${esc(t.date)}', '${esc(t.purpose).replaceAll("'","&#39;")}')">${esc(fmtDate(t.date).slice(0,5))} · ${esc(t.purpose.slice(0,34))}${t.purpose.length>34?'…':''}</button>`).join('')
       || '<span class="empty">No rental trips in the last/next 7 days.</span>';
 
@@ -386,10 +386,10 @@
     $('mileList').innerHTML = mileSorted.slice(0,15).map(m => `
       <div class="rem" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
         <div>
-          <div style="font-weight:bold; font-size:0.9rem;">${m.miles} mi</div>
-          <div style="font-size:0.78rem; color:var(--steel); margin:0;">${esc(fmtDate(m.date))} · ${esc(m.purpose)}</div>
+          <div style="font-weight:bold; font-size:15px;">${m.miles} mi</div>
+          <div style="font-size:13px; color:var(--steel); margin:0;">${esc(fmtDate(m.date))} · ${esc(m.purpose)}</div>
         </div>
-        <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
+        <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:13px; background:var(--white); color:var(--red); border:1px solid var(--control); border-radius:6px;"
           onclick="finDelete('${esc(m.key)}')">Delete</button>
       </div>`).join('') || '<p class="empty">No trips logged yet.</p>';
   }
@@ -427,15 +427,15 @@
     $('monthlyBreakdown').innerHTML = `
       <div class="tbl-wrap">
         <table>
-          <thead><tr><th>Month</th><th>Rentals</th><th>Revenue</th><th>Expenses</th><th>Net Income</th></tr></thead>
+          <thead><tr><th>Month</th><th style="text-align:right;">Rentals</th><th style="text-align:right;">Revenue</th><th style="text-align:right;">Expenses</th><th style="text-align:right;">Net income</th></tr></thead>
           <tbody>
             ${rows.slice().reverse().map(r => `
-              <tr${r.month === currentMonth ? ' style="background:var(--gold-bg);"' : ''}>
-                <td style="font-weight:bold;">${monthLabel(r.month)}${r.month === currentMonth ? ' <span class="pill pending">Current</span>' : ''}</td>
-                <td class="mono">${r.count}</td>
-                <td class="mono">${fmt(r.rev)}</td>
-                <td class="mono">${fmt(r.exp)}</td>
-                <td class="mono" style="font-weight:bold;color:${r.net >= 0 ? 'var(--green)' : 'var(--crate-red)'};">${r.net >= 0 ? '' : '−'}${fmt(Math.abs(r.net))}</td>
+              <tr>
+                <td style="font-weight:600;">${monthLabel(r.month)}${r.month === currentMonth ? ' <span class="pill pending">Current</span>' : ''}</td>
+                <td class="mono" style="text-align:right;">${r.count}</td>
+                <td class="mono" style="text-align:right;">${fmt(r.rev)}</td>
+                <td class="mono" style="text-align:right;">${fmt(r.exp)}</td>
+                <td class="mono" style="text-align:right;font-weight:600;color:${r.net >= 0 ? 'var(--ink)' : 'var(--red)'};">${r.net >= 0 ? '' : '−'}${fmt(Math.abs(r.net))}</td>
               </tr>`).join('')}
           </tbody>
         </table>
@@ -478,12 +478,12 @@
 
     $('expList').innerHTML = filtered.length ? filtered.map(e => `
       <div class="rem" style="padding:10px 14px;">
-        <div style="font-weight:bold; font-size:0.9rem;">${money(e.amount)} — ${esc(e.category)}${(e.recurring === 'monthly' || e.recurring === 'yearly') ? ` <span class="pill pending" style="font-size:0.65rem;">${e.recurring}</span>` : ''}</div>
-        <div style="font-size:0.78rem; color:var(--steel); margin:2px 0 8px;">${esc(fmtDate(e.date))}${e.vendor ? ' · ' + esc(e.vendor) : ''}${e.paymentMethod ? ' · ' + esc(e.paymentMethod) : ''}${e.description ? ' · ' + esc(e.description) : ''}</div>
+        <div style="font-weight:bold; font-size:15px;">${money(e.amount)} — ${esc(e.category)}${(e.recurring === 'monthly' || e.recurring === 'yearly') ? ` <span class="pill pending" style="font-size:12px;">${e.recurring}</span>` : ''}</div>
+        <div style="font-size:13px; color:var(--steel); margin:2px 0 8px;">${esc(fmtDate(e.date))}${e.vendor ? ' · ' + esc(e.vendor) : ''}${e.paymentMethod ? ' · ' + esc(e.paymentMethod) : ''}${e.description ? ' · ' + esc(e.description) : ''}</div>
         <div style="display:flex; gap:6px;">
-          <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:var(--cream); color:var(--ink); border:1px solid var(--line); border-radius:8px;"
+          <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:13px; background:var(--white); color:var(--ink); border:1px solid var(--control); border-radius:6px;"
             onclick="finEditStart('${esc(e.key)}')">Edit</button>
-          <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
+          <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:13px; background:var(--white); color:var(--red); border:1px solid var(--control); border-radius:6px;"
             onclick="finDelete('${esc(e.key)}')">Delete</button>
         </div>
       </div>`).join('') : `<p class="empty">${FIN.expenses.length ? 'No expenses match these filters.' : 'No expenses logged yet.'}</p>`;
@@ -508,9 +508,7 @@
       .reduce((t,e) => t + Number(e.amount||0), 0);
     const net = ytdRevenue - ytdExpenses;
     const positive = net >= 0;
-    const color = positive ? 'var(--green)' : 'var(--red)';
-    $('netIncomeBubble').style.borderColor = color;
-    $('netIncomeAmount').style.color = color;
+    $('netIncomeAmount').style.color = positive ? 'var(--ink)' : 'var(--red)';
     $('netIncomeAmount').textContent = (positive ? '' : '−') + money(Math.abs(net));
     $('netIncomeSub').textContent = `${money(ytdRevenue)} revenue − ${money(ytdExpenses)} expenses`;
   }

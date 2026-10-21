@@ -8,20 +8,19 @@
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Today's Reminders — Ready Tote Oklahoma (Internal)</title>
-<link rel="stylesheet" href="admin-shared.css?v=20261021">
-<script src="admin-shared.js?v=20261021"></script>
-<script src="admin-rentals-shared.js?v=20260818"></script>
+<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<script src="admin-shared.js?v=20261022"></script>
+<script src="admin-rentals-shared.js?v=20261022"></script>
 <style>
-  .rem .who{font-weight:bold;}
-  .rem .meta{color:var(--steel);font-size:0.82rem;margin:3px 0 0;font-family:inherit;line-height:1.45;}
+  .rem .who{font-weight:600;font-size:16px;}
+  .rem .meta{color:var(--steel);font-size:14px;margin:3px 0 0;line-height:1.45;font-variant-numeric:tabular-nums;}
   .rem .meta.addr{margin-top:2px;}
-  #results h2{margin:16px 0 6px; font-size:0.9rem;}
-  #results h2 .h2-note{font-family:'Barlow',sans-serif; font-weight:400; font-size:0.72rem; color:var(--steel);}
-  #results .empty{margin:0 0 0 2px; font-size:0.85rem;}
+  #results h2{margin:32px 0 10px; font-size:17px;}
+  #results h2:first-child{margin-top:8px;}
+  #results h2 .h2-note{font-weight:400; font-size:13px; color:var(--steel);}
+  #results .empty{margin:0 0 0 2px; font-size:14px;}
   .rem{margin-bottom:8px;}
-  .rem .msg{background:var(--cream);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:12px 14px;font-size:0.88rem;color:var(--ink);line-height:1.55;margin-bottom:10px;}
-  .sms-btn{display:inline-block;background:var(--green);color:#fff;font-weight:bold;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:0.88rem;transition:opacity 0.12s ease;}
-  .sms-btn:hover{opacity:0.88;}
+  .rem .msg{background:#FAF8F3;border-radius:8px;padding:12px 14px;font-size:14px;color:var(--ink);line-height:1.55;margin-bottom:10px;}
   /* Group related row buttons so each group wraps independently and
      lines up the same way regardless of which buttons are "Sent" */
   .rem .actions{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px;}
@@ -29,52 +28,52 @@
 
   /* Collapsible card: summary always visible, tap to reveal the buttons */
   .rem-summary{display:flex; align-items:flex-start; gap:10px; cursor:pointer; user-select:none;}
-  .rem-summary .chevron{flex:none; color:var(--gold); font-size:0.75rem; line-height:1.6; width:12px; text-align:center; transition:transform 0.15s ease;}
+  .rem-summary .chevron{flex:none; color:var(--steel); font-size:13px; line-height:1.6; width:12px; text-align:center; transition:transform 0.15s ease;}
   .rem.open .rem-summary .chevron{transform:rotate(90deg);}
   .rem-details{display:none; margin-top:10px;}
   .rem.open .rem-details{display:block;}
   h2{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
-  .section-toggle{width:auto; margin:0; padding:2px 10px; font-size:0.7rem; font-weight:bold; background:none; border:1px solid var(--line); color:var(--steel); border-radius:20px; cursor:pointer;}
-  .section-toggle:hover{border-color:var(--gold); color:var(--gold);}
+  .section-toggle{width:auto; margin:0 0 0 auto; padding:0; font-size:13px; font-weight:600; background:none; border:none; color:var(--ink); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control); cursor:pointer;}
+  .section-toggle:hover{background:none; text-decoration-color:var(--ink);}
 </style>
 </head>
 <body>
 <nav class="admin-nav" aria-label="Admin tools">
-  <a href="admin.html"><span class="nav-icon" aria-hidden="true">📊</span> Dashboard</a>
-  <a href="admin-requests.html"><span class="nav-icon" aria-hidden="true">📥</span> Requests</a>
-  <a href="admin-invoice.html"><span class="nav-icon" aria-hidden="true">🧾</span> Send Invoice</a>
-  <a href="admin-add-rental.html"><span class="nav-icon" aria-hidden="true">➕</span> Add Rental</a>
-  <a href="admin-reminders.html" aria-current="page"><span class="nav-icon" aria-hidden="true">🚚</span> Reminders</a>
-  <a href="admin-rentals.html"><span class="nav-icon" aria-hidden="true">📋</span> All Rentals</a>
-  <a href="admin-contacts.html"><span class="nav-icon" aria-hidden="true">📇</span> Contacts</a>
-  <a href="admin-finance.html"><span class="nav-icon" aria-hidden="true">💰</span> Finance</a>
-  <a href="admin-outreach.html"><span class="nav-icon" aria-hidden="true">🤝</span> Outreach</a>
-  <a href="admin-inventory.html"><span class="nav-icon" aria-hidden="true">📦</span> Inventory</a>
+  <a href="admin.html">Dashboard</a>
+  <a href="admin-requests.html">Requests</a>
+  <a href="admin-invoice.html">Send Invoice</a>
+  <a href="admin-add-rental.html">Add Rental</a>
+  <a href="admin-reminders.html" aria-current="page">Reminders</a>
+  <a href="admin-rentals.html">All Rentals</a>
+  <a href="admin-contacts.html">Contacts</a>
+  <a href="admin-finance.html">Finance</a>
+  <a href="admin-outreach.html">Outreach</a>
+  <a href="admin-inventory.html">Inventory</a>
 </nav>
 <div class="card">
-  <h1>Today's Reminder Texts</h1>
+  <h1>Reminder texts</h1>
   <p class="sub">Tap a button to open Messages with the text pre-filled, then confirm it was sent. Best used on your phone. For searching, editing, or managing any rental directly, see All Rentals.</p>
 
   <input type="hidden" id="secret">
 
-  <button id="loadBtn">Load today's reminders</button>
+  <button id="loadBtn">Refresh</button>
   <div class="status" id="status"></div>
 
   <div id="results" style="display:none;">
-    <h2>📅 This week</h2>
+    <h2>This week</h2>
     <div id="thisWeek"></div>
 
-    <h2>🚚 Delivery tomorrow <button type="button" class="section-toggle" onclick="toggleAllSection('delivery', this)">Expand all</button></h2>
+    <h2>Delivery tomorrow <button type="button" class="section-toggle" onclick="toggleAllSection('delivery', this)">Expand all</button></h2>
     <div id="delivery"></div>
-    <h2>📦 Pickup in 2 days <button type="button" class="section-toggle" onclick="toggleAllSection('pickup', this)">Expand all</button></h2>
+    <h2>Pickup in 2 days <button type="button" class="section-toggle" onclick="toggleAllSection('pickup', this)">Expand all</button></h2>
     <div id="pickup"></div>
-    <h2>📍 Confirm pickup address <span class="h2-note">5 days before pickup</span> <button type="button" class="section-toggle" onclick="toggleAllSection('addressCheck', this)">Expand all</button></h2>
+    <h2>Confirm pickup address <span class="h2-note">5 days before pickup</span> <button type="button" class="section-toggle" onclick="toggleAllSection('addressCheck', this)">Expand all</button></h2>
     <div id="addressCheck"></div>
-    <h2>⭐ Review requests <span class="h2-note">picked up 3 days ago</span> <button type="button" class="section-toggle" onclick="toggleAllSection('review', this)">Expand all</button></h2>
+    <h2>Review requests <span class="h2-note">picked up 3 days ago</span> <button type="button" class="section-toggle" onclick="toggleAllSection('review', this)">Expand all</button></h2>
     <div id="review"></div>
-    <h2>💬 Invoice follow-ups <span class="h2-note">invoiced 3 days ago</span> <button type="button" class="section-toggle" onclick="toggleAllSection('followup', this)">Expand all</button></h2>
+    <h2>Invoice follow-ups <span class="h2-note">invoiced 3 days ago</span> <button type="button" class="section-toggle" onclick="toggleAllSection('followup', this)">Expand all</button></h2>
     <div id="followup"></div>
-    <h2>📧 Email payment reminders <span class="h2-note">invoiced 5+ days, unpaid</span> <button type="button" class="section-toggle" onclick="toggleAllSection('emailReminder', this)">Expand all</button></h2>
+    <h2>Email payment reminders <span class="h2-note">invoiced 5+ days, unpaid</span> <button type="button" class="section-toggle" onclick="toggleAllSection('emailReminder', this)">Expand all</button></h2>
     <div id="emailReminder"></div>
   </div>
 </div>
@@ -94,7 +93,7 @@
     const secret = $('secret').value.trim();
     if (!secret) return showErr('Enter the admin secret.');
     const btn = $('loadBtn');
-    btn.disabled = true; btn.textContent = 'Loading…';
+    btn.disabled = true; btn.textContent = 'Refresh';
     try {
       const resp = await fetch('/.netlify/functions/get-rentals', {
         method: 'POST',
@@ -119,18 +118,18 @@
         $('status').style.display = 'none';
       }
     } catch { showErr('Network error — use this page on the live site.'); }
-    btn.disabled = false; btn.textContent = 'Load today\'s reminders';
+    btn.disabled = false; btn.textContent = 'Refresh';
   }
 
   // Same per-type text buttons as the All Rentals page (textBtn in
   // admin-rentals-shared.js): tapping one opens Messages pre-filled, then asks
   // "Did you send the text?" and marks it sent. Section id -> [flag type, icon, label].
   const SECTION_BTN = {
-    delivery:     ['delivery',     '🚚', 'Delivery'],
-    pickup:       ['pickup',       '📦', 'Pickup'],
-    addressCheck: ['addressCheck', '📍', 'Confirm address'],
-    review:       ['review',       '⭐', 'Review'],
-    followup:     ['followup',     '💬', 'Follow-up'],
+    delivery:     ['delivery',     '', 'Delivery'],
+    pickup:       ['pickup',       '', 'Pickup'],
+    addressCheck: ['addressCheck', '', 'Confirm address'],
+    review:       ['review',       '', 'Review'],
+    followup:     ['followup',     '', 'Follow-up'],
   };
 
   function render(id, items) {
@@ -194,7 +193,7 @@
     events.sort((a,b) => a.date.localeCompare(b.date) || timeKey(a.time) - timeKey(b.time));
     el.innerHTML = events.map(e => `
       <div class="rem" style="padding:10px 14px;">
-        <div class="who" style="font-size:0.9rem;">${esc(fmtDay(e.date))} · <span style="color:var(--gold);">${esc(e.label)}</span> — ${esc(e.r.name)}</div>
+        <div class="who" style="font-size:15px;">${esc(fmtDay(e.date))} · <span style="color:var(--steel);">${esc(e.label)}</span> — ${esc(e.r.name)}</div>
         <div class="meta" style="margin:2px 0 0;">${esc(fmtTime(e.time))}${e.addr ? ' · ' + esc(e.addr) : ''} · ${esc(e.r.package)}</div>
       </div>`).join('');
   }

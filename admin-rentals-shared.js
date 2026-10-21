@@ -31,9 +31,9 @@ function textBtn(type, key, smsLink, icon, label, color) {
   const flagId = type + ':' + (key || 'unknown');
   const sent = SENT_FLAGS[flagId];
   if (sent) {
-    return `<button type="button" class="unsend-btn" data-flagid="${flagId}" title="Click to mark as unsent" style="width:auto; padding:8px 16px; font-size:0.8rem; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px; cursor:pointer;">${icon} ✓ Sent ↩</button>`;
+    return `<button type="button" class="unsend-btn" data-flagid="${flagId}" title="Click to mark as unsent" style="width:auto; padding:8px 16px; font-size:14px; background:var(--track); color:var(--steel); border:1px solid transparent; border-radius:6px; cursor:pointer;">${label} sent · undo</button>`;
   }
-  return `<a class="sms-btn" href="${smsLink}" onclick="setTimeout(()=>confirmSent('${flagId}'),500)" style="padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line);">${icon} ${label}</a>`;
+  return `<a class="sms-btn" href="${smsLink}" onclick="setTimeout(()=>confirmSent('${flagId}'),500)" style="padding:8px 16px; font-size:14px;">${/^text\b/i.test(label) ? label : 'Text: ' + label}</a>`;
 }
 
 window.confirmSent = async (flagId) => {
@@ -83,12 +83,12 @@ function emailReminderBtn(r) {
   const flagId = 'emailReminder:' + r.key;
   const sent = SENT_FLAGS[flagId];
   if (!r.email || !r.stripeUrl) {
-    return `<span style="display:inline-block; font-size:0.78rem; color:var(--steel);">📧 No payment link on file — resend the invoice instead</span>`;
+    return `<span style="display:inline-block; font-size:13px; color:var(--steel);">No payment link on file — resend the invoice instead</span>`;
   }
   if (sent) {
-    return `<button type="button" class="email-reminder-btn" data-key="${esc(r.key)}" title="Resends with whatever price and payment link are currently on file" style="width:auto; padding:8px 16px; font-size:0.8rem; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px; cursor:pointer;">📧 ✓ Emailed ${esc(fmtDate(sent))} · Resend</button>`;
+    return `<button type="button" class="email-reminder-btn" data-key="${esc(r.key)}" title="Resends with whatever price and payment link are currently on file" style="width:auto; padding:8px 16px; font-size:14px; background:var(--track); color:var(--steel); border:1px solid transparent; border-radius:6px; cursor:pointer;">Emailed ${esc(fmtDate(sent))} · Resend</button>`;
   }
-  return `<button type="button" class="email-reminder-btn" data-key="${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📧 Send reminder</button>`;
+  return `<button type="button" class="email-reminder-btn" data-key="${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">Send reminder</button>`;
 }
 
 // Text version of the same nudge. Independent of the email reminder —
@@ -98,7 +98,7 @@ function textReminderBtn(r) {
   if (!r.invoicedAt || r.backfilled || PAID_FLAGS[r.key]) return '';
   const link = r.paymentReminderSms || r.sms;
   if (!r.phone || !link) return '';
-  return textBtn('textReminder', r.key, link, '💬', 'Text reminder', 'var(--green)');
+  return textBtn('textReminder', r.key, link, '', 'Text reminder', 'var(--green)');
 }
 
 // "Just sent your invoice" text — on-demand only, meant for right after
@@ -108,7 +108,7 @@ function textReminderBtn(r) {
 function invoiceReminderBtn(r) {
   if (!r.invoicedAt || r.backfilled || PAID_FLAGS[r.key]) return '';
   if (!r.phone || !r.invoiceSentSms) return '';
-  return textBtn('invoiceSent', r.key, r.invoiceSentSms, '🧾', 'Text invoice sent', 'var(--green)');
+  return textBtn('invoiceSent', r.key, r.invoiceSentSms, '', 'Text invoice sent', 'var(--green)');
 }
 
 window.sendEmailReminder = async (key) => {
