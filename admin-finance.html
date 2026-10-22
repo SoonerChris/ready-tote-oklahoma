@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Finance · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261028"></script>
+<script src="admin-shared.js?v=20261029"></script>
 <style>
   /* Finance answers one question first: how is the business doing in the
      period picked (a month, a year, or all time), and where is the money
@@ -124,6 +124,12 @@
   .rate input{width:96px; height:36px; padding:6px 10px 6px 22px; font-size:14px;}
 
   .pill.neutral{background:var(--track); color:#4A433B;}
+  .fee-line{font-size:14px; color:var(--steel); margin:0 0 12px; display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px;}
+  .fee-line b{color:var(--ink);}
+  .fee-line input{width:72px; height:32px; padding:4px 8px; font-size:14px; margin:0;}
+  .fee-line .btn-sm{height:32px;}
+  .kpi .cap a{color:inherit;}
+  .kpi .cap.warn{color:#6B4C0C;}
 
   @media(max-width:900px){
     .kpis{grid-template-columns:repeat(2,1fr);}
@@ -181,6 +187,10 @@
         <button type="button" data-mode="year" aria-pressed="false">Year</button>
         <button type="button" data-mode="all" aria-pressed="false">All time</button>
       </div>
+      <div class="seg" id="basisSeg" role="group" aria-label="Count revenue">
+        <button type="button" data-basis="paid" aria-pressed="true" title="Count each rental when it's paid. Most small businesses file taxes this way (cash basis).">When paid</button>
+        <button type="button" data-basis="dropoff" aria-pressed="false" title="Count each rental in the month it's dropped off, paid or not.">By drop-off</button>
+      </div>
       <div class="step" id="stepper">
         <button type="button" id="prevBtn" aria-label="Previous period">‹</button>
         <span class="label num" id="periodLabel"></span>
@@ -192,14 +202,14 @@
 
     <section class="panel chart" aria-labelledby="chartTitle">
       <div class="panel-head">
-        <h2 id="chartTitle">Revenue and expenses by month</h2>
+        <h2 id="chartTitle">Money in and out by month</h2>
         <div class="legend" id="chartLegend">
-          <span><i style="background:var(--data)"></i>Revenue</span>
+          <span><i style="background:var(--data)"></i><span id="legendRev">Revenue</span></span>
           <span><i style="background:var(--data-2)"></i>Expenses</span>
         </div>
       </div>
       <div id="chart"></div>
-      <p class="chart-note">Click a month to see it in detail. Revenue counts each rental in the month it's dropped off.</p>
+      <p class="chart-note" id="chartNote"></p>
     </section>
 
     <div class="split">
@@ -251,6 +261,7 @@
               <option value="monthly">Every month</option>
               <option value="yearly">Every year</option>
             </select></div>
+          <div id="expEndWrap" hidden><label for="expEnd">Stopped on (optional)</label><input type="date" id="expEnd"></div>
           <div class="wide"><label for="expVendor">Vendor</label><input type="text" id="expVendor" placeholder="Amazon, Home Depot…"></div>
           <div class="wide"><label for="expPayment">Paid with</label>
             <select id="expPayment">
@@ -263,6 +274,7 @@
               <option>Other</option>
             </select></div>
         </div>
+        <p class="note" id="expHint" hidden></p>
         <label for="expDesc">Notes (optional)</label>
         <input type="text" id="expDesc" placeholder="What it was for">
         <input type="hidden" id="expEditKey" value="">
@@ -273,6 +285,7 @@
       </div>
 
       <p class="totals-line" id="expCount"></p>
+      <div class="fee-line" id="feeLine"></div>
       <div id="expList"></div>
       <div style="margin-top:12px;"><button type="button" id="expCsvBtn" class="secondary btn-sm">Download expenses (CSV)</button></div>
     </div>
@@ -313,7 +326,18 @@
   $('secret').value = adminSessionMarker();   // signed-in marker; the session cookie is what the server checks
 
   let ALL_RENTALS = [];
-  let FIN = { expenses: [], mileage: [], mileageRate: null };
+  let FIN = { expenses: [], mileage: [], mileageRate: null, stripeFees: { pct: 2.9, fixed: 0.3 } };
+  let PAID = {}, PAID_VIA = {};
+  let BASIS = finBasis();
+  // Prepared from the raw records by prepare(): revenue entries, expense
+  // charges (recurring ones repeated), and estimated Stripe fees
+  let REV = [], CHARGES = [], FEES = [], SPEND = [];
+  function prepare() {
+    REV = revenueEntries(ALL_RENTALS, PAID, BASIS);
+    CHARGES = expenseCharges(FIN.expenses, TODAY);
+    FEES = stripeFeeCharges(REV, PAID, PAID_VIA, FIN.stripeFees);
+    SPEND = [...CHARGES, ...FEES];
+  }
   const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
   const CUR_MONTH = TODAY.slice(0, 7);
   // The period everything above the tabs describes
@@ -342,6 +366,8 @@
       else {
         const rd = await rentalsResp.json();
         ALL_RENTALS = (rd.rentals || []).filter(r => !r.cancelled);   // cancelled rentals aren't revenue
+        PAID = rd.paidFlags || {};
+        PAID_VIA = rd.paidVia || {};
         FIN = await finResp.json();
         $('results').style.display = 'block';   // shown first so the chart can measure its width
         renderAll();
@@ -388,26 +414,33 @@
   }
   const inR = (d, s, e) => !!d && d >= s && d <= e;
   function totals(s, e) {
-    const rentals = ALL_RENTALS.filter(r => inR(r.dropoffDate, s, e));
-    const expenses = FIN.expenses.filter(x => inR(x.date, s, e));
+    const rev = REV.filter(x => inR(x.date, s, e));
+    const rentals = rev.map(x => x.rental);
+    const expenses = SPEND.filter(x => inR(x.date, s, e));
     const miles = FIN.mileage.filter(x => inR(x.date, s, e)).reduce((t, x) => t + Number(x.miles||0), 0);
-    const revenue = rentals.reduce((t, r) => t + priceNum(r.price), 0);
-    const spent = expenses.reduce((t, x) => t + Number(x.amount||0), 0);
-    return { rentals, expenses, revenue, spent, net: revenue - spent, miles };
+    const revenue = round2(rev.reduce((t, x) => t + x.amount, 0));
+    const spent = round2(expenses.reduce((t, x) => t + Number(x.amount||0), 0));
+    const fees = round2(expenses.filter(x => x.estimated).reduce((t, x) => t + x.amount, 0));
+    const fuel = round2(expenses.filter(x => x.category === 'Fuel').reduce((t, x) => t + Number(x.amount||0), 0));
+    return { rentals, expenses, revenue, spent, net: round2(revenue - spent), miles, fees, fuel };
   }
+  // Recurring costs still running (no stop date, or one that hasn't come yet)
   function monthlyOverhead() {
     let o = 0;
-    for (const e of FIN.expenses) {
+    for (const e of FIN.expenses.filter(x => !x.endDate || x.endDate >= TODAY)) {
       if (e.recurring === 'monthly') o += Number(e.amount||0);
       else if (e.recurring === 'yearly') o += Number(e.amount||0) / 12;
     }
     return o;
   }
 
-  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.seg button[data-mode]').forEach(b => b.addEventListener('click', () => {
     P.mode = b.dataset.mode;
     if (P.mode !== 'all' && !P.y) { P.y = +TODAY.slice(0,4); P.m = +TODAY.slice(5,7); }
     renderPeriod();
+  }));
+  document.querySelectorAll('#basisSeg button').forEach(b => b.addEventListener('click', () => {
+    BASIS = b.dataset.basis; setFinBasis(BASIS); renderAll();
   }));
   $('prevBtn').addEventListener('click', () => stepPeriod(-1));
   $('nextBtn').addEventListener('click', () => stepPeriod(1));
@@ -424,6 +457,7 @@
   }
 
   function renderAll() {
+    prepare();
     renderPeriod();
     renderMonthTable();
     renderFinance();
@@ -432,7 +466,12 @@
 
   // Everything that follows the period: stepper, finding, KPIs, chart highlight, breakdowns
   function renderPeriod() {
-    document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === P.mode)));
+    document.querySelectorAll('.seg button[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === P.mode)));
+    document.querySelectorAll('#basisSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.basis === BASIS)));
+    $('legendRev').textContent = BASIS === 'paid' ? 'Collected' : 'Revenue';
+    $('chartNote').textContent = 'Click a month to see it in detail. ' + (BASIS === 'paid'
+      ? 'Revenue counts each rental when it was paid; rentals added with Add Rental count on their drop-off date.'
+      : 'Revenue counts each rental in the month it\'s dropped off, paid or not.');
     const R = range();
     $('stepper').style.display = P.mode === 'all' ? 'none' : '';
     $('periodLabel').textContent = R.label;
@@ -467,11 +506,16 @@
     const margin = T.revenue > 0 && T.net >= 0 ? Math.round(T.net / T.revenue * 100) + '% of revenue kept' : T.revenue > 0 ? 'Expenses were more than revenue' : 'No revenue in this period';
     const avg = T.rentals.length ? money(T.revenue / T.rentals.length) + ' average' : 'No rentals';
     const rate = FIN.mileageRate;
+    const owed = owedRentals(ALL_RENTALS, PAID);
+    const owedAmt = owed.reduce((t, r) => t + priceAmount(r.price), 0);
+    const owedCap = owed.length ? `<div class="cap"><a href="admin-rentals.html?filter=unpaid">${money(owedAmt)} still owed</a> on ${plural(owed.length, 'invoice')}</div>` : '';
+    // With the mileage rate, gas isn't deductible (IRS Pub 463); parking and tolls still are
+    const fuelCap = rate && T.fuel > 0 ? `<div class="cap warn">${money(T.fuel)} of fuel logged. With the mileage rate, fuel isn't deductible (parking and tolls are).</div>` : '';
     $('kpis').innerHTML = `
       <div class="kpi lead"><div class="lbl">Net income</div><div class="val num" style="color:${T.net < 0 ? 'var(--red)' : 'var(--ink)'}">${signed(T.net)}</div><div class="cap">${margin}</div><div class="cap">${Pv ? delta(T.net, Pv.net) : ''}</div></div>
-      <div class="kpi"><div class="lbl">Revenue</div><div class="val num">${money(T.revenue)}</div><div class="cap">${plural(T.rentals.length, 'rental')} · ${avg}</div><div class="cap">${Pv ? delta(T.revenue, Pv.revenue) : ''}</div></div>
-      <div class="kpi"><div class="lbl">Expenses</div><div class="val num">${money(T.spent)}</div><div class="cap">${plural(T.expenses.length, 'expense')}</div><div class="cap">${Pv ? delta(T.spent, Pv.spent, false) : ''}</div></div>
-      <div class="kpi"><div class="lbl">Mileage deduction</div><div class="val num">${rate ? money(T.miles * rate) : '—'}</div><div class="cap num">${T.miles.toLocaleString('en-US', { maximumFractionDigits: 1 })} mi${rate ? ' at $' + Number(rate).toFixed(2) + ' a mile' : ' · set a rate under Mileage'}</div></div>`;
+      <div class="kpi"><div class="lbl">${BASIS === 'paid' ? 'Collected' : 'Revenue'}</div><div class="val num">${money(T.revenue)}</div><div class="cap">${plural(T.rentals.length, 'rental')} · ${avg}</div><div class="cap">${Pv ? delta(T.revenue, Pv.revenue) : ''}</div>${owedCap}</div>
+      <div class="kpi"><div class="lbl">Expenses</div><div class="val num">${money(T.spent)}</div><div class="cap">${T.fees ? `Includes ${money(T.fees)} estimated Stripe fees` : plural(T.expenses.length, 'charge')}</div><div class="cap">${Pv ? delta(T.spent, Pv.spent, false) : ''}</div></div>
+      <div class="kpi"><div class="lbl">Mileage deduction</div><div class="val num">${rate ? money(T.miles * rate) : '—'}</div><div class="cap num">${T.miles.toLocaleString('en-US', { maximumFractionDigits: 1 })} mi${rate ? ' at $' + Number(rate).toFixed(3).replace(/0$/, '') + ' a mile' : ' · set a rate under Mileage'}</div>${fuelCap}</div>`;
 
     renderChart();
 
@@ -488,12 +532,14 @@
 
     const byCat = {};
     for (const e of T.expenses) {
-      byCat[e.category || 'Other'] = byCat[e.category || 'Other'] || { n: 0, v: 0, rec: 0 };
+      byCat[e.category || 'Other'] = byCat[e.category || 'Other'] || { n: 0, v: 0, rec: 0, est: false };
       const b = byCat[e.category || 'Other']; b.n++; b.v += Number(e.amount||0);
       if (e.recurring === 'monthly' || e.recurring === 'yearly') b.rec++;
+      if (e.estimated) b.est = true;
     }
     const oh = monthlyOverhead();
-    $('byCategory').innerHTML = barList(Object.entries(byCat).map(([k, d]) => ({ name: k, v: d.v, sub: plural(d.n, 'expense') + (d.rec ? ` · ${d.rec} recurring` : '') })), T.spent, '#8C8377', 'No expenses in this period.')
+    $('byCategory').innerHTML = barList(Object.entries(byCat).map(([k, d]) => ({ name: k, v: d.v,
+        sub: d.est ? `${plural(d.n, 'card payment')} · estimated` : plural(d.n, 'charge') + (d.rec ? ` · ${d.rec} from recurring costs` : '') })), T.spent, '#8C8377', 'No expenses in this period.')
       + (oh ? `<p class="note" style="margin-top:10px;">Recurring costs come to about <b class="num" style="color:var(--ink)">${money(oh)}</b> a month.</p>` : '');
 
     document.querySelectorAll('#monthTable tbody tr').forEach(tr => tr.classList.toggle('sel', P.mode === 'month' && tr.dataset.month === ymKey(P.y, P.m)));
@@ -522,7 +568,7 @@
   }
 
   function firstMonth() {
-    const seen = [...ALL_RENTALS.map(r => monthKey(r.dropoffDate)), ...FIN.expenses.map(e => monthKey(e.date))].filter(Boolean).sort();
+    const seen = [...REV.map(x => monthKey(x.date)), ...SPEND.map(e => monthKey(e.date))].filter(Boolean).sort();
     return seen.length && seen[0] < CUR_MONTH ? seen[0] : CUR_MONTH;
   }
   function monthsBetween(a, b) {
@@ -564,7 +610,7 @@
       if (r.exp > 0) s += `<rect x="${cx + gap / 2}" y="${y(r.exp)}" width="${bw}" height="${y(0) - y(r.exp)}" fill="#B9AFA0"></rect>`;
       const lbl = monthName(r.month, { month: narrow ? 'narrow' : 'short' }) + (r.month.endsWith('-01') && !narrow ? ' ' + r.month.slice(2, 4) : '');
       s += `<text class="mlabel${sel(r.month) ? ' sel' : ''}" x="${cx}" y="${H - 8}" text-anchor="middle">${lbl}</text>`;
-      s += `<rect class="hit" x="${padL + i * slot}" y="${padT}" width="${slot}" height="${plotH + padB}" data-month="${r.month}"><title>${monthName(r.month)}: revenue ${money(r.rev)}, expenses ${money(r.exp)}, net ${signed(r.net)}</title></rect>`;
+      s += `<rect class="hit" x="${padL + i * slot}" y="${padT}" width="${slot}" height="${plotH + padB}" data-month="${r.month}"><title>${monthName(r.month)}: ${BASIS === 'paid' ? 'collected' : 'revenue'} ${money(r.rev)}, expenses ${money(r.exp)}, net ${signed(r.net)}</title></rect>`;
     });
     $('chart').innerHTML = s + '</svg>';
     $('chart').querySelectorAll('.hit').forEach(h => h.addEventListener('click', () => pickMonth(h.dataset.month)));
@@ -585,7 +631,7 @@
     const pct = (n, d) => d > 0 && n >= 0 ? Math.round(n / d * 100) + '%' : '—';
     $('monthTable').innerHTML = `
       <table class="data">
-        <thead><tr><th>Month</th><th class="r">Rentals</th><th class="r">Revenue</th><th class="r">Expenses</th><th class="r">Net income</th><th class="r">Margin</th></tr></thead>
+        <thead><tr><th>Month</th><th class="r">Rentals</th><th class="r">${BASIS === 'paid' ? 'Collected' : 'Revenue'}</th><th class="r">Expenses</th><th class="r">Net income</th><th class="r">Margin</th></tr></thead>
         <tbody>${rows.map(r => `
           <tr class="pick" data-month="${r.month}" tabindex="0">
             <td>${monthName(r.month)}${r.month === CUR_MONTH ? ' <span class="pill neutral">So far</span>' : ''}</td>
@@ -621,7 +667,7 @@
   function renderRentalsTab() {
     const rows = [...ALL_RENTALS].sort((a, b) => (b.dropoffDate||'').localeCompare(a.dropoffDate||''));
     $('rentTabCount').textContent = ' ' + rows.length;
-    $('rentCount').innerHTML = rows.length ? `<b class="num">${plural(rows.length, 'rental')}</b> · <b class="num">${money(rows.reduce((t, r) => t + priceNum(r.price), 0))}</b> invoiced` : '';
+    $('rentCount').innerHTML = rows.length ? `<b class="num">${plural(rows.length, 'rental')}</b> · <b class="num">${money(rows.reduce((t, r) => t + priceNum(r.price), 0))}</b> booked` : '';
     const status = r => r.dropoffDate <= TODAY && r.pickupDate >= TODAY ? '<span class="pill ok">Out now</span>'
       : r.pickupDate < TODAY ? '<span class="pill neutral">Done</span>' : '<span class="pill pending">Upcoming</span>';
     $('rentList').innerHTML = rows.length ? `
@@ -655,7 +701,7 @@
   });
   async function reloadFinance(){
     const resp = await finCall({ action: 'list' });
-    if (resp.ok) { FIN = await resp.json(); renderPeriod(); renderMonthTable(); renderFinance(); }
+    if (resp.ok) { FIN = await resp.json(); prepare(); renderPeriod(); renderMonthTable(); renderFinance(); }
   }
 
   function renderFinance() {
@@ -716,7 +762,7 @@
     const prevCat = $('expFilterCategory').value, prevPay = $('expFilterPayment').value, prevMonth = $('expFilterMonth').value;
     const cats = [...new Set(FIN.expenses.map(e => e.category).filter(Boolean))].sort();
     const pays = [...new Set(FIN.expenses.map(e => e.paymentMethod).filter(Boolean))].sort();
-    const months = [...new Set(FIN.expenses.map(e => monthKey(e.date)).filter(Boolean))].sort().reverse();
+    const months = [...new Set(CHARGES.map(e => monthKey(e.date)).filter(Boolean))].sort().reverse();
 
     $('expFilterCategory').innerHTML = '<option value="">All categories</option>' +
       cats.map(c => `<option${c === prevCat ? ' selected' : ''}>${esc(c)}</option>`).join('');
@@ -726,24 +772,35 @@
       months.map(m => `<option value="${m}"${m === prevMonth ? ' selected' : ''}>${esc(monthName(m))}</option>`).join('');
   }
 
+  // One row per expense record. A recurring one shows its monthly or yearly
+  // amount and what it has added up to; with a month picked, only the
+  // charges in that month count toward the total.
   function renderExpenseTable(){
     const fMonth = $('expFilterMonth').value, fCat = $('expFilterCategory').value,
           fPay = $('expFilterPayment').value, search = $('expFilterSearch').value.trim().toLowerCase();
+    const chargesOf = e => CHARGES.filter(c => c.source === e && (!fMonth || monthKey(c.date) === fMonth));
 
     const filtered = FIN.expenses.filter(e => {
-      if (fMonth && monthKey(e.date) !== fMonth) return false;
+      if (fMonth && !chargesOf(e).length) return false;
       if (fCat && e.category !== fCat) return false;
       if (fPay && e.paymentMethod !== fPay) return false;
       if (search && !`${e.vendor||''} ${e.description||''}`.toLowerCase().includes(search)) return false;
       return true;
     }).sort((a,b) => (b.date||'').localeCompare(a.date||''));
 
-    const total = filtered.reduce((t,e) => t + Number(e.amount||0), 0);
+    const total = filtered.reduce((t, e) => t + chargesOf(e).reduce((u, c) => u + Number(c.amount||0), 0), 0);
     const filteredOn = fMonth || fCat || fPay || search;
     $('expCount').innerHTML = FIN.expenses.length
-      ? `${filteredOn ? `Showing ${filtered.length} of ${FIN.expenses.length}` : plural(filtered.length, 'expense')} · <b class="num">${money(total)}</b> total`
+      ? `${filteredOn ? `Showing ${filtered.length} of ${FIN.expenses.length}` : plural(filtered.length, 'expense')} · <b class="num">${money(total)}</b> ${fMonth ? 'in ' + esc(monthName(fMonth)) : 'charged so far'}`
       : '';
-    const often = e => e.recurring === 'monthly' ? 'Every month' : e.recurring === 'yearly' ? 'Every year' : '';
+    const short = d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const often = e => {
+      if (e.recurring !== 'monthly' && e.recurring !== 'yearly') return '';
+      const all = CHARGES.filter(c => c.source === e);
+      const sum = all.reduce((t, c) => t + Number(c.amount||0), 0);
+      const ended = e.endDate && e.endDate <= TODAY;
+      return `${e.recurring === 'monthly' ? 'Every month' : 'Every year'} since ${short(e.date)}${ended ? `, stopped ${short(e.endDate)}` : e.endDate ? `, stops ${short(e.endDate)}` : ''} · ${plural(all.length, 'charge')}, ${money(sum)} so far`;
+    };
 
     $('expList').innerHTML = filtered.length ? `
       <table class="data stack">
@@ -751,10 +808,10 @@
         <tbody>${filtered.map(e => `
           <tr>
             <td class="c-meta" style="white-space:nowrap;">${esc(fmtDate(e.date))}</td>
-            <td class="c-main">${esc(e.vendor || e.category || '—')}${e.description ? `<span class="minor">${esc(e.description)}</span>` : ''}</td>
-            <td class="c-hide">${esc(e.category || '—')}${often(e) ? `<span class="minor">${often(e)}</span>` : ''}</td>
+            <td class="c-main">${esc(e.vendor || e.category || '—')}${e.description ? `<span class="minor">${esc(e.description)}</span>` : ''}${often(e) ? `<span class="minor">${often(e)}</span>` : ''}</td>
+            <td class="c-hide">${esc(e.category || '—')}</td>
             <td class="c-hide" style="color:var(--steel);">${esc(e.paymentMethod || '—')}</td>
-            <td class="r c-amt" style="font-weight:600;">${money(e.amount)}</td>
+            <td class="r c-amt" style="font-weight:600;">${money(e.amount)}${e.recurring === 'monthly' ? '<span class="minor">a month</span>' : e.recurring === 'yearly' ? '<span class="minor">a year</span>' : ''}</td>
             <td class="c-act"><div class="row-actions">
               <button type="button" class="link" onclick="finEditStart('${esc(e.key)}')">Edit</button>
               <button type="button" class="link danger" onclick="finDelete('${esc(e.key)}')">Delete</button>
@@ -762,7 +819,24 @@
           </tr>`).join('')}
         </tbody>
       </table>` : `<p class="empty-line">${FIN.expenses.length ? 'No expenses match these filters.' : 'No expenses logged yet.'}</p>`;
+    renderFeeLine(fMonth);
   }
+
+  // Stripe fees aren't records you enter; they're estimated from payments
+  function renderFeeLine(fMonth) {
+    const f = FIN.stripeFees || { pct: 2.9, fixed: 0.3 };
+    const list = FEES.filter(x => !fMonth || monthKey(x.date) === fMonth);
+    const sum = list.reduce((t, x) => t + x.amount, 0);
+    $('feeLine').innerHTML = `<span>Plus <b class="num">${money(sum)}</b> in estimated Stripe fees${fMonth ? ' in ' + esc(monthName(fMonth)) : ''} (${plural(list.length, 'card payment')} at ${f.pct}% + $${Number(f.fixed).toFixed(2)}).</span>
+      <button type="button" class="link" onclick="this.parentElement.querySelector('.fee-edit').hidden = false; this.hidden = true;">Change rate</button>
+      <span class="fee-edit" hidden><input type="number" id="feePct" step="0.1" min="0" value="${f.pct}" aria-label="Percent"> % +
+        $<input type="number" id="feeFixed" step="0.01" min="0" value="${Number(f.fixed).toFixed(2)}" aria-label="Fixed fee">
+        <button type="button" class="secondary btn-sm" onclick="saveFees()">Save</button></span>`;
+  }
+  window.saveFees = async () => {
+    const resp = await finCall({ action: 'setStripeFees', pct: $('feePct').value, fixed: $('feeFixed').value });
+    if (resp.ok) reloadFinance(); else showErr(await resp.text().catch(() => 'Couldn’t save the fee rate.'));
+  };
 
   $('expFilterMonth').addEventListener('change', renderExpenseTable);
   $('expFilterCategory').addEventListener('change', renderExpenseTable);
@@ -779,6 +853,15 @@
     if (!$('expDate').value) $('expDate').value = TODAY;
     $('expAmount').focus();
   });
+
+  function syncExpForm() {
+    $('expEndWrap').hidden = $('expRecurring').value === 'one-time';
+    const fuel = $('expCategory').value === 'Fuel' && FIN.mileageRate;
+    $('expHint').hidden = !fuel;
+    $('expHint').textContent = fuel ? 'You use the mileage rate, so fuel isn’t tax deductible (parking and tolls are). It still counts in your expenses here.' : '';
+  }
+  $('expRecurring').addEventListener('change', syncExpForm);
+  $('expCategory').addEventListener('change', syncExpForm);
 
   window.fillTrip = (date, purpose) => { $('mileDate').value = date; $('milePurpose').value = purpose; $('mileMiles').focus(); };
   window.finDelete = async (key) => {
@@ -802,6 +885,8 @@
     $('expVendor').value = e.vendor || '';
     $('expPayment').value = e.paymentMethod || '';
     $('expDesc').value = e.description || '';
+    $('expEnd').value = e.endDate || '';
+    syncExpForm();
     $('expEditKey').value = key;
     $('expFormTitle').textContent = 'Edit expense';
     $('expAddBtn').textContent = 'Save changes';
@@ -811,7 +896,8 @@
   window.finEditCancel = () => {
     $('expEditKey').value = '';
     $('expDate').value = ''; $('expAmount').value = ''; $('expVendor').value = ''; $('expDesc').value = '';
-    $('expCategory').selectedIndex = 0; $('expRecurring').value = 'one-time'; $('expPayment').value = '';
+    $('expCategory').selectedIndex = 0; $('expRecurring').value = 'one-time'; $('expPayment').value = ''; $('expEnd').value = '';
+    syncExpForm();
     $('expFormTitle').textContent = 'Add expense';
     $('expAddBtn').textContent = 'Add expense';
     $('expForm').hidden = true;
@@ -821,11 +907,13 @@
     const date = $('expDate').value, category = $('expCategory').value,
           description = $('expDesc').value.trim(), amount = $('expAmount').value,
           recurring = $('expRecurring').value, vendor = $('expVendor').value.trim(),
-          paymentMethod = $('expPayment').value, editKey = $('expEditKey').value;
+          paymentMethod = $('expPayment').value, editKey = $('expEditKey').value,
+          endDate = recurring === 'one-time' ? '' : $('expEnd').value;
     if (!date || !amount) return showErr('An expense needs a date and an amount.');
+    if (endDate && endDate < date) return showErr('The stop date is before the start date.');
     const resp = editKey
-      ? await finCall({ action: 'editExpense', key: editKey, date, category, description, amount, recurring, vendor, paymentMethod })
-      : await finCall({ action: 'addExpense', date, category, description, amount, recurring, vendor, paymentMethod });
+      ? await finCall({ action: 'editExpense', key: editKey, date, category, description, amount, recurring, vendor, paymentMethod, endDate })
+      : await finCall({ action: 'addExpense', date, category, description, amount, recurring, vendor, paymentMethod, endDate });
     if (resp.ok) {
       finEditCancel();
       reloadFinance();
@@ -848,9 +936,12 @@
     a.download = name + '-' + new Date().toISOString().slice(0,10) + '.csv';
     a.click(); URL.revokeObjectURL(a.href);
   }
+  // One line per charge: recurring costs once per month or year, plus the
+  // estimated Stripe fees, so the file adds up to what Finance shows
   $('expCsvBtn').addEventListener('click', () =>
-    dlCsv('ready-tote-expenses', ['date','category','vendor','recurring','paymentMethod','description','amount'],
-      [...FIN.expenses].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(e => ({ ...e, date: fmtDate(e.date) }))));
+    dlCsv('ready-tote-expenses', ['date','category','vendor','amount','paymentMethod','recurring','description','estimated'],
+      [...SPEND].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(e => ({ ...e, date: fmtDate(e.date),
+        amount: Number(e.amount||0).toFixed(2), recurring: e.recurring && e.recurring !== 'one-time' ? e.recurring : '', estimated: e.estimated ? 'yes' : '' }))));
   $('mileCsvBtn').addEventListener('click', () =>
     dlCsv('ready-tote-mileage', ['date','purpose','miles'],
       [...FIN.mileage].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(m => ({ ...m, date: fmtDate(m.date) }))));

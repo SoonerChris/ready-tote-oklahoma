@@ -207,6 +207,12 @@ async function autoMarkPaid(email, name, amountCents, tosAccepted) {
 
   paidFlags[match.key] = new Date().toISOString();
   await metaStore.setJSON("paidFlags", paidFlags);
+  // How it was paid, so Finance only estimates Stripe fees on Stripe payments
+  try {
+    const via = (await metaStore.get("paidVia", { type: "json" })) || {};
+    via[match.key] = "stripe";
+    await metaStore.setJSON("paidVia", via);
+  } catch (e) { console.error("stripe-webhook: paidVia save failed:", e.message); }
   console.log("stripe-webhook: marked rental paid ->", match.key, match.name);
 
   // Record terms-of-service acceptance on the rental record itself, so it's

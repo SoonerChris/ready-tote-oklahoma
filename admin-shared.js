@@ -136,6 +136,72 @@ function isRushBooking(submittedAt, deliveryDate, time) {
   return (delivery - sent) / 36e5 < 24;
 }
 
+// ---- Money: the rules Finance and the Dashboard both use ----
+// Revenue can be counted when it's paid (cash basis, what most small
+// businesses file taxes on) or by drop-off date. Recurring expenses count
+// once per month or year from their start date until they're stopped.
+// Stripe keeps a fee from every card payment; it's estimated as an expense.
+const FIN_BASIS_KEY = 'rto-fin-basis';
+function finBasis() { try { return localStorage.getItem(FIN_BASIS_KEY) === 'dropoff' ? 'dropoff' : 'paid'; } catch { return 'paid'; } }
+function setFinBasis(b) { try { localStorage.setItem(FIN_BASIS_KEY, b); } catch {} }
+const okDay = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }); };
+const round2 = n => Math.round(n * 100) / 100;
+function priceAmount(p) { const m = String(p || '').replace(/[^0-9.]/g, ''); return m ? parseFloat(m) || 0 : 0; }
+
+// Rentals logged with Add Rental were paid another way, on their drop-off date
+const paidOutsideInvoice = r => !!r.backfilled || !r.invoicedAt;
+
+// One entry per rental: { date, amount, rental }. On the "paid" basis an
+// unpaid invoice isn't revenue yet.
+function revenueEntries(rentals, paidFlags, basis) {
+  const out = [];
+  for (const r of rentals) {
+    const amount = priceAmount(r.price);
+    let date = '';
+    if (basis === 'dropoff' || paidOutsideInvoice(r)) date = r.dropoffDate || '';
+    else if (paidFlags[r.key]) date = okDay(paidFlags[r.key]);
+    if (date) out.push({ date, amount, rental: r });
+  }
+  return out;
+}
+
+// Invoices sent and not paid yet
+function owedRentals(rentals, paidFlags) {
+  return rentals.filter(r => !paidOutsideInvoice(r) && !paidFlags[r.key]);
+}
+
+// Each expense as the charges it really makes, up to `until` (YYYY-MM-DD)
+function expenseCharges(expenses, until) {
+  const out = [];
+  const pad = n => String(n).padStart(2, '0');
+  for (const e of expenses) {
+    if ((e.recurring !== 'monthly' && e.recurring !== 'yearly') || !/^\d{4}-\d{2}-\d{2}$/.test(e.date || '')) { out.push({ ...e, source: e }); continue; }
+    const stop = e.endDate && e.endDate < until ? e.endDate : until;
+    let [y, m] = e.date.split('-').map(Number);
+    const d = +e.date.slice(8, 10);
+    for (let i = 0; i < 1200; i++) {
+      const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+      const date = `${y}-${pad(m)}-${pad(Math.min(d, last))}`;
+      if (date > stop) break;
+      out.push({ ...e, date, repeat: i > 0, source: e });
+      if (e.recurring === 'monthly') { m++; if (m > 12) { m = 1; y++; } } else y++;
+    }
+  }
+  return out;
+}
+
+// Estimated Stripe fee on each Stripe card payment. Payments are recorded
+// as Stripe (the webhook) or marked paid by hand (cash, Venmo); invoices
+// paid before that was recorded are assumed to be Stripe.
+function stripeFeeCharges(revenue, paidFlags, paidVia, fees) {
+  const pct = Number(fees && fees.pct), fixed = Number(fees && fees.fixed);
+  if (!Number.isFinite(pct) || !Number.isFinite(fixed)) return [];
+  return revenue
+    .filter(x => !paidOutsideInvoice(x.rental) && paidFlags[x.rental.key] && (paidVia[x.rental.key] || 'stripe') === 'stripe' && x.amount > 0)
+    .map(x => ({ date: x.date, amount: round2(x.amount * pct / 100 + fixed), category: 'Stripe fees', vendor: 'Stripe',
+      description: 'Estimated fee on ' + (x.rental.name || 'a payment'), estimated: true, rental: x.rental }));
+}
+
 // ---- Auth guard ----
 // Runs immediately (this script is a blocking, non-deferred <script src>
 // in <head>, so this executes before <body> is even parsed) rather than

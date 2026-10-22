@@ -1,9 +1,16 @@
 // POST /.netlify/functions/finance
-// Expense + mileage tracking. Actions: list, addExpense, editExpense, addMileage, delete, setRate.
+// Expense + mileage tracking. Actions: list, addExpense, editExpense, addMileage,
+// delete, setRate, setStripeFees.
+//
+// Recurring expenses (monthly/yearly) are one record with a start date and an
+// optional endDate; the pages turn them into one charge per month or year.
 // Admin only (signed-in session, see lib-auth.mjs).
 
 import { getStore } from "@netlify/blobs";
 import { isAdmin } from "./lib-auth.mjs";
+
+const DEFAULT_STRIPE_FEES = { pct: 2.9, fixed: 0.3 };
+const validDate = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
 export default async (request) => {
   if (request.method !== "POST") {
@@ -36,7 +43,8 @@ export default async (request) => {
           else if (blobs[i].key.startsWith("mile_")) mileage.push(r);
         }
         const mileageRate = (await meta.get("mileageRate", { type: "json" })) ?? null;
-        return json({ expenses, mileage, mileageRate });
+        const stripeFees = (await meta.get("stripeFees", { type: "json" })) ?? DEFAULT_STRIPE_FEES;
+        return json({ expenses, mileage, mileageRate, stripeFees });
       }
 
       case "addExpense": {
@@ -53,6 +61,7 @@ export default async (request) => {
           amount: Number(body.amount) || 0,
           paymentMethod: body.paymentMethod || "",
           recurring,
+          ...(recurring !== "one-time" && validDate(body.endDate) ? { endDate: body.endDate } : {}),
         });
         return json({ ok: true });
       }
@@ -73,6 +82,7 @@ export default async (request) => {
           amount: Number(body.amount) || 0,
           paymentMethod: body.paymentMethod || "",
           recurring,
+          ...(recurring !== "one-time" && validDate(body.endDate) ? { endDate: body.endDate } : {}),
         });
         return json({ ok: true });
       }
@@ -105,6 +115,15 @@ export default async (request) => {
         return json({ ok: true, rate });
       }
 
+      case "setStripeFees": {
+        // Stripe's standard US card pricing is 2.9% + 30 cents; change it here if yours differs
+        const pct = Number(body.pct), fixed = Number(body.fixed);
+        if (!Number.isFinite(pct) || pct < 0 || pct > 10 || !Number.isFinite(fixed) || fixed < 0 || fixed > 5) {
+          return new Response("Fees must look like 2.9 (percent) and 0.30 (dollars)", { status: 400 });
+        }
+        await meta.setJSON("stripeFees", { pct, fixed });
+        return json({ ok: true });
+      }
       default:
         return new Response("Unknown action", { status: 400 });
     }

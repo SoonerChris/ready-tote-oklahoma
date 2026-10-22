@@ -31,6 +31,13 @@ export default async (request) => {
       flags[body.key] = new Date().toISOString();
     }
     await store.setJSON("paidFlags", flags);
+    // Marked by hand means paid outside Stripe (Stripe payments are marked
+    // by stripe-webhook), so no Stripe fee is estimated for it on Finance
+    try {
+      const via = (await store.get("paidVia", { type: "json" })) || {};
+      if (body.paid === false) delete via[body.key]; else via[body.key] = "manual";
+      await store.setJSON("paidVia", via);
+    } catch {}
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (e) {
     console.error("mark-paid failed:", e.message);

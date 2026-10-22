@@ -31,6 +31,8 @@ export default async (request) => {
   try { sentFlags = (await metaStore.get("sentFlags", { type: "json" })) || {}; } catch {}
   let paidFlags = {};
   try { paidFlags = (await metaStore.get("paidFlags", { type: "json" })) || {}; } catch {}
+  let paidVia = {};
+  try { paidVia = (await metaStore.get("paidVia", { type: "json" })) || {}; } catch {}
   let skippedFlags = {};
   try { skippedFlags = (await metaStore.get("skippedFlags", { type: "json" })) || {}; } catch {}
 
@@ -85,7 +87,7 @@ export default async (request) => {
     r.invoiceSentSms = iv.sms;
   }
 
-  return new Response(JSON.stringify({ rentals, reminders, sentFlags, paidFlags, skippedFlags, reviewLinkMissing: !reviewLink }), {
+  return new Response(JSON.stringify({ rentals, reminders, sentFlags, paidFlags, paidVia, skippedFlags, reviewLinkMissing: !reviewLink }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
   });
