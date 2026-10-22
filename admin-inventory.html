@@ -27,6 +27,38 @@
   #freeChart svg{display:block; width:100%; height:auto; overflow:visible;}
   #freeChart .tick{font-size:12px; fill:var(--steel);}
   #freeChart .lbl{font-size:12px; fill:var(--ink); font-weight:600;}
+  /* Click a day: what's owned, who has totes out, what's held, what's free */
+  #freeChart .hit{fill:transparent; cursor:pointer;}
+  #freeChart .hit:hover{fill:rgba(30,27,24,0.05);}
+  #freeChart .hit:focus{outline:none; fill:rgba(30,27,24,0.08);}
+  #freeChart .sel{fill:var(--track);}
+  .lookup{display:flex; justify-content:space-between; align-items:flex-end; gap:12px 20px; flex-wrap:wrap; margin-top:8px;}
+  .lookup .note{flex:1 1 320px;}
+  .lookup-field{display:flex; align-items:center; gap:8px; margin:0; font-size:13px; font-weight:600; white-space:nowrap;}
+  .lookup-field input{width:auto; height:34px; padding:4px 8px; font-size:14px;}
+  .day-detail{margin-top:14px; padding:16px; border-radius:10px; background:#FAF8F3;}
+  .day-detail .dd-head{display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap;}
+  .day-detail h3{margin:0; font-size:17px;}
+  .day-detail h3 .free{font-variant-numeric:tabular-nums;}
+  .day-detail .close{all:unset; cursor:pointer; font-size:13px; font-weight:600; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
+  .day-detail .close:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
+  .math{display:grid; grid-template-columns:max-content 1fr; gap:2px 12px; margin:12px 0 4px; font-size:15px; font-variant-numeric:tabular-nums;}
+  .math .n{text-align:right; font-weight:600;}
+  .math .total{border-top:1px solid var(--control); padding-top:4px; margin-top:2px;}
+  .dd-group{margin-top:14px;}
+  .dd-group h4{margin:0 0 4px; font-size:14px;}
+  .dd-row{display:flex; align-items:baseline; gap:12px; padding:6px 0; border-top:1px solid #EEEAE1; font-size:14px;}
+  .dd-row:first-of-type{border-top:none;}
+  .dd-row .who{flex:1; min-width:0;}
+  .dd-row .who a{color:var(--ink); font-weight:600; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
+  .dd-row .when{color:var(--steel); font-size:13px;}
+  .dd-row .q{font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .guess{display:inline-block; margin-left:6px; padding:0 6px; border-radius:4px; background:var(--gold-bg); color:#6B4C0C; font-size:12px; font-weight:600;}
+  .stat.clickable{cursor:pointer;}
+  .stat.clickable:hover .num{text-decoration:underline; text-underline-offset:4px; text-decoration-thickness:2px;}
+  .stat.clickable:focus-visible{outline:2px solid var(--ink); outline-offset:-2px;}
+  .exp-day:not(.blank){cursor:pointer;}
+  .exp-day.sel{outline:2px solid var(--ink); outline-offset:-2px;}
   details.cal-toggle{margin-top:28px;}
   details.cal-toggle summary{cursor:pointer; font-size:14px; font-weight:600; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
   @media(max-width:640px){
@@ -96,7 +128,11 @@
       <div class="panel-head"><h2 id="chartTitle">Free totes, next 60 days</h2>
         <div class="legend"><span><i style="background:#A87F22"></i>Free</span><span><i style="background:#D9A13B"></i>Under 20</span><span><i style="background:var(--red)"></i>Overbooked</span></div></div>
       <div id="freeChart"></div>
-      <p class="note" style="margin:6px 0 0;">Totes owned minus every rental on the books and every confirmed booking not yet invoiced, day by day. Hover a day for its number.</p>
+      <div class="lookup">
+        <p class="note" style="margin:0;">Click any day to see who has totes out. Totes owned minus every rental on the books and every confirmed booking not yet invoiced.</p>
+        <label class="lookup-field">Look up a date <input type="date" id="lookupDate"></label>
+      </div>
+      <div class="day-detail" id="dayDetail" hidden aria-live="polite"></div>
     </section>
 
     <div id="pendingSection" hidden>
@@ -272,7 +308,7 @@
     const freeToday = computeDays(0, 1)[0].available;
 
     $('statCards').innerHTML = `
-      <div class="stat"><div class="lbl">Free today</div><div class="num" style="${freeToday < 0 ? 'color:var(--red)' : ''}">${freeToday}</div><div class="cap">${pendingTotes ? `${pendingTotes} more held for confirmed bookings` : 'ready to rent'}</div></div>
+      <div class="stat clickable" role="button" tabindex="0" onclick="showDay(TODAY)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDay(TODAY);}" title="See who has totes out today"><div class="lbl">Free today</div><div class="num" style="${freeToday < 0 ? 'color:var(--red)' : ''}">${freeToday}</div><div class="cap">${pendingTotes ? `${pendingTotes} more held for confirmed bookings` : 'ready to rent'}</div></div>
       <div class="stat"><div class="lbl">Out with customers</div><div class="num">${deployed}</div><div class="cap">${ACTIVE_RENTALS.length} ${ACTIVE_RENTALS.length === 1 ? 'rental' : 'rentals'}</div></div>
       <div class="stat"><div class="lbl">Owned</div><div class="num">${totalOwned}</div><div class="cap">${lifetimeTotes.toLocaleString('en-US')} totes rented, all time</div></div>
       <div class="stat"><div class="lbl">Dollies out</div><div class="num">${dolliesOut}</div><div class="cap">estimated from rentals</div></div>
@@ -419,13 +455,21 @@
     }
     if (LOW <= top) svg += `<line x1="${padL}" x2="${W - padR}" y1="${y(LOW)}" y2="${y(LOW)}" stroke="#D9A13B" stroke-dasharray="4 3"/>`;
     const low = ahead.reduce((m, d) => d.available < m.available ? d : m, ahead[0]);
+    const si = ahead.findIndex(d => d.date === SELECTED);
+    if (si >= 0) svg += `<rect class="sel" x="${padL + si * slot}" y="${padT - 4}" width="${slot}" height="${H - padT - padB + 4}" rx="2"/>`;
+    let lastLabelX = -Infinity;
     ahead.forEach((d, i) => {
       const x = padL + i * slot + (slot - bw) / 2, v = d.available;
       const color = v < 0 ? 'var(--red)' : v < LOW ? '#D9A13B' : '#A87F22';
       const y0 = y(Math.max(v, 0)), y1 = y(Math.min(v, 0));
       svg += `<rect x="${x}" y="${y0}" width="${bw}" height="${Math.max(1, y1 - y0)}" fill="${color}"><title>${dayLabel(d.date)}: ${v} free</title></rect>`;
       const dt = new Date(d.date + 'T12:00:00');
-      if (i === 0 || dt.getDay() === 1) svg += `<text class="tick" x="${padL + i * slot + slot / 2}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : 'middle'}">${i === 0 ? 'Today' : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</text>`;
+      // Mondays get a date label, skipped when it would crowd the previous one (phones)
+      const lx = padL + i * slot + slot / 2;
+      if ((i === 0 || dt.getDay() === 1) && (i === 0 || lx - lastLabelX >= 52)) {
+        svg += `<text class="tick" x="${i === 0 ? padL : lx}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : 'middle'}">${i === 0 ? 'Today' : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</text>`;
+        lastLabelX = i === 0 ? padL + 20 : lx;
+      }
     });
     if (low.available < ahead[0].available) {
       const i = ahead.indexOf(low), cx = padL + i * slot + slot / 2;
@@ -433,8 +477,84 @@
       svg += `<line x1="${cx}" x2="${cx}" y1="16" y2="${y(Math.max(low.available, 0)) - 2}" stroke="var(--ink)" stroke-width="1"/>`;
       svg += `<text class="lbl" x="${cx + (i < ahead.length * 0.8 ? 4 : -4)}" y="12" text-anchor="${i < ahead.length * 0.8 ? 'start' : 'end'}">Tightest: ${low.available} free on ${new Date(low.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</text>`;
     }
+    // Click targets cover the whole column, so short bars are easy to hit
+    ahead.forEach((d, i) => {
+      svg += `<rect class="hit" x="${padL + i * slot}" y="${padT - 4}" width="${slot}" height="${H - padT - padB + 4}" data-date="${d.date}" tabindex="0" role="button" aria-label="${dayLabel(d.date)}: ${d.available} free. Show details."><title>${dayLabel(d.date)}: ${d.available} free</title></rect>`;
+    });
     el.innerHTML = svg + '</svg>';
+    el.querySelectorAll('.hit').forEach(h => {
+      h.addEventListener('click', () => showDay(h.dataset.date));
+      h.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showDay(h.dataset.date); } });
+    });
   }
+
+  // ---- One day in detail ----
+  // Uses the same rules as computeDays(): a rental counts as out from its
+  // drop-off day through its pickup day, and confirmed-not-invoiced bookings
+  // count from today on. So the "free" here always matches the chart.
+  let SELECTED = '';
+  function dayBreakdown(date) {
+    const owned = ownedAsOf(date);
+    const out = ALL_RENTALS.filter(r => r.dropoffDate && r.pickupDate && r.dropoffDate <= date && r.pickupDate >= date)
+      .map(r => ({ name: r.name, totes: toteQty(r), dollies: dollyQty(r), guessed: typeof r.toteCount !== 'number', from: r.dropoffDate, to: r.pickupDate }))
+      .sort((a, b) => a.to.localeCompare(b.to));
+    const held = date >= TODAY
+      ? PENDING_CONFIRMED.filter(p => p.estTotes > 0 && p.deliveryDate && p.pickupDate && p.deliveryDate <= date && p.pickupDate >= date)
+          .map(p => ({ name: p.name, totes: p.estTotes, from: p.deliveryDate, to: p.pickupDate }))
+      : [];
+    const outTotes = out.reduce((t, x) => t + x.totes, 0), heldTotes = held.reduce((t, x) => t + x.totes, 0);
+    const changes = EVENTS.filter(e => e.date === date);
+    return { owned, out, held, outTotes, heldTotes, free: owned - outTotes - heldTotes, dollies: out.reduce((t, x) => t + x.dollies, 0), changes };
+  }
+
+  window.showDay = (date) => {
+    if (!date || !TODAY) return;
+    SELECTED = date;
+    $('lookupDate').value = date;
+    const b = dayBreakdown(date);
+    const short = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const rel = date === TODAY ? 'Today, ' : '';
+    const freeColor = b.free < 0 ? 'color:var(--red)' : '';
+    const link = name => `<a href="admin-rentals.html?q=${encodeURIComponent(name || '')}">${esc(name || 'Unnamed')}</a>`;
+    const span = x => {
+      if (x.from === date && x.to === date) return 'out and back today';
+      if (x.from === date) return 'goes out this day · back ' + short(x.to);
+      if (x.to === date) return 'comes back this day';
+      return 'back ' + short(x.to);
+    };
+    const going = b.out.filter(x => x.from === date).length, coming = b.out.filter(x => x.to === date).length;
+    $('dayDetail').innerHTML = `
+      <div class="dd-head">
+        <h3>${rel}${esc(dayLabel(date))}: <span class="free" style="${freeColor}">${b.free < 0 ? `overbooked by ${-b.free}` : `${b.free} ${b.free === 1 ? 'tote' : 'totes'} free`}</span></h3>
+        <button type="button" class="close" onclick="closeDay()">Close</button>
+      </div>
+      <div class="math">
+        <span class="n">${b.owned}</span><span>owned${b.changes.length ? ` (stock changed this day: ${b.changes.map(e => (ADD_TYPES.includes(e.type) ? '+' : '−') + e.quantity).join(', ')})` : ''}</span>
+        <span class="n">−${b.outTotes}</span><span>out with ${b.out.length} ${b.out.length === 1 ? 'customer' : 'customers'}${going || coming ? ` (${[going ? going + ' going out' : '', coming ? coming + ' coming back' : ''].filter(Boolean).join(', ')} this day)` : ''}</span>
+        ${date >= TODAY ? `<span class="n">−${b.heldTotes}</span><span>held for confirmed bookings not yet invoiced</span>` : ''}
+        <span class="n total" style="${freeColor}">${b.free}</span><span class="total">free</span>
+      </div>
+      ${b.out.length ? `<div class="dd-group"><h4>Out with customers · ${b.dollies} ${b.dollies === 1 ? 'dolly' : 'dollies'}</h4>${b.out.map(x => `
+        <div class="dd-row"><div class="who">${link(x.name)}${x.guessed ? '<span class="guess" title="No tote count set on this rental; read from the package name">count guessed</span>' : ''}<div class="when">${span(x)}</div></div><span class="q">${x.totes} totes</span></div>`).join('')}</div>` : ''}
+      ${b.held.length ? `<div class="dd-group"><h4>Held for confirmed bookings</h4>${b.held.map(x => `
+        <div class="dd-row"><div class="who"><a href="admin-requests.html">${esc(x.name || 'Unnamed')}</a><span class="guess" title="Estimated from the package name until invoiced">estimated</span><div class="when">${short(x.from)} to ${short(x.to)}</div></div><span class="q">${x.totes} totes</span></div>`).join('')}</div>` : ''}
+      ${date < TODAY ? '<p class="note" style="margin:12px 0 0;">Past days are rebuilt from logged rentals and stock changes.</p>' : ''}
+`;
+    $('dayDetail').hidden = false;
+    renderFreeChart(computeDays(0, 60));
+    document.querySelectorAll('.exp-day.sel').forEach(c => c.classList.remove('sel'));
+    const cell = document.querySelector(`.exp-day[data-date="${date}"]`);
+    if (cell) cell.classList.add('sel');
+    $('dayDetail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+  window.closeDay = () => {
+    SELECTED = '';
+    $('dayDetail').hidden = true;
+    renderFreeChart(computeDays(0, 60));
+    document.querySelectorAll('.exp-day.sel').forEach(c => c.classList.remove('sel'));
+  };
+  $('lookupDate').addEventListener('change', () => { if ($('lookupDate').value) showDay($('lookupDate').value); });
+
   function niceStep(x) {
     const p = Math.pow(10, Math.floor(Math.log10(Math.max(x, 1))));
     for (const k of [1, 2, 2.5, 5, 10]) if (k * p >= x) return k * p;
@@ -491,7 +611,13 @@
         if (entry.isPast) cls += ' past';
         if (entry.isToday) cls += ' today';
         cell.className = cls;
-        cell.title = entry.date + ': ' + entry.available + ' available' + (entry.isToday ? ' (today)' : entry.isPast ? ' (reconstructed)' : '');
+        cell.title = entry.date + ': ' + entry.available + ' available' + (entry.isToday ? ' (today)' : entry.isPast ? ' (reconstructed)' : '') + '. Click for details.';
+        cell.dataset.date = entry.date;
+        cell.tabIndex = 0;
+        cell.setAttribute('role', 'button');
+        cell.addEventListener('click', () => showDay(entry.date));
+        cell.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showDay(entry.date); } });
+        if (entry.date === SELECTED) cell.classList.add('sel');
         cell.innerHTML = `<span class="n">${dayNum}</span><span class="a">${entry.available}</span>`;
         grid.appendChild(cell);
       });
