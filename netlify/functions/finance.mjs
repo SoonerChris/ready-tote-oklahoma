@@ -1,6 +1,10 @@
 // POST /.netlify/functions/finance
-// Expense + mileage tracking. Actions: list, addExpense, editExpense, addMileage,
-// delete, setRate, setStripeFees.
+// Expense + mileage tracking. Actions: list, addExpense, editExpense,
+// addMileage, editMileage, delete, restore, setRate, deleteRate,
+// setStripeFees, setTaxPct.
+//
+// Mileage rates are kept by start date ({ from, rate }), since the IRS rate
+// can change during a year; each trip uses the rate in effect on its date.
 //
 // Recurring expenses (monthly/yearly) are one record with a start date and an
 // optional endDate; the pages turn them into one charge per month or year.
@@ -10,6 +14,26 @@ import { getStore } from "@netlify/blobs";
 import { isAdmin } from "./lib-auth.mjs";
 
 const DEFAULT_STRIPE_FEES = { pct: 2.9, fixed: 0.3 };
+
+// Rates by start date. A rate saved before dates were tracked (one number
+// under "mileageRate") counts from the beginning.
+async function getRates(meta) {
+  const rates = await meta.get("mileageRates", { type: "json" }).catch(() => null);
+  if (Array.isArray(rates)) return rates;
+  const old = await meta.get("mileageRate", { type: "json" }).catch(() => null);
+  return Number.isFinite(old) ? [{ from: "0000-01-01", rate: old }] : [];
+}
+
+// A trip can name the rental and leg it was for, so Finance knows which
+// deliveries and pickups are already logged
+function mileageRecord(b) {
+  return {
+    date: b.date,
+    purpose: String(b.purpose).slice(0, 200),
+    miles: Number(b.miles) || 0,
+    ...(b.rentalKey ? { rentalKey: String(b.rentalKey).slice(0, 200), leg: b.leg === "pickup" ? "pickup" : "delivery" } : {}),
+  };
+}
 const validDate = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
 export default async (request) => {
@@ -42,9 +66,17 @@ export default async (request) => {
           if (blobs[i].key.startsWith("exp_")) expenses.push(r);
           else if (blobs[i].key.startsWith("mile_")) mileage.push(r);
         }
-        const mileageRate = (await meta.get("mileageRate", { type: "json" })) ?? null;
+        const mileageRates = await getRates(meta);
+        const mileageRate = mileageRates.length ? mileageRates[mileageRates.length - 1].rate : null;
         const stripeFees = (await meta.get("stripeFees", { type: "json" })) ?? DEFAULT_STRIPE_FEES;
-        return json({ expenses, mileage, mileageRate, stripeFees });
+        const taxPct = (await meta.get("taxSetAsidePct", { type: "json" })) ?? 25;
+        // Which expenses have a receipt photo (photos store, "<key>:receipt")
+        try {
+          const { blobs: photos } = await getStore("photos").list();
+          const withReceipt = new Set(photos.map((b) => b.key).filter((k) => k.endsWith(":receipt")).map((k) => k.slice(0, -8)));
+          for (const e of expenses) if (withReceipt.has(e.key)) e.hasReceipt = true;
+        } catch {}
+        return json({ expenses, mileage, mileageRate, mileageRates, stripeFees, taxPct });
       }
 
       case "addExpense": {
@@ -63,7 +95,7 @@ export default async (request) => {
           recurring,
           ...(recurring !== "one-time" && validDate(body.endDate) ? { endDate: body.endDate } : {}),
         });
-        return json({ ok: true });
+        return json({ ok: true, key });
       }
 
       case "editExpense": {
@@ -92,11 +124,26 @@ export default async (request) => {
           if (!body[f]) return new Response("Missing field: " + f, { status: 400 });
         }
         const key = `mile_${body.date}_${Date.now()}`;
-        await store.setJSON(key, {
-          date: body.date,
-          purpose: body.purpose,
-          miles: Number(body.miles) || 0,
-        });
+        await store.setJSON(key, mileageRecord(body));
+        return json({ ok: true, key });
+      }
+      case "editMileage": {
+        if (!body.key || !String(body.key).startsWith("mile_")) return new Response("Missing key", { status: 400 });
+        for (const f of ["date", "purpose", "miles"]) {
+          if (!body[f]) return new Response("Missing field: " + f, { status: 400 });
+        }
+        const existing = await store.get(body.key, { type: "json" });
+        if (!existing) return new Response("Trip not found", { status: 404 });
+        await store.setJSON(body.key, { ...existing, ...mileageRecord(body) });
+        return json({ ok: true });
+      }
+      case "restore": {
+        // Undo of a delete: put the record back under its original key, so
+        // anything tied to that key (a receipt photo) comes back with it
+        const key = String(body.key || "");
+        if (!/^(exp|mile)_/.test(key) || !body.record || typeof body.record !== "object") return new Response("Bad restore", { status: 400 });
+        const { key: _k, hasReceipt, ...record } = body.record;
+        await store.setJSON(key, record);
         return json({ ok: true });
       }
 
@@ -109,10 +156,25 @@ export default async (request) => {
       case "setRate": {
         const rate = Number(body.rate);
         if (!Number.isFinite(rate) || rate <= 0 || rate > 5) {
-          return new Response("Rate must be dollars per mile, e.g. 0.70", { status: 400 });
+          return new Response("Rate must be dollars per mile, e.g. 0.725", { status: 400 });
         }
-        await meta.setJSON("mileageRate", rate);
-        return json({ ok: true, rate });
+        const from = validDate(body.from) ? body.from : "0000-01-01";
+        const rates = (await getRates(meta)).filter((r) => r.from !== from);
+        rates.push({ from, rate });
+        rates.sort((a, b) => a.from.localeCompare(b.from));
+        await meta.setJSON("mileageRates", rates);
+        return json({ ok: true, rates });
+      }
+      case "deleteRate": {
+        const rates = (await getRates(meta)).filter((r) => r.from !== body.from);
+        await meta.setJSON("mileageRates", rates);
+        return json({ ok: true, rates });
+      }
+      case "setTaxPct": {
+        const pct = Number(body.pct);
+        if (!Number.isFinite(pct) || pct < 0 || pct > 60) return new Response("Set-aside must be a percent from 0 to 60", { status: 400 });
+        await meta.setJSON("taxSetAsidePct", pct);
+        return json({ ok: true });
       }
 
       case "setStripeFees": {

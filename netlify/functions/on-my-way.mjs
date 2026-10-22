@@ -10,13 +10,15 @@
 //
 // Env vars required:
 //   GOOGLE_PLACES_API_KEY - same Google Cloud API key used for reviews.
-//                           Must also have "Distance Matrix API" enabled
-//                           (Google Cloud Console -> APIs & Services).
+//                           Must also have "Routes API" enabled
+//                           (Google Cloud Console -> APIs & Services);
+//                           see lib-routes.mjs.
 //   HOME_ADDRESS           - optional; overrides the hardcoded default below
 
 import { getStore } from "@netlify/blobs";
 import { smsLink, dropoffAddressOf, pickupAddressOf } from "./lib-reminders.mjs";
 import { isAdmin } from "./lib-auth.mjs";
+import { routeMatrix } from "./lib-routes.mjs";
 
 const DEFAULT_HOME_ADDRESS = "313 SW 166th St, Oklahoma City, OK 73170";
 
@@ -55,22 +57,21 @@ export default async (request) => {
   const origin = (body.origin || "").trim() || process.env.HOME_ADDRESS || DEFAULT_HOME_ADDRESS;
 
   try {
-    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}&departure_time=now&key=${apiKey}`;
-    const resp = await fetch(url);
-    const data = await resp.json();
-
-    if (data.status !== "OK") {
-      console.error("Distance Matrix API error:", data.status, data.error_message || "");
-      return json({ error: "Google Maps error: " + data.status }, 502);
+    // Routes API with current traffic (lib-routes.mjs)
+    let route;
+    try {
+      route = (await routeMatrix(apiKey, [origin], [destination], { traffic: true }))[0][0];
+    } catch (e) {
+      console.error("Route lookup failed:", e.message);
+      return json({ error: e.message }, 502);
     }
-
-    const element = data.rows?.[0]?.elements?.[0];
-    if (!element || element.status !== "OK") {
+    if (!route) {
       return json({ error: "Could not calculate travel time for that address. Double check it and try again." }, 502);
     }
 
-    const durationText = (element.duration_in_traffic || element.duration).text;
-    const durationSeconds = (element.duration_in_traffic || element.duration).value;
+    const durationSeconds = route.seconds;
+    const mins = Math.round(durationSeconds / 60);
+    const durationText = mins >= 60 ? `${Math.floor(mins / 60)} hr ${mins % 60} min` : `${mins} min`;
     const rawArrival = new Date(Date.now() + durationSeconds * 1000);
     const arrivalTime = formatArrivalTime(roundToNearest15(rawArrival));
 

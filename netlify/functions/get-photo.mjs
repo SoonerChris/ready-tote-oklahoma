@@ -9,7 +9,7 @@
 import { getStore } from "@netlify/blobs";
 import { isAdmin } from "./lib-auth.mjs";
 
-const ALLOWED_TYPES = ["delivery", "pickup", "military_id"];
+const ALLOWED_TYPES = ["delivery", "pickup", "military_id", "receipt"];   // receipt: keyed to a Finance expense
 
 export default async (request) => {
   if (request.method !== "POST") {
