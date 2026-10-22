@@ -9,7 +9,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Send invoice · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261026"></script>
+<script src="admin-shared.js?v=20261027"></script>
 <script src="admin-availability.js?v=20261024"></script>
 <style>
   :root{--col:720px;}
@@ -104,6 +104,10 @@
   <p class="note">Filled from the package. Inventory counts these, so change them if this rental is different.</p>
 
   <label class="check" style="margin-top:14px;">
+    <input type="checkbox" id="isRush"> Rush fee ($25)
+  </label>
+  <p class="note" id="rushNote" hidden></p>
+  <label class="check" style="margin-top:10px;">
     <input type="checkbox" id="isMilitary"> Military discount (15%)
   </label>
 
@@ -304,28 +308,38 @@
     }
   }
 
-  // Estimates an invoice total from the current package price, the $25
-  // rush fee, and the 15% military discount — a starting point only. It
-  // fills the price field but the field stays a normal editable input,
-  // so adjusting it by hand afterward (to true up net income, fix a
-  // rounding difference, whatever) always just works.
-  //
-  // Rush fee is based on how much notice the ORIGINAL request gave —
-  // delivery within 24 hours of when the customer submitted it — not on
-  // when this invoice happens to get sent. That keeps it accurate
-  // whether you invoice the same day or a week later, and matches what
-  // the booking form itself promises ("requests within 24 hours of
-  // delivery include a $25 expedite fee"). Without a submission
-  // timestamp (no prefilled request — a from-scratch invoice), there's
-  // no basis to judge rush eligibility, so that part is skipped; add it
-  // by hand if it applies.
+  // Estimates an invoice total: package price, plus the $25 rush fee when
+  // ticked, less 15% military (taken off the whole total, rush included).
+  // It fills the price field, which stays editable.
   // Price follows the package, rush and military automatically until you
   // type a price yourself; then it's left alone and "Recalculate" appears.
   let PRICE_BY_HAND = false;
   function autoPrice() {
+    autoRush();
     if (!PRICE_BY_HAND) recalcEstimate();
     stripeCheck();
   }
+
+  // Rush ticks itself when the request came in less than 24 hours before
+  // drop-off (shared rule, admin-shared.js). Tick or untick it yourself and
+  // it stays the way you set it.
+  let RUSH_BY_HAND = false;
+  function autoRush() {
+    const note = $('rushNote');
+    if (!PREFILL_SUBMITTED_AT || !$('dropoffDate').value) { note.hidden = true; return; }
+    const rush = isRushBooking(PREFILL_SUBMITTED_AT, $('dropoffDate').value, $('dropoffTime').value);
+    if (!RUSH_BY_HAND) $('isRush').checked = rush;
+    const when = new Date(PREFILL_SUBMITTED_AT).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    note.textContent = rush
+      ? `Request came in ${when}, less than 24 hours before drop-off.${RUSH_BY_HAND && !$('isRush').checked ? ' You turned the fee off.' : ''}`
+      : `Request came in ${when}, more than 24 hours before drop-off.${RUSH_BY_HAND && $('isRush').checked ? ' You turned the fee on.' : ''}`;
+    note.hidden = false;
+  }
+  $('isRush').addEventListener('change', () => { RUSH_BY_HAND = true; autoPrice(); });
+
+  // The pieces behind the price, shown on the review screen and as lines on
+  // the invoice email. Null when the price was typed by hand.
+  let LINE_ITEMS = null;
   function recalcEstimate() {
     const pkgVal = $('package').value;
     if (!pkgVal || pkgVal === 'custom') { $('estimateNote').style.display = 'none'; return; }
@@ -336,24 +350,22 @@
 
     let total = base;
     const notes = [`$${trimZeros(base)} package`];
+    const items = [{ label: 'Package price', amount: base }];
 
-    if (PREFILL_SUBMITTED_AT && $('dropoffDate').value) {
-      const dropoffTime = $('dropoffTime').value || '10:00';
-      const deliveryDt = new Date(`${$('dropoffDate').value}T${dropoffTime}:00`);
-      const submittedDt = new Date(PREFILL_SUBMITTED_AT);
-      const hoursNotice = (deliveryDt - submittedDt) / (1000 * 60 * 60);
-      if (hoursNotice >= 0 && hoursNotice < 24) {
-        total += 25;
-        notes.push('+$25 rush (requested within 24hrs of delivery)');
-      }
+    if ($('isRush').checked) {
+      total += RUSH_FEE;
+      notes.push(`+$${RUSH_FEE} rush`);
+      items.push({ label: 'Rush fee', amount: RUSH_FEE });
     }
 
     if ($('isMilitary').checked) {
-      const discount = total * 0.15;
-      total -= discount;
+      const discount = Math.round(total * 0.15 * 100) / 100;
+      total = Math.round((total - discount) * 100) / 100;
       notes.push(`\u2212$${discount.toFixed(2)} military (15%)`);
+      items.push({ label: 'Military discount (15%)', amount: -discount });
     }
 
+    LINE_ITEMS = items.length > 1 ? items : null;
     $('price').value = '$' + trimZeros(total);
     $('estimateNote').textContent = notes.length > 1 ? notes.join('  \u00b7  ') + `  =  $${trimZeros(total)}` : '';
     $('estimateNote').style.display = notes.length > 1 ? 'block' : 'none';
@@ -399,6 +411,7 @@
   $('stripeUrl').addEventListener('input', stripeCheck);
   $('price').addEventListener('input', () => {
     PRICE_BY_HAND = true;
+    LINE_ITEMS = null;
     $('recalcBtn').hidden = !$('package').value || $('package').value === 'custom';
     $('estimateNote').style.display = 'none';
     stripeCheck();
@@ -606,6 +619,10 @@
     payload.serviceType = $('serviceType').value;
     payload.notes = $('notes').value.trim();
     payload.isMilitary = $('isMilitary').checked;
+    payload.isRush = $('isRush').checked;
+    // Line items only when they add up to the price being sent
+    const sum = LINE_ITEMS ? LINE_ITEMS.reduce((t, i) => t + i.amount, 0) : null;
+    if (LINE_ITEMS && Math.abs(sum - (money(payload.price) ?? -1)) < 0.01) payload.lineItems = LINE_ITEMS;
     if (PREFILL_MILITARY_ID_KEY) payload.militaryIdKey = PREFILL_MILITARY_ID_KEY;
     if (payload.serviceType === 'self') {
       payload.dropoffAddress = 'Customer pickup';
@@ -655,7 +672,7 @@
       <h3>${LOG_MODE ? 'Add this rental to the log?' : 'Send this invoice?'}</h3>
       <dl>
         <dt>${LOG_MODE ? 'Customer' : 'To'}</dt><dd>${esc(p.name)}${p.email ? ' · ' + esc(p.email) : ''}${LOG_MODE ? ' · ' + esc(p.phone) : ''}</dd>
-        <dt>Amount</dt><dd><b>${esc(p.price)}</b> · ${esc(p.package)}${p.isMilitary ? ' · military' : ''}</dd>
+        <dt>Amount</dt><dd><b>${esc(p.price)}</b> · ${esc(p.package)}${p.lineItems ? '<br>' + p.lineItems.map((i, n) => `${esc(i.label)} ${n === 0 ? '' : i.amount < 0 ? '\u2212' : '+'}$${Math.abs(i.amount).toFixed(2)}`).join(' · ') : (p.isMilitary ? ' · military' : '') + (p.isRush ? ' · rush' : '')}</dd>
         <dt>Totes</dt><dd>${p.toteCount} totes · ${p.dollyCount} ${p.dollyCount === 1 ? 'dolly' : 'dollies'}</dd>
         <dt>Dates</dt><dd>${esc(day(p.dropoffDate))} ${esc(p.dropoffTime)} to ${esc(day(p.pickupDate))} ${esc(p.pickupTime)}</dd>
         <dt>Where</dt><dd>${p.serviceType === 'self' ? 'Customer picks up and returns' : LOG_MODE ? (esc([p.dropoffAddressStreet, p.dropoffAddressCity].filter(Boolean).join(', ')) || 'No address') : esc(p.dropoffAddress) + (p.pickupAddress !== p.dropoffAddress ? '<br>Pickup: ' + esc(p.pickupAddress) : '')}</dd>

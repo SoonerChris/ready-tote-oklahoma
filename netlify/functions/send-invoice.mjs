@@ -10,7 +10,7 @@
 import { getStore } from "@netlify/blobs";
 import { rentalToICSAttachments } from "./lib-reminders.mjs";
 import { isAdmin } from "./lib-auth.mjs";
-import { emailLayout, heading, pill, detailsCard, button, contactLine } from "./lib-email.mjs";
+import { emailLayout, heading, pill, detailsCard, button, contactLine, cleanLineItems, lineItemRows } from "./lib-email.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
@@ -61,6 +61,10 @@ export default async (request) => {
   const duration = escapeHtml(body.duration);
   const rawPrice = String(body.price).trim();
   const price = escapeHtml(rawPrice.startsWith("$") ? rawPrice : "$" + rawPrice);
+  // Package / rush / military lines, only when they add up to the price
+  let lineItems = cleanLineItems(body.lineItems);
+  const priceNum = parseFloat(rawPrice.replace(/[^0-9.]/g, ""));
+  if (lineItems && !(Math.abs(lineItems.reduce((t, i) => t + i.amount, 0) - priceNum) < 0.01)) lineItems = null;
   const dropoff = `${formatDate(body.dropoffDate)} at ${escapeHtml(body.dropoffTime)}`;
   const pickup = `${formatDate(body.pickupDate)} at ${escapeHtml(body.pickupTime)}`;
   const dropoffAddress = escapeHtml(body.dropoffAddress);
@@ -91,6 +95,7 @@ export default async (request) => {
                   ? [["Service", "You pick up and return the totes"], ["Pick up totes", dropoff], ["Return totes", pickup]]
                   : [["Drop-off", dropoff], ["Pickup", pickup],
                      ...(sameAddress ? [["Address", dropoffAddress]] : [["Drop-off address", dropoffAddress], ["Pickup address", pickupAddress]])]),
+                ...lineItemRows(lineItems),
               ],
               total: ["Total due", price],
             })}
@@ -150,6 +155,8 @@ export default async (request) => {
       invoicedAt: new Date().toISOString(),
       stripeUrl,
       isMilitary: !!body.isMilitary,
+      isRush: !!body.isRush,
+      ...(lineItems ? { lineItems } : {}),
       militaryIdKey: body.militaryIdKey || "",
     });
   } catch (e) {

@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Requests · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261026"></script>
+<script src="admin-shared.js?v=20261027"></script>
 <script src="admin-availability.js?v=20261024"></script>
 <style>
   :root{--col:820px;}
@@ -671,24 +671,17 @@
     }
   }
 
-  // Rush = delivery date is today or tomorrow relative to when this is sent.
-  // deliveryDate is a date-only string (YYYY-MM-DD), so "under 24 hrs notice"
-  // is approximated as same-day or next-day rather than an exact hour count.
+  // Rush: the request came in less than 24 hours before delivery (shared
+  // rule in admin-shared.js, the same one Send Invoice charges by).
   function isRushRequest(r) {
-    if (!r.deliveryDate) return false;
-    const delivery = new Date(r.deliveryDate + 'T00:00:00');
-    if (isNaN(delivery)) return false;
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const diffDays = Math.round((delivery - today) / (1000 * 60 * 60 * 24));
-    return diffDays <= 1;
+    return isRushBooking(r.submittedAt, r.deliveryDate, windowStart(r.deliveryWindow));
   }
 
   function confirmMessage(r) {
     const first = (r.name || 'there').split(' ')[0];
     const pkg = r.package || 'your package';
     const rushNote = isRushRequest(r)
-      ? ` Since that's a rush request (under 24 hrs out), a $25 expedite fee applies, it'll show as its own line on your invoice.`
+      ? ` Since that's a rush request (under 24 hrs out), a $${RUSH_FEE} expedite fee applies, it'll show as its own line on your invoice.`
       : '';
     return `Hi ${first}, Ready Tote Oklahoma here! Got your request for ${pkg}. Your dates, ${fmtReqDate(r.deliveryDate)} to ${fmtReqDate(r.pickupDate)}, work on our end.${rushNote} Reply YES to confirm and we will send you an invoice shortly.`;
   }

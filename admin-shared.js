@@ -113,6 +113,25 @@ function findPendingConfirmed(requests, rentals) {
     .map(req => ({ ...req, estTotes: totesInPackage(req.package), estDollies: dolliesInPackage(req.package) }));
 }
 
+// ---- Rush fee ----
+// One rule everywhere, matching the booking form and terms: a request that
+// came in less than 24 hours before delivery pays a $25 expedite fee.
+// Delivery time is the start of the customer's window (morning 8 AM,
+// afternoon noon, evening 5 PM), or noon when they had no preference.
+// Send Invoice uses the real drop-off time instead, once it's set.
+const RUSH_FEE = 25;
+function windowStart(w) {
+  const m = String(w || '').toLowerCase().match(/morning|afternoon|evening/);
+  return m ? { morning: '08:00', afternoon: '12:00', evening: '17:00' }[m[0]] : '12:00';
+}
+function isRushBooking(submittedAt, deliveryDate, time) {
+  if (!submittedAt || !deliveryDate) return false;
+  const t = /^\d{1,2}:\d{2}$/.test(time || '') ? time.padStart(5, '0') : '12:00';
+  const delivery = new Date(`${deliveryDate}T${t}:00`), sent = new Date(submittedAt);
+  if (isNaN(delivery) || isNaN(sent)) return false;
+  return (delivery - sent) / 36e5 < 24;
+}
+
 // ---- Auth guard ----
 // Runs immediately (this script is a blocking, non-deferred <script src>
 // in <head>, so this executes before <body> is even parsed) rather than

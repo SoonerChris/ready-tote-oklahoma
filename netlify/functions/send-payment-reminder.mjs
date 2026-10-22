@@ -11,7 +11,7 @@
 import { getStore } from "@netlify/blobs";
 import { friendlyTime } from "./lib-reminders.mjs";
 import { isAdmin } from "./lib-auth.mjs";
-import { emailLayout, heading, pill, detailsCard, button, contactLine } from "./lib-email.mjs";
+import { emailLayout, heading, pill, detailsCard, button, contactLine, cleanLineItems, lineItemRows } from "./lib-email.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
@@ -68,6 +68,7 @@ export default async (request) => {
               rows: [
                 ["Package", pkg],
                 dropoffKnown ? ["Drop-off", dropoff] : null,
+                ...lineItemRows(cleanLineItems(rental.lineItems)),
               ],
               total: price ? ["Total due", price] : null,
             })}

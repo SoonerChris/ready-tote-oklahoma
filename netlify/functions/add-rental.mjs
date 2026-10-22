@@ -68,6 +68,7 @@ export default async (request) => {
       serviceType: body.serviceType || "delivery",
       notes: body.notes || "",
       isMilitary: !!body.isMilitary,
+      isRush: !!body.isRush,
       ...(body.militaryIdKey ? { militaryIdKey: body.militaryIdKey } : {}),
       invoicedAt: new Date().toISOString(),
       backfilled: true,
