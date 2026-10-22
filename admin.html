@@ -72,6 +72,13 @@
   .texts .row{grid-template-columns:minmax(0,1fr) auto auto;}
   .texts .why{font-size:13px;color:var(--muted);white-space:nowrap;text-align:right;}
   .texts .btn{height:34px;}
+  /* After tapping Text: "Sent to Hannah?" in the row, so it can be marked done */
+  .texts .ask{grid-column:1 / -1; display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; margin-top:6px; padding:8px 10px; background:#FAF8F3; border-radius:8px; font-size:14px; font-weight:600;}
+  .texts .ask[hidden]{display:none;}
+  .texts .ask .btn{height:32px;}
+  .texts .sent{display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--rule); font-size:14px; color:var(--muted);}
+  .texts .sent b{color:var(--positive); font-weight:600;}
+  .texts .sent .linkbtn{margin-left:auto;}
 
   .day{padding:14px 0 4px;font-size:13px;font-weight:600;color:var(--muted);}
   .day:first-child{padding-top:0;}
@@ -341,15 +348,23 @@
       ...reminders.review.map(r => ({ ...r, why: 'Ask for a review' })),
     ].map(r => ({ ...r, why: r.why + (r.overdue ? ' · overdue' : '') }));
     $('textsCount').textContent = allTexts.length ? ' ' + allTexts.length : '';
-    $('textsList').innerHTML = allTexts.length ? allTexts.map(r => `
-      <div class="row">
+    const firstName = r => esc(String(r.name || '').split(' ')[0] || 'them');
+    $('textsList').innerHTML = (allTexts.length ? allTexts.map(r => `
+      <div class="row" data-flag="${escAttr(r.flagId)}">
         <div class="person">
           <div class="who">${esc(r.name)}</div>
           <div class="meta"><span class="num">${esc(r.phone)}</span> · ${plural(totesInPackage(r.package), 'tote')}</div>
         </div>
         <div class="why">${r.why}</div>
-        <a class="btn ghost" href="${escAttr(r.sms)}">Text ${esc(String(r.name).split(' ')[0])}</a>
-      </div>`).join('') : '<p class="empty-line">No texts due today.</p>';
+        <a class="btn ghost" data-text href="${escAttr(r.sms)}">Text ${firstName(r)}</a>
+        <div class="ask" hidden>
+          <span>Sent to ${firstName(r)}?</span>
+          <button type="button" class="btn primary" data-yes data-why="${escAttr(r.why)}" data-name="${escAttr(r.name)}">Yes, sent</button>
+          <button type="button" class="linkbtn" data-no>Not yet</button>
+        </div>
+      </div>`).join('') : '<p class="empty-line">No texts due today.</p>')
+      + JUST_SENT.map(x => `
+      <div class="sent"><span><b>Sent</b> to ${esc(x.name)} · ${esc(x.why)}</span><button type="button" class="linkbtn" data-undo="${escAttr(x.flagId)}">Undo</button></div>`).join('');
 
     // ---- Next 7 days ----
     const endDate = shiftDate(today, 7);
@@ -496,6 +511,44 @@
         <div class="row"><span>Revenue <span class="sub">${plural(k.count, 'rental')}</span></span><span class="num">${moneyDec(k.revenue)}</span></div>
         <div class="row"><span>Expenses <span class="sub num">${moneyDec(monthlyOverhead)}/mo recurring</span></span><span class="num">−${moneyDec(k.expTotal)}</span></div>
       </div>`;
+  }
+
+  // ---- Marking dashboard texts as sent ----
+  // Same sent flags as the Reminders page (mark-sent), so a text marked sent
+  // here is gone there too, and the server stops listing it.
+  let JUST_SENT = [];   // marked this visit, shown with Undo
+  $('textsList').addEventListener('click', async (e) => {
+    const row = e.target.closest('.row');
+    if (e.target.closest('[data-text]') && row) {
+      // Messages opens; the question waits in the row for when you come back
+      setTimeout(() => { const ask = row.querySelector('.ask'); if (ask) ask.hidden = false; }, 400);
+      return;
+    }
+    if (e.target.closest('[data-no]') && row) { row.querySelector('.ask').hidden = true; return; }
+    const yes = e.target.closest('[data-yes]');
+    if (yes && row) {
+      yes.disabled = true; yes.textContent = 'Saving…';
+      const ok = await setSent(row.dataset.flag, true);
+      if (!ok) { yes.disabled = false; yes.textContent = 'Yes, sent'; return; }
+      JUST_SENT.push({ flagId: row.dataset.flag, name: yes.dataset.name, why: yes.dataset.why.replace(' · overdue', '') });
+      for (const k of Object.keys(DATA.reminders)) DATA.reminders[k] = (DATA.reminders[k] || []).filter(x => x.flagId !== row.dataset.flag);
+      render();
+      return;
+    }
+    const undo = e.target.closest('[data-undo]');
+    if (undo) {
+      undo.disabled = true;
+      if (await setSent(undo.dataset.undo, false)) { JUST_SENT = JUST_SENT.filter(x => x.flagId !== undo.dataset.undo); load(); }
+      else undo.disabled = false;
+    }
+  });
+  async function setSent(flagId, sent) {
+    try {
+      const resp = await post('mark-sent', { secret: $('secret').value.trim(), flagId, ...(sent ? {} : { unsent: true }) });
+      if (resp.ok) return true;
+      showErr(sent ? 'Couldn’t mark that text as sent. Try again.' : 'Couldn’t undo that. Try again.');
+    } catch { showErr('Network error. Nothing was changed.'); }
+    return false;
   }
 
   function shiftDate(iso, days) {
