@@ -83,7 +83,7 @@ function emailReminderBtn(r) {
   const flagId = 'emailReminder:' + r.key;
   const sent = SENT_FLAGS[flagId];
   if (!r.email || !r.stripeUrl) {
-    return `<span style="display:inline-block; font-size:13px; color:var(--steel);">No payment link on file — resend the invoice instead</span>`;
+    return `<span class="no-link" style="display:inline-block; font-size:13px; color:var(--steel);">No payment link on file, so no reminder email. Resend the invoice instead.</span>`;
   }
   if (sent) {
     return `<button type="button" class="email-reminder-btn" data-key="${esc(r.key)}" title="Resends with whatever price and payment link are currently on file" style="width:auto; padding:8px 16px; font-size:14px; background:var(--track); color:var(--steel); border:1px solid transparent; border-radius:6px; cursor:pointer;">Emailed ${esc(fmtDate(sent))} · Resend</button>`;

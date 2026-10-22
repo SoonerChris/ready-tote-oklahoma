@@ -9,7 +9,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Send invoice · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261027"></script>
+<script src="admin-shared.js?v=20261028"></script>
 <script src="admin-availability.js?v=20261024"></script>
 <style>
   :root{--col:720px;}
@@ -827,7 +827,7 @@
     const first = esc((p.name || 'there').split(' ')[0]);
     const parts = [];
     if (!LOG_MODE && p.phone) {
-      const msg = `Hi ${(p.name || 'there').split(' ')[0]}, it's Ready Tote Oklahoma! Your invoice just went out to ${p.email}. Don't see it? Reply here and we'll get you fixed up!`;
+      const msg = `Hi ${(p.name || 'there').split(' ')[0]}, it's ${TEXT_SIGNER}! Your invoice just went out to ${p.email}. Don't see it? Reply here and we'll get you fixed up!`;
       parts.push(`<a class="sms-btn" id="invoiceTextBtn" href="${escAttr(smsLink(p.phone, msg))}">Text ${first} that it went out</a>`);
     }
     parts.push(`<a href="admin-requests.html" class="linkish">Back to requests</a>`);

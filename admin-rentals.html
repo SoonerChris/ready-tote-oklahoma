@@ -9,8 +9,8 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>All Rentals — Ready Tote Oklahoma (Internal)</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261027"></script>
-<script src="admin-rentals-shared.js?v=20261022"></script>
+<script src="admin-shared.js?v=20261028"></script>
+<script src="admin-rentals-shared.js?v=20261028"></script>
 <style>
   .rem .who{font-weight:600;font-size:16px;}
   .rem .meta{color:var(--steel);font-size:14px;margin:3px 0 0;line-height:1.45;font-variant-numeric:tabular-nums;}
@@ -349,7 +349,7 @@
               ${textBtn('delivery', r.key, r.deliverySms, '', 'Delivery', '')}
               ${r.serviceType !== 'self' ? textBtn('addressCheck', r.key, r.addressCheckSms, '', 'Confirm address', '') : ''}
               ${textBtn('pickup', r.key, r.pickupSms, '', 'Pickup', '')}
-              ${textBtn('review', r.key, r.reviewSms, '', 'Review', '')}
+              ${r.reviewSms ? textBtn('review', r.key, r.reviewSms, '', 'Review', '') : ''}
               ${textBtn('followup', r.key, r.followupSms, '', 'Follow-up', '')}
             </div>
           </div>
@@ -381,7 +381,7 @@
     if (r.dropoffDate) steps.push({ type: 'delivery', label: self ? 'Pickup-day reminder' : 'Delivery reminder', due: addDays(r.dropoffDate, -1), until: r.dropoffDate, sms: r.deliverySms });
     if (r.pickupDate && !self) steps.push({ type: 'addressCheck', label: 'Confirm pickup address', due: addDays(r.pickupDate, -5), until: r.pickupDate, sms: r.addressCheckSms });
     if (r.pickupDate) steps.push({ type: 'pickup', label: self ? 'Return reminder' : 'Pickup reminder', due: addDays(r.pickupDate, -2), until: r.pickupDate, sms: r.pickupSms });
-    if (r.pickupDate) steps.push({ type: 'review', label: 'Ask for a review', due: addDays(r.pickupDate, 3), until: addDays(r.pickupDate, 21), sms: r.reviewSms });
+    if (r.pickupDate && r.reviewSms) steps.push({ type: 'review', label: 'Ask for a review', due: addDays(r.pickupDate, 3), until: addDays(r.pickupDate, 21), sms: r.reviewSms });
     const open = steps.filter(s => !SENT_FLAGS[s.type + ':' + r.key] && TODAY <= s.until && s.sms).sort((a, b) => a.due.localeCompare(b.due));
     if (!open.length) return '';
     const s = open[0];

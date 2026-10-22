@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Requests · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261027"></script>
+<script src="admin-shared.js?v=20261028"></script>
 <script src="admin-availability.js?v=20261024"></script>
 <style>
   :root{--col:820px;}
@@ -685,7 +685,7 @@
     const rushNote = isRushRequest(r)
       ? ` Since that's a rush request (under 24 hrs out), a $${RUSH_FEE} expedite fee applies, it'll show as its own line on your invoice.`
       : '';
-    return `Hi ${first}, Ready Tote Oklahoma here! Got your request for ${pkg}. Your dates, ${fmtReqDate(r.deliveryDate)} to ${fmtReqDate(r.pickupDate)}, work on our end.${rushNote} Reply YES to confirm and we will send you an invoice shortly.`;
+    return `Hi ${first}, it's ${TEXT_SIGNER}! Got your request for ${pkg}. Your dates, ${fmtReqDate(r.deliveryDate)} to ${fmtReqDate(r.pickupDate)}, work on our end.${rushNote} Reply YES to confirm and we will send you an invoice shortly.`;
   }
 
   // normalizePhone() and smsLink() now live in admin-shared.js.

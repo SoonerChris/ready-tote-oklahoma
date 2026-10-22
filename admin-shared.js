@@ -113,6 +113,10 @@ function findPendingConfirmed(requests, rentals) {
     .map(req => ({ ...req, estTotes: totesInPackage(req.package), estDollies: dolliesInPackage(req.package) }));
 }
 
+// Who customer texts are from (keep in sync with SIGNER in
+// netlify/functions/lib-reminders.mjs).
+const TEXT_SIGNER = 'Chris with Ready Tote Oklahoma';
+
 // ---- Rush fee ----
 // One rule everywhere, matching the booking form and terms: a request that
 // came in less than 24 hours before delivery pays a $25 expedite fee.

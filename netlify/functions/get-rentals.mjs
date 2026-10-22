@@ -31,6 +31,8 @@ export default async (request) => {
   try { sentFlags = (await metaStore.get("sentFlags", { type: "json" })) || {}; } catch {}
   let paidFlags = {};
   try { paidFlags = (await metaStore.get("paidFlags", { type: "json" })) || {}; } catch {}
+  let skippedFlags = {};
+  try { skippedFlags = (await metaStore.get("skippedFlags", { type: "json" })) || {}; } catch {}
 
   const reviewLink = process.env.GOOGLE_REVIEW_LINK || "";
   const reminders = computeReminders(rentals, reviewLink, sentFlags, paidFlags);
@@ -73,7 +75,7 @@ export default async (request) => {
     r.invoiceSentSms = iv.sms;
   }
 
-  return new Response(JSON.stringify({ rentals, reminders, sentFlags, paidFlags }), {
+  return new Response(JSON.stringify({ rentals, reminders, sentFlags, paidFlags, skippedFlags, reviewLinkMissing: !reviewLink }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
   });
