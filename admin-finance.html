@@ -124,6 +124,29 @@
   .rate input{width:96px; height:36px; padding:6px 10px 6px 22px; font-size:14px;}
 
   .pill.neutral{background:var(--track); color:#4A433B;}
+  .econ-row{display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-top:1px solid var(--row-rule); font-size:14px;}
+  .econ-row:first-child{border-top:none;}
+  .econ-row span:first-child{color:var(--steel);}
+  .econ-row b{font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .kpis.mile-kpis{grid-template-columns:1fr 1fr 1.4fr;}
+  @media(max-width:640px){
+    .kpis.mile-kpis{grid-template-columns:1fr 1fr;}
+    .kpis.mile-kpis .kpi:nth-child(3){grid-column:1 / -1; border-left:none; border-top:1px solid var(--line);}
+  }
+  .econ-row .hint{display:block; font-size:12px; color:var(--steel); font-weight:400;}
+  .tax-row{display:flex; justify-content:space-between; gap:12px; padding:6px 0; font-size:14px; font-variant-numeric:tabular-nums;}
+  .tax-row.part{padding-left:12px; color:var(--steel); font-size:13px;}
+  .tax-row.total{border-top:1px solid var(--line); margin-top:4px; padding-top:10px; font-weight:700;}
+  .tax-row.aside{background:var(--gold-bg); color:#6B4C0C; border-radius:8px; padding:10px 12px; margin-top:10px; font-weight:700;}
+  .tax-row.aside input{width:56px; height:28px; padding:2px 6px; margin:0 4px; font-size:13px;}
+  .tax-note{font-size:12px; color:var(--steel); margin:8px 0 0; line-height:1.5;}
+  .rates .rate-row{display:flex; gap:8px; align-items:baseline; font-size:14px; margin-top:4px;}
+  .rates .rate-row span{color:var(--steel);}
+  .from-label{display:inline-flex; align-items:center; gap:6px; font-size:13px; margin:0; font-weight:500;}
+  .from-label input{width:auto; height:36px; margin:0; padding:4px 8px; font-size:14px;}
+  .chips button.later{border-style:dashed;}
+  .del-ask{font-size:13px; font-weight:600;}
+  .row-actions [hidden]{display:none;}
   .fee-line{font-size:14px; color:var(--steel); margin:0 0 12px; display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px;}
   .fee-line b{color:var(--ink);}
   .fee-line input{width:72px; height:32px; padding:4px 8px; font-size:14px; margin:0;}
@@ -177,6 +200,7 @@
   <p class="finding" id="finding"><span class="when">Loading your numbers…</span></p>
 
   <input type="hidden" id="secret">
+  <input type="file" id="receiptInput" accept="image/*" style="display:none">
   <button id="loadBtn">Refresh</button>
   <div class="status" id="status"></div>
 
@@ -228,6 +252,17 @@
       <div class="scroll-x" id="monthTable"></div>
     </section>
 
+    <div class="split">
+      <section class="panel" aria-labelledby="econTitle">
+        <div class="panel-head"><h2 id="econTitle">Totes and pricing</h2><span class="meta" id="econMeta"></span></div>
+        <div id="econ"></div>
+      </section>
+      <section class="panel" aria-labelledby="taxTitle">
+        <div class="panel-head"><h2 id="taxTitle">Taxes</h2><span class="meta">An estimate to plan with, not tax advice</span></div>
+        <div id="tax"></div>
+      </section>
+    </div>
+
     <div class="tabs" role="tablist" aria-label="Records">
       <button type="button" role="tab" id="tab-expenses" aria-controls="panel-expenses" aria-selected="true">Expenses<span class="count num" id="expTabCount"></span></button>
       <button type="button" role="tab" id="tab-mileage" aria-controls="panel-mileage" aria-selected="false">Mileage<span class="count num" id="mileTabCount"></span></button>
@@ -277,6 +312,8 @@
         <p class="note" id="expHint" hidden></p>
         <label for="expDesc">Notes (optional)</label>
         <input type="text" id="expDesc" placeholder="What it was for">
+        <label for="expReceipt">Receipt photo (optional)</label>
+        <input type="file" id="expReceipt" accept="image/*">
         <input type="hidden" id="expEditKey" value="">
         <div class="form-actions">
           <button type="button" id="expAddBtn">Add expense</button>
@@ -292,18 +329,20 @@
 
     <!-- Mileage -->
     <div class="tabpanel" role="tabpanel" id="panel-mileage" aria-labelledby="tab-mileage" hidden>
-      <div class="kpis" id="mileTotals" style="grid-template-columns:repeat(3,1fr);"></div>
+      <div class="kpis mile-kpis" id="mileTotals"></div>
 
       <div class="form-panel" id="mileForm">
-        <h3>Log a trip</h3>
-        <p class="note" style="margin:0;">Quick-fill from deliveries and pickups in the last and next 7 days:</p>
+        <h3 id="mileFormTitle">Log a trip</h3>
+        <p class="note" style="margin:0;" id="tripNudge"></p>
         <div class="chips" id="tripChips"></div>
         <div class="form-grid">
           <div><label for="mileDate">Date</label><input type="date" id="mileDate"></div>
           <div><label for="mileMiles">Miles</label><input type="number" id="mileMiles" placeholder="0.0" step="0.1" min="0"></div>
           <div class="wide"><label for="milePurpose">Purpose</label><input type="text" id="milePurpose" placeholder="Deliver, Jane Smith, Moore"></div>
         </div>
-        <div class="form-actions"><button type="button" id="mileAddBtn">Add trip</button></div>
+        <p class="note" id="mileNote" style="margin:6px 0 0;"></p>
+        <input type="hidden" id="mileEditKey" value="">
+        <div class="form-actions"><button type="button" id="mileAddBtn">Add trip</button><button type="button" id="mileCancelBtn" class="secondary" hidden>Cancel</button></div>
       </div>
 
       <div id="mileList"></div>
@@ -312,6 +351,9 @@
 
     <!-- Rentals -->
     <div class="tabpanel" role="tabpanel" id="panel-rentals" aria-labelledby="tab-rentals" hidden>
+      <div class="toolbar">
+        <select id="rentFilter" aria-label="Show"><option value="">All rentals</option><option value="paid">Paid</option><option value="unpaid">Not paid yet</option></select>
+      </div>
       <p class="totals-line" id="rentCount"></p>
       <div class="scroll-x" id="rentList"></div>
       <div style="margin-top:12px;"><button type="button" id="csvBtn" class="secondary btn-sm">Download rental log (CSV)</button></div>
@@ -328,10 +370,21 @@
   let ALL_RENTALS = [];
   let FIN = { expenses: [], mileage: [], mileageRate: null, stripeFees: { pct: 2.9, fixed: 0.3 } };
   let PAID = {}, PAID_VIA = {};
+  let INV = [];   // tote stock changes, for the fleet numbers
   let BASIS = finBasis();
   // Prepared from the raw records by prepare(): revenue entries, expense
   // charges (recurring ones repeated), and estimated Stripe fees
   let REV = [], CHARGES = [], FEES = [], SPEND = [];
+  // Mileage rate in effect on a date (rates are kept by start date)
+  function rateOn(date) {
+    let r = null;
+    for (const x of FIN.mileageRates || []) if (x.from <= date) r = x.rate;
+    return r;
+  }
+  const hasRate = () => (FIN.mileageRates || []).length > 0;
+  const deductionOf = trips => round2(trips.reduce((t, m) => t + Number(m.miles || 0) * (rateOn(m.date) || 0), 0));
+  const fmtRate = r => '$' + Number(r).toFixed(3).replace(/0$/, '');
+
   function prepare() {
     REV = revenueEntries(ALL_RENTALS, PAID, BASIS);
     CHARGES = expenseCharges(FIN.expenses, TODAY);
@@ -353,6 +406,8 @@
     const btn = $('loadBtn');
     btn.disabled = true; btn.textContent = 'Refreshing…';
     try {
+      const invP = fetch('/.netlify/functions/tote-stock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret, action: 'list' }) })
+        .then(r => r.ok ? r.json() : { events: [] }).then(d => { INV = d.events || []; }).catch(() => {});
       const [rentalsResp, finResp] = await Promise.all([
         fetch('/.netlify/functions/get-rentals', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret }),
@@ -369,6 +424,7 @@
         PAID = rd.paidFlags || {};
         PAID_VIA = rd.paidVia || {};
         FIN = await finResp.json();
+        await invP;
         $('results').style.display = 'block';   // shown first so the chart can measure its width
         renderAll();
         $('status').style.display = 'none';
@@ -380,6 +436,7 @@
   // ---- Formatting ----
   function fmtPrice(p){ const s=String(p||'').trim(); return s ? (s.startsWith('$') ? esc(s) : '$'+esc(s)) : ''; }
   function showErr(m){const s=$('status');s.className='status err';s.textContent=m;s.style.display='block';}
+  function showOk(m, html){const s=$('status');s.className='status ok';if(html)s.innerHTML=m;else s.textContent=m;s.style.display='block';}
   const money = n => '$' + Number(n||0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
   const signed = n => (n < 0 ? '−' : '') + money(Math.abs(n));
   const whole = n => '$' + Math.round(n).toLocaleString('en-US');
@@ -417,12 +474,14 @@
     const rev = REV.filter(x => inR(x.date, s, e));
     const rentals = rev.map(x => x.rental);
     const expenses = SPEND.filter(x => inR(x.date, s, e));
-    const miles = FIN.mileage.filter(x => inR(x.date, s, e)).reduce((t, x) => t + Number(x.miles||0), 0);
+    const trips = FIN.mileage.filter(x => inR(x.date, s, e));
+    const miles = trips.reduce((t, x) => t + Number(x.miles||0), 0);
+    const deduction = deductionOf(trips);
     const revenue = round2(rev.reduce((t, x) => t + x.amount, 0));
     const spent = round2(expenses.reduce((t, x) => t + Number(x.amount||0), 0));
     const fees = round2(expenses.filter(x => x.estimated).reduce((t, x) => t + x.amount, 0));
     const fuel = round2(expenses.filter(x => x.category === 'Fuel').reduce((t, x) => t + Number(x.amount||0), 0));
-    return { rentals, expenses, revenue, spent, net: round2(revenue - spent), miles, fees, fuel };
+    return { rentals, expenses, revenue, spent, net: round2(revenue - spent), miles, deduction, fees, fuel };
   }
   // Recurring costs still running (no stop date, or one that hasn't come yet)
   function monthlyOverhead() {
@@ -505,17 +564,17 @@
     };
     const margin = T.revenue > 0 && T.net >= 0 ? Math.round(T.net / T.revenue * 100) + '% of revenue kept' : T.revenue > 0 ? 'Expenses were more than revenue' : 'No revenue in this period';
     const avg = T.rentals.length ? money(T.revenue / T.rentals.length) + ' average' : 'No rentals';
-    const rate = FIN.mileageRate;
+    const rate = hasRate();
     const owed = owedRentals(ALL_RENTALS, PAID);
     const owedAmt = owed.reduce((t, r) => t + priceAmount(r.price), 0);
     const owedCap = owed.length ? `<div class="cap"><a href="admin-rentals.html?filter=unpaid">${money(owedAmt)} still owed</a> on ${plural(owed.length, 'invoice')}</div>` : '';
     // With the mileage rate, gas isn't deductible (IRS Pub 463); parking and tolls still are
     const fuelCap = rate && T.fuel > 0 ? `<div class="cap warn">${money(T.fuel)} of fuel logged. With the mileage rate, fuel isn't deductible (parking and tolls are).</div>` : '';
     $('kpis').innerHTML = `
-      <div class="kpi lead"><div class="lbl">Net income</div><div class="val num" style="color:${T.net < 0 ? 'var(--red)' : 'var(--ink)'}">${signed(T.net)}</div><div class="cap">${margin}</div><div class="cap">${Pv ? delta(T.net, Pv.net) : ''}</div></div>
+      <div class="kpi lead"><div class="lbl">Net income</div><div class="val num" style="color:${T.net < 0 ? 'var(--red)' : 'var(--ink)'}">${signed(T.net)}</div><div class="cap">${margin}</div><div class="cap">${Pv ? delta(T.net, Pv.net) : ''}</div>${T.net - T.deduction > 0 ? `<div class="cap warn">Set aside about ${money((T.net - T.deduction) * Number(FIN.taxPct ?? 25) / 100)} for taxes</div>` : ''}</div>
       <div class="kpi"><div class="lbl">${BASIS === 'paid' ? 'Collected' : 'Revenue'}</div><div class="val num">${money(T.revenue)}</div><div class="cap">${plural(T.rentals.length, 'rental')} · ${avg}</div><div class="cap">${Pv ? delta(T.revenue, Pv.revenue) : ''}</div>${owedCap}</div>
       <div class="kpi"><div class="lbl">Expenses</div><div class="val num">${money(T.spent)}</div><div class="cap">${T.fees ? `Includes ${money(T.fees)} estimated Stripe fees` : plural(T.expenses.length, 'charge')}</div><div class="cap">${Pv ? delta(T.spent, Pv.spent, false) : ''}</div></div>
-      <div class="kpi"><div class="lbl">Mileage deduction</div><div class="val num">${rate ? money(T.miles * rate) : '—'}</div><div class="cap num">${T.miles.toLocaleString('en-US', { maximumFractionDigits: 1 })} mi${rate ? ' at $' + Number(rate).toFixed(3).replace(/0$/, '') + ' a mile' : ' · set a rate under Mileage'}</div>${fuelCap}</div>`;
+      <div class="kpi"><div class="lbl">Mileage deduction</div><div class="val num">${rate ? money(T.deduction) : '—'}</div><div class="cap num">${T.miles.toLocaleString('en-US', { maximumFractionDigits: 1 })} mi${rate ? (T.miles ? ' at ' + fmtRate(T.deduction / T.miles) + ' a mile' : '') : ' · set a rate under Mileage'}</div>${fuelCap}</div>`;
 
     renderChart();
 
@@ -543,7 +602,113 @@
       + (oh ? `<p class="note" style="margin-top:10px;">Recurring costs come to about <b class="num" style="color:var(--ink)">${money(oh)}</b> a month.</p>` : '');
 
     document.querySelectorAll('#monthTable tbody tr').forEach(tr => tr.classList.toggle('sel', P.mode === 'month' && tr.dataset.month === ymKey(P.y, P.m)));
+    renderEcon(R, T, when);
+    renderTax();
   }
+
+  // ---- Totes and pricing ----
+  // Revenue per tote rented, how much of the fleet was out, whether the
+  // totes bought have paid for themselves, and discounts and rush fees
+  // from invoices that carry a price breakdown.
+  function renderEcon(R, T, when) {
+    $('econMeta').textContent = when;
+    const toteSum = T.rentals.reduce((t, r) => t + toteQty(r), 0);
+    // Utilization: totes out per day over totes owned per day, up to today
+    const owned = d => INV.filter(e => e.item !== 'dolly' && e.date <= d).reduce((t, e) => t + (['purchased', 'returned-to-service'].includes(e.type) ? e.quantity : -e.quantity), 0);
+    const first = INV.filter(e => e.item !== 'dolly').map(e => e.date).sort()[0];
+    let ownedDays = 0, outDays = 0;
+    if (first) {
+      let d = R.start < first ? first : R.start;
+      const end = R.end > TODAY ? TODAY : R.end;
+      for (let i = 0; d <= end && i < 4000; i++) {
+        ownedDays += Math.max(0, owned(d));
+        outDays += ALL_RENTALS.reduce((t, r) => r.dropoffDate <= d && r.pickupDate >= d ? t + toteQty(r) : t, 0);
+        const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + 1); d = x.toISOString().slice(0, 10);
+      }
+    }
+    // Payback: everything spent on Equipment vs everything collected, all time
+    const equip = round2(CHARGES.filter(c => c.category === 'Equipment').reduce((t, c) => t + Number(c.amount || 0), 0));
+    const collected = round2(revenueEntries(ALL_RENTALS, PAID, 'paid').reduce((t, x) => t + x.amount, 0));
+    // Discounts and rush fees, from invoices with line items
+    let disc = 0, rush = 0, withLines = 0;
+    for (const r of T.rentals) {
+      if (!Array.isArray(r.lineItems)) continue;
+      withLines++;
+      for (const li of r.lineItems) { if (li.amount < 0) disc += -li.amount; else if (/rush/i.test(li.label)) rush += li.amount; }
+    }
+    const row = (k, v, sub) => `<div class="econ-row"><span>${k}${sub ? `<span class="hint">${sub}</span>` : ''}</span><b>${v}</b></div>`;
+    $('econ').innerHTML = [
+      row('Revenue per tote rented', toteSum ? money(T.revenue / toteSum) : '—', toteSum ? `${toteSum.toLocaleString('en-US')} totes on ${plural(T.rentals.length, 'rental')}` : 'No rentals in this period'),
+      row('Fleet in use', ownedDays ? Math.round(outDays / ownedDays * 100) + '%' : '—', ownedDays ? 'Share of tote-days rented out' + (R.end > TODAY ? ', up to today' : '') : 'Log totes owned on Inventory to see this'),
+      row('Totes paid off', equip ? (collected >= equip ? (collected / equip).toFixed(1) + '×' : money(equip - collected) + ' to go') : '—', equip ? `${money(equip)} spent on equipment, ${money(collected)} collected, all time` : 'No Equipment expenses logged'),
+      row('Discounts given', disc ? '−' + money(disc) : money(0), withLines ? `Military and promo, on ${plural(withLines, 'invoice')} with a price breakdown` : 'Shows for invoices sent with a price breakdown'),
+      row('Rush fees', money(rush), ''),
+    ].join('');
+  }
+
+  // ---- Taxes for the year: always counted when paid (cash basis) ----
+  // Groups follow how a Schedule C reads; equipment and anything unusual
+  // are for an accountant to place. Fuel is left out when a mileage rate
+  // is set, since the standard rate replaces actual car costs (IRS Pub 463).
+  const TAX_GROUP = { Marketing: 'Advertising', Insurance: 'Insurance', Supplies: 'Supplies', Equipment: 'Equipment (totes, dollies)',
+    'Software & Fees': 'Software and subscriptions', 'Stripe fees': 'Card processing fees (estimated)', Fuel: 'Car: fuel', Other: 'Other expenses' };
+  function taxYear() { return P.mode === 'all' ? +TODAY.slice(0, 4) : P.y; }
+  function taxFigures(y) {
+    const s = `${y}-01-01`, e = `${y}-12-31`;
+    const rev = revenueEntries(ALL_RENTALS, PAID, 'paid').filter(x => inR(x.date, s, e));
+    const receipts = round2(rev.reduce((t, x) => t + x.amount, 0));
+    const spend = [...CHARGES, ...stripeFeeCharges(rev, PAID, PAID_VIA, FIN.stripeFees)].filter(x => inR(x.date, s, e));
+    const groups = {}; let fuelSkipped = 0;
+    for (const x of spend) {
+      if (x.category === 'Fuel' && hasRate()) { fuelSkipped += Number(x.amount || 0); continue; }
+      const g = TAX_GROUP[x.category] || x.category || 'Other expenses';
+      groups[g] = round2((groups[g] || 0) + Number(x.amount || 0));
+    }
+    const trips = FIN.mileage.filter(m => inR(m.date, s, e));
+    const mileage = deductionOf(trips);
+    const expenses = round2(Object.values(groups).reduce((t, v) => t + v, 0));
+    const profit = round2(receipts - expenses - mileage);
+    const pct = Number(FIN.taxPct ?? 25);
+    return { y, receipts, groups, expenses, mileage, miles: trips.reduce((t, m) => t + Number(m.miles || 0), 0), fuelSkipped: round2(fuelSkipped), profit, pct, aside: round2(Math.max(0, profit) * pct / 100), rentals: rev.length };
+  }
+  function renderTax() {
+    const f = taxFigures(taxYear());
+    const so = f.y === +TODAY.slice(0, 4) ? ' so far' : '';
+    const row = (k, v, cls = '') => `<div class="tax-row ${cls}"><span>${k}</span><span>${v}</span></div>`;
+    $('tax').innerHTML =
+      row(`<b>${f.y}${so}: money collected</b>`, `<b>${money(f.receipts)}</b>`)
+      + row(`Expenses`, '−' + money(f.expenses))
+      + Object.entries(f.groups).sort((a, b) => b[1] - a[1]).map(([g, v]) => row(esc(g), money(v), 'part')).join('')
+      + row(`Mileage (${f.miles.toLocaleString('en-US', { maximumFractionDigits: 1 })} mi)`, f.mileage ? '−' + money(f.mileage) : (hasRate() ? money(0) : 'Set a rate'))
+      + row('Estimated profit', signed(f.profit), 'total')
+      + `<div class="tax-row aside"><span>Set aside for taxes, about <input type="number" id="taxPct" min="0" max="60" step="1" value="${f.pct}" aria-label="Percent">%</span><span>${money(f.aside)}</span></div>`
+      + `<p class="tax-note">${f.fuelSkipped ? `${money(f.fuelSkipped)} of fuel is left out: with the mileage rate it isn't deductible. ` : ''}Equipment can be deducted all at once or spread over several years; ask your accountant which fits. Your accountant can tell you the right set-aside percent.</p>
+         <button type="button" class="secondary btn-sm" id="taxCsvBtn" style="margin-top:10px;">Download ${f.y} for my accountant (CSV)</button>`;
+  }
+  // Saved when you leave the box
+  document.addEventListener('change', async (e) => {
+    if (e.target.id !== 'taxPct') return;
+    const resp = await finCall({ action: 'setTaxPct', pct: e.target.value });
+    if (resp.ok) { FIN.taxPct = Number(e.target.value); renderTax(); } else showErr('Set-aside must be a percent from 0 to 60.');
+  });
+  document.addEventListener('click', (e) => {
+    if (e.target.id !== 'taxCsvBtn') return;
+    const f = taxFigures(taxYear()), s = `${f.y}-01-01`, end = `${f.y}-12-31`;
+    const rows = [
+      { section: 'Summary', date: '', item: 'Money collected (cash basis)', amount: f.receipts.toFixed(2), detail: plural(f.rentals, 'rental') },
+      ...Object.entries(f.groups).map(([g, v]) => ({ section: 'Summary', date: '', item: g, amount: (-v).toFixed(2), detail: '' })),
+      { section: 'Summary', date: '', item: 'Mileage deduction', amount: (-f.mileage).toFixed(2), detail: f.miles.toFixed(1) + ' mi' },
+      { section: 'Summary', date: '', item: 'Estimated profit', amount: f.profit.toFixed(2), detail: '' },
+      ...(f.fuelSkipped ? [{ section: 'Summary', date: '', item: 'Fuel not counted (mileage rate used)', amount: f.fuelSkipped.toFixed(2), detail: '' }] : []),
+      ...revenueEntries(ALL_RENTALS, PAID, 'paid').filter(x => inR(x.date, s, end)).sort((a, b) => a.date.localeCompare(b.date))
+        .map(x => ({ section: 'Income', date: fmtDate(x.date), item: x.rental.name, amount: x.amount.toFixed(2), detail: x.rental.package })),
+      ...[...CHARGES, ...stripeFeeCharges(revenueEntries(ALL_RENTALS, PAID, 'paid'), PAID, PAID_VIA, FIN.stripeFees)].filter(x => inR(x.date, s, end)).sort((a, b) => a.date.localeCompare(b.date))
+        .map(x => ({ section: 'Expense', date: fmtDate(x.date), item: (x.vendor || x.category) + (x.estimated ? ' (estimated)' : ''), amount: (-Number(x.amount || 0)).toFixed(2), detail: x.category + (x.category === 'Fuel' && hasRate() ? ', not deductible with mileage rate' : '') })),
+      ...FIN.mileage.filter(m => inR(m.date, s, end)).sort((a, b) => a.date.localeCompare(b.date))
+        .map(m => ({ section: 'Mileage', date: fmtDate(m.date), item: m.purpose, amount: (-(m.miles * (rateOn(m.date) || 0))).toFixed(2), detail: m.miles + ' mi at ' + (rateOn(m.date) || 0) })),
+    ];
+    dlCsv(`ready-tote-taxes-${f.y}`, ['section', 'date', 'item', 'amount', 'detail'], rows);
+  });
 
   // "2–3 Bedrooms — 40 Totes + 2 Dollies — $169" -> "2–3 Bedrooms · 40 totes"
   function shortPkg(p) {
@@ -664,33 +829,47 @@
   if (TABS.includes(location.hash.slice(1))) showTab(location.hash.slice(1));
 
   // ---- Rentals tab: every rental, newest drop-off first ----
+  // Payment status for a rental: paid (when, how), paid another way, or not yet
+  function payState(r) {
+    if (paidOutsideInvoice(r)) return { paid: true, date: r.dropoffDate, via: 'Paid another way' };
+    if (PAID[r.key]) return { paid: true, date: okDay(PAID[r.key]), via: (PAID_VIA[r.key] || 'stripe') === 'stripe' ? 'Stripe' : 'Marked paid' };
+    return { paid: false };
+  }
+  const lineSum = (r, test) => Array.isArray(r.lineItems) ? r.lineItems.filter(test).reduce((t, li) => t + li.amount, 0) : 0;
   function renderRentalsTab() {
-    const rows = [...ALL_RENTALS].sort((a, b) => (b.dropoffDate||'').localeCompare(a.dropoffDate||''));
-    $('rentTabCount').textContent = ' ' + rows.length;
-    $('rentCount').innerHTML = rows.length ? `<b class="num">${plural(rows.length, 'rental')}</b> · <b class="num">${money(rows.reduce((t, r) => t + priceNum(r.price), 0))}</b> booked` : '';
+    const f = $('rentFilter').value;
+    const rows = [...ALL_RENTALS].filter(r => !f || (f === 'paid') === payState(r).paid)
+      .sort((a, b) => (b.dropoffDate||'').localeCompare(a.dropoffDate||''));
+    $('rentTabCount').textContent = ' ' + ALL_RENTALS.length;
+    $('rentCount').innerHTML = rows.length ? `<b class="num">${plural(rows.length, 'rental')}</b> · <b class="num">${money(rows.reduce((t, r) => t + priceNum(r.price), 0))}</b>${f === 'unpaid' ? ' not paid yet' : ' booked'}` : '';
     const status = r => r.dropoffDate <= TODAY && r.pickupDate >= TODAY ? '<span class="pill ok">Out now</span>'
       : r.pickupDate < TODAY ? '<span class="pill neutral">Done</span>' : '<span class="pill pending">Upcoming</span>';
+    const pay = r => { const p = payState(r); return p.paid ? `<span class="pill ok">Paid</span><span class="minor">${esc(fmtDate(p.date))} · ${esc(p.via)}</span>` : '<span class="pill err">Not paid</span>'; };
     $('rentList').innerHTML = rows.length ? `
       <table class="data">
-        <thead><tr><th>Drop-off</th><th>Customer</th><th>Package</th><th>Status</th><th class="r">Price</th></tr></thead>
+        <thead><tr><th>Drop-off</th><th>Customer</th><th>Package</th><th>Status</th><th>Payment</th><th class="r">Price</th></tr></thead>
         <tbody>${rows.map(r => `
           <tr>
             <td style="white-space:nowrap;">${esc(fmtDate(r.dropoffDate))}<span class="minor">back ${esc(fmtDate(r.pickupDate))}</span></td>
             <td>${esc(r.name)}</td>
             <td>${esc(shortPkg(r.package))}</td>
             <td>${status(r)}</td>
+            <td>${pay(r)}</td>
             <td class="r" style="font-weight:600;">${fmtPrice(r.price)}</td>
           </tr>`).join('')}
         </tbody>
-      </table>` : '<p class="empty-line">No rentals yet.</p>';
+      </table>` : `<p class="empty-line">${ALL_RENTALS.length ? 'No rentals match.' : 'No rentals yet.'}</p>`;
   }
+  $('rentFilter').addEventListener('change', renderRentalsTab);
 
   $('csvBtn').addEventListener('click', () => {
     if (!ALL_RENTALS.length) return showErr('No rentals to export yet.');
-    const cols = ['invoicedAt','name','email','phone','package','price','duration','dropoffDate','dropoffTime','dropoffAddress','pickupDate','pickupTime','pickupAddress'];
+    const cols = ['invoicedAt','name','email','phone','package','totes','price','discount','rushFee','promoCode','paid','paidDate','paidHow','duration','dropoffDate','dropoffTime','dropoffAddress','pickupDate','pickupTime','pickupAddress'];
     const rows = [...ALL_RENTALS].sort((a,b) => (b.invoicedAt||'').localeCompare(a.invoicedAt||''))
-      .map(r => ({ ...r, invoicedAt: fmtDate((r.invoicedAt||'').slice(0,10)), dropoffDate: fmtDate(r.dropoffDate), pickupDate: fmtDate(r.pickupDate),
-                    dropoffAddress: dropoffAddressOf(r), pickupAddress: pickupAddressOf(r) }));
+      .map(r => { const p = payState(r); return { ...r, invoicedAt: fmtDate((r.invoicedAt||'').slice(0,10)), dropoffDate: fmtDate(r.dropoffDate), pickupDate: fmtDate(r.pickupDate),
+                    dropoffAddress: dropoffAddressOf(r), pickupAddress: pickupAddressOf(r), totes: toteQty(r),
+                    discount: (-lineSum(r, li => li.amount < 0)).toFixed(2), rushFee: lineSum(r, li => li.amount > 0 && /rush/i.test(li.label)).toFixed(2),
+                    paid: p.paid ? 'yes' : 'no', paidDate: p.paid ? fmtDate(p.date) : '', paidHow: p.via || '' }; });
     dlCsv('ready-tote-rentals', cols, rows);
   });
 
@@ -710,50 +889,99 @@
     populateExpenseFilters();
     renderExpenseTable();
 
-    // Mileage summary: this year
-    const yr = TODAY.slice(0, 4);
-    const ytdMiles = FIN.mileage.filter(m => (m.date||'').startsWith(yr)).reduce((t,m)=>t+Number(m.miles||0),0);
-    const rate = FIN.mileageRate;
-    $('mileTotals').innerHTML = `
-      <div class="kpi"><div class="lbl">Business miles, ${yr}</div><div class="val num">${ytdMiles.toLocaleString('en-US',{maximumFractionDigits:1})} mi</div><div class="cap">${plural(FIN.mileage.filter(m => (m.date||'').startsWith(yr)).length, 'trip')}</div></div>
-      <div class="kpi"><div class="lbl">Estimated deduction, ${yr}</div><div class="val num">${rate ? money(ytdMiles * rate) : '—'}</div><div class="cap">${rate ? 'at $' + Number(rate).toFixed(2) + ' a mile' : 'Set your rate to see this'}</div></div>
-      <div class="kpi"><div class="lbl"><label for="rateInput" style="all:unset;">Rate per mile</label></div>
-        <div class="rate" style="margin-top:6px;">
-          <div class="money-field compact"><input type="number" id="rateInput" step="0.005" min="0" placeholder="0.70" value="${rate ?? ''}"></div>
-          <button type="button" class="secondary btn-sm" onclick="saveRate()">Save</button>
-        </div></div>`;
+    renderMileage();
+  }
 
-    const lo = new Date(TODAY+'T12:00:00Z'); lo.setUTCDate(lo.getUTCDate()-7);
-    const hi = new Date(TODAY+'T12:00:00Z'); hi.setUTCDate(hi.getUTCDate()+7);
-    const loS = lo.toISOString().slice(0,10), hiS = hi.toISOString().slice(0,10);
-    const trips = [];
+  // ---- Mileage ----
+  // Deliveries and pickups that are trips, and which of them are logged.
+  // A trip logged from a chip names its rental and leg; older ones match
+  // on date and the customer's name in the purpose.
+  function tripCandidates(fromDate, toDate) {
+    const out = [];
     for (const r of ALL_RENTALS) {
       if (r.serviceType === 'self') continue;
-      if (r.dropoffDate >= loS && r.dropoffDate <= hiS)
-        trips.push({ date: r.dropoffDate, purpose: 'Deliver, ' + r.name + (dropoffAddressOf(r) ? ', ' + dropoffAddressOf(r) : '') });
-      if (r.pickupDate >= loS && r.pickupDate <= hiS)
-        trips.push({ date: r.pickupDate, purpose: 'Pick up, ' + r.name + (pickupAddressOf(r) ? ', ' + pickupAddressOf(r) : '') });
+      for (const leg of ['delivery', 'pickup']) {
+        const date = leg === 'delivery' ? r.dropoffDate : r.pickupDate;
+        if (!date || date < fromDate || date > toDate) continue;
+        const addr = leg === 'delivery' ? dropoffAddressOf(r) : pickupAddressOf(r);
+        const logged = FIN.mileage.some(m => (m.rentalKey === r.key && m.leg === leg)
+          || (!m.rentalKey && m.date === date && String(m.purpose || '').toLowerCase().includes(String(r.name || '').toLowerCase().split(' ')[0] || '\u0000')));
+        out.push({ key: r.key, leg, date, name: r.name, addr, logged,
+          purpose: (leg === 'delivery' ? 'Deliver, ' : 'Pick up, ') + r.name + (addr ? ', ' + addr : '') });
+      }
     }
-    trips.sort((a,b)=>b.date.localeCompare(a.date));
-    $('tripChips').innerHTML = trips.slice(0,8).map(t => `
-      <button type="button" onclick="fillTrip('${esc(t.date)}', '${esc(t.purpose).replaceAll("'","&#39;")}')">${esc(fmtDate(t.date).slice(0,5))} · ${esc(t.purpose.slice(0,34))}${t.purpose.length>34?'…':''}</button>`).join('')
-      || '<span class="note">No delivery or pickup trips in the last or next 7 days.</span>';
+    return out.sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  let TRIP_FOR = null;   // { key, leg } when the form was filled from a chip
+  function renderMileage() {
+    const yr = TODAY.slice(0, 4);
+    const ytd = FIN.mileage.filter(m => (m.date||'').startsWith(yr));
+    const ytdMiles = ytd.reduce((t,m)=>t+Number(m.miles||0),0);
+    const rates = FIN.mileageRates || [];
+    const cur = rateOn(TODAY);
+    $('mileTotals').innerHTML = `
+      <div class="kpi"><div class="lbl">Business miles, ${yr}</div><div class="val num">${ytdMiles.toLocaleString('en-US',{maximumFractionDigits:1})} mi</div><div class="cap">${plural(ytd.length, 'trip')}</div></div>
+      <div class="kpi"><div class="lbl">Estimated deduction, ${yr}</div><div class="val num">${rates.length ? money(deductionOf(ytd)) : '—'}</div><div class="cap">${cur ? 'Now ' + fmtRate(cur) + ' a mile' : 'Set your rate to see this'}</div></div>
+      <div class="kpi"><div class="lbl">Rate per mile</div>
+        <div class="rates">${rates.length ? [...rates].reverse().map(r => `<div class="rate-row"><b class="num">${fmtRate(r.rate)}</b> <span>${r.from === '0000-01-01' ? 'from the start' : 'from ' + esc(fmtDate(r.from))}</span> <button type="button" class="link danger" onclick="deleteRate('${r.from}')">Remove</button></div>`).join('') : '<p class="note" style="margin:4px 0;">No rate set yet.</p>'}</div>
+        <div class="rate" style="margin-top:6px;">
+          <div class="money-field compact"><input type="number" id="rateInput" step="0.005" min="0" placeholder="0.725" aria-label="Rate per mile"></div>
+          <label class="from-label">from <input type="date" id="rateFrom" value="${yr}-01-01" aria-label="Starting"></label>
+          <button type="button" class="secondary btn-sm" onclick="saveRate()">Add</button>
+        </div>
+        <p class="note" style="margin:6px 0 0;">The IRS set 72.5¢ for 2026. Add a new line if it changes during the year.</p></div>`;
+
+    // Trips this month and last month that aren't logged yet, plus the next week's
+    const monthStart = TODAY.slice(0, 8) + '01';
+    const lo = new Date(monthStart + 'T12:00:00Z'); lo.setUTCMonth(lo.getUTCMonth() - 1);
+    const hi = new Date(TODAY + 'T12:00:00Z'); hi.setUTCDate(hi.getUTCDate() + 7);
+    // Past trips needing a log first (newest first), then the week ahead
+    const cands = tripCandidates(lo.toISOString().slice(0, 10), hi.toISOString().slice(0, 10)).filter(t => !t.logged)
+      .sort((a, b) => (a.date > TODAY) - (b.date > TODAY) || (a.date > TODAY ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)));
+    const pastUnlogged = cands.filter(t => t.date <= TODAY);
+    const thisMonth = pastUnlogged.filter(t => t.date >= monthStart).length;
+    $('tripNudge').innerHTML = pastUnlogged.length
+      ? `<b>${plural(pastUnlogged.length, 'trip')}</b> ${pastUnlogged.length === 1 ? 'isn’t' : 'aren’t'} logged yet${thisMonth && thisMonth < pastUnlogged.length ? ` (${thisMonth} this month)` : ''}. Tap one to fill it in, miles included.`
+      : 'Every delivery and pickup so far is logged.';
+    $('tripChips').innerHTML = cands.slice(0, 10).map(t => `
+      <button type="button" data-trip="${escAttr(t.key)}" data-leg="${t.leg}" data-date="${t.date}" data-purpose="${escAttr(t.purpose)}"${t.date > TODAY ? ' class="later"' : ''}>${esc(fmtDate(t.date).slice(0,5))} · ${esc(t.leg === 'delivery' ? 'Deliver' : 'Pick up')}, ${esc(t.name || '')}</button>`).join('')
+      || '<span class="note">No deliveries or pickups waiting to be logged.</span>';
 
     const mileSorted = [...FIN.mileage].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     $('mileList').innerHTML = mileSorted.length ? `
       <table class="data stack">
         <thead><tr><th>Date</th><th>Trip</th><th class="r">Miles</th><th class="r">Deduction</th><th></th></tr></thead>
         <tbody>${mileSorted.map(m => `
-          <tr>
+          <tr data-row="${escAttr(m.key)}">
             <td class="c-meta" style="white-space:nowrap;">${esc(fmtDate(m.date))}</td>
             <td class="c-main">${esc(m.purpose)}</td>
             <td class="r c-amt">${Number(m.miles).toLocaleString('en-US',{maximumFractionDigits:1})} mi</td>
-            <td class="r c-hide" style="color:var(--steel);">${rate ? money(m.miles * rate) : '—'}</td>
-            <td class="c-act"><div class="row-actions"><button type="button" class="link danger" onclick="finDelete('${esc(m.key)}')">Delete</button></div></td>
+            <td class="r c-hide" style="color:var(--steel);">${rateOn(m.date) ? money(m.miles * rateOn(m.date)) : '—'}</td>
+            <td class="c-act">${rowActions(m.key, 'mile')}</td>
           </tr>`).join('')}
         </tbody>
       </table>` : '<p class="empty-line">No trips logged yet.</p>';
   }
+
+  // Chip: fill the form, then work out the round-trip miles
+  $('tripChips').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-trip]'); if (!b) return;
+    mileEditCancel();
+    $('mileDate').value = b.dataset.date; $('milePurpose').value = b.dataset.purpose;
+    TRIP_FOR = { key: b.dataset.trip, leg: b.dataset.leg };
+    $('mileMiles').value = ''; $('mileMiles').placeholder = 'Working out miles…';
+    $('mileNote').textContent = '';
+    try {
+      const resp = await fetch('/.netlify/functions/trip-miles', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: $('secret').value.trim(), key: b.dataset.trip, type: b.dataset.leg, origin: sessionStorage.getItem('rto-admin-startfrom') || '' }) });
+      const d = await resp.json().catch(() => ({}));
+      if (resp.ok && d.miles) { $('mileMiles').value = d.miles; $('mileNote').textContent = `Round trip from ${d.origin}. Change it if you made other stops.`; }
+      else $('mileNote').textContent = (d.error || 'Couldn’t work out the miles.') + ' Type them in.';
+    } catch { $('mileNote').textContent = 'Couldn’t work out the miles. Type them in.'; }
+    $('mileMiles').placeholder = '0.0';
+    $('mileMiles').focus();
+  });
 
   // Keeps each filter's own selection intact while refreshing the option
   // lists from whatever categories/payment methods/months actually exist
@@ -808,14 +1036,11 @@
         <tbody>${filtered.map(e => `
           <tr>
             <td class="c-meta" style="white-space:nowrap;">${esc(fmtDate(e.date))}</td>
-            <td class="c-main">${esc(e.vendor || e.category || '—')}${e.description ? `<span class="minor">${esc(e.description)}</span>` : ''}${often(e) ? `<span class="minor">${often(e)}</span>` : ''}</td>
+            <td class="c-main">${esc(e.vendor || e.category || '—')}${e.description ? `<span class="minor">${esc(e.description)}</span>` : ''}${often(e) ? `<span class="minor">${often(e)}</span>` : ''}<span class="minor"><button type="button" class="link" data-receipt="${escAttr(e.key)}" data-has="${e.hasReceipt ? '1' : ''}">${e.hasReceipt ? 'View receipt' : 'Add receipt'}</button></span></td>
             <td class="c-hide">${esc(e.category || '—')}</td>
             <td class="c-hide" style="color:var(--steel);">${esc(e.paymentMethod || '—')}</td>
             <td class="r c-amt" style="font-weight:600;">${money(e.amount)}${e.recurring === 'monthly' ? '<span class="minor">a month</span>' : e.recurring === 'yearly' ? '<span class="minor">a year</span>' : ''}</td>
-            <td class="c-act"><div class="row-actions">
-              <button type="button" class="link" onclick="finEditStart('${esc(e.key)}')">Edit</button>
-              <button type="button" class="link danger" onclick="finDelete('${esc(e.key)}')">Delete</button>
-            </div></td>
+            <td class="c-act">${rowActions(e.key, 'exp')}</td>
           </tr>`).join('')}
         </tbody>
       </table>` : `<p class="empty-line">${FIN.expenses.length ? 'No expenses match these filters.' : 'No expenses logged yet.'}</p>`;
@@ -856,24 +1081,122 @@
 
   function syncExpForm() {
     $('expEndWrap').hidden = $('expRecurring').value === 'one-time';
-    const fuel = $('expCategory').value === 'Fuel' && FIN.mileageRate;
+    const fuel = $('expCategory').value === 'Fuel' && hasRate();
     $('expHint').hidden = !fuel;
     $('expHint').textContent = fuel ? 'You use the mileage rate, so fuel isn’t tax deductible (parking and tolls are). It still counts in your expenses here.' : '';
   }
   $('expRecurring').addEventListener('change', syncExpForm);
   $('expCategory').addEventListener('change', syncExpForm);
 
-  window.fillTrip = (date, purpose) => { $('mileDate').value = date; $('milePurpose').value = purpose; $('mileMiles').focus(); };
-  window.finDelete = async (key) => {
-    if (!confirm('Delete this entry?')) return;
-    const resp = await finCall({ action: 'delete', key });
-    if (resp.ok) reloadFinance(); else showErr('Delete failed.');
-  };
   window.saveRate = async () => {
-    const rate = document.getElementById('rateInput').value;
-    const resp = await finCall({ action: 'setRate', rate });
-    if (resp.ok) reloadFinance(); else showErr('Rate must be dollars per mile, like 0.70.');
+    const rate = $('rateInput').value, from = $('rateFrom').value;
+    if (!rate) return showErr('Type the rate, like 0.725.');
+    const resp = await finCall({ action: 'setRate', rate, from });
+    if (resp.ok) reloadFinance(); else showErr(await resp.text().catch(() => 'Couldn’t save the rate.'));
   };
+  window.deleteRate = async (from) => {
+    const resp = await finCall({ action: 'deleteRate', from });
+    if (resp.ok) reloadFinance(); else showErr('Couldn’t remove that rate.');
+  };
+
+  // ---- Receipt photos (photos store, "<expense key>:receipt") ----
+  async function uploadReceipt(key, file) {
+    try {
+      const dataUrl = await compressImage(file, 1800, 0.75);
+      const resp = await fetch('/.netlify/functions/upload-photo', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: $('secret').value.trim(), key, type: 'receipt', imageBase64: dataUrl.split(',')[1], mimeType: 'image/jpeg' }) });
+      return resp.ok;
+    } catch { return false; }
+  }
+  let RECEIPT_FOR = null;
+  $('receiptInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0], key = RECEIPT_FOR; RECEIPT_FOR = null;
+    if (!file || !key) return;
+    showOk('Uploading the receipt…');
+    if (await uploadReceipt(key, file)) { showOk('Receipt saved.'); reloadFinance(); } else showErr('The receipt didn’t upload. Try again.');
+  });
+  document.querySelector('.card').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-receipt]'); if (!b) return;
+    if (!b.dataset.has) { RECEIPT_FOR = b.dataset.receipt; $('receiptInput').value = ''; $('receiptInput').click(); return; }
+    // Open the tab first so phones don't treat it as a pop-up
+    const win = window.open('', '_blank');
+    if (win) win.document.write('<title>Receipt</title><body style="margin:0;background:#111;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;">Loading…</body>');
+    try {
+      const resp = await fetch('/.netlify/functions/get-photo', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: $('secret').value.trim(), key: b.dataset.receipt, type: 'receipt' }) });
+      if (!resp.ok) throw new Error();
+      const d = await resp.json();
+      if (win) win.document.body.innerHTML = `<img src="data:${d.mimeType};base64,${d.imageBase64}" style="max-width:100%;max-height:100vh;">`;
+    } catch { if (win) win.document.body.textContent = 'Couldn’t load the receipt.'; }
+  });
+  function compressImage(file, maxDim, quality) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width >= height) { height = Math.round(height * (maxDim / width)); width = maxDim; }
+            else { width = Math.round(width * (maxDim / height)); height = maxDim; }
+          }
+          const c = document.createElement('canvas'); c.width = width; c.height = height;
+          c.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(c.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => reject(new Error('Could not read image.'));
+        img.src = reader.result;
+      };
+      reader.onerror = () => reject(new Error('Could not read file.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ---- Edit / delete with undo, for expenses and trips ----
+  function rowActions(key, kind) {
+    return `<div class="row-actions">
+      <button type="button" class="link" data-edit="${escAttr(key)}" data-kind="${kind}">Edit</button>
+      <button type="button" class="link danger" data-del="${escAttr(key)}">Delete</button>
+      <span class="del-ask" hidden>Delete? <button type="button" class="link danger" data-del-yes="${escAttr(key)}">Yes</button> <button type="button" class="link" data-del-no>Keep</button></span>
+    </div>`;
+  }
+  let LAST_DELETED = null;
+  document.querySelector('.card').addEventListener('click', async (e) => {
+    const t = e.target.closest('[data-edit],[data-del],[data-del-yes],[data-del-no],#undoDel');
+    if (!t) return;
+    if (t.id === 'undoDel') {
+      const d = LAST_DELETED; if (!d) return; LAST_DELETED = null;
+      const resp = await finCall({ action: 'restore', key: d.key, record: d });
+      if (resp.ok) { showOk('Put back.'); reloadFinance(); } else showErr('Couldn’t undo. Add it again by hand.');
+      return;
+    }
+    const acts = t.closest('.row-actions');
+    if (t.matches('[data-edit]')) return t.dataset.kind === 'mile' ? mileEditStart(t.dataset.edit) : finEditStart(t.dataset.edit);
+    if (t.matches('[data-del]')) { acts.querySelector('[data-del]').hidden = true; acts.querySelector('[data-edit]').hidden = true; acts.querySelector('.del-ask').hidden = false; return; }
+    if (t.matches('[data-del-no]')) { acts.querySelector('[data-del]').hidden = false; acts.querySelector('[data-edit]').hidden = false; acts.querySelector('.del-ask').hidden = true; return; }
+    const key = t.dataset.delYes;
+    const rec = [...FIN.expenses, ...FIN.mileage].find(x => x.key === key);
+    const resp = await finCall({ action: 'delete', key });
+    if (!resp.ok) return showErr('Couldn’t delete that.');
+    LAST_DELETED = rec;
+    const what = key.startsWith('mile_') ? `the ${Number(rec.miles)} mi trip on ${fmtDate(rec.date)}` : `${rec.vendor || rec.category} (${money(rec.amount)})`;
+    showOk(`Deleted ${esc(what)}. <button type="button" class="link" id="undoDel">Undo</button>`, true);
+    reloadFinance();
+  });
+
+  // Trip edit uses the same form as adding one
+  window.mileEditStart = (key) => {
+    const m = FIN.mileage.find(x => x.key === key); if (!m) return;
+    $('mileDate').value = m.date || ''; $('milePurpose').value = m.purpose || ''; $('mileMiles').value = m.miles || '';
+    $('mileEditKey').value = key; TRIP_FOR = m.rentalKey ? { key: m.rentalKey, leg: m.leg } : null;
+    $('mileFormTitle').textContent = 'Edit trip'; $('mileAddBtn').textContent = 'Save trip'; $('mileCancelBtn').hidden = false;
+    $('mileForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+  function mileEditCancel() {
+    $('mileEditKey').value = ''; TRIP_FOR = null; $('mileNote').textContent = '';
+    $('mileFormTitle').textContent = 'Log a trip'; $('mileAddBtn').textContent = 'Add trip'; $('mileCancelBtn').hidden = true;
+  }
+  $('mileCancelBtn').addEventListener('click', () => { mileEditCancel(); $('milePurpose').value = ''; $('mileMiles').value = ''; });
 
   window.finEditStart = (key) => {
     const e = FIN.expenses.find(x => x.key === key);
@@ -896,7 +1219,7 @@
   window.finEditCancel = () => {
     $('expEditKey').value = '';
     $('expDate').value = ''; $('expAmount').value = ''; $('expVendor').value = ''; $('expDesc').value = '';
-    $('expCategory').selectedIndex = 0; $('expRecurring').value = 'one-time'; $('expPayment').value = ''; $('expEnd').value = '';
+    $('expCategory').selectedIndex = 0; $('expRecurring').value = 'one-time'; $('expPayment').value = ''; $('expEnd').value = ''; $('expReceipt').value = '';
     syncExpForm();
     $('expFormTitle').textContent = 'Add expense';
     $('expAddBtn').textContent = 'Add expense';
@@ -915,16 +1238,22 @@
       ? await finCall({ action: 'editExpense', key: editKey, date, category, description, amount, recurring, vendor, paymentMethod, endDate })
       : await finCall({ action: 'addExpense', date, category, description, amount, recurring, vendor, paymentMethod, endDate });
     if (resp.ok) {
+      const file = $('expReceipt').files[0];
+      if (file) {
+        const key = editKey || (await resp.json().catch(() => ({}))).key;
+        if (key && !(await uploadReceipt(key, file))) showErr('Expense saved, but the receipt photo didn’t upload. Try Add receipt on the row.');
+      }
       finEditCancel();
       reloadFinance();
     } else showErr(editKey ? 'Update expense failed.' : 'Add expense failed.');
   });
   $('mileAddBtn').addEventListener('click', async () => {
-    const date = $('mileDate').value, purpose = $('milePurpose').value.trim(), miles = $('mileMiles').value;
+    const date = $('mileDate').value, purpose = $('milePurpose').value.trim(), miles = $('mileMiles').value, editKey = $('mileEditKey').value;
     if (!date || !purpose || !miles) return showErr('A trip needs a date, a purpose and miles.');
-    const resp = await finCall({ action: 'addMileage', date, purpose, miles });
-    if (resp.ok) { $('milePurpose').value=''; $('mileMiles').value=''; reloadFinance(); }
-    else showErr('Add trip failed.');
+    const link = TRIP_FOR ? { rentalKey: TRIP_FOR.key, leg: TRIP_FOR.leg } : {};
+    const resp = await finCall({ action: editKey ? 'editMileage' : 'addMileage', key: editKey || undefined, date, purpose, miles, ...link });
+    if (resp.ok) { $('milePurpose').value=''; $('mileMiles').value=''; mileEditCancel(); reloadFinance(); }
+    else showErr(editKey ? 'Couldn’t save the trip.' : 'Couldn’t add the trip.');
   });
 
   function dlCsv(name, cols, rows){
