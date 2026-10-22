@@ -71,7 +71,7 @@ export function emailLayout({ preheader = "", body, footer = true }) {
             <table role="presentation" cellpadding="0" cellspacing="0">
               <tr>
                 <td style="padding-right:10px;"><img src="${LOGO_URL}" alt="" width="36" height="36" style="display:block; width:36px; height:36px; border-radius:8px;"></td>
-                <td style="font-family:'Archivo Black', 'Arial Black', Arial, sans-serif; font-size:16px; color:${C.ink}; letter-spacing:-0.2px;">Ready Tote</td>
+                <td style="font-family:'Archivo Black', 'Arial Black', Arial, sans-serif; font-size:16px; color:${C.ink}; letter-spacing:-0.2px;">Ready Tote Oklahoma</td>
               </tr>
             </table>
           </td>

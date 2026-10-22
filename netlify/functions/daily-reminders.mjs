@@ -110,7 +110,7 @@ export default async () => {
     body: JSON.stringify({
       from: process.env.RESEND_FROM || FROM_FALLBACK,
       to: REMINDER_RECIPIENTS,
-      subject: `${total} reminder${total > 1 ? "s" : ""} to handle today | Ready Tote`,
+      subject: `${total} reminder${total > 1 ? "s" : ""} to handle today | Ready Tote Oklahoma`,
       html,
       attachments: attachments.length ? attachments : undefined,
     }),
