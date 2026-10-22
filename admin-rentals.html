@@ -7,10 +7,10 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<title>All Rentals — Ready Tote Oklahoma (Internal)</title>
+<title>All rentals · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
 <script src="admin-shared.js?v=20261028"></script>
-<script src="admin-rentals-shared.js?v=20261028"></script>
+<script src="admin-rentals-shared.js?v=20261029"></script>
 <style>
   .rem .who{font-weight:600;font-size:16px;}
   .rem .meta{color:var(--steel);font-size:14px;margin:3px 0 0;line-height:1.45;font-variant-numeric:tabular-nums;}
@@ -104,6 +104,27 @@
   .next .what span{color:var(--steel);}
   .next .sms-btn{background:var(--ink); color:#fff; border-color:var(--ink);}
   .next .sms-btn:hover{background:#3A342D;}
+  .next.upcoming{background:none; border:1px dashed var(--control);}
+  .next-btns{display:flex; align-items:center; gap:10px;}
+  .skip{all:unset; cursor:pointer; font-size:13px; font-weight:600; color:var(--steel); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
+  .skip:hover{color:var(--ink);}
+  .card-ask{display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; margin:-4px 0 12px; padding:9px 12px; background:#FAF8F3; border-radius:8px; font-size:14px; font-weight:600;}
+  .card-ask[hidden]{display:none;}
+  .card-ask button{width:auto; margin:0; padding:7px 14px; font-size:14px;}
+  .card-ask .linklike{all:unset; cursor:pointer; text-decoration:underline; text-underline-offset:3px; font-weight:600;}
+  .ghost-btn{width:auto; margin:0; padding:8px 14px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;}
+  .ghost-btn:hover{background:#fff; border-color:var(--ink);}
+  .cancel-box{margin-top:10px; padding:12px 14px; border-radius:8px; background:#FAF8F3;}
+  .cancel-box[hidden]{display:none;}
+  .cancel-box p{margin:0 0 8px; font-size:14px; font-weight:600;}
+  .cancel-box .reasons{display:flex; flex-wrap:wrap; gap:6px;}
+  .cancel-box .reasons button{width:auto; margin:0; padding:7px 12px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control);}
+  .cancel-box .reasons button:hover{background:#fff; border-color:var(--ink);}
+  .cancel-box .other{display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;}
+  .cancel-box .other input{flex:1 1 200px; margin:0; height:36px; padding:6px 10px; font-size:14px;}
+  .cancel-box .other button{width:auto; margin:0; height:36px; padding:0 12px; font-size:14px;}
+  .edit-form .warn{margin:10px 0 0; padding:8px 10px; border-radius:6px; background:var(--red-bg); color:#831C1E; font-size:13px; font-weight:600;}
+  .edit-form .warn[hidden]{display:none;}
   .tool-row{display:flex; flex-wrap:wrap; gap:8px; padding-top:10px; border-top:1px solid var(--line);}
   .tool-row button{width:auto; margin:0; padding:8px 14px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control);}
   .tool-row button:hover{background:#fff; border-color:var(--ink);}
@@ -176,13 +197,18 @@
   $('startFrom').value = sessionStorage.getItem('rto-admin-startfrom') || '';
   $('startFrom').addEventListener('input', () => sessionStorage.setItem('rto-admin-startfrom', $('startFrom').value));
 
-  let ALL_RENTALS = [];
+  let ALL_RENTALS = [], REM = {};
+  // Package Stripe links and what each charges, for the price check on edit
+  let PKG_LINKS = {};
+  fetch('packages.json').then(r => r.json()).then(d => { for (const p of d.packages || []) if (p.stripeUrl) PKG_LINKS[p.stripeUrl] = p.price; }).catch(() => {});
+  const money = v => { const n = parseFloat(String(v || '').replace(/[^0-9.]/g, '')); return Number.isFinite(n) ? n : null; };
   let FILTER = 'all', SEARCH = '', SHOW_PAST = false;
   // ?q=Name opens the list searched for that name (links from Inventory's day breakdown)
   const Q0 = new URLSearchParams(location.search).get('q');
   const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
 
   $('loadBtn').addEventListener('click', load);
+  wireTextAsks($('allRentals'));
   // Auto-load if a secret is already saved (matches admin.html behavior)
   if ($('secret').value) load();
 
@@ -204,6 +230,7 @@
         ALL_RENTALS = data.rentals || [];
         SENT_FLAGS = data.sentFlags || {};
         PAID_FLAGS = data.paidFlags || {};
+        REM = data.reminders || {};
         // Every action reloads the list from the server so text links and
         // flags stay right; the open cards, open panels and scroll position
         // are put back so you don't lose your place.
@@ -213,14 +240,15 @@
         $('results').style.display = 'block';
         $('status').style.display = 'none';
       }
-    } catch { showErr('Network error — use this page on the live site.'); }
+    } catch { showErr('Network error. Use this page on the live site.'); }
     btn.disabled = false; btn.textContent = 'Refresh';
   }
 
   // ---- Find: groups, filters, search ----
-  const isOut = r => r.dropoffDate && r.pickupDate && r.dropoffDate <= TODAY && r.pickupDate >= TODAY;
-  const isUpcoming = r => !!r.dropoffDate && r.dropoffDate > TODAY;
-  const isDone = r => !!r.pickupDate && r.pickupDate < TODAY;
+  // Cancelled rentals only show under their own filter
+  const isOut = r => !r.cancelled && r.dropoffDate && r.pickupDate && r.dropoffDate <= TODAY && r.pickupDate >= TODAY;
+  const isUpcoming = r => !r.cancelled && !!r.dropoffDate && r.dropoffDate > TODAY;
+  const isDone = r => !r.cancelled && !!r.pickupDate && r.pickupDate < TODAY;
   // "Needs info": missing what Inventory or the texts depend on
   function missingInfo(r) {
     const out = [];
@@ -230,12 +258,13 @@
     return out;
   }
   const FILTERS = [
-    ['all', 'All', () => true],
+    ['all', 'All', r => !r.cancelled],
     ['out', 'Out now', isOut],
     ['upcoming', 'Upcoming', isUpcoming],
     ['unpaid', 'Unpaid', r => isUnpaid(r)],
-    ['info', 'Needs info', r => missingInfo(r).length > 0],
+    ['info', 'Needs info', r => !r.cancelled && missingInfo(r).length > 0],
     ['done', 'Done', isDone],
+    ['cancelled', 'Cancelled', r => !!r.cancelled],
   ];
   function matchesSearch(r) {
     if (!SEARCH) return true;
@@ -277,7 +306,7 @@
     let html = '';
     if (FILTER === 'all' && !SEARCH) {
       const out = shown.filter(isOut).sort(byPickup), up = shown.filter(isUpcoming).sort(byDropAsc);
-      const past = shown.filter(r => !isOut(r) && !isUpcoming(r)).sort(byDropDesc);
+      const past = shown.filter(r => !r.cancelled && !isOut(r) && !isUpcoming(r)).sort(byDropDesc);
       const group = (title, list) => list.length ? `<div class="group-h"><span>${title}<span class="n">${list.length}</span></span></div>` + list.map(card).join('') : '';
       html += group('Out now', out) + group('Upcoming', up);
       if (past.length) {
@@ -308,11 +337,11 @@
       ? `${typeof r.toteCount === 'number' ? r.toteCount : '—'} totes · ${typeof r.dollyCount === 'number' ? r.dollyCount : '—'} ${r.dollyCount === 1 ? 'dolly' : 'dollies'}` : '<span style="color:#831C1E;">Not set. Inventory can’t count this rental</span>';
     // Paid rentals keep "Mark unpaid" under More; it's rarely needed
     const paid = !!PAID_FLAGS[r.key];
-    const paymentControls = paid ? '' : payBtn(r) + invoiceReminderBtn(r) + emailReminderBtn(r) + textReminderBtn(r);
+    const paymentControls = paid || r.cancelled ? '' : payBtn(r) + invoiceReminderBtn(r) + emailReminderBtn(r) + textReminderBtn(r);
     const tbtn = (panel, label) => `<button type="button" class="panel-btn" data-panel="${panel}-${k}" aria-expanded="false">${label}</button>`;
 
     return `
-      <div class="rem${isOut(r) ? ' active-rental' : ''}" data-key="${k}">
+      <div class="rem${isOut(r) ? ' active-rental' : ''}" data-key="${k}" data-first="${escAttr(String(r.name || '').split(' ')[0])}">
         <div class="rem-summary" onclick="this.closest('.rem').classList.toggle('open')">
           <span class="chevron">▸</span>
           <div class="sum-main">
@@ -321,7 +350,7 @@
           </div>
           <div class="sum-side">
             <div class="price">${fmtPrice(r.price)}</div>
-            <div class="pills">${status}${pay}${r.isMilitary ? pill('neutral', 'Military') : ''}${missing.length ? pill('err', 'Needs info', 'Missing ' + missing.join(', ')) : ''}</div>
+            <div class="pills">${r.cancelled ? pill('neutral', 'Cancelled') : ''}${status}${pay}${r.isMilitary ? pill('neutral', 'Military') : ''}${missing.length ? pill('err', 'Needs info', 'Missing ' + missing.join(', ')) : ''}</div>
           </div>
         </div>
         <div class="rem-details">
@@ -335,9 +364,10 @@
             ${missing.length ? `<div><span class="k">Missing</span><span style="color:#831C1E;">${esc(missing.join(', '))}</span></div>` : ''}
           </div>
           ${r.notes ? `<div class="msg">${esc(r.notes)}</div>` : ''}
-          ${nextStep(r)}
+          ${r.cancelled ? `<div class="next upcoming"><div class="what"><b>Cancelled ${esc(fmtDate((r.cancelledAt || '').slice(0, 10)))}</b><span>${esc(r.cancelReason || 'No reason given')}. It doesn't count in reminders, inventory, availability or revenue.</span></div><button type="button" class="ghost-btn" onclick="restoreRental('${k}')">Restore rental</button></div>` : nextStep(r)}
+          ${askFor(r.key, String(r.name || '').split(' ')[0])}
           ${paymentControls ? `<div class="actions payment-actions">${paymentControls}</div>` : ''}
-          ${r.serviceType !== 'self' && (dOff || pOff) && !isDone(r) ? `<div class="actions">
+          ${!r.cancelled && r.serviceType !== 'self' && (dOff || pOff) && !isDone(r) ? `<div class="actions">
             ${dOff && !isOut(r) ? onTheWayBtn('delivery', r.key) : ''}
             ${pOff ? onTheWayBtn('pickup', r.key) : ''}
           </div>` : ''}
@@ -361,32 +391,72 @@
             <div class="actions">
               ${paid ? payBtn(r) : ''}
               <button type="button" class="edit-military-btn" data-key="${k}" data-military="${r.isMilitary ? 'true' : 'false'}" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">${r.isMilitary ? 'Remove military discount' : 'Mark as military'}</button>
+              ${r.cancelled ? '' : `<button type="button" class="ghost-btn" onclick="this.closest('.xpanel').querySelector('.cancel-box').hidden = false">Cancel rental</button>`}
               <button type="button" class="delete-btn" onclick="deleteRental('${k}', '${esc(r.name).replaceAll("'", '&#39;')}')">Delete rental</button>
             </div>
-            <p class="note">Delete is for cancellations, or to re-add a rental with corrected details. It can't be undone.</p>
+            <div class="cancel-box" hidden>
+              <p>Why is ${esc(String(r.name || 'this rental').split(' ')[0])} cancelling?</p>
+              <div class="reasons">
+                <button type="button" onclick="cancelRental('${k}', this.textContent)">Plans changed</button>
+                <button type="button" onclick="cancelRental('${k}', this.textContent)">Booked elsewhere</button>
+                <button type="button" onclick="cancelRental('${k}', this.textContent)">Never paid</button>
+                <button type="button" onclick="cancelRental('${k}', this.textContent)">We couldn't fit it in</button>
+              </div>
+              <div class="other">
+                <input type="text" maxlength="120" placeholder="Or type a reason" aria-label="Other reason">
+                <button type="button" onclick="cancelRental('${k}', this.previousElementSibling.value)">Cancel rental</button>
+                <button type="button" class="secondary" onclick="this.closest('.cancel-box').hidden = true">Keep it</button>
+              </div>
+            </div>
+            <p class="note">Cancel keeps the record but stops its reminders and takes it out of inventory and revenue; you can restore it. Delete erases it for good, for entries made by mistake.</p>
           </div>
         </div>
       </div>`;
   }
 
-  // ---- Next step: the text that's due next, on the same schedule as Reminders ----
-  // Each text has a due date; a text whose moment has passed (a delivery
-  // reminder after drop-off, a payment follow-up once paid) drops out.
+  // ---- Next step: what Reminders says is due for this rental ----
+  // Uses the server's reminder lists (the same rules as Reminders and the
+  // daily email), so the two pages always agree. Nothing due: shows what's
+  // coming up next, without a button.
   const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const NEXT_LABEL = {
+    delivery: 'Delivery reminder', pickupTomorrow: 'Pickup reminder', pickup: 'Pickup in 2 days',
+    addressCheck: 'Confirm pickup address', followup: 'Invoice follow-up', emailReminder: 'Payment reminder', review: 'Ask for a review',
+  };
   function nextStep(r) {
-    const steps = [];
+    const due = [];
+    for (const [list, items] of Object.entries(REM)) for (const it of items || []) if (it.key === r.key) due.push({ list, it });
+    due.sort((a, b) => (a.it.dueDate || '').localeCompare(b.it.dueDate || ''));
+    const first = esc(String(r.name || '').split(' ')[0] || 'them');
+    if (due.length) {
+      const { list, it } = due[0];
+      const self = r.serviceType === 'self';
+      const label = list === 'delivery' && self ? 'Pickup-day reminder' : list === 'pickupTomorrow' && self ? 'Return reminder'
+        : list === 'addressCheck' && it.pickupDate === addDays(TODAY, 2) ? 'Pickup reminder and address check' : NEXT_LABEL[list] || list;
+      const when = it.overdue ? `was due ${shortDate(it.dueDate)}` : 'due today';
+      // A payment reminder's text is tracked as textReminder; its Skip clears the whole reminder
+      const textFlag = list === 'emailReminder' ? 'textReminder:' + r.key : it.flagId;
+      const more = due.length > 1 ? `<span> · ${due.length - 1} more due on Reminders</span>` : '';
+      return `<div class="next"><div class="what"><b>Next: ${esc(label)}</b><span>${when}</span>${more}</div>
+        <div class="next-btns">${it.sms && r.phone ? `<a class="sms-btn" href="${escAttr(it.sms)}" data-text data-flag="${escAttr(textFlag)}" data-what="${escAttr(label)}">Text ${first}</a>` : ''}
+        <button type="button" class="skip" data-skip data-flag="${escAttr(it.flagId)}">Skip</button></div></div>`;
+    }
+    // Coming up: the earliest future reminder that hasn't been sent or skipped
     const self = r.serviceType === 'self';
-    if (r.invoicedAt && !r.backfilled && !PAID_FLAGS[r.key])
-      steps.push({ type: 'followup', label: 'Invoice follow-up', due: addDays(r.invoicedAt.slice(0, 10), 3), until: '9999-12-31', sms: r.followupSms });
-    if (r.dropoffDate) steps.push({ type: 'delivery', label: self ? 'Pickup-day reminder' : 'Delivery reminder', due: addDays(r.dropoffDate, -1), until: r.dropoffDate, sms: r.deliverySms });
-    if (r.pickupDate && !self) steps.push({ type: 'addressCheck', label: 'Confirm pickup address', due: addDays(r.pickupDate, -5), until: r.pickupDate, sms: r.addressCheckSms });
-    if (r.pickupDate) steps.push({ type: 'pickup', label: self ? 'Return reminder' : 'Pickup reminder', due: addDays(r.pickupDate, -2), until: r.pickupDate, sms: r.pickupSms });
-    if (r.pickupDate && r.reviewSms) steps.push({ type: 'review', label: 'Ask for a review', due: addDays(r.pickupDate, 3), until: addDays(r.pickupDate, 21), sms: r.reviewSms });
-    const open = steps.filter(s => !SENT_FLAGS[s.type + ':' + r.key] && TODAY <= s.until && s.sms).sort((a, b) => a.due.localeCompare(b.due));
-    if (!open.length) return '';
-    const s = open[0];
-    const when = s.due < TODAY ? `was due ${shortDate(s.due)}` : s.due === TODAY ? 'due today' : `due ${shortDate(s.due)}`;
-    return `<div class="next"><div class="what"><b>Next: ${esc(s.label)}</b><span>${when}</span></div>${textBtn(s.type, r.key, s.sms, '', 'Text ' + (r.name || '').split(' ')[0], '')}</div>`;
+    const sent = t => SENT_FLAGS[t + ':' + r.key];
+    const steps = [];
+    if (isUnpaid(r) && !sent('emailReminder') && !sent('textReminder')) {
+      const inv = r.invoicedAt.slice(0, 10);
+      if (!sent('followup')) steps.push(['Invoice follow-up', addDays(inv, 3)]);
+      steps.push(['Payment reminder', addDays(inv, 5)]);
+    }
+    if (r.dropoffDate && !sent('delivery')) steps.push([self ? 'Pickup-day reminder' : 'Delivery reminder', addDays(r.dropoffDate, -1)]);
+    if (r.pickupDate && !self && !sent('addressCheck')) steps.push(['Confirm pickup address', addDays(r.pickupDate, -5)]);
+    if (r.pickupDate && self && !sent('pickup')) steps.push(['Return reminder', addDays(r.pickupDate, -2)]);
+    if (r.pickupDate && !sent('pickupTomorrow')) steps.push([self ? 'Return reminder' : 'Pickup reminder', addDays(r.pickupDate, -1)]);
+    if (r.pickupDate && r.reviewSms && !sent('review')) steps.push(['Ask for a review', addDays(r.pickupDate, 3)]);
+    const next = steps.filter(([, d]) => d > TODAY).sort((a, b) => a[1].localeCompare(b[1]))[0];
+    return next ? `<div class="next upcoming"><div class="what"><b>Coming up: ${esc(next[0])}</b><span>${shortDate(next[1])}</span></div></div>` : '';
   }
 
   // ---- One edit form per rental ----
@@ -419,6 +489,7 @@
       <h4>Other</h4>
       <div class="g4">
         ${f('stripeUrl', 'Stripe payment link', r.stripeUrl, 'type="url" placeholder="https://buy.stripe.com/…"', 'w4')}
+        <p class="warn w4" data-stripe-warn hidden></p>
         <div class="w4"><label>Notes</label><textarea data-ef="notes" rows="2" style="resize:vertical;">${esc(r.notes || '')}</textarea></div>
       </div>
       <div class="form-actions"><button type="submit">Save changes</button><button type="button" class="secondary" onclick="closePanel('edit-${k}')">Cancel</button></div>
@@ -429,7 +500,6 @@
     el.querySelectorAll('.pay-btn').forEach(btn => btn.addEventListener('click', () => togglePaid(btn.dataset.key, btn.dataset.setpaid === 'true')));
     el.querySelectorAll('.email-reminder-btn').forEach(btn => btn.addEventListener('click', () => sendEmailReminder(btn.dataset.key)));
     el.querySelectorAll('.otw-btn').forEach(btn => btn.addEventListener('click', () => onTheWay(btn.dataset.key, btn.dataset.type)));
-    el.querySelectorAll('.unsend-btn').forEach(btn => btn.addEventListener('click', () => unmarkSent(btn.dataset.flagid)));
     el.querySelectorAll('.edit-military-btn').forEach(btn => btn.addEventListener('click', () => toggleMilitary(btn.dataset.key, btn.dataset.military === 'true')));
     el.querySelectorAll('.add-photo-btn').forEach(btn => btn.addEventListener('click', () => triggerPhotoCapture(btn.dataset.key, btn.dataset.type)));
     el.querySelectorAll('.view-photo-btn').forEach(btn => btn.addEventListener('click', () => viewPhoto(btn.dataset.key, btn.dataset.type)));
@@ -493,7 +563,7 @@
   // the on-my-way function, then swaps in a ready-to-tap text link.
   function onTheWayBtn(type, key) {
     const label = type === 'delivery' ? 'Delivery' : 'Pickup';
-    return `<span id="otw-wrap-${type}-${key}"><button type="button" id="otw-${type}-${key}" class="otw-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">On the Way (${label})</button></span>`;
+    return `<span id="otw-wrap-${type}-${key}"><button type="button" id="otw-${type}-${key}" class="otw-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">On the way: ${label.toLowerCase()}</button></span>`;
   }
 
   window.onTheWay = async (key, type) => {
@@ -513,20 +583,20 @@
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok || data.error) {
         showErr(data.error || ('On the Way calculation failed (' + resp.status + ').'));
-        if (btn) { btn.disabled = false; btn.textContent = 'On the Way (' + label + ')'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'On the way: ' + label.toLowerCase(); }
         return;
       }
-      wrap.innerHTML = `<a class="sms-btn" href="${data.sms}" style="padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control);">Text ETA — ${esc(data.arrivalTime)} →</a>`;
+      wrap.innerHTML = `<a class="sms-btn" href="${data.sms}" style="padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control);">Text ETA (${esc(data.arrivalTime)})</a>`;
     } catch {
       showErr('Network error calculating ETA.');
-      if (btn) { btn.disabled = false; btn.textContent = 'On the Way (' + label + ')'; }
+      if (btn) { btn.disabled = false; btn.textContent = 'On the way: ' + label.toLowerCase(); }
     }
   };
 
   // An invoice counts as "unpaid" once it's actually been emailed (invoicedAt,
   // not a backfilled record) and no paid flag has been set for it.
   function isUnpaid(r) {
-    return !!r.invoicedAt && !r.backfilled && !PAID_FLAGS[r.key];
+    return !!r.invoicedAt && !r.backfilled && !r.cancelled && !PAID_FLAGS[r.key];
   }
 
   function paymentBadge(r) {
@@ -534,7 +604,7 @@
       return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--green-bg); color:#14492F; border-radius:4px; vertical-align:middle;">Paid</span>`;
     }
     if (!r.invoicedAt || r.backfilled) return '';
-    return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--red-bg); color:#831C1E; border-radius:4px; vertical-align:middle;">Invoiced — Unpaid</span>`;
+    return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--red-bg); color:#831C1E; border-radius:4px; vertical-align:middle;">Invoiced, unpaid</span>`;
   }
 
   // Shows only once the customer has checked the terms-of-service box at
@@ -542,7 +612,7 @@
   function tosBadge(r) {
     if (!r.tosAccepted) return '';
     const acceptedDate = esc(fmtDate((r.tosAcceptedAt || '').slice(0, 10)));
-    return `<span title="Accepted ${acceptedDate}" style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--gold-bg); color:#6B4C0C; border-radius:4px; vertical-align:middle;">Terms Accepted</span>`;
+    return `<span title="Accepted ${acceptedDate}" style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--gold-bg); color:#6B4C0C; border-radius:4px; vertical-align:middle;">Terms accepted</span>`;
   }
 
   function militaryBadge(r) {
@@ -626,8 +696,34 @@
   // One Save for the whole edit form. Only fields that changed are sent;
   // edit-rental skips blank text fields (except notes), so a cleared box
   // can't wipe real data.
+  // Does the saved Stripe link charge the price in the form? Only package
+  // links have a known amount; a pasted one-off link can't be checked.
+  function stripeWarning(form) {
+    const url = form.querySelector('[data-ef="stripeUrl"]').value.trim();
+    const linkPrice = money(PKG_LINKS[url]), price = money(form.querySelector('[data-ef="price"]').value);
+    return linkPrice !== null && price !== null && Math.abs(linkPrice - price) > 0.004
+      ? `The Stripe link charges $${linkPrice}, but the price is $${price}. Payment reminders would send the wrong amount. Paste a link for $${price}.` : '';
+  }
+  document.addEventListener('input', (e) => {
+    const form = e.target.closest('.edit-form');
+    if (!form) return;
+    const w = stripeWarning(form), box = form.querySelector('[data-stripe-warn]');
+    box.textContent = w; box.hidden = !w;
+    form.dataset.anyway = '';
+    form.querySelector('button[type=submit]').textContent = 'Save changes';
+  });
+
   window.saveEdit = async (form) => {
     const key = form.dataset.key;
+    // A price that doesn't match the Stripe link needs a second tap
+    const sw = stripeWarning(form);
+    if (sw && form.dataset.anyway !== '1') {
+      const box = form.querySelector('[data-stripe-warn]');
+      box.textContent = sw; box.hidden = false;
+      form.dataset.anyway = '1';
+      form.querySelector('button[type=submit]').textContent = 'Save anyway';
+      return;
+    }
     const r = ALL_RENTALS.find(x => x.key === key);
     if (!r) return showErr('That rental is no longer on file. Refresh and try again.');
     const fields = {};
@@ -673,8 +769,23 @@
         showErr('Save failed (' + resp.status + '): ' + detail);
       }
     } catch { showErr('Network error. Nothing was saved.'); }
-    btn.disabled = false; btn.textContent = 'Save changes';
+    btn.disabled = false; btn.textContent = 'Save changes'; form.dataset.anyway = '';
   };
+
+  // Cancel / restore: a flag on the rental (edit-rental), so the record stays
+  async function setCancelled(key, cancel, reason) {
+    try {
+      const resp = await fetch('/.netlify/functions/edit-rental', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: $('secret').value.trim(), key, cancel, ...(cancel ? { cancelReason: reason || '' } : {}) }),
+      });
+      if (!resp.ok) return showErr((cancel ? 'Cancel' : 'Restore') + ' failed (' + resp.status + '): ' + await resp.text().catch(() => ''));
+      toast(cancel ? 'Cancelled. It’s under the Cancelled filter.' : 'Restored');
+      $('loadBtn').click();
+    } catch { showErr('Network error. Nothing was changed.'); }
+  }
+  window.cancelRental = (key, reason) => setCancelled(key, true, String(reason || '').trim());
+  window.restoreRental = (key) => setCancelled(key, false);
 
   window.deleteRental = async (key, name) => {
     if (!confirm('Delete the rental for ' + name + '? This cannot be undone.')) return;

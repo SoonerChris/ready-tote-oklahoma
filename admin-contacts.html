@@ -109,7 +109,7 @@
       const [rResp, qResp] = await Promise.all([post('get-rentals'), post('get-requests')]);
       if (rResp.status === 401 || qResp.status === 401) { showErr('Wrong admin secret.'); return; }
       if (!rResp.ok) { showErr('Load failed (' + rResp.status + ').'); return; }
-      const rentals = (await rResp.json()).rentals || [];
+      const rentals = ((await rResp.json()).rentals || []).filter(r => !r.cancelled);
       // Requests are only for finding leads; the page still works without them
       const requests = qResp.ok ? ((await qResp.json()).requests || []) : [];
       PEOPLE = buildPeople(rentals, requests);

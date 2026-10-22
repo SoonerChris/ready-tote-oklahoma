@@ -68,7 +68,7 @@ export default async (request) => {
               rows: [
                 ["Package", pkg],
                 dropoffKnown ? ["Drop-off", dropoff] : null,
-                ...lineItemRows(cleanLineItems(rental.lineItems)),
+                ...lineItemRows(cleanLineItems(rental.lineItems), rental.price),
               ],
               total: price ? ["Total due", price] : null,
             })}

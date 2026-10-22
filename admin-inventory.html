@@ -7,7 +7,7 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<title>Tote Inventory — Ready Tote Oklahoma (Internal)</title>
+<title>Inventory · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
 <script src="admin-shared.js?v=20261028"></script>
 <style>
@@ -239,7 +239,7 @@
 
       const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
       TODAY = today;
-      ALL_RENTALS = rd.rentals || [];
+      ALL_RENTALS = (rd.rentals || []).filter(r => !r.cancelled);   // cancelled rentals hold no totes
       ACTIVE_RENTALS = ALL_RENTALS.filter(r => r.dropoffDate <= today && r.pickupDate >= today);
 
       // Confirmed bookings only get written to the rentals store once Send

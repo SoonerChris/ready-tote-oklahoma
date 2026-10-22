@@ -31,24 +31,64 @@ function textBtn(type, key, smsLink, icon, label, color) {
   const flagId = type + ':' + (key || 'unknown');
   const sent = SENT_FLAGS[flagId];
   if (sent) {
-    return `<button type="button" class="unsend-btn" data-flagid="${flagId}" title="Click to mark as unsent" style="width:auto; padding:8px 16px; font-size:14px; background:var(--track); color:var(--steel); border:1px solid transparent; border-radius:6px; cursor:pointer;">${label} sent · undo</button>`;
+    return `<button type="button" class="unsend-btn" data-undo-flag="${escAttr(flagId)}" title="Mark as not sent" style="width:auto; padding:8px 16px; font-size:14px; background:var(--track); color:var(--steel); border:1px solid transparent; border-radius:6px; cursor:pointer;">${esc(label)} sent · Undo</button>`;
   }
-  return `<a class="sms-btn" href="${smsLink}" onclick="setTimeout(()=>confirmSent('${flagId}'),500)" style="padding:8px 16px; font-size:14px;">${/^text\b/i.test(label) ? label : 'Text: ' + label}</a>`;
+  return `<a class="sms-btn" href="${escAttr(smsLink)}" data-text data-flag="${escAttr(flagId)}" data-what="${escAttr(label.replace(/^text\s+/i, ''))}" style="padding:8px 16px; font-size:14px;">${esc(/^text\b/i.test(label) ? label : 'Text: ' + label)}</a>`;
 }
 
-window.confirmSent = async (flagId) => {
-  if (!confirm('Did you send the text? Mark as sent?')) return;
-  await markSent(flagId);
-};
+// ---- "Sent to Hannah?" after tapping a Text button ----
+// Tapping Text opens Messages; the card then asks whether it went out, in
+// its .card-ask box (cards carry data-key and data-first). Open questions
+// are remembered by card, so a reload puts them back.
+const TEXT_ASKS = new Map();   // card key -> { flag, what }
+function askFor(key, first) {
+  const a = TEXT_ASKS.get(key);
+  return `<div class="card-ask" data-card-ask${a ? '' : ' hidden'}>${a ? askInner(a, first) : ''}</div>`;
+}
+function askInner(a, first) {
+  const what = a.what && !/^text$/i.test(a.what) ? ' the ' + esc(a.what.toLowerCase()) + ' text' : '';
+  return `<span>Sent${what} to ${esc(first || 'them')}?</span>
+    <button type="button" data-ask-yes>Yes, sent</button>
+    <button type="button" class="linklike" data-ask-no>Not yet</button>`;
+}
+function wireTextAsks(root) {
+  root.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-text],[data-ask-yes],[data-ask-no],[data-skip],[data-undo-flag]');
+    if (!t) return;
+    const card = t.closest('[data-key]');
+    const key = card && card.dataset.key;
+    if (t.matches('[data-text]')) {
+      const a = { flag: t.dataset.flag, what: t.dataset.what || '' };
+      TEXT_ASKS.set(key, a);
+      setTimeout(() => {
+        const box = card.querySelector('[data-card-ask]');
+        if (box) { box.innerHTML = askInner(a, card.dataset.first); box.hidden = false; }
+      }, 400);
+    } else if (t.matches('[data-ask-no]')) {
+      TEXT_ASKS.delete(key);
+      t.closest('[data-card-ask]').hidden = true;
+    } else if (t.matches('[data-ask-yes]')) {
+      const a = TEXT_ASKS.get(key); if (!a) return;
+      t.disabled = true; TEXT_ASKS.delete(key);
+      markSent(a.flag);
+    } else if (t.matches('[data-skip]')) {
+      t.disabled = true; TEXT_ASKS.delete(key);
+      markSent(t.dataset.flag, { skip: true });
+    } else if (t.matches('[data-undo-flag]')) {
+      t.disabled = true;
+      unmarkSent(t.dataset.undoFlag);
+    }
+  });
+}
 
-window.markSent = async (flagId) => {
+window.markSent = async (flagId, extra = {}) => {
   const secret = $('secret').value.trim();
   if (!secret) return showErr('Enter the admin secret first.');
   try {
     const resp = await fetch('/.netlify/functions/mark-sent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ secret, flagId }),
+      body: JSON.stringify({ secret, flagId, ...extra }),
     });
     if (resp.ok) { $('loadBtn').click(); }
     else {
@@ -59,7 +99,6 @@ window.markSent = async (flagId) => {
 };
 
 window.unmarkSent = async (flagId) => {
-  if (!confirm('Mark this text as unsent? It will show as due again.')) return;
   const secret = $('secret').value.trim();
   if (!secret) return showErr('Enter the admin secret first.');
   try {

@@ -74,7 +74,24 @@ export default async (request) => {
       updated[f] = n;
       changed = true;
     }
+    // Cancel keeps the record (and its history) but takes it out of
+    // reminders, inventory, availability, revenue and payment matching.
+    // { cancel: true, cancelReason } cancels; { cancel: false } restores.
+    if (body.cancel === true) {
+      updated.cancelled = true;
+      updated.cancelledAt = new Date().toISOString();
+      updated.cancelReason = String(body.cancelReason || "").trim().slice(0, 120);
+      changed = true;
+    } else if (body.cancel === false) {
+      delete updated.cancelled; delete updated.cancelledAt; delete updated.cancelReason;
+      changed = true;
+    }
     if (!changed) return new Response("No editable fields provided", { status: 400 });
+
+    // A new price makes the saved breakdown (package, rush, discount) stale;
+    // drop it so emails show just the new total rather than lines that
+    // don't add up to it.
+    if (updated.price !== existing.price && updated.lineItems) delete updated.lineItems;
 
     await store.setJSON(body.key, updated);
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
