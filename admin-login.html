@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Sign in · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261022"></script>
+<script src="admin-shared.js?v=20261025"></script>
 <style>
   body{display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px 16px;}
   .login-card{max-width:380px; width:100%; padding:28px 28px 24px;}
@@ -107,8 +107,10 @@
       const data = await resp.json().catch(() => ({ ok: false }));
 
       if (resp.ok && data.ok) {
+        // The server set the session cookie; this browser only notes until
+        // when it's signed in. The password isn't stored anywhere.
+        localStorage.setItem('rto-admin-session', JSON.stringify({ u: username, exp: data.expires || Date.now() + 30 * 864e5 }));
         localStorage.setItem('rto-admin-username', username);
-        localStorage.setItem('rto-admin-password', password);
 
         // Chrome/Edge: explicitly ask to save this in Google Password
         // Manager. Not supported everywhere (Firefox/Safari), so this is
@@ -122,6 +124,8 @@
         }
 
         location.href = target;
+      } else if (resp.status === 429) {
+        fail(`Too many tries. For your security, sign-in is paused for about ${data.retryMinutes || 15} minutes.`);
       } else if (resp.status === 401) {
         fail('That username or password didn’t match. Check Caps Lock and try again.');
       } else {

@@ -1,8 +1,9 @@
 // POST /.netlify/functions/get-outreach
 // Returns all B2B outreach entries (apartments + realtors + moving companies).
-// Protected by INVOICE_SECRET (same secret as the other admin pages).
+// Admin only (signed-in session, see lib-auth.mjs) (same secret as the other admin pages).
 
 import { getStore } from "@netlify/blobs";
+import { isAdmin } from "./lib-auth.mjs";
 
 export default async (request) => {
   if (request.method !== "POST") {
@@ -10,7 +11,7 @@ export default async (request) => {
   }
   let body;
   try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  if (!process.env.INVOICE_SECRET || body.secret !== process.env.INVOICE_SECRET) {
+  if (!isAdmin(request, body)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

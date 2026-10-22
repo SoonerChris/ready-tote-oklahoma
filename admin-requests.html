@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Booking Requests — Ready Tote Oklahoma (Internal)</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261022"></script>
+<script src="admin-shared.js?v=20261025"></script>
 <script src="admin-availability.js?v=20261024"></script>
 <style>
   :root{--col:820px;}
@@ -109,7 +109,7 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
-  $('secret').value = localStorage.getItem('rto-admin-password') || '';
+  $('secret').value = adminSessionMarker();   // signed-in marker; the session cookie is what the server checks
 
   let ALL = [];
   const STATUS_META = {

@@ -13,6 +13,7 @@
 //   GOOGLE_PLACE_ID       - your Google Business Profile's Place ID (recommended, skips search)
 
 import { getStore } from "@netlify/blobs";
+import { readSession } from "./lib-auth.mjs";
 
 const CACHE_KEY = "google-reviews-cache";
 const CACHE_HOURS = 24;
@@ -21,7 +22,9 @@ export default async (request) => {
   // Computed first so every response, including error responses, knows
   // whether to disable caching (see json() below).
   const url = new URL(request.url);
-  const debug = url.searchParams.has("debug");
+  // ?debug skips the 24-hour cache and calls Google directly, so it's only
+  // honoured for a signed-in admin; anyone else gets the normal cached reply.
+  const debug = url.searchParams.has("debug") && !!readSession(request);
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   let placeId = process.env.GOOGLE_PLACE_ID || "";

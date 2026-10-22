@@ -2,11 +2,12 @@
 // Returns a stored delivery/pickup proof photo, or a military ID photo, as
 // base64, so the admin page can display it (no email attached to a URL —
 // kept internal, same secret pattern as every other admin function).
-// Protected by INVOICE_SECRET. This is the only way a military ID photo
+// Admin only (signed-in session, see lib-auth.mjs). This is the only way a military ID photo
 // can ever be read back — the public upload-military-id.mjs endpoint is
 // write-only, so an uploaded ID is never retrievable outside the admin.
 
 import { getStore } from "@netlify/blobs";
+import { isAdmin } from "./lib-auth.mjs";
 
 const ALLOWED_TYPES = ["delivery", "pickup", "military_id"];
 
@@ -16,7 +17,7 @@ export default async (request) => {
   }
   let body;
   try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  if (!process.env.INVOICE_SECRET || body.secret !== process.env.INVOICE_SECRET) {
+  if (!isAdmin(request, body)) {
     return new Response("Unauthorized", { status: 401 });
   }
   if (!body.key) return new Response("Missing key", { status: 400 });

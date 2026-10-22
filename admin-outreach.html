@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Outreach Tracker — Ready Tote Oklahoma (Internal)</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261022"></script>
+<script src="admin-shared.js?v=20261025"></script>
 <style>
   :root{--col:960px;}
 
@@ -200,7 +200,7 @@
     showStatus('ok', added ? `Imported ${added} remodeler contact(s).` : 'All 9 remodelers already in your list.');
   }
 
-  $('secret').value = localStorage.getItem('rto-admin-password') || '';
+  $('secret').value = adminSessionMarker();   // signed-in marker; the session cookie is what the server checks
   $('loadBtn').addEventListener('click', loadAll);
   // Auto-load if a secret is already saved (matches admin.html/admin-finance.html behavior)
   if ($('secret').value) loadAll();

@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Contacts · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261022"></script>
+<script src="admin-shared.js?v=20261025"></script>
 <style>
   /* One row per person, built from every rental and booking request:
      customers (with what they've rented and spent) and leads (people who
@@ -92,7 +92,7 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
-  $('secret').value = localStorage.getItem('rto-admin-password') || '';
+  $('secret').value = adminSessionMarker();   // signed-in marker; the session cookie is what the server checks
 
   let PEOPLE = [], FILTER = 'all';
   $('loadBtn').addEventListener('click', load);

@@ -16,6 +16,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { smsLink, dropoffAddressOf, pickupAddressOf } from "./lib-reminders.mjs";
+import { isAdmin } from "./lib-auth.mjs";
 
 const DEFAULT_HOME_ADDRESS = "313 SW 166th St, Oklahoma City, OK 73170";
 
@@ -27,7 +28,7 @@ export default async (request) => {
   let body;
   try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
 
-  if (!process.env.INVOICE_SECRET || body.secret !== process.env.INVOICE_SECRET) {
+  if (!isAdmin(request, body)) {
     return json({ error: "Unauthorized" }, 401);
   }
 

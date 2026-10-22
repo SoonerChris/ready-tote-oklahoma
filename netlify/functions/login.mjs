@@ -1,42 +1,54 @@
 // POST /.netlify/functions/login
-// Verifies a username/password pair for the admin login page.
+// Checks the admin username and password and, if they match, starts a
+// 30-day session: a signed HttpOnly cookie the other admin functions accept
+// (see lib-auth.mjs). The browser never stores the password.
 //
-// Reuses INVOICE_SECRET as the password value on purpose — every other
-// protected function already checks body.secret against INVOICE_SECRET,
-// so this keeps that unchanged and adds exactly one new env var:
-//   ADMIN_USERNAME - the username admin-login.html asks for
+//   INVOICE_SECRET - the admin password
+//   ADMIN_USERNAME - the username; if unset, any username is accepted with
+//                    the right password, so a missing setting can't lock you out
 //
-// Does not set a session/cookie. admin-login.html stores the verified
-// username/password in localStorage and every other admin page sends
-// them back as { secret: password, ... } on each request, same as before.
+// Too many wrong tries from one address (10 in 15 minutes) are turned away
+// for the rest of that window, so the password can't be guessed by brute force.
 
-export default async (request) => {
+import { getStore } from "@netlify/blobs";
+import { passwordMatches, usernameMatches, createSession, sessionCookie } from "./lib-auth.mjs";
+
+const MAX_FAILURES = 10;
+const WINDOW_MS = 15 * 60 * 1000;
+
+const json = (obj, status, headers = {}) => new Response(JSON.stringify(obj), {
+  status,
+  headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...headers },
+});
+
+export default async (request, context) => {
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
   let body;
   try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
 
-  const { username, password } = body;
-
-  const passwordOk = !!process.env.INVOICE_SECRET && password === process.env.INVOICE_SECRET;
-  // If ADMIN_USERNAME hasn't been set in Netlify yet, don't enforce it —
-  // any username is accepted as long as the password is right. This is a
-  // deliberate safety net: forgetting to set this one env var shouldn't be
-  // able to lock Chris out of his own admin tools. Set it to actually
-  // require a specific username.
-  const usernameOk = !process.env.ADMIN_USERNAME || username === process.env.ADMIN_USERNAME;
-  const ok = passwordOk && usernameOk;
-
-  if (!ok) {
-    return new Response(JSON.stringify({ ok: false }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
+  // One counter per client address; the rate limit is best-effort, so a
+  // storage hiccup never blocks a correct sign-in.
+  const ip = (context && context.ip) || request.headers.get("x-nf-client-connection-ip") || "unknown";
+  const store = getStore("login-attempts");
+  const key = "ip_" + ip.replace(/[^a-zA-Z0-9.:_-]/g, "_");
+  let record = null;
+  try { record = await store.get(key, { type: "json" }); } catch {}
+  const now = Date.now();
+  if (record && now - record.first > WINDOW_MS) record = null;
+  if (record && record.count >= MAX_FAILURES) {
+    const wait = Math.ceil((record.first + WINDOW_MS - now) / 60000);
+    return json({ ok: false, error: "too_many_attempts", retryMinutes: wait }, 429, { "Retry-After": String(wait * 60) });
   }
 
-  return new Response(JSON.stringify({ ok: true }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
+  const ok = passwordMatches(body.password) && usernameMatches(body.username);
+  if (!ok) {
+    try { await store.setJSON(key, { first: record ? record.first : now, count: (record ? record.count : 0) + 1 }); } catch {}
+    return json({ ok: false }, 401);
+  }
+
+  try { if (record) await store.delete(key); } catch {}
+  const { token, expires } = createSession(body.username);
+  return json({ ok: true, expires }, 200, { "Set-Cookie": sessionCookie(token) });
 };

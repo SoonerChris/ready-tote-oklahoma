@@ -2,9 +2,10 @@
 // Logs a rental record directly (no email sent). Used by the "Log only, no
 // email" mode of admin-invoice.html, for bookings paid another way or for
 // backfilling past rentals.
-// Protected by INVOICE_SECRET.
+// Admin only (signed-in session, see lib-auth.mjs).
 
 import { getStore } from "@netlify/blobs";
+import { isAdmin } from "./lib-auth.mjs";
 
 // toteCount/dollyCount drive Inventory math directly, so they're validated
 // as real whole numbers here rather than parsed out of the package text.
@@ -22,7 +23,7 @@ export default async (request) => {
   }
   let body;
   try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  if (!process.env.INVOICE_SECRET || body.secret !== process.env.INVOICE_SECRET) {
+  if (!isAdmin(request, body)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

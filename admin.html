@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Dashboard · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261022"></script>
+<script src="admin-shared.js?v=20261025"></script>
 <style>
   /* Dashboard layout: the cream body is the frame (sidebar on it, no rule),
      the work sits on one white sheet inset 8px from the window's right,
@@ -232,7 +232,7 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
-  $('secret').value = localStorage.getItem('rto-admin-password') || '';
+  $('secret').value = adminSessionMarker();   // signed-in marker; the session cookie is what the server checks
 
   $('loadBtn').addEventListener('click', load);
   // Auto-load if secret is saved

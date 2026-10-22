@@ -1,6 +1,6 @@
 // POST /.netlify/functions/update-request
 // Moves a booking request through its pipeline and/or patches its details.
-// Protected by INVOICE_SECRET.
+// Admin only (signed-in session, see lib-auth.mjs).
 //
 // Body: { secret, key, action, ...fields }
 // action one of: "review" | "send-confirmation" | "confirm" | "decline" | "reopen" | "invoice"
@@ -9,6 +9,7 @@
 // a typo'd address or add review notes.
 
 import { getStore } from "@netlify/blobs";
+import { isAdmin } from "./lib-auth.mjs";
 
 const EDITABLE_FIELDS = [
   "name", "email", "phone", "package",
@@ -26,7 +27,7 @@ export default async (request) => {
   }
   let body;
   try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  if (!process.env.INVOICE_SECRET || body.secret !== process.env.INVOICE_SECRET) {
+  if (!isAdmin(request, body)) {
     return new Response("Unauthorized", { status: 401 });
   }
   if (!body.key) return new Response("Missing key", { status: 400 });
