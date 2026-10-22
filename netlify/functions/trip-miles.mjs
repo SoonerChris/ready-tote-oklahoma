@@ -1,7 +1,7 @@
 // POST /.netlify/functions/trip-miles
 // Round-trip driving miles from home to a rental's drop-off or pickup
-// address and back, for logging business mileage on Finance. Uses the same
-// Google Distance Matrix setup as on-my-way.mjs.
+// address and back, for logging business mileage on Finance. Uses the
+// Routes API through lib-routes.mjs, same as on-my-way.mjs.
 // Admin only (signed-in session, see lib-auth.mjs).
 //
 // Body: { key, type: "delivery" | "pickup", origin? }
@@ -13,6 +13,7 @@
 import { getStore } from "@netlify/blobs";
 import { dropoffAddressOf, pickupAddressOf } from "./lib-reminders.mjs";
 import { isAdmin } from "./lib-auth.mjs";
+import { routeMatrix } from "./lib-routes.mjs";
 
 const DEFAULT_HOME_ADDRESS = "313 SW 166th St, Oklahoma City, OK 73170";
 const METERS_PER_MILE = 1609.344;
@@ -38,17 +39,15 @@ export default async (request) => {
 
   try {
     // Out and back as two legs, since one-way distance can differ by direction
-    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins=${encodeURIComponent(origin + "|" + destination)}&destinations=${encodeURIComponent(destination + "|" + origin)}&key=${apiKey}`;
-    const data = await (await fetch(url)).json();
-    if (data.status !== "OK") return json({ error: "Google Maps error: " + data.status }, 502);
-    const out = data.rows?.[0]?.elements?.[0], back = data.rows?.[1]?.elements?.[1];
-    if (!out || out.status !== "OK" || !back || back.status !== "OK") {
+    const grid = await routeMatrix(apiKey, [origin, destination], [destination, origin]);
+    const out = grid[0][0], back = grid[1][1];
+    if (!out || !back) {
       return json({ error: "Couldn't find a driving route to that address. Check it and try again." }, 502);
     }
-    const miles = Math.round(((out.distance.value + back.distance.value) / METERS_PER_MILE) * 10) / 10;
+    const miles = Math.round(((out.meters + back.meters) / METERS_PER_MILE) * 10) / 10;
     return json({ miles, destination, origin });
   } catch (e) {
     console.error("trip-miles failed:", e.message);
-    return json({ error: "Network error calculating miles" }, 500);
+    return json({ error: e.message || "Network error calculating miles" }, 502);
   }
 };
