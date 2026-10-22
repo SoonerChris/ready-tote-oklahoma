@@ -7,26 +7,51 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<title>Contacts — Ready Tote Oklahoma (Internal)</title>
+<title>Contacts · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
 <script src="admin-shared.js?v=20261022"></script>
 <style>
+  /* One row per person, built from every rental and booking request:
+     customers (with what they've rented and spent) and leads (people who
+     asked but haven't booked yet). */
   :root{--col:1140px;}
-
-  .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
-  .toolbar input[type=search]{flex:1;min-width:220px;margin:0;}
-  .count-badge{font-size:14px;color:var(--steel);white-space:nowrap;}
-
-  .tbl-wrap table{min-width:760px;}
-  td.name{font-weight:bold;white-space:nowrap;}
-  td.mono{white-space:nowrap;}
-  td a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--control);}
-  td a:hover{text-decoration-color:var(--ink);}
-  td.addr{color:var(--steel);font-size:13px;max-width:260px;}
-  .pkg-badge{position:relative;display:inline-flex;align-items:center;font-size:12px;font-weight:600;background:var(--gold-bg);color:#6B4C0C;padding:3px 8px 3px 16px;border-radius:3px 10px 10px 3px;white-space:nowrap;}
-  .pkg-badge::before{content:'';position:absolute;left:6px;top:50%;transform:translateY(-50%);width:4px;height:4px;border-radius:50%;background:var(--white);}
-  .no-results{padding:24px;text-align:center;color:var(--steel);font-size:15px;}
-
+  .num{font-variant-numeric:tabular-nums;}
+  .toolbar{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px;}
+  .toolbar input[type=search]{flex:1 1 260px; margin:0;}
+  .toolbar .grow{flex:1;}
+  .toolbar button{width:auto; margin:0; height:38px; padding:0 14px; font-size:14px;}
+  .fchips{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;}
+  .fchips button{width:auto; margin:0; height:34px; padding:0 12px; font-size:14px; font-weight:600; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:999px;}
+  .fchips button:hover{background:#fff; border-color:var(--ink);}
+  .fchips button[aria-pressed="true"]{background:var(--ink); color:#fff; border-color:var(--ink);}
+  .fchips .n{font-weight:500; opacity:.75; margin-left:4px;}
+  .count-line{font-size:14px; color:var(--steel); margin:0 0 8px;}
+  .count-line b{color:var(--ink);}
+  table.people{width:100%; border-collapse:collapse; font-size:14px;}
+  table.people th{font-size:12px; font-weight:500; color:var(--steel); text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap;}
+  table.people td{padding:12px 10px; border-bottom:1px solid #F1EDE4; vertical-align:top; font-variant-numeric:tabular-nums;}
+  table.people tr:last-child td{border-bottom:none;}
+  table.people .r{text-align:right; white-space:nowrap;}
+  table.people .who b{font-size:15px;}
+  table.people .minor{display:block; font-size:13px; color:var(--steel); margin-top:2px;}
+  table.people a{color:var(--ink); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
+  .acts{display:flex; gap:6px; justify-content:flex-end;}
+  .acts a{display:inline-flex; align-items:center; height:32px; padding:0 10px; border:1px solid var(--control); border-radius:6px; font-size:13px; font-weight:600; text-decoration:none !important; white-space:nowrap;}
+  .acts a:hover{border-color:var(--ink);}
+  .pill.neutral{background:var(--track); color:#4A433B;}
+  .no-results{padding:14px; border:1px dashed var(--control); border-radius:8px; color:var(--steel); font-size:14px;}
+  @media(max-width:960px){
+    table.people thead{display:none;}
+    table.people, table.people tbody{display:block;}
+    table.people tr{display:grid; grid-template-columns:1fr auto; gap:4px 12px; padding:12px 0; border-bottom:1px solid #F1EDE4;}
+    table.people td{display:block; padding:0; border:none;}
+    table.people td.c-who{grid-column:1; grid-row:1;}
+    table.people td.c-money{grid-column:2; grid-row:1;}
+    table.people td.c-contact{grid-column:1 / -1; grid-row:2;}
+    table.people td.c-last{grid-column:1; grid-row:3; color:var(--steel); font-size:13px;}
+    table.people td.c-act{grid-column:2; grid-row:3;}
+    table.people td.c-hide{display:none;}
+  }
 </style>
 </head>
 <body>
@@ -35,7 +60,7 @@
     <a href="admin.html">Dashboard</a>
   <a href="admin-requests.html">Requests</a>
     <a href="admin-invoice.html">Send Invoice</a>
-    <a href="admin-add-rental.html">Add Rental</a>
+    <a href="admin-invoice.html?mode=log">Add Rental</a>
     <a href="admin-reminders.html">Reminders</a>
   <a href="admin-rentals.html">All Rentals</a>
     <a href="admin-contacts.html" aria-current="page">Contacts</a>
@@ -45,29 +70,21 @@
   </nav>
 
   <h1>Contacts</h1>
-  <p class="sub">Every renter's phone, email, and address in one searchable table. Sorted by most recent rental first.</p>
+  <p class="sub">Everyone who has rented or asked about renting, one row per person. Customers show what they've rented and spent; leads asked but haven't booked yet.</p>
 
-  <div class="secret-bar">
   <input type="hidden" id="secret">
-    <button id="loadBtn">Refresh</button>
-  </div>
+  <button id="loadBtn">Refresh</button>
   <div class="status" id="status"></div>
 
   <div id="results" style="display:none;">
     <div class="toolbar">
-      <input type="search" id="search" placeholder="Search name, phone, email, or address…">
-      <span class="count-badge" id="countBadge"></span>
+      <input type="search" id="search" placeholder="Search name, phone, email or address" aria-label="Search contacts">
+      <button type="button" class="secondary" id="copyEmailsBtn">Copy emails</button>
+      <button type="button" class="secondary" id="csvBtn">Download CSV</button>
     </div>
-    <div class="tbl-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th><th>Phone</th><th>Email</th><th>Package</th><th>Drop-off</th><th>Pickup</th><th>Address</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-    </div>
+    <div class="fchips" id="chips" role="group" aria-label="Show"></div>
+    <p class="count-line" id="countLine"></p>
+    <div id="peopleList"></div>
   </div>
 </div>
 
@@ -77,76 +94,154 @@
   const $ = (id) => document.getElementById(id);
   $('secret').value = localStorage.getItem('rto-admin-password') || '';
 
-  let ALL_ROWS = [];
-
+  let PEOPLE = [], FILTER = 'all';
   $('loadBtn').addEventListener('click', load);
-  $('search').addEventListener('input', () => renderTable(filterRows($('search').value)));
-  // Auto-load if secret is already saved (matches other admin pages)
+  $('search').addEventListener('input', render);
   if ($('secret').value) load();
 
   async function load() {
     const secret = $('secret').value.trim();
     if (!secret) return showErr('Enter the admin secret.');
     const btn = $('loadBtn');
-    btn.disabled = true; btn.textContent = 'Refresh';
+    btn.disabled = true; btn.textContent = 'Refreshing…';
     try {
-      const resp = await fetch('/.netlify/functions/get-rentals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret }),
-      });
-      if (resp.status === 401) { showErr('Wrong admin secret.'); return; }
-      if (!resp.ok) { showErr('Load failed (' + resp.status + ').'); return; }
-      const data = await resp.json();
-      const rentals = data.rentals || [];
-      ALL_ROWS = [...rentals].sort((a, b) => (b.dropoffDate || '').localeCompare(a.dropoffDate || ''));
-      $('search').value = '';
-      renderTable(ALL_ROWS);
+      const post = fn => fetch('/.netlify/functions/' + fn, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret }) });
+      const [rResp, qResp] = await Promise.all([post('get-rentals'), post('get-requests')]);
+      if (rResp.status === 401 || qResp.status === 401) { showErr('Wrong admin secret.'); return; }
+      if (!rResp.ok) { showErr('Load failed (' + rResp.status + ').'); return; }
+      const rentals = (await rResp.json()).rentals || [];
+      // Requests are only for finding leads; the page still works without them
+      const requests = qResp.ok ? ((await qResp.json()).requests || []) : [];
+      PEOPLE = buildPeople(rentals, requests);
+      render();
       $('results').style.display = 'block';
       $('status').style.display = 'none';
     } catch {
-      showErr('Network error — use this page on the live site.');
+      showErr('Network error. This page only works on the live site.');
     } finally {
       btn.disabled = false; btn.textContent = 'Refresh';
     }
   }
 
-  function filterRows(q) {
-    q = q.trim().toLowerCase();
-    if (!q) return ALL_ROWS;
-    return ALL_ROWS.filter(r => {
-      const hay = [r.name, r.phone, r.email, dropoffAddressOf(r), pickupAddressOf(r), r.package]
-        .filter(Boolean).join(' ').toLowerCase();
-      return hay.includes(q);
-    });
+  // ---- People: rentals and requests grouped by phone, else email, else name ----
+  const priceNum = p => { const m = String(p || '').replace(/[^0-9.]/g, ''); return m ? parseFloat(m) : 0; };
+  const money = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function personKey(x) {
+    const d = String(x.phone || '').replace(/\D/g, '').slice(-10);
+    if (d.length === 10) return 'p' + d;
+    if (x.email) return 'e' + String(x.email).trim().toLowerCase();
+    return 'n' + String(x.name || '').trim().toLowerCase();
+  }
+  function buildPeople(rentals, requests) {
+    const map = new Map();
+    const get = (x) => {
+      const k = personKey(x);
+      if (!map.has(k)) map.set(k, { key: k, name: '', phone: '', email: '', address: '', city: '', rentals: [], leads: [], latest: '' });
+      return map.get(k);
+    };
+    // Newest first, so the latest name, email and address win
+    for (const r of [...rentals].sort((a, b) => (b.dropoffDate || '').localeCompare(a.dropoffDate || ''))) {
+      const p = get(r);
+      p.rentals.push(r);
+      p.name ||= r.name || ''; p.phone ||= r.phone || ''; p.email ||= r.email || '';
+      if (!p.address) { p.address = dropoffAddressOf(r) || ''; p.city = r.dropoffAddressCity || ''; }
+      if ((r.dropoffDate || '') > p.latest) p.latest = r.dropoffDate || '';
+    }
+    // A request becomes a rental once invoiced; only the others are leads
+    for (const q of [...requests].sort((a, b) => (b.submittedAt || '').localeCompare(a.submittedAt || ''))) {
+      if (q.status === 'invoiced') continue;
+      const p = get(q);
+      p.leads.push(q);
+      p.name ||= q.name || ''; p.phone ||= q.phone || ''; p.email ||= q.email || '';
+      if (!p.address) { p.address = deliveryAddressOf(q) || ''; p.city = q.deliveryAddressCity || ''; }
+    }
+    return [...map.values()].map(p => ({
+      ...p,
+      spent: p.rentals.reduce((t, r) => t + priceNum(r.price), 0),
+      kind: p.rentals.length > 1 ? 'repeat' : p.rentals.length ? 'customer' : 'lead',
+      leadDate: p.leads.length ? (p.leads[0].submittedAt || '').slice(0, 10) : '',
+    })).sort((a, b) => (b.latest || b.leadDate).localeCompare(a.latest || a.leadDate));
   }
 
-  function renderTable(rows) {
-    $('countBadge').textContent = rows.length + (rows.length === 1 ? ' contact' : ' contacts');
-    const tb = $('tbody');
+  const FILTERS = [
+    ['all', 'All', () => true],
+    ['customers', 'Customers', p => p.rentals.length > 0],
+    ['repeat', 'Repeat', p => p.rentals.length > 1],
+    ['leads', 'Leads', p => p.kind === 'lead'],
+  ];
+  window.setFilter = f => { FILTER = f; render(); };
+  function matches(p, q) {
+    if (!q) return true;
+    const hay = [p.name, p.phone, String(p.phone).replace(/\D/g, ''), p.email, p.address,
+      ...p.rentals.map(r => r.package), ...p.rentals.map(r => pickupAddressOf(r))].join(' ').toLowerCase();
+    return q.split(/\s+/).every(w => hay.includes(w));
+  }
+  function visible() {
+    const q = $('search').value.trim().toLowerCase();
+    return PEOPLE.filter(p => matches(p, q)).filter(FILTERS.find(f => f[0] === FILTER)[2]);
+  }
+
+  function render() {
+    const q = $('search').value.trim().toLowerCase();
+    const found = PEOPLE.filter(p => matches(p, q));
+    $('chips').innerHTML = FILTERS.map(([id, label, fn]) =>
+      `<button type="button" aria-pressed="${FILTER === id}" onclick="setFilter('${id}')">${label}<span class="n">${found.filter(fn).length}</span></button>`).join('');
+    const rows = visible();
+    const spent = rows.reduce((t, p) => t + p.spent, 0);
+    $('countLine').innerHTML = rows.length
+      ? `<b class="num">${rows.length}</b> ${rows.length === 1 ? 'person' : 'people'}${spent ? ` · <b class="num">${money(spent)}</b> in rentals` : ''}`
+      : '';
     if (!rows.length) {
-      const q = esc($('search').value);
-      tb.innerHTML = `<tr><td colspan="7" class="no-results">No contacts match "${q}".</td></tr>`;
+      $('peopleList').innerHTML = `<p class="no-results">${q ? `No one matches “${esc($('search').value.trim())}”.` : 'No one here yet.'}</p>`;
       return;
     }
-    tb.innerHTML = rows.map(r => {
-      const addr = dropoffAddressOf(r) || pickupAddressOf(r);
-      const pickupAddr = pickupAddressOf(r);
-      const addrTitle = (pickupAddr && pickupAddr !== addr) ? ` title="Pickup address: ${escAttr(pickupAddr)}"` : '';
-      const phoneDigits = (r.phone || '').replace(/[^0-9+]/g, '');
-      return `
-      <tr>
-        <td class="name">${esc(r.name)}</td>
-        <td class="mono">${r.phone ? `<a href="tel:${escAttr(phoneDigits)}">${esc(r.phone)}</a>` : '—'}</td>
-        <td class="mono">${r.email ? `<a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : '—'}</td>
-        <td>${r.package ? `<span class="pkg-badge">${esc(r.package)}</span>` : ''}</td>
-        <td class="mono">${esc(fmtDate(r.dropoffDate))}</td>
-        <td class="mono">${esc(fmtDate(r.pickupDate))}</td>
-        <td class="addr"${addrTitle}>${esc(addr)}</td>
-      </tr>`;
-    }).join('');
+    const day = iso => iso ? new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+    $('peopleList').innerHTML = `
+      <table class="people">
+        <thead><tr><th>Name</th><th>Contact</th><th class="r">Rentals</th><th>Last rental</th><th>Area</th><th></th></tr></thead>
+        <tbody>${rows.map(p => {
+          const digits = String(p.phone || '').replace(/[^0-9+]/g, '');
+          const tag = p.kind === 'repeat' ? '<span class="pill ok">Repeat</span>' : p.kind === 'lead' ? '<span class="pill pending">Lead</span>' : '';
+          const last = p.rentals.length ? day(p.latest) + `<span class="minor">${esc(p.rentals[0].package ? p.rentals[0].package.split(/\s+—\s+/)[0] : '')}</span>`
+            : `Asked ${day(p.leadDate)}<span class="minor">${esc(p.leads[0].status === 'declined' ? 'Declined' : 'Not booked yet')}</span>`;
+          return `<tr>
+            <td class="c-who who"><b>${esc(p.name || 'No name')}</b> ${tag}</td>
+            <td class="c-contact">${p.phone ? `<a href="tel:${escAttr(digits)}">${esc(p.phone)}</a>` : '—'}${p.email ? `<span class="minor"><a href="mailto:${escAttr(p.email)}">${esc(p.email)}</a></span>` : ''}</td>
+            <td class="c-money r">${p.rentals.length ? `${p.rentals.length} ${p.rentals.length === 1 ? 'rental' : 'rentals'}<span class="minor">${money(p.spent)}</span>` : '<span style="color:var(--steel)">—</span>'}</td>
+            <td class="c-last">${last}</td>
+            <td class="c-hide" style="color:var(--steel);">${esc(p.city || (p.address.split(',').slice(-2, -1)[0] || '').trim() || '—')}</td>
+            <td class="c-act"><div class="acts">
+              ${digits ? `<a href="sms:${escAttr(normalizePhone(p.phone))}">Text</a>` : ''}
+              ${p.email ? `<a href="mailto:${escAttr(p.email)}">Email</a>` : ''}
+            </div></td>
+          </tr>`; }).join('')}
+        </tbody>
+      </table>`;
   }
-  function showErr(m) { const s = $('status'); s.className = 'status err'; s.textContent = m; }
+
+  // ---- Export: what's on screen (search and filter applied) ----
+  $('copyEmailsBtn').addEventListener('click', async () => {
+    const emails = [...new Set(visible().map(p => String(p.email || '').trim()).filter(Boolean))];
+    if (!emails.length) return showErr('No emails in this list.');
+    try {
+      await navigator.clipboard.writeText(emails.join(', '));
+      showOk(`Copied ${emails.length} email${emails.length === 1 ? '' : 's'}. Paste them into BCC.`);
+    } catch { showErr('Couldn’t copy. Your browser blocked the clipboard.'); }
+  });
+  $('csvBtn').addEventListener('click', () => {
+    const rows = visible();
+    if (!rows.length) return showErr('Nothing to export.');
+    const cols = ['name', 'type', 'phone', 'email', 'address', 'rentals', 'totalSpent', 'lastRental', 'requested'];
+    const cell = v => '"' + String(v ?? '').replaceAll('"', '""') + '"';
+    const lines = [cols.join(',')].concat(rows.map(p => [p.name, p.kind, p.phone, p.email, p.address, p.rentals.length, p.spent.toFixed(2), p.latest, p.leadDate].map(cell).join(',')));
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([lines.join('\r\n')], { type: 'text/csv' }));
+    a.download = 'ready-tote-contacts-' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click(); URL.revokeObjectURL(a.href);
+  });
+
+  function showErr(m) { const s = $('status'); s.style.display = 'block'; s.className = 'status err'; s.textContent = m; }
+  function showOk(m) { const s = $('status'); s.style.display = 'block'; s.className = 'status ok'; s.textContent = m; setTimeout(() => { s.style.display = 'none'; }, 3000); }
 </script>
 </body>
 </html>

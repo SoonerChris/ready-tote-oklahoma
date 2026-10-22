@@ -150,7 +150,7 @@
   <a href="admin.html" aria-current="page">Dashboard</a>
   <a href="admin-requests.html">Requests</a>
   <a href="admin-invoice.html">Send Invoice</a>
-  <a href="admin-add-rental.html">Add Rental</a>
+  <a href="admin-invoice.html?mode=log">Add Rental</a>
   <a href="admin-reminders.html">Reminders</a>
   <a href="admin-rentals.html">All Rentals</a>
   <a href="admin-contacts.html">Contacts</a>
@@ -170,7 +170,7 @@
     <div class="title-actions">
       <span class="fresh" id="fresh"></span>
       <button type="button" class="linkbtn" id="loadBtn">Refresh</button>
-      <a class="btn primary" id="primaryAction" href="admin-add-rental.html">Add rental</a>
+      <a class="btn primary" id="primaryAction" href="admin-invoice.html?mode=log">Add rental</a>
     </div>
   </div>
 
@@ -396,7 +396,7 @@
     // ---- Primary action follows the waiting work ----
     const pa = $('primaryAction');
     if (pendingRequests > 0) { pa.href = 'admin-requests.html'; pa.textContent = `Review ${plural(pendingRequests, 'request')}`; }
-    else { pa.href = 'admin-add-rental.html'; pa.textContent = 'Add rental'; }
+    else { pa.href = 'admin-invoice.html?mode=log'; pa.textContent = 'Add rental'; }
 
     // ---- Tote fleet ----
     const scale = Math.max(totalTotesOwned, totesDeployed) || 1;

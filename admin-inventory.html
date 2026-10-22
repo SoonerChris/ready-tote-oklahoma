@@ -11,8 +11,29 @@
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
 <script src="admin-shared.js?v=20261022"></script>
 <style>
-  .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:16px 20px;}
-  @media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr);}}
+  :root{--col:960px;}
+  .finding{margin:4px 0 20px; font-size:17px; max-width:760px; line-height:1.45;}
+  .finding b{font-weight:600;}
+  .finding .bad{color:#831C1E; font-weight:600;}
+  .stats{display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--line); border-radius:10px; margin-bottom:24px;}
+  .stats .stat{padding:14px 18px; border-left:1px solid var(--line);}
+  .stats .stat:first-child{border-left:none;}
+  .stats .cap{font-size:13px; color:var(--steel); margin-top:2px;}
+  .panel{border:1px solid var(--line); border-radius:10px; padding:16px 20px 16px; margin-bottom:24px;}
+  .panel-head{display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:8px;}
+  .panel-head h2{margin:0; font-size:16px;}
+  .legend{display:flex; gap:14px; font-size:13px; color:var(--steel);}
+  .legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px;}
+  #freeChart svg{display:block; width:100%; height:auto; overflow:visible;}
+  #freeChart .tick{font-size:12px; fill:var(--steel);}
+  #freeChart .lbl{font-size:12px; fill:var(--ink); font-weight:600;}
+  details.cal-toggle{margin-top:28px;}
+  details.cal-toggle summary{cursor:pointer; font-size:14px; font-weight:600; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
+  @media(max-width:640px){
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .stats .stat:nth-child(3){border-left:none;}
+    .stats .stat:nth-child(n+3){border-top:1px solid var(--line);}
+  }
   .stats .num{font-weight:600; font-size:26px; line-height:1.15; font-variant-numeric:tabular-nums;}
   .stats .lbl{font-size:13px; color:var(--steel); font-variant-numeric:tabular-nums;}
   .stats .num.warn{color:var(--crate-red);}
@@ -52,7 +73,7 @@
   <a href="admin.html">Dashboard</a>
   <a href="admin-requests.html">Requests</a>
   <a href="admin-invoice.html">Send Invoice</a>
-  <a href="admin-add-rental.html">Add Rental</a>
+  <a href="admin-invoice.html?mode=log">Add Rental</a>
   <a href="admin-reminders.html">Reminders</a>
   <a href="admin-rentals.html">All Rentals</a>
   <a href="admin-contacts.html">Contacts</a>
@@ -62,38 +83,28 @@
 </nav>
 <div class="card">
   <h1>Inventory</h1>
-  <p class="sub">Track totes owned and estimate how many are out on rental right now — including confirmed bookings that haven't been invoiced yet — and project availability forward using every rental on the books. Uses the Tote/Dolly count set on each rental; older rentals without one fall back to parsing the package name.</p>
+  <p class="finding" id="finding"><span style="color:var(--steel)">Loading your stock…</span></p>
 
   <input type="hidden" id="secret">
   <button id="loadBtn">Refresh</button>
   <div class="status" id="status"></div>
 
   <div id="results" style="display:none;">
-    <div class="rem stats" id="statCards"></div>
+    <div class="stats" id="statCards"></div>
 
-    <h2>Confirmed, not yet invoiced</h2>
-    <div class="rem">
-      <p class="note" style="margin:0 0 10px;">Bookings marked Confirmed on the Requests page don't count anywhere else until they're actually invoiced — this is the gap that caused the count to drift before. Totes here are estimated from the package name, since requests don't have a set tote count the way rentals do.</p>
-      <div id="pendingConfirmed"></div>
-    </div>
+    <section class="panel" aria-labelledby="chartTitle">
+      <div class="panel-head"><h2 id="chartTitle">Free totes, next 60 days</h2>
+        <div class="legend"><span><i style="background:#A87F22"></i>Free</span><span><i style="background:#D9A13B"></i>Under 20</span><span><i style="background:var(--red)"></i>Overbooked</span></div></div>
+      <div id="freeChart"></div>
+      <p class="note" style="margin:6px 0 0;">Totes owned minus every rental on the books and every confirmed booking not yet invoiced, day by day. Hover a day for its number.</p>
+    </section>
 
-    <h2>Data cleanup</h2>
-    <div class="rem">
-      <p class="note" style="margin:0 0 10px;">Sets Tote/Dolly counts on older rentals from before those fields existed, by parsing the package text. Skips anything it can't confidently parse (e.g. "Custom Package") so it never guesses a wrong number — you'll get a list to fix by hand.</p>
-      <button type="button" id="backfillBtn" style="width:auto; padding:10px 18px;">Backfill counts from package text</button>
-      <div id="backfillResult" style="margin-top:10px;"></div>
-    </div>
-
-    <h2>Inventory calendar, past 60 days to next 60</h2>
-    <div class="rem">
-      <div class="exp-legend">
-        <span><i class="exp-dot open"></i>Plenty free</span>
-        <span><i class="exp-dot limited"></i>Under 20 free</span>
-        <span><i class="exp-dot booked"></i>Zero or oversold</span>
-        <span><i class="exp-dot" style="background:var(--white); border:2px solid var(--ink);"></i>Today</span>
+    <div id="pendingSection" hidden>
+      <h2>Confirmed, not yet invoiced</h2>
+      <div class="rem">
+        <p class="note" style="margin:0 0 10px;">These bookings hold totes but aren't rentals yet. Totes are estimated from the package name until they're invoiced.</p>
+        <div id="pendingConfirmed"></div>
       </div>
-      <p class="note" style="margin:0 0 12px;">Each cell is totes owned minus everything scheduled to be out that day. Past days are reconstructed from your logged rentals and stock events, so this is only as accurate as what's been logged. Future days project forward using every rental on the books (not just currently active ones) and your current tote count, so you can see upcoming crunches before they happen.</p>
-      <div class="exp-scroll" id="expectedCal"></div>
     </div>
 
     <h2>Log a stock change</h2>
@@ -117,6 +128,29 @@
 
     <h2>History</h2>
     <div id="evList"></div>
+
+    <details class="cal-toggle">
+      <summary>Show the day-by-day calendar (past 60 days to next 60)</summary>
+      <div class="rem" style="margin-top:12px;">
+        <div class="exp-legend">
+          <span><i class="exp-dot open"></i>Plenty free</span>
+          <span><i class="exp-dot limited"></i>Under 20 free</span>
+          <span><i class="exp-dot booked"></i>Zero or overbooked</span>
+          <span><i class="exp-dot" style="background:var(--white); border:2px solid var(--ink);"></i>Today</span>
+        </div>
+        <p class="note" style="margin:0 0 12px;">Past days are rebuilt from your logged rentals and stock changes, so they're only as accurate as what's been logged.</p>
+        <div class="exp-scroll" id="expectedCal"></div>
+      </div>
+    </details>
+
+    <div id="cleanupSection" hidden>
+      <h2>Data cleanup</h2>
+      <div class="rem">
+        <p class="note" style="margin:0 0 10px;"><span id="cleanupCount"></span> Sets tote and dolly counts on older rentals by reading the package text. Anything it can't read confidently (like "Custom package") is listed for you to fix by hand, never guessed.</p>
+        <button type="button" id="backfillBtn" style="width:auto; padding:10px 18px;">Fill in counts from package text</button>
+        <div id="backfillResult" style="margin-top:10px;"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -170,9 +204,9 @@
         ? findPendingConfirmed((await requestsResp.json()).requests || [], ALL_RENTALS)
         : [];
 
+      $('results').style.display = 'block';   // shown first so the chart can measure its width
       render();
       renderExpected();
-      $('results').style.display = 'block';
       $('status').style.display = 'none';
     } catch (e) { console.error('Load inventory failed:', e); showErr('Load failed — check the console for details.'); }
     btn.disabled = false; btn.textContent = 'Refresh';
@@ -234,18 +268,21 @@
     const available = totalOwned - deployed - pendingTotes;
     // Lifetime total: every rental ever logged, any status, not just active ones.
     const lifetimeTotes = ALL_RENTALS.reduce((t, r) => t + toteQty(r), 0);
+    // Same day-by-day number as the headline and chart, so they always agree
+    const freeToday = computeDays(0, 1)[0].available;
 
     $('statCards').innerHTML = `
-      <div class="stat"><div class="num">${totalOwned}</div><div class="lbl">Total owned</div></div>
-      <div class="stat"><div class="num gold">${deployed}</div><div class="lbl">Out on rental (est.)</div></div>
-      <div class="stat"><div class="num ${PENDING_CONFIRMED.length ? 'warn' : ''}">${pendingTotes}</div><div class="lbl">Confirmed, not invoiced (est.)</div></div>
-      <div class="stat"><div class="num ${available < 0 ? 'warn' : 'green'}">${available}</div><div class="lbl">Available now</div></div>
-      <div class="stat"><div class="num">${ACTIVE_RENTALS.length}</div><div class="lbl">Active rentals</div></div>
-      <div class="stat"><div class="num green">${lifetimeTotes}</div><div class="lbl">Lifetime totes rented</div></div>
-      <div class="stat"><div class="num gold">${dolliesOut}</div><div class="lbl">Dollies out (est.)</div></div>
+      <div class="stat"><div class="lbl">Free today</div><div class="num" style="${freeToday < 0 ? 'color:var(--red)' : ''}">${freeToday}</div><div class="cap">${pendingTotes ? `${pendingTotes} more held for confirmed bookings` : 'ready to rent'}</div></div>
+      <div class="stat"><div class="lbl">Out with customers</div><div class="num">${deployed}</div><div class="cap">${ACTIVE_RENTALS.length} ${ACTIVE_RENTALS.length === 1 ? 'rental' : 'rentals'}</div></div>
+      <div class="stat"><div class="lbl">Owned</div><div class="num">${totalOwned}</div><div class="cap">${lifetimeTotes.toLocaleString('en-US')} totes rented, all time</div></div>
+      <div class="stat"><div class="lbl">Dollies out</div><div class="num">${dolliesOut}</div><div class="cap">estimated from rentals</div></div>
     `;
 
     renderPendingConfirmed();
+    $('pendingSection').hidden = !PENDING_CONFIRMED.length;
+    const missingCounts = ALL_RENTALS.filter(r => typeof r.toteCount !== 'number' || typeof r.dollyCount !== 'number').length;
+    $('cleanupSection').hidden = !missingCounts;
+    $('cleanupCount').textContent = missingCounts ? `${missingCounts} ${missingCounts === 1 ? 'rental is' : 'rentals are'} missing tote or dolly counts.` : '';
 
     const sorted = [...EVENTS].sort((a, b) => (b.date + b.key).localeCompare(a.date + a.key));
     $('evList').innerHTML = sorted.length ? sorted.map(e => {
@@ -282,7 +319,7 @@
           </div>
           <div style="font-size:13px; color:var(--steel); margin:0;">${esc(p.package || '—')} · ${esc(fmtDate(p.deliveryDate))} → ${esc(fmtDate(p.pickupDate))}</div>
         </div>
-        <a href="admin-invoice.html" style="width:auto; padding:8px 14px; font-size:13px; background:var(--gold); color:var(--ink); border-radius:8px; text-decoration:none; font-weight:bold;">Invoice it →</a>
+        <a href="admin-requests.html" class="sms-btn" style="padding:7px 12px; font-size:13px;">Invoice it →</a>
       </div>`).join('');
   }
 
@@ -306,8 +343,15 @@
   }
 
   function renderExpected() {
-    const PAST_DAYS = 60;
-    const FUTURE_DAYS = 60;
+    const days = computeDays(60, 60);
+    renderHeadline(days.filter(d => !d.isPast));
+    renderFreeChart(days.filter(d => !d.isPast));
+    renderCalendar(days);
+  }
+
+  // Free totes per day: owned as of that day minus every rental out that day,
+  // plus (from today on) confirmed bookings that aren't invoiced yet.
+  function computeDays(PAST_DAYS, FUTURE_DAYS) {
     // Same estimable-only subset used in the stat cards above.
     const pendingEstimable = PENDING_CONFIRMED.filter(p => p.estTotes > 0);
 
@@ -334,7 +378,71 @@
       }
       days.push({ date, available: owned - deployed, isToday: date === TODAY, isPast: date < TODAY });
     }
+    return days;
+  }
 
+  const LOW = 20;   // under this many free counts as tight, same as the calendar
+  const dayLabel = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+  // The answer first: free today, and the tightest day coming up
+  function renderHeadline(ahead) {
+    if (!ahead.length) return;
+    const today = ahead[0];
+    const low = ahead.reduce((m, d) => d.available < m.available ? d : m, ahead[0]);
+    const over = ahead.filter(d => d.available < 0);
+    let html = `<b>${today.available}</b> totes free today.`;
+    if (over.length) {
+      const worst = over.reduce((m, d) => d.available < m.available ? d : m, over[0]);
+      html += ` <span class="bad">${over.length === 1 ? dayLabel(over[0].date) + ' is' : over.length + ' days are'} overbooked`
+        + `${over.length === 1 ? ` by ${-over[0].available}` : `, worst ${dayLabel(worst.date)} (short ${-worst.available})`}.</span>`;
+    } else if (low.date !== today.date && low.available < today.available) {
+      html += ` Tightest day in the next 60: <b>${dayLabel(low.date)}</b>, ${low.available} free.`;
+    } else {
+      html += ` No day in the next 60 has fewer.`;
+    }
+    $('finding').innerHTML = html;
+  }
+
+  // One bar per day; colour says plenty, tight or overbooked
+  function renderFreeChart(ahead) {
+    const el = $('freeChart');
+    const W = Math.max(320, el.clientWidth || 860), H = 210, padL = 36, padR = 4, padT = 28, padB = 24;
+    const maxV = Math.max(1, ...ahead.map(d => d.available)), minV = Math.min(0, ...ahead.map(d => d.available));
+    const step = niceStep((maxV - minV) / 4);
+    const top = Math.ceil(maxV / step) * step, bot = Math.floor(minV / step) * step;
+    const y = v => padT + (top - v) / (top - bot) * (H - padT - padB);
+    const slot = (W - padL - padR) / ahead.length, bw = Math.max(1, slot - (slot > 6 ? 2 : 1));
+    let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Free totes for the next ${ahead.length} days">`;
+    for (let v = bot; v <= top + 1e-9; v += step) {
+      svg += `<line x1="${padL}" x2="${W - padR}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#CFC7B8' : '#EEEAE1'}"/>`;
+      svg += `<text class="tick" x="${padL - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+    }
+    if (LOW <= top) svg += `<line x1="${padL}" x2="${W - padR}" y1="${y(LOW)}" y2="${y(LOW)}" stroke="#D9A13B" stroke-dasharray="4 3"/>`;
+    const low = ahead.reduce((m, d) => d.available < m.available ? d : m, ahead[0]);
+    ahead.forEach((d, i) => {
+      const x = padL + i * slot + (slot - bw) / 2, v = d.available;
+      const color = v < 0 ? 'var(--red)' : v < LOW ? '#D9A13B' : '#A87F22';
+      const y0 = y(Math.max(v, 0)), y1 = y(Math.min(v, 0));
+      svg += `<rect x="${x}" y="${y0}" width="${bw}" height="${Math.max(1, y1 - y0)}" fill="${color}"><title>${dayLabel(d.date)}: ${v} free</title></rect>`;
+      const dt = new Date(d.date + 'T12:00:00');
+      if (i === 0 || dt.getDay() === 1) svg += `<text class="tick" x="${padL + i * slot + slot / 2}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : 'middle'}">${i === 0 ? 'Today' : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</text>`;
+    });
+    if (low.available < ahead[0].available) {
+      const i = ahead.indexOf(low), cx = padL + i * slot + slot / 2;
+      // Label in the band above the plot, with a thin leader down to the bar, so it never sits on other bars
+      svg += `<line x1="${cx}" x2="${cx}" y1="16" y2="${y(Math.max(low.available, 0)) - 2}" stroke="var(--ink)" stroke-width="1"/>`;
+      svg += `<text class="lbl" x="${cx + (i < ahead.length * 0.8 ? 4 : -4)}" y="12" text-anchor="${i < ahead.length * 0.8 ? 'start' : 'end'}">Tightest: ${low.available} free on ${new Date(low.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</text>`;
+    }
+    el.innerHTML = svg + '</svg>';
+  }
+  function niceStep(x) {
+    const p = Math.pow(10, Math.floor(Math.log10(Math.max(x, 1))));
+    for (const k of [1, 2, 2.5, 5, 10]) if (k * p >= x) return k * p;
+  }
+  let resizeT;
+  window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (TODAY) renderFreeChart(computeDays(0, 60)); }, 150); });
+
+  function renderCalendar(days) {
     const wrap = $('expectedCal');
     wrap.innerHTML = '';
 
@@ -392,8 +500,10 @@
       wrap.appendChild(monthDiv);
     });
 
+    // (Scrolls inside its own box only once the calendar is opened.)
     const todayCell = wrap.querySelector('.exp-day.today');
-    if (todayCell) todayCell.scrollIntoView({ block: 'center' });
+    const det = wrap.closest('details');
+    if (todayCell && det) det.addEventListener('toggle', () => { if (det.open) wrap.scrollTop = todayCell.offsetTop - wrap.offsetTop - 120; }, { once: true });
   }
 
   function labelFor(type) {

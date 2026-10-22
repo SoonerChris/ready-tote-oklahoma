@@ -13,6 +13,15 @@
 <script src="admin-availability.js?v=20261023"></script>
 <style>
   :root{--col:720px;}
+  /* One form, two jobs: send the invoice email, or just log the rental */
+  .mode-seg{display:inline-flex; gap:2px; padding:2px; background:var(--track); border-radius:8px; margin:0 0 8px;}
+  .mode-seg button{all:unset; box-sizing:border-box; height:34px; line-height:32px; padding:0 14px; border:1px solid transparent; border-radius:6px; font-size:14px; font-weight:600; color:var(--steel); cursor:pointer;}
+  .mode-seg button:hover{color:var(--ink);}
+  .mode-seg button[aria-pressed="true"]{background:#fff; color:var(--ink); border-color:var(--line);}
+  .mode-seg button:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
+  .log-only{display:none;}
+  body.log-mode .log-only{display:inline;}
+  body.log-mode .send-only{display:none;}
   /* The check before an invoice email goes out */
   .send-summary{margin-top:24px; padding:16px; border-radius:10px; background:#FAF8F3; border:1px solid var(--line);}
   .send-summary h3{margin:0 0 8px; font-size:16px;}
@@ -28,7 +37,7 @@
   <a href="admin.html">Dashboard</a>
   <a href="admin-requests.html">Requests</a>
   <a href="admin-invoice.html" aria-current="page">Send Invoice</a>
-  <a href="admin-add-rental.html">Add Rental</a>
+  <a href="admin-invoice.html?mode=log">Add Rental</a>
   <a href="admin-reminders.html">Reminders</a>
   <a href="admin-rentals.html">All Rentals</a>
   <a href="admin-contacts.html">Contacts</a>
@@ -37,8 +46,12 @@
   <a href="admin-inventory.html">Inventory</a>
 </nav>
 <div class="card">
-  <h1>Send invoice</h1>
-  <p class="sub">Internal tool — fills out and sends the branded invoice email with a Stripe payment button.</p>
+  <h1 id="pageTitle">Send invoice</h1>
+  <p class="sub" id="pageSub">Fills out and sends the branded invoice email with a Stripe payment button, and adds the rental to the log.</p>
+  <div class="mode-seg" role="group" aria-label="What to do">
+    <button type="button" data-mode="send" aria-pressed="true">Send invoice</button>
+    <button type="button" data-mode="log" aria-pressed="false">Log only, no email</button>
+  </div>
 
   <input type="hidden" id="secret">
 
@@ -48,7 +61,7 @@
       <input type="text" id="name" placeholder="Jane Smith">
     </div>
     <div>
-      <label>Customer email</label>
+      <label>Customer email<span class="log-only"> (optional)</span></label>
       <input type="email" id="email" placeholder="jane@example.com">
     </div>
   </div>
@@ -56,9 +69,11 @@
   <label>Customer phone</label>
   <input type="tel" id="phone" placeholder="405-555-0123">
 
+  <div class="send-only">
   <label>Paste booking email (optional)</label>
   <textarea id="pasteBox" rows="4" placeholder="Paste the Netlify booking notification email here, then click Parse to auto-fill name, email, package, and dates." style="resize:vertical;"></textarea>
   <button type="button" id="parseBtn" class="secondary" style="margin-top:8px;width:auto;padding:8px 14px;font-size:14px;">Parse booking email</button>
+  </div>
 
   <label>Package</label>
   <select id="package">
@@ -174,9 +189,11 @@
 
   </div><!-- /addressSection -->
 
+  <div class="send-only">
   <label>Stripe payment link</label>
   <input type="url" id="stripeUrl" placeholder="https://buy.stripe.com/...">
   <p class="note">Paste the Stripe Payment Link for this package. Tip: edit this file to hard-code your three links in the package dropdown (data-stripe attributes) so this auto-fills.</p>
+  </div>
 
   <label style="display:flex; align-items:center; gap:8px; font-weight:normal; margin-top:18px;">
     <input type="checkbox" id="isMilitary" style="width:auto;"> Military discount (ID on file or being verified)
@@ -188,7 +205,7 @@
 
   <div class="send-summary" id="sendSummary" hidden></div>
   <button id="sendBtn">Review and send</button>
-  <button type="button" id="newInvoiceBtn" class="secondary" hidden onclick="location.href='admin-invoice.html'">Start a new invoice</button>
+  <button type="button" id="newInvoiceBtn" class="secondary" hidden onclick="location.href = LOG_MODE ? 'admin-invoice.html?mode=log' : 'admin-invoice.html'">Start a new invoice</button>
   <div class="status" id="status"></div>
   <div id="invoiceTextPrompt" style="display:none; margin-top:14px;"></div>
 </div>
@@ -452,6 +469,32 @@
     }
   });
 
+  // ---- Mode: send the invoice email, or log the rental only (was admin-add-rental.html) ----
+  let LOG_MODE = new URLSearchParams(location.search).get('mode') === 'log';
+  function setMode(log) {
+    if (SENT) return;
+    LOG_MODE = log;
+    document.body.classList.toggle('log-mode', log);
+    document.querySelectorAll('.mode-seg button').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.mode === 'log') === log)));
+    $('pageTitle').textContent = log ? 'Add rental' : 'Send invoice';
+    $('pageSub').textContent = log
+      ? 'Adds a rental to the log without emailing the customer. Use it for bookings paid another way, or to backfill past rentals.'
+      : 'Fills out and sends the branded invoice email with a Stripe payment button, and adds the rental to the log.';
+    $('sendBtn').textContent = log ? 'Review and add' : 'Review and send';
+    $('newInvoiceBtn').textContent = log ? 'Add another rental' : 'Start a new invoice';
+    document.title = (log ? 'Add rental' : 'Send invoice') + ' · Ready Tote Oklahoma admin';
+    // The sidebar highlights whichever of the two this is
+    document.querySelectorAll('.admin-nav a').forEach(a => {
+      const h = a.getAttribute('href') || '';
+      if (h.startsWith('admin-invoice.html')) a.toggleAttribute('aria-current', log ? h.includes('mode=log') : !h.includes('mode=log'));
+      if (a.hasAttribute('aria-current')) a.setAttribute('aria-current', 'page');
+    });
+    try { history.replaceState(null, '', log ? '?mode=log' : location.pathname); } catch {}
+    hideSummary();
+  }
+  document.querySelectorAll('.mode-seg button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode === 'log')));
+  document.addEventListener('DOMContentLoaded', () => setMode(LOG_MODE));
+
   // ---- Send: build and check the payload, show a summary, send once ----
   let SENT = false, PENDING_PAYLOAD = null;
   const FIELD_NAMES = {
@@ -477,12 +520,20 @@
 
   function buildPayload() {
     if (!$('secret').value.trim()) { showStatus('err', 'You’re signed out. Log in again.'); return null; }
-    const fields = ['secret','name','email','phone','price','duration','dropoffDate','dropoffTime','pickupDate','pickupTime','stripeUrl'];
-    if ($('serviceType').value !== 'self') fields.push('street','city','state','zip');
+    // Logging only needs who, what, how much and when; the email and address are optional
+    const fields = LOG_MODE
+      ? ['secret','name','phone','price','dropoffDate','pickupDate']
+      : ['secret','name','email','phone','price','duration','dropoffDate','dropoffTime','pickupDate','pickupTime','stripeUrl'];
+    if (!LOG_MODE && $('serviceType').value !== 'self') fields.push('street','city','state','zip');
     const payload = {};
     for (const f of fields) {
       payload[f] = $(f).value.trim();
       if (!payload[f]) return missing(f);
+    }
+    if (LOG_MODE) {
+      for (const f of ['email', 'duration', 'street', 'city', 'state', 'zip']) payload[f] = $(f).value.trim();
+      payload.dropoffTime = $('dropoffTime').value || '10:00';
+      payload.pickupTime = $('pickupTime').value || '10:00';
     }
     if (!payload.price.replace(/^\$+/, '').trim()) return missing('price');
     if (payload.pickupDate < payload.dropoffDate) { showStatus('err', 'The pickup date is before the drop-off date.'); $('pickupDate').focus(); return null; }
@@ -524,9 +575,22 @@
       } else {
         const ps = $('pstreet').value.trim(), pc = $('pcity').value.trim(),
               pst = $('pstate').value.trim(), pz = $('pzip').value.trim();
-        if (!ps || !pc || !pst || !pz) { showStatus('err', 'Fill in the whole pickup address, or tick “same as drop-off”.'); $('pstreet').focus(); return null; }
+        if (!LOG_MODE && (!ps || !pc || !pst || !pz)) { showStatus('err', 'Fill in the whole pickup address, or tick “same as drop-off”.'); $('pstreet').focus(); return null; }
         payload.pickupAddress = ps + ', ' + pc + ', ' + pst + ' ' + pz;
       }
+    }
+    if (LOG_MODE) {
+      // add-rental stores the address in separate fields
+      const same = $('sameAddress').checked && payload.serviceType !== 'self';
+      Object.assign(payload, {
+        dropoffAddressStreet: payload.street, dropoffAddressCity: payload.city, dropoffAddressState: payload.street ? payload.state : '', dropoffAddressZip: payload.zip,
+        pickupAddressStreet: same ? payload.street : $('pstreet').value.trim(), pickupAddressCity: same ? payload.city : $('pcity').value.trim(),
+        pickupAddressState: same ? (payload.street ? payload.state : '') : ($('pstreet').value.trim() ? $('pstate').value.trim() : ''), pickupAddressZip: same ? payload.zip : $('pzip').value.trim(),
+      });
+      if (payload.serviceType === 'self') {
+        for (const k of Object.keys(payload)) if (/^(dropoff|pickup)Address(Street|City|State|Zip)$/.test(k)) payload[k] = '';
+      }
+      delete payload.dropoffAddress; delete payload.pickupAddress; delete payload.stripeUrl;
     }
     delete payload.street; delete payload.city; delete payload.state; delete payload.zip;
 
@@ -541,17 +605,18 @@
     const res = checkAvailability(p.dropoffDate, p.pickupDate, p.toteCount, prefillHold());
     const box = $('sendSummary');
     box.innerHTML = `
-      <h3>Send this invoice?</h3>
+      <h3>${LOG_MODE ? 'Add this rental to the log?' : 'Send this invoice?'}</h3>
       <dl>
-        <dt>To</dt><dd>${esc(p.name)} · ${esc(p.email)}</dd>
+        <dt>${LOG_MODE ? 'Customer' : 'To'}</dt><dd>${esc(p.name)}${p.email ? ' · ' + esc(p.email) : ''}${LOG_MODE ? ' · ' + esc(p.phone) : ''}</dd>
         <dt>Amount</dt><dd><b>${esc(p.price)}</b> · ${esc(p.package)}${p.isMilitary ? ' · military' : ''}</dd>
         <dt>Totes</dt><dd>${p.toteCount} totes · ${p.dollyCount} ${p.dollyCount === 1 ? 'dolly' : 'dollies'}</dd>
         <dt>Dates</dt><dd>${esc(day(p.dropoffDate))} ${esc(p.dropoffTime)} to ${esc(day(p.pickupDate))} ${esc(p.pickupTime)}</dd>
-        <dt>Where</dt><dd>${p.serviceType === 'self' ? 'Customer picks up and returns' : esc(p.dropoffAddress) + (p.pickupAddress !== p.dropoffAddress ? '<br>Pickup: ' + esc(p.pickupAddress) : '')}</dd>
+        <dt>Where</dt><dd>${p.serviceType === 'self' ? 'Customer picks up and returns' : LOG_MODE ? (esc([p.dropoffAddressStreet, p.dropoffAddressCity].filter(Boolean).join(', ')) || 'No address') : esc(p.dropoffAddress) + (p.pickupAddress !== p.dropoffAddress ? '<br>Pickup: ' + esc(p.pickupAddress) : '')}</dd>
+        ${LOG_MODE ? '<dt>Email</dt><dd>None. The customer isn’t emailed.</dd>' : ''}
         ${res && !res.ok ? `<dt>Stock</dt><dd>${availabilityHtml(res)}</dd>` : ''}
       </dl>
       <div class="row-btns">
-        <button type="button" id="confirmSendBtn">Send invoice email</button>
+        <button type="button" id="confirmSendBtn">${LOG_MODE ? 'Add to rental log' : 'Send invoice email'}</button>
         <button type="button" class="secondary" id="editAgainBtn">Back to edit</button>
       </div>`;
     box.hidden = false;
@@ -574,9 +639,9 @@
     if (SENT || !payload) return;
     payload.secret = $('secret').value.trim();
     const btn = $('confirmSendBtn');
-    btn.disabled = true; btn.textContent = 'Sending...';
+    btn.disabled = true; btn.textContent = LOG_MODE ? 'Adding…' : 'Sending…';
     try {
-      const resp = await fetch('/.netlify/functions/send-invoice', {
+      const resp = await fetch('/.netlify/functions/' + (LOG_MODE ? 'add-rental' : 'send-invoice'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -588,9 +653,14 @@
         $('sendBtn').hidden = true;
         $('newInvoiceBtn').hidden = false;
         document.querySelectorAll('.card input, .card select, .card textarea').forEach(el => { el.disabled = true; });
-        showStatus('ok', 'Invoice sent to ' + payload.email + ' (BCC to you).');
+        document.querySelectorAll('.mode-seg button').forEach(b => { b.disabled = true; });
         if (PREFILL_REQUEST_KEY) markRequestInvoiced(PREFILL_REQUEST_KEY);
-        showInvoiceTextPrompt(payload.name, payload.phone, payload.email);
+        if (LOG_MODE) {
+          showStatus('ok', 'Added ' + payload.name + ' to the rental log. No email was sent.');
+        } else {
+          showStatus('ok', 'Invoice sent to ' + payload.email + ' (BCC to you).');
+          showInvoiceTextPrompt(payload.name, payload.phone, payload.email);
+        }
       } else if (resp.status === 401) {
         showStatus('err', 'Wrong admin secret.');
       } else {
@@ -600,7 +670,7 @@
     } catch (e) {
       showStatus('err', 'Network error. The invoice may not have sent; check your inbox for the BCC before trying again.');
     }
-    if (!SENT) { btn.disabled = false; btn.textContent = 'Send invoice email'; }
+    if (!SENT) { btn.disabled = false; btn.textContent = LOG_MODE ? 'Add to rental log' : 'Send invoice email'; }
   }
 
   // ---- Availability for the chosen dates and tote count ----
