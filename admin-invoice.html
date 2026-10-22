@@ -10,7 +10,7 @@
 <title>Send Invoice — Ready Tote Oklahoma (Internal)</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
 <script src="admin-shared.js?v=20261022"></script>
-<script src="admin-availability.js?v=20261023"></script>
+<script src="admin-availability.js?v=20261024"></script>
 <style>
   :root{--col:720px;}
   /* One form, two jobs: send the invoice email, or just log the rental */
@@ -635,7 +635,7 @@
 
   function showSummary(p) {
     const day = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    const res = checkAvailability(p.dropoffDate, p.pickupDate, p.toteCount, prefillHold());
+    const res = checkAvailability(p.dropoffDate, p.pickupDate, p.toteCount, prefillHold(), p.dollyCount);
     const box = $('sendSummary');
     box.innerHTML = `
       <h3>${LOG_MODE ? 'Add this rental to the log?' : 'Send this invoice?'}</h3>
@@ -713,15 +713,15 @@
     const r = PENDING_PREFILL;
     if (!r || !['awaiting_confirmation', 'confirmed'].includes(r.status)) return null;
     const totes = totesInPackageText(r.package);
-    return totes ? { start: r.deliveryDate, end: r.pickupDate, totes } : null;
+    return totes ? { start: r.deliveryDate, end: r.pickupDate, totes, dollies: dolliesInPackageText(r.package) } : null;
   }
   function renderAvailLine() {
     const start = $('dropoffDate').value, end = $('pickupDate').value;
     if (!start || !end) { $('availLine').innerHTML = ''; return; }
     const need = Number($('toteCount').value) || 0;
-    $('availLine').innerHTML = availabilityHtml(checkAvailability(start, end, need, prefillHold()));
+    $('availLine').innerHTML = availabilityHtml(checkAvailability(start, end, need, prefillHold(), Number($('dollyCount').value) || 0));
   }
-  ['dropoffDate', 'pickupDate', 'toteCount'].forEach(id => $(id).addEventListener('input', renderAvailLine));
+  ['dropoffDate', 'pickupDate', 'toteCount', 'dollyCount'].forEach(id => $(id).addEventListener('input', renderAvailLine));
   $('package').addEventListener('change', () => setTimeout(renderAvailLine, 0));
   loadAvailability().then(renderAvailLine);
 

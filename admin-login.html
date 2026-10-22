@@ -7,29 +7,48 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<title>Log In — Ready Tote Oklahoma (Internal)</title>
+<title>Sign in · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
 <script src="admin-shared.js?v=20261022"></script>
 <style>
   body{display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px 16px;}
-  .login-card{max-width:360px; width:100%;}
+  .login-card{max-width:380px; width:100%; padding:28px 28px 24px;}
+  .brand{display:flex; align-items:center; gap:12px; margin-bottom:20px;}
+  .brand img{width:48px; height:48px;}
+  .brand b{display:block; font-family:'Archivo Black', sans-serif; font-weight:400; font-size:18px; line-height:1.1;}
+  .brand small{display:block; font-size:13px; color:var(--steel); margin-top:2px;}
+  .login-card h1{font-size:22px; margin:0 0 4px;}
+  .login-card .sub{margin:0 0 8px;}
+  .pw-wrap{position:relative;}
+  .pw-wrap input{padding-right:72px;}
+  .pw-toggle{position:absolute; right:6px; top:50%; transform:translateY(-50%); width:auto; margin:0; height:32px; padding:0 10px; font-size:13px; font-weight:600; background:transparent; color:var(--ink); border:none;}
+  .pw-toggle:hover{background:var(--track);}
+  .caps{display:none; margin:6px 0 0; font-size:13px; font-weight:600; color:#6B4C0C;}
+  .caps.shown{display:block;}
+  .back{display:block; margin-top:16px; font-size:13px; color:var(--steel); text-align:center;}
 </style>
 </head>
 <body>
 <div class="card login-card">
-  <h1>Ready Tote Oklahoma</h1>
-  <p class="sub">Sign in to the admin tools.</p>
+  <div class="brand"><img src="images/logo.png" alt=""><span><b>Ready Tote</b><small>Admin</small></span></div>
+  <h1>Sign in</h1>
+  <p class="sub" id="signinFor">To the admin tools.</p>
 
   <form id="loginForm" method="post">
     <label for="username">Username</label>
     <input type="text" id="username" name="username" autocomplete="username" required autofocus>
 
     <label for="password">Password</label>
-    <input type="password" id="password" name="password" autocomplete="current-password" required>
+    <div class="pw-wrap">
+      <input type="password" id="password" name="password" autocomplete="current-password" required aria-describedby="capsNote">
+      <button type="button" class="pw-toggle" id="pwToggle" aria-controls="password" aria-pressed="false">Show</button>
+    </div>
+    <p class="caps" id="capsNote" role="status">Caps Lock is on.</p>
 
-    <button type="submit" id="loginBtn">Log In</button>
+    <button type="submit" id="loginBtn">Sign in</button>
   </form>
-  <div class="status" id="status"></div>
+  <div class="status" id="status" role="alert"></div>
+  <a class="back" href="/">readytoteokc.com</a>
 </div>
 
 <script>
@@ -43,6 +62,33 @@
     return /^admin[\w-]*\.html$/.test(raw) ? raw : 'admin.html';
   }
 
+  // Which page you were heading to, in words
+  const PAGE_NAMES = { 'admin.html': 'the dashboard', 'admin-requests.html': 'Requests', 'admin-invoice.html': 'Send invoice',
+    'admin-reminders.html': 'Reminders', 'admin-rentals.html': 'All rentals', 'admin-contacts.html': 'Contacts',
+    'admin-finance.html': 'Finance', 'admin-outreach.html': 'Outreach', 'admin-inventory.html': 'Inventory' };
+  const target = safeRedirectTarget();
+  if (new URLSearchParams(location.search).get('redirect')) $('signinFor').textContent = `To open ${PAGE_NAMES[target] || 'the admin tools'}.`;
+
+  $('pwToggle').addEventListener('click', () => {
+    const show = $('password').type === 'password';
+    $('password').type = show ? 'text' : 'password';
+    $('pwToggle').textContent = show ? 'Hide' : 'Show';
+    $('pwToggle').setAttribute('aria-pressed', String(show));
+    $('password').focus();
+  });
+  const caps = e => { if (e.getModifierState) $('capsNote').classList.toggle('shown', e.getModifierState('CapsLock')); };
+  $('password').addEventListener('keydown', caps);
+  $('password').addEventListener('keyup', caps);
+
+  function fail(msg) {
+    const status = $('status');
+    status.className = 'status err';
+    status.textContent = msg;
+    status.style.display = 'block';
+    $('loginBtn').disabled = false; $('loginBtn').textContent = 'Sign in';
+    $('password').focus(); $('password').select();
+  }
+
   $('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = $('username').value.trim();
@@ -50,7 +96,7 @@
     const btn = $('loginBtn');
     const status = $('status');
     status.style.display = 'none';
-    btn.disabled = true; btn.textContent = 'Logging in…';
+    btn.disabled = true; btn.textContent = 'Signing in…';
 
     try {
       const resp = await fetch('/.netlify/functions/login', {
@@ -75,18 +121,14 @@
           } catch { /* best-effort only */ }
         }
 
-        location.href = safeRedirectTarget();
+        location.href = target;
+      } else if (resp.status === 401) {
+        fail('That username or password didn’t match. Check Caps Lock and try again.');
       } else {
-        status.className = 'status err';
-        status.textContent = 'Wrong username or password.';
-        status.style.display = 'block';
-        btn.disabled = false; btn.textContent = 'Log In';
+        fail('Sign-in isn’t working right now (error ' + resp.status + '). Try again in a minute.');
       }
     } catch {
-      status.className = 'status err';
-      status.textContent = 'Network error — try again.';
-      status.style.display = 'block';
-      btn.disabled = false; btn.textContent = 'Log In';
+      fail('Couldn’t reach the site. Check your connection and try again.');
     }
   });
 </script>

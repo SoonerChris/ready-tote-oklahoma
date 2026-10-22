@@ -10,7 +10,7 @@
 <title>Booking Requests — Ready Tote Oklahoma (Internal)</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
 <script src="admin-shared.js?v=20261022"></script>
-<script src="admin-availability.js?v=20261023"></script>
+<script src="admin-availability.js?v=20261024"></script>
 <style>
   :root{--col:820px;}
   .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
@@ -21,7 +21,22 @@
   .req{border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:12px;background:var(--white);}
   .req-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
   .req-name{font-weight:bold;font-size:16px;}
-  .req-sub{font-size:13px;color:var(--steel);margin-top:2px;}
+  .req-sub{font-size:13px;color:var(--steel);margin-top:2px;font-variant-numeric:tabular-nums;}
+  .req-sub .late{color:#831C1E;font-weight:600;}
+  .req-tags{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+  .avail-row{display:flex;align-items:flex-start;}
+  .avail-row .lbl{flex:none;}
+  .avail-list{display:flex;flex-wrap:wrap;min-width:0;}
+  /* Decline: pick a reason in place instead of a browser pop-up */
+  .decline-box{display:none;margin-top:12px;padding:12px 14px;border-radius:8px;background:#FAF8F3;}
+  .decline-box.shown{display:block;}
+  .decline-box p{margin:0 0 8px;font-size:14px;font-weight:600;}
+  .decline-box .reasons{display:flex;flex-wrap:wrap;gap:6px;}
+  .decline-box .reasons button{width:auto;margin:0;padding:7px 12px;font-size:14px;background:#fff;color:var(--ink);border:1px solid var(--control);}
+  .decline-box .reasons button:hover{background:#fff;border-color:var(--red);color:var(--red);}
+  .decline-box .other{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .decline-box .other input{flex:1 1 220px;margin:0;height:36px;padding:6px 10px;font-size:14px;}
+  .decline-box .other button{width:auto;margin:0;height:36px;padding:0 12px;font-size:14px;}
   .req-body{font-size:14px;line-height:1.65;}
   .req-body{font-size:15px;line-height:1.6;font-variant-numeric:tabular-nums;}
   .req-body .lbl{color:var(--steel);display:inline-block;min-width:84px;}
@@ -167,9 +182,30 @@
     const need = totesInPackageText(r.package);
     // Awaiting-confirmation and confirmed requests already hold their totes
     // in the availability numbers; add them back so it isn't counted twice.
+    const needDollies = dolliesInPackageText(r.package);
     const held = ['awaiting_confirmation', 'confirmed'].includes(r.status) && need
-      ? { start: r.deliveryDate, end: r.pickupDate, totes: need } : null;
-    return availabilityHtml(checkAvailability(r.deliveryDate, r.pickupDate, need, held));
+      ? { start: r.deliveryDate, end: r.pickupDate, totes: need, dollies: needDollies } : null;
+    return availabilityHtml(checkAvailability(r.deliveryDate, r.pickupDate, need, held, needDollies));
+  }
+
+  // "Submitted 5 hours ago · Oct 21, 3:41 PM". Requests waiting on you
+  // (new, reviewed, confirmed) turn red after a day so nothing sits unanswered.
+  const WAITING_ON_YOU = ['new', 'reviewed', 'confirmed'];
+  function ago(iso) {
+    const ms = Date.now() - new Date(iso).getTime();
+    if (!iso || isNaN(ms)) return '';
+    const m = Math.round(ms / 60000), h = Math.round(ms / 3600000), d = Math.floor(ms / 86400000);
+    if (m < 2) return 'just now';
+    if (m < 60) return m + ' minutes ago';
+    if (h < 24) return h + (h === 1 ? ' hour' : ' hours') + ' ago';
+    return d + (d === 1 ? ' day' : ' days') + ' ago';
+  }
+  function ageLine(r) {
+    if (!r.submittedAt) return 'Submitted —';
+    const when = new Date(r.submittedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const late = WAITING_ON_YOU.includes(r.status) && Date.now() - new Date(r.submittedAt).getTime() > 86400000;
+    const who = WAITING_ON_YOU.includes(r.status) ? ' · waiting on you' : r.status === 'awaiting_confirmation' ? ' · waiting on the customer' : '';
+    return `Submitted <span class="${late ? 'late' : ''}">${esc(ago(r.submittedAt))}</span> · ${esc(when)}${esc(who)}`;
   }
 
   function cardHtml(r) {
@@ -180,17 +216,16 @@
       <div class="req-head">
         <div>
           <div class="req-name">${esc(r.name || 'Unnamed request')}</div>
-          <div class="req-sub">Submitted ${esc(fmtDateTime(r.submittedAt))}</div>
+          <div class="req-sub">${ageLine(r)}</div>
         </div>
-        <span class="pill ${meta.pill}">${meta.label}</span>
-        ${r.isMilitary ? '<span class="pill ok">Military</span>' : ''}
+        <div class="req-tags"><span class="pill ${meta.pill}">${meta.label}</span>${r.isMilitary ? '<span class="pill ok">Military</span>' : ''}</div>
       </div>
       <div class="req-body">
         <div><span class="lbl">Package</span>${r.package ? `<span class="tag">${esc(r.package)}</span>` : '—'}</div>
         <div><span class="lbl">Delivery</span>${esc(fmtReqDate(r.deliveryDate))}${r.deliveryWindow && !/no preference/i.test(r.deliveryWindow) ? ' — pref: ' + esc(r.deliveryWindow) : ''}</div>
         <div><span class="lbl">Pickup</span>${esc(fmtReqDate(r.pickupDate))}${r.pickupWindow && !/no preference/i.test(r.pickupWindow) ? ' — pref: ' + esc(r.pickupWindow) : ''}</div>
         <div><span class="lbl">Address</span>${esc(deliveryAddressOf(r) || '—')}</div>
-        ${OPEN_STATUSES.includes(r.status) ? `<div><span class="lbl">Totes</span>${requestAvailability(r)}</div>` : ''}
+        ${OPEN_STATUSES.includes(r.status) ? `<div class="avail-row"><span class="lbl">Stock</span><span class="avail-list">${requestAvailability(r)}</span></div>` : ''}
         <div><span class="lbl">Phone</span>${r.phone ? `<a href="tel:${escAttr(phoneDigits)}">${esc(r.phone)}</a>` : '—'}</div>
         <div><span class="lbl">Email</span>${r.email ? `<a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : '—'}</div>
         ${r.reviewNotes ? `<div><span class="lbl">Notes</span>${esc(r.reviewNotes)}</div>` : ''}
@@ -198,6 +233,20 @@
       </div>
 
       <div class="req-actions" data-actions></div>
+      <div class="decline-box" data-decline>
+        <p>Why decline ${esc((r.name || 'this request').split(' ')[0])}?</p>
+        <div class="reasons">
+          <button type="button" data-reason="Booked up for these dates">Booked up</button>
+          <button type="button" data-reason="Outside our service area">Outside service area</button>
+          <button type="button" data-reason="Customer cancelled">Customer cancelled</button>
+          <button type="button" data-reason="No response from customer">No response</button>
+        </div>
+        <div class="other">
+          <input type="text" data-reason-other placeholder="Or type a reason" aria-label="Other reason">
+          <button type="button" data-decline-other>Decline</button>
+          <button type="button" class="secondary" data-decline-cancel>Cancel</button>
+        </div>
+      </div>
 
       <div class="req-actions">
         <button type="button" class="linklike" data-toggle-military>${r.isMilitary ? 'Unmark military' : 'Mark as military'}</button>
@@ -299,10 +348,13 @@
     }
     // invoiced: no actions, read-only
 
-    function declineFlow(key) {
-      const reason = prompt('Reason (optional) — e.g. unavailable, customer cancelled:', '') || '';
-      act(key, 'decline', 'Marked declined.', { declineReason: reason });
-    }
+    // Decline opens the reasons in the card; one tap declines with that reason
+    function declineFlow() { card.querySelector('[data-decline]').classList.toggle('shown'); }
+    const decline = reason => act(r.key, 'decline', 'Declined' + (reason ? ': ' + reason.toLowerCase() : '') + '.', { declineReason: reason });
+    card.querySelectorAll('[data-reason]').forEach(b => b.addEventListener('click', () => decline(b.dataset.reason)));
+    card.querySelector('[data-decline-other]').addEventListener('click', () => decline(card.querySelector('[data-reason-other]').value.trim()));
+    card.querySelector('[data-reason-other]').addEventListener('keydown', e => { if (e.key === 'Enter') decline(e.target.value.trim()); });
+    card.querySelector('[data-decline-cancel]').addEventListener('click', () => card.querySelector('[data-decline]').classList.remove('shown'));
   }
 
   // ---- Military ID photo (staff-added) ----

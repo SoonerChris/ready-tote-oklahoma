@@ -334,7 +334,8 @@
     const pendingRequests = requests.filter(r => r.status === 'new' || r.status === 'reviewed' || r.status === 'awaiting_confirmation').length;
 
     const ADD_TYPES = ['purchased', 'returned-to-service'];
-    const totalTotesOwned = invEvents.reduce((t,e) => t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity), 0);
+    // Dolly stock changes are tracked separately; events with no item are totes
+    const totalTotesOwned = invEvents.filter(e => e.item !== 'dolly').reduce((t,e) => t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity), 0);
     const totesDeployed = activeRentals.reduce((t,r) => t + totesInPackage(r.package), 0);
     const totesAvailable = totalTotesOwned - totesDeployed;
 
