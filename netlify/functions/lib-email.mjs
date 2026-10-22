@@ -161,6 +161,24 @@ export function callout(html, tone = "plain") {
             </table>`;
 }
 
+// Price breakdown saved with a rental: [{ label, amount }], e.g. package,
+// rush fee, military discount. Anything malformed is dropped, so a bad
+// value can never break or pad an invoice.
+export function cleanLineItems(raw) {
+  if (!Array.isArray(raw) || raw.length < 2 || raw.length > 6) return null;
+  const items = raw.map(i => ({ label: String(i?.label ?? "").trim().slice(0, 60), amount: Number(i?.amount) }))
+    .filter(i => i.label && Number.isFinite(i.amount) && Math.abs(i.amount) < 100000);
+  return items.length === raw.length ? items : null;
+}
+
+// Line items as detailsCard rows: the first plain, the rest signed.
+export function lineItemRows(items) {
+  return (items || []).map((i, n) => [
+    escapeHtml(i.label),
+    `${n === 0 ? "" : i.amount < 0 ? "&minus;" : "+"}$${Math.abs(i.amount).toFixed(2)}`,
+  ]);
+}
+
 // "Questions? Reply or call" line that closes customer emails.
 export function contactLine(prefix = "Questions?") {
   return `

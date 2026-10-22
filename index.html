@@ -1062,6 +1062,11 @@
             <input type="text" name="delivery_address" placeholder="Street address, city, state, zip" required>
           </label>
         </div>
+        <div class="form-grid" style="margin-top:18px;">
+          <label>Promo code (optional)
+            <input type="text" name="promo_code" maxlength="40" autocomplete="off" placeholder="From a partner, if you have one">
+          </label>
+        </div>
         <label style="flex-direction:row; align-items:center; gap:8px; font-weight:400; margin-top:18px; font-size:0.88rem; color:var(--steel);">
           <input type="checkbox" name="is_military" value="true" style="width:auto;">
           <span>Military? Check here (optional) and mention it when we call to confirm your 15% discount.</span>
@@ -1292,6 +1297,7 @@
   <select name="pickup_window"><option>No preference</option></select>
   <input type="text" name="delivery_address">
   <input type="checkbox" name="is_military" value="true">
+  <input type="text" name="promo_code">
   <input type="text" name="hp_field">
 </form>
 

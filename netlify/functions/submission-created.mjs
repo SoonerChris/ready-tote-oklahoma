@@ -33,6 +33,8 @@ export default async (request) => {
   const pickupDate = formatDate(data.pickup_date) || "your requested date";
   const isMilitary = data.is_military === "true";
   const militaryIdKey = data.military_id_key || "";
+  // Optional partner promo code; checked by hand before invoicing
+  const promoCode = String(data.promo_code || "").trim().slice(0, 40);
 
   // The booking form now collects one "Delivery Address" text box
   // (delivery_address). Submissions from before that change sent
@@ -75,6 +77,7 @@ export default async (request) => {
       deliveryAddressZip: addr.zip,
       isMilitary,
       militaryIdKey,
+      promoCode,
       status: "new",
       submittedAt: new Date().toISOString(),
     });
@@ -99,7 +102,8 @@ export default async (request) => {
             })}
             ${detailsCard({
               label: "Your request",
-              rows: [["Package", pkg], ["Delivery", deliveryDate], ["Pickup", pickupDate]],
+              rows: [["Package", pkg], ["Delivery", deliveryDate], ["Pickup", pickupDate],
+                promoCode ? ["Promo code", `${escapeHtml(promoCode)} (we'll apply it on your invoice)`] : null],
             })}
 ${militaryBlock}
             ${steps([

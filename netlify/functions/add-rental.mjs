@@ -68,11 +68,13 @@ export default async (request) => {
       serviceType: body.serviceType || "delivery",
       notes: body.notes || "",
       isMilitary: !!body.isMilitary,
+      isRush: !!body.isRush,
+      ...(body.promoCode ? { promoCode: String(body.promoCode).trim().slice(0, 40) } : {}),
       ...(body.militaryIdKey ? { militaryIdKey: body.militaryIdKey } : {}),
       invoicedAt: new Date().toISOString(),
       backfilled: true,
     });
-    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    return new Response(JSON.stringify({ ok: true, key }), { status: 200 });
   } catch (e) {
     console.error("add-rental failed:", e.message);
     return new Response("Storage error", { status: 502 });

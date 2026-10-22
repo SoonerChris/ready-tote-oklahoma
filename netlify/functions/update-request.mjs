@@ -16,7 +16,7 @@ const EDITABLE_FIELDS = [
   "deliveryDate", "pickupDate", "deliveryWindow", "pickupWindow",
   "deliveryAddress", "deliveryAddressStreet", "deliveryAddressCity",
   "deliveryAddressState", "deliveryAddressZip",
-  "reviewNotes", "declineReason", "invoiceRentalKey", "isMilitary",
+  "reviewNotes", "declineReason", "invoiceRentalKey", "isMilitary", "promoCode",
 ];
 
 const VALID_ACTIONS = new Set(["review", "send-confirmation", "confirm", "unconfirm", "decline", "reopen", "invoice"]);
