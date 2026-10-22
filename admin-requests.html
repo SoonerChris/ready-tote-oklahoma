@@ -77,6 +77,8 @@
   /* "Sent to Hannah?" after tapping Text to confirm */
   .ask{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;margin-top:12px;padding:10px 12px;background:#FAF8F3;border-radius:8px;font-size:14px;font-weight:600;}
   .ask[hidden]{display:none;}
+  .undo-line{display:flex;align-items:center;gap:12px;margin-top:12px;padding:9px 12px;border-radius:8px;background:var(--green-bg);color:#14492F;font-size:14px;font-weight:600;}
+  .undo-line button.linklike{all:unset;cursor:pointer;margin-left:auto;color:var(--ink);text-decoration:underline;text-underline-offset:3px;font-weight:600;}
   .ask button{width:auto;margin:0;padding:7px 14px;font-size:14px;}
   .ask button.linklike{background:none;border:none;color:var(--ink);text-decoration:underline;text-underline-offset:3px;padding:7px 4px;}
 </style>
@@ -306,6 +308,7 @@
       ${warns.length ? `<div class="warns">${warns.map(w => `<div class="warn">${esc(w)}</div>`).join('')}</div>` : ''}
 
       <div class="req-actions" data-actions></div>
+      ${LAST_MOVE && LAST_MOVE.key === r.key ? `<div class="undo-line"><span>${esc(LAST_MOVE.label)}</span><button type="button" class="linklike" data-undo>Undo</button></div>` : ''}
       <div class="ask" data-ask${OPEN_ASKS.has(r.key) ? '' : ' hidden'}>
         <span>Sent the confirm text to ${esc((r.name || 'them').split(' ')[0])}?</span>
         <button type="button" data-ask-yes>Yes, sent</button>
@@ -365,6 +368,7 @@
         <button type="button" data-save-edit>Save changes</button>
       </div>
 
+      ${STEP_BACK[r.status] ? `<button type="button" class="toggle-note" data-move-back>${STEP_BACK[r.status](r)[1]}</button>` : ''}
       <button type="button" class="toggle-note" data-toggle="note">${r.reviewNotes ? 'Edit note' : '+ Add note'}</button>
       <div class="note-block" data-note>
         <textarea rows="2" data-note-text placeholder="e.g. gate code, dog on property, availability check…">${esc(r.reviewNotes || '')}</textarea>
@@ -393,6 +397,19 @@
   }
 
   const OPEN_ASKS = new Set();   // requests showing "Sent the confirm text?"; kept across re-renders
+
+  // Undo for status changes. The latest change shows an Undo right in its
+  // card; every open request also has a "Move back" link for later.
+  let LAST_MOVE = null;   // { key, prev, label }
+  const STEP_BACK = {
+    awaiting_confirmation: (r) => r.reviewedAt ? ['review', 'Move back to reviewed'] : ['reopen', 'Move back to new'],
+    confirmed: () => ['unconfirm', 'Move back to awaiting customer'],
+  };
+  const UNDO_ACTION = { new: 'reopen', reviewed: 'review', awaiting_confirmation: 'unconfirm', confirmed: 'confirm' };
+  function moveBack(r, action) {
+    LAST_MOVE = null;
+    act(r.key, action, 'Moved back to ' + (action === 'unconfirm' ? 'awaiting customer' : action === 'review' ? 'reviewed' : 'new') + '.');
+  }
 
   // Text to confirm: check stock first, open Messages, then ask whether it
   // went out before moving the request to "Awaiting customer".
@@ -443,6 +460,16 @@
         const d = new Date(dIn.value + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + 14);
         pIn.value = d.toISOString().slice(0, 10);
       }
+    });
+
+    card.querySelector('[data-undo]')?.addEventListener('click', () => {
+      const m = LAST_MOVE; if (!m) return;
+      LAST_MOVE = null;
+      act(r.key, UNDO_ACTION[m.prev], 'Undone. Back to ' + (STATUS_META[m.prev] || STATUS_META.new).label.toLowerCase() + '.');
+    });
+    card.querySelector('[data-move-back]')?.addEventListener('click', () => {
+      const [action, label] = STEP_BACK[r.status](r);
+      if (confirm(label + ' for ' + (r.name || 'this request') + '?')) moveBack(r, action);
     });
 
     card.querySelector('[data-ask-yes]').addEventListener('click', () => {
@@ -601,6 +628,8 @@
 
   async function act(key, action, okMsg, extra) {
     const secret = $('secret').value.trim();
+    const before = ALL.find(x => x.key === key);
+    const prev = before && before.status;
     try {
       const resp = await fetch('/.netlify/functions/update-request', {
         method: 'POST',
@@ -611,6 +640,9 @@
       const data = await resp.json();
       const idx = ALL.findIndex(x => x.key === key);
       if (idx >= 0) ALL[idx] = data.request;
+      // Forward moves can be undone from the card; undoing doesn't offer another undo
+      LAST_MOVE = ['send-confirmation', 'confirm', 'decline'].includes(action) && UNDO_ACTION[prev]
+        ? { key, prev, label: okMsg.replace(/\.$/, '') } : null;
       showOk(okMsg);
       render();
     } catch (e) {
