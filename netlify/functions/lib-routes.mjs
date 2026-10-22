@@ -37,12 +37,7 @@ async function viaRoutesApi(apiKey, origins, destinations, traffic) {
     }),
   });
   const data = await resp.json().catch(() => null);
-  if (!resp.ok || !Array.isArray(data)) {
-    const status = data?.error?.status || data?.[0]?.error?.status || resp.status;
-    const hint = status === "PERMISSION_DENIED" || resp.status === 403
-      ? "Turn on the Routes API for your Google key (Google Cloud, APIs & Services)." : "";
-    throw new Error(`Google Maps error: ${status}. ${hint}`.trim());
-  }
+  if (!resp.ok || !Array.isArray(data)) throw new Error(explain(Array.isArray(data) ? data[0] : data, resp.status));
   const grid = origins.map(() => destinations.map(() => null));
   for (const el of data) {
     if (el.condition !== "ROUTE_EXISTS") continue;
@@ -52,6 +47,23 @@ async function viaRoutesApi(apiKey, origins, destinations, traffic) {
     };
   }
   return grid;
+}
+
+// Google's error, in plain words: what's wrong with the key and where to fix it
+function explain(body, httpStatus) {
+  const err = body?.error || {};
+  const info = (err.details || []).find((d) => d.reason) || {};
+  const reason = info.reason || err.status || String(httpStatus);
+  const project = info.metadata?.consumer?.replace("projects/", "") || "";
+  const fixes = {
+    SERVICE_DISABLED: `Routes API isn't turned on in the Google project this key belongs to${project ? ` (project number ${project})` : ""}. Enable it in that project; it can take a few minutes to start working.`,
+    API_KEY_SERVICE_BLOCKED: "This key's API restrictions don't include Routes API. In Google Cloud, Credentials, open the key and add Routes API under API restrictions.",
+    API_KEY_HTTP_REFERRER_BLOCKED: "This key is restricted to websites, which blocks the site's server. In Google Cloud, Credentials, open the key and set Application restrictions to None.",
+    API_KEY_IP_ADDRESS_BLOCKED: "This key is restricted to IP addresses, which blocks the site's server. In Google Cloud, Credentials, open the key and set Application restrictions to None.",
+    BILLING_DISABLED: "Billing isn't turned on for the Google project this key belongs to. Routes API needs billing enabled.",
+    API_KEY_INVALID: "Google doesn't recognize this key. Check GOOGLE_PLACES_API_KEY in Netlify.",
+  };
+  return `Google Maps error: ${reason}. ${fixes[reason] || err.message || ""}`.trim();
 }
 
 async function viaLegacyDistanceMatrix(apiKey, origins, destinations, traffic) {
