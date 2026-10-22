@@ -105,7 +105,7 @@ export default async (request) => {
     // Normalize both stores into the same {start, end, totes} shape so the
     // per-day loop below doesn't need to know which store anything came from.
     const rentalWindows = rentals
-      .filter((r) => r.dropoffDate && r.pickupDate)
+      .filter((r) => !r.cancelled && r.dropoffDate && r.pickupDate)
       .map((r) => ({ start: r.dropoffDate, end: r.pickupDate, totes: totesFor(r), dollies: dolliesFor(r) }));
 
     const heldRequestWindows = requests

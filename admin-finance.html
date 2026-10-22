@@ -341,7 +341,7 @@
       else if (!rentalsResp.ok || !finResp.ok) { showErr('Load failed.'); }
       else {
         const rd = await rentalsResp.json();
-        ALL_RENTALS = rd.rentals || [];
+        ALL_RENTALS = (rd.rentals || []).filter(r => !r.cancelled);   // cancelled rentals aren't revenue
         FIN = await finResp.json();
         $('results').style.display = 'block';   // shown first so the chart can measure its width
         renderAll();

@@ -239,7 +239,7 @@
 
       const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
       TODAY = today;
-      ALL_RENTALS = rd.rentals || [];
+      ALL_RENTALS = (rd.rentals || []).filter(r => !r.cancelled);   // cancelled rentals hold no totes
       ACTIVE_RENTALS = ALL_RENTALS.filter(r => r.dropoffDate <= today && r.pickupDate >= today);
 
       // Confirmed bookings only get written to the rentals store once Send

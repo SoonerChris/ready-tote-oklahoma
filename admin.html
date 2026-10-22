@@ -310,7 +310,7 @@
       const id = await iResp.json();
       const qd = await qResp.json();
 
-      DATA.rentals = rd.rentals || [];
+      DATA.rentals = (rd.rentals || []).filter(r => !r.cancelled);   // cancelled rentals count nowhere
       DATA.reminders = rd.reminders || { delivery: [], pickup: [], review: [] };
       DATA.paidFlags = rd.paidFlags || {};
       DATA.sentFlags = rd.sentFlags || {};

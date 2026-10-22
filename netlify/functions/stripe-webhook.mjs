@@ -229,7 +229,7 @@ async function autoMarkPaid(email, name, amountCents, tosAccepted) {
 function findRentalMatch(rentals, paidFlags, email, name, amountCents) {
   // Only rentals that were actually invoiced (not backfilled) and aren't
   // already marked paid are candidates — same rule admin-reminders.html uses.
-  const candidates = rentals.filter((r) => r.invoicedAt && !r.backfilled && !paidFlags[r.key]);
+  const candidates = rentals.filter((r) => r.invoicedAt && !r.backfilled && !r.cancelled && !paidFlags[r.key]);
   if (!candidates.length) return null;
 
   const normEmail = email ? normalize(email) : "";

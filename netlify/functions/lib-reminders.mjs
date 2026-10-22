@@ -108,6 +108,7 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
   const timing = (due) => ({ dueDate: due, overdue: today > due });
 
   for (const r of rentals) {
+    if (r.cancelled) continue;   // cancelled rentals get no texts
     const first = (r.name || "there").split(" ")[0];
     const dropAddr = dropoffAddressOf(r);
     const pickAddr = pickupAddressOf(r);

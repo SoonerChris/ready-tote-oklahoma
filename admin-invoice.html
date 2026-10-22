@@ -590,7 +590,7 @@
   // ---- Earlier rentals, for the "already invoiced?" check ----
   let RENTALS = [];
   fetch('/.netlify/functions/get-rentals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: $('secret').value }) })
-    .then(r => r.ok ? r.json() : null).then(d => { if (d) RENTALS = d.rentals || []; }).catch(() => {});
+    .then(r => r.ok ? r.json() : null).then(d => { if (d) RENTALS = (d.rentals || []).filter(r => !r.cancelled); }).catch(() => {});
   const digits = v => String(v || '').replace(/\D/g, '').slice(-10);
   function duplicatesOf(p) {
     return RENTALS.filter(r => r.dropoffDate === p.dropoffDate && (
