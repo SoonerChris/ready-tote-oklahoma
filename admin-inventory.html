@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Tote Inventory — Ready Tote Oklahoma (Internal)</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261025"></script>
+<script src="admin-shared.js?v=20261026"></script>
 <style>
   :root{--col:960px;}
   .finding{margin:4px 0 20px; font-size:17px; max-width:760px; line-height:1.45;}
@@ -258,52 +258,8 @@
     btn.disabled = false; btn.textContent = 'Refresh';
   }
 
-  // Matches on email+date first, falling back to name+date — same
-  // best-effort heuristic used by the CLI diagnostic script this fix grew
-  // out of. A request only counts as "pending" if neither match finds an
-  // existing rental record, meaning it's genuinely never been invoiced.
-  function findPendingConfirmed(requests, rentals) {
-    const byEmail = new Set(rentals.map(r => `${(r.email || '').toLowerCase()}|${r.dropoffDate}`));
-    const byName = new Set(rentals.map(r => `${(r.name || '').toLowerCase()}|${r.dropoffDate}`));
-
-    return requests
-      // Same holds as the public availability function: a request awaiting the
-      // customer's confirmation, or confirmed, reserves its totes
-      .filter(req => req.status === 'confirmed' || req.status === 'awaiting_confirmation')
-      .filter(req => {
-        const emailKey = `${(req.email || '').toLowerCase()}|${req.deliveryDate}`;
-        const nameKey = `${(req.name || '').toLowerCase()}|${req.deliveryDate}`;
-        return !byEmail.has(emailKey) && !byName.has(nameKey);
-      })
-      // estTotes: parsed from the request's free-text package, since
-      // requests never get a real numeric toteCount field. 0 means it
-      // couldn't be confidently parsed (e.g. "Custom Package") — flagged
-      // separately below rather than guessed at.
-      .map(req => ({ ...req, estTotes: totesInPackage(req.package), estDollies: dolliesInPackage(req.package) }));
-  }
-
-  // Legacy fallback: parse counts out of the package text, used only for
-  // rentals logged before toteCount/dollyCount existed as real fields.
-  function totesInPackage(pkg) {
-    const m = String(pkg || '').match(/(\d+)\s*totes?/i);
-    return m ? parseInt(m[1], 10) : 0;
-  }
-  function dolliesInPackage(pkg) {
-    const s = String(pkg || '');
-    const m = s.match(/(\d+)\s*doll(?:y|ies)/i);
-    if (m) return parseInt(m[1], 10);
-    return /doll(?:y|ies)/i.test(s) ? 1 : 0;
-  }
-
-  // Authoritative count: prefer the real numeric field set at booking time
-  // (via Send Invoice / Add Rental / the Reminders quick-edit); only fall
-  // back to text-parsing for older rentals that predate those fields.
-  function toteQty(r) {
-    return typeof r.toteCount === 'number' ? r.toteCount : totesInPackage(r.package);
-  }
-  function dollyQty(r) {
-    return typeof r.dollyCount === 'number' ? r.dollyCount : dolliesInPackage(r.package);
-  }
+  // findPendingConfirmed, toteQty, dollyQty and the package-text readers
+  // live in admin-shared.js, shared with the Dashboard.
 
   function render() {
     const totalOwned = ownedAsOf('9999-12-31');
