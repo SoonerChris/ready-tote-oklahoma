@@ -45,6 +45,7 @@
   .math{display:grid; grid-template-columns:max-content 1fr; gap:2px 12px; margin:12px 0 4px; font-size:15px; font-variant-numeric:tabular-nums;}
   .math .n{text-align:right; font-weight:600;}
   .math .total{border-top:1px solid var(--control); padding-top:4px; margin-top:2px;}
+  .dolly-line{margin:8px 0 0; font-size:14px; font-variant-numeric:tabular-nums;}
   .dd-group{margin-top:14px;}
   .dd-group h4{margin:0 0 4px; font-size:14px;}
   .dd-row{display:flex; align-items:baseline; gap:12px; padding:6px 0; border-top:1px solid #EEEAE1; font-size:14px;}
@@ -54,6 +55,10 @@
   .dd-row .when{color:var(--steel); font-size:13px;}
   .dd-row .q{font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap;}
   .guess{display:inline-block; margin-left:6px; padding:0 6px; border-radius:4px; background:var(--gold-bg); color:#6B4C0C; font-size:12px; font-weight:600;}
+  .item-seg{display:inline-flex; gap:2px; padding:2px; background:var(--track); border-radius:8px; margin-bottom:10px;}
+  .item-seg button{all:unset; box-sizing:border-box; height:32px; line-height:30px; padding:0 14px; border:1px solid transparent; border-radius:6px; font-size:14px; font-weight:600; color:var(--steel); cursor:pointer;}
+  .item-seg button[aria-pressed="true"]{background:#fff; color:var(--ink); border-color:var(--line);}
+  .item-seg button:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
   .stat.clickable{cursor:pointer;}
   .stat.clickable:hover .num{text-decoration:underline; text-underline-offset:4px; text-decoration-thickness:2px;}
   .stat.clickable:focus-visible{outline:2px solid var(--ink); outline-offset:-2px;}
@@ -136,19 +141,24 @@
     </section>
 
     <div id="pendingSection" hidden>
-      <h2>Confirmed, not yet invoiced</h2>
+      <h2>Booked, not yet invoiced</h2>
       <div class="rem">
-        <p class="note" style="margin:0 0 10px;">These bookings hold totes but aren't rentals yet. Totes are estimated from the package name until they're invoiced.</p>
+        <p class="note" style="margin:0 0 10px;">Requests awaiting the customer's yes, or confirmed, hold totes but aren't rentals yet. Counts are estimated from the package name until they're invoiced. Your public booking calendar counts them the same way.</p>
         <div id="pendingConfirmed"></div>
       </div>
     </div>
 
     <h2>Log a stock change</h2>
     <div class="rem">
+      <div class="item-seg" role="group" aria-label="What changed">
+        <button type="button" data-item="tote" aria-pressed="true">Totes</button>
+        <button type="button" data-item="dolly" aria-pressed="false">Dollies</button>
+      </div>
+      <p class="note" id="dollySetup" hidden style="margin:0 0 10px;">Dollies aren't tracked yet. Log how many you own as "Purchased" (today's date is fine) and dolly availability starts counting.</p>
       <div class="grid2" style="gap:10px;">
         <input type="date" id="evDate">
         <select id="evType">
-          <option value="purchased">Purchased new totes</option>
+          <option value="purchased">Purchased new</option>
           <option value="returned-to-service">Repaired / returned to service</option>
           <option value="damaged">Damaged / retired from use</option>
           <option value="lost">Lost / not returned</option>
@@ -159,7 +169,7 @@
         <input type="number" id="evQty" placeholder="Quantity" min="1" step="1">
         <input type="text" id="evNote" placeholder="Note (optional)">
       </div>
-      <button type="button" id="evAddBtn">Add event</button>
+      <button type="button" id="evAddBtn">Add stock change</button>
     </div>
 
     <h2>History</h2>
@@ -257,7 +267,9 @@
     const byName = new Set(rentals.map(r => `${(r.name || '').toLowerCase()}|${r.dropoffDate}`));
 
     return requests
-      .filter(req => req.status === 'confirmed')
+      // Same holds as the public availability function: a request awaiting the
+      // customer's confirmation, or confirmed, reserves its totes
+      .filter(req => req.status === 'confirmed' || req.status === 'awaiting_confirmation')
       .filter(req => {
         const emailKey = `${(req.email || '').toLowerCase()}|${req.deliveryDate}`;
         const nameKey = `${(req.name || '').toLowerCase()}|${req.deliveryDate}`;
@@ -267,7 +279,7 @@
       // requests never get a real numeric toteCount field. 0 means it
       // couldn't be confidently parsed (e.g. "Custom Package") — flagged
       // separately below rather than guessed at.
-      .map(req => ({ ...req, estTotes: totesInPackage(req.package) }));
+      .map(req => ({ ...req, estTotes: totesInPackage(req.package), estDollies: dolliesInPackage(req.package) }));
   }
 
   // Legacy fallback: parse counts out of the package text, used only for
@@ -294,7 +306,7 @@
   }
 
   function render() {
-    const totalOwned = EVENTS.reduce((t, e) => t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity), 0);
+    const totalOwned = ownedAsOf('9999-12-31');
     const deployed = ACTIVE_RENTALS.reduce((t, r) => t + toteQty(r), 0);
     const dolliesOut = ACTIVE_RENTALS.reduce((t, r) => t + dollyQty(r), 0);
     // Only the estimable ones (parsed package text > 0) affect the numbers —
@@ -308,10 +320,12 @@
     const freeToday = computeDays(0, 1)[0].available;
 
     $('statCards').innerHTML = `
-      <div class="stat clickable" role="button" tabindex="0" onclick="showDay(TODAY)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDay(TODAY);}" title="See who has totes out today"><div class="lbl">Free today</div><div class="num" style="${freeToday < 0 ? 'color:var(--red)' : ''}">${freeToday}</div><div class="cap">${pendingTotes ? `${pendingTotes} more held for confirmed bookings` : 'ready to rent'}</div></div>
+      <div class="stat clickable" role="button" tabindex="0" onclick="showDay(TODAY)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDay(TODAY);}" title="See who has totes out today"><div class="lbl">Free today</div><div class="num" style="${freeToday < 0 ? 'color:var(--red)' : ''}">${freeToday}</div><div class="cap">${pendingTotes ? `${pendingTotes} more held for bookings not yet invoiced` : 'ready to rent'}</div></div>
       <div class="stat"><div class="lbl">Out with customers</div><div class="num">${deployed}</div><div class="cap">${ACTIVE_RENTALS.length} ${ACTIVE_RENTALS.length === 1 ? 'rental' : 'rentals'}</div></div>
       <div class="stat"><div class="lbl">Owned</div><div class="num">${totalOwned}</div><div class="cap">${lifetimeTotes.toLocaleString('en-US')} totes rented, all time</div></div>
-      <div class="stat"><div class="lbl">Dollies out</div><div class="num">${dolliesOut}</div><div class="cap">estimated from rentals</div></div>
+      ${DOLLIES_TRACKED()
+        ? (() => { const d = computeDays(0, 1)[0]; return `<div class="stat"><div class="lbl">Dollies free today</div><div class="num" style="${d.dolliesFree < 0 ? 'color:var(--red)' : ''}">${d.dolliesFree}</div><div class="cap">${dolliesOut} out · ${dolliesOwnedAsOf('9999-12-31')} owned</div></div>`; })()
+        : `<div class="stat"><div class="lbl">Dollies out</div><div class="num">${dolliesOut}</div><div class="cap">Log dollies owned below to track free ones</div></div>`}
     `;
 
     renderPendingConfirmed();
@@ -327,7 +341,7 @@
       return `
       <div class="rem" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
         <div>
-          <div style="font-weight:bold; font-size:15px;"><span style="color:${color};">${sign}${e.quantity}</span> — ${esc(labelFor(e.type))}</div>
+          <div style="font-weight:bold; font-size:15px;"><span style="color:${color};">${sign}${e.quantity} ${isDollyEvent(e) ? (e.quantity === 1 ? 'dolly' : 'dollies') : (e.quantity === 1 ? 'tote' : 'totes')}</span> · ${esc(labelFor(e.type))}</div>
           <div style="font-size:13px; color:var(--steel); margin:0;">${esc(fmtDate(e.date))}${e.note ? ' · ' + esc(e.note) : ''}</div>
         </div>
         <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:13px; background:var(--white); color:var(--red); border:1px solid var(--control); border-radius:6px;"
@@ -350,7 +364,7 @@
       <div class="rem" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
         <div>
           <div style="font-weight:bold; font-size:15px;">
-            ${esc(p.name || 'Unnamed')}
+            ${esc(p.name || 'Unnamed')} <span class="pill ${p.status === 'confirmed' ? 'ok' : 'pending'}" style="vertical-align:2px;">${p.status === 'confirmed' ? 'Confirmed' : 'Awaiting customer'}</span>
             ${p.estTotes > 0 ? ` — ~${p.estTotes} tote${p.estTotes === 1 ? '' : 's'}` : ' — <span style="color:var(--crate-red);">couldn\'t estimate count</span>'}
           </div>
           <div style="font-size:13px; color:var(--steel); margin:0;">${esc(p.package || '—')} · ${esc(fmtDate(p.deliveryDate))} → ${esc(fmtDate(p.pickupDate))}</div>
@@ -371,8 +385,15 @@
     return d.toISOString().slice(0, 10);
   }
 
+  // Stock events with no item predate dolly tracking and are totes
+  const isDollyEvent = e => e.item === 'dolly';
+  // Dollies count once at least one dolly stock change is logged
+  const DOLLIES_TRACKED = () => EVENTS.some(isDollyEvent);
+  function dolliesOwnedAsOf(dateStr) {
+    return EVENTS.filter(isDollyEvent).reduce((t, e) => e.date > dateStr ? t : t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity), 0);
+  }
   function ownedAsOf(dateStr) {
-    return EVENTS.reduce((t, e) => {
+    return EVENTS.filter(e => !isDollyEvent(e)).reduce((t, e) => {
       if (e.date > dateStr) return t; // hasn't happened yet as of this date
       return t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity);
     }, 0);
@@ -412,7 +433,13 @@
           return t;
         }, 0);
       }
-      days.push({ date, available: owned - deployed, isToday: date === TODAY, isPast: date < TODAY });
+      const day = { date, available: owned - deployed, isToday: date === TODAY, isPast: date < TODAY };
+      if (DOLLIES_TRACKED()) {
+        let dOut = ALL_RENTALS.reduce((t, r) => r.dropoffDate && r.pickupDate && r.dropoffDate <= date && r.pickupDate >= date ? t + dollyQty(r) : t, 0);
+        if (date >= TODAY) dOut += pendingEstimable.reduce((t, p) => p.deliveryDate <= date && p.pickupDate >= date ? t + (p.estDollies || 0) : t, 0);
+        day.dolliesFree = dolliesOwnedAsOf(date) - dOut;
+      }
+      days.push(day);
     }
     return days;
   }
@@ -436,6 +463,9 @@
     } else {
       html += ` No day in the next 60 has fewer.`;
     }
+    // Dollies: only once they're tracked, and only when they run short
+    const dShort = ahead.filter(d => typeof d.dolliesFree === 'number' && d.dolliesFree < 0);
+    if (dShort.length) html += ` <span class="bad">Dollies run short on ${dShort.length === 1 ? dayLabel(dShort[0].date) : dShort.length + ' days, first ' + dayLabel(dShort[0].date)}.</span>`;
     $('finding').innerHTML = html;
   }
 
@@ -504,7 +534,12 @@
       : [];
     const outTotes = out.reduce((t, x) => t + x.totes, 0), heldTotes = held.reduce((t, x) => t + x.totes, 0);
     const changes = EVENTS.filter(e => e.date === date);
-    return { owned, out, held, outTotes, heldTotes, free: owned - outTotes - heldTotes, dollies: out.reduce((t, x) => t + x.dollies, 0), changes };
+    const dollies = out.reduce((t, x) => t + x.dollies, 0);
+    const heldDollies = date >= TODAY
+      ? PENDING_CONFIRMED.filter(p => p.estTotes > 0 && p.deliveryDate && p.pickupDate && p.deliveryDate <= date && p.pickupDate >= date).reduce((t, p) => t + (p.estDollies || 0), 0)
+      : 0;
+    const dolly = DOLLIES_TRACKED() ? { owned: dolliesOwnedAsOf(date), out: dollies, held: heldDollies, free: dolliesOwnedAsOf(date) - dollies - heldDollies } : null;
+    return { owned, out, held, outTotes, heldTotes, free: owned - outTotes - heldTotes, dollies, dolly, changes };
   }
 
   window.showDay = (date) => {
@@ -529,14 +564,15 @@
         <button type="button" class="close" onclick="closeDay()">Close</button>
       </div>
       <div class="math">
-        <span class="n">${b.owned}</span><span>owned${b.changes.length ? ` (stock changed this day: ${b.changes.map(e => (ADD_TYPES.includes(e.type) ? '+' : '−') + e.quantity).join(', ')})` : ''}</span>
+        <span class="n">${b.owned}</span><span>owned${b.changes.length ? ` (stock changed this day: ${b.changes.map(e => (ADD_TYPES.includes(e.type) ? '+' : '−') + e.quantity + (isDollyEvent(e) ? ' dollies' : ' totes')).join(', ')})` : ''}</span>
         <span class="n">−${b.outTotes}</span><span>out with ${b.out.length} ${b.out.length === 1 ? 'customer' : 'customers'}${going || coming ? ` (${[going ? going + ' going out' : '', coming ? coming + ' coming back' : ''].filter(Boolean).join(', ')} this day)` : ''}</span>
-        ${date >= TODAY ? `<span class="n">−${b.heldTotes}</span><span>held for confirmed bookings not yet invoiced</span>` : ''}
+        ${date >= TODAY ? `<span class="n">−${b.heldTotes}</span><span>held for bookings not yet invoiced</span>` : ''}
         <span class="n total" style="${freeColor}">${b.free}</span><span class="total">free</span>
       </div>
+      ${b.dolly ? `<p class="dolly-line">Dollies: ${b.dolly.owned} owned − ${b.dolly.out} out${b.dolly.held ? ` − ${b.dolly.held} held` : ''} = <b style="${b.dolly.free < 0 ? 'color:var(--red)' : ''}">${b.dolly.free < 0 ? `overbooked by ${-b.dolly.free}` : b.dolly.free + ' free'}</b></p>` : ''}
       ${b.out.length ? `<div class="dd-group"><h4>Out with customers · ${b.dollies} ${b.dollies === 1 ? 'dolly' : 'dollies'}</h4>${b.out.map(x => `
         <div class="dd-row"><div class="who">${link(x.name)}${x.guessed ? '<span class="guess" title="No tote count set on this rental; read from the package name">count guessed</span>' : ''}<div class="when">${span(x)}</div></div><span class="q">${x.totes} totes</span></div>`).join('')}</div>` : ''}
-      ${b.held.length ? `<div class="dd-group"><h4>Held for confirmed bookings</h4>${b.held.map(x => `
+      ${b.held.length ? `<div class="dd-group"><h4>Held for bookings not yet invoiced</h4>${b.held.map(x => `
         <div class="dd-row"><div class="who"><a href="admin-requests.html">${esc(x.name || 'Unnamed')}</a><span class="guess" title="Estimated from the package name until invoiced">estimated</span><div class="when">${short(x.from)} to ${short(x.to)}</div></div><span class="q">${x.totes} totes</span></div>`).join('')}</div>` : ''}
       ${date < TODAY ? '<p class="note" style="margin:12px 0 0;">Past days are rebuilt from logged rentals and stock changes.</p>' : ''}
 `;
@@ -634,7 +670,7 @@
 
   function labelFor(type) {
     return {
-      purchased: 'Purchased new totes',
+      purchased: 'Purchased new',
       'returned-to-service': 'Repaired / returned to service',
       damaged: 'Damaged / retired from use',
       lost: 'Lost / not returned',
@@ -658,11 +694,18 @@
     if (resp.ok) { const d = await resp.json(); EVENTS = d.events || []; render(); renderExpected(); }
   }
 
+  let EV_ITEM = 'tote';
+  document.querySelectorAll('.item-seg button').forEach(b => b.addEventListener('click', () => {
+    EV_ITEM = b.dataset.item;
+    document.querySelectorAll('.item-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    $('dollySetup').hidden = !(EV_ITEM === 'dolly' && !DOLLIES_TRACKED());
+  }));
+
   $('evAddBtn').addEventListener('click', async () => {
     const date = $('evDate').value, type = $('evType').value,
           quantity = $('evQty').value, note = $('evNote').value.trim();
-    if (!date || !quantity) return showErr('Event needs a date and quantity.');
-    const resp = await invCall({ action: 'add', date, type, quantity, note });
+    if (!date || !quantity) return showErr('A stock change needs a date and a quantity.');
+    const resp = await invCall({ action: 'add', date, type, quantity, note, item: EV_ITEM });
     if (resp.ok) { $('evQty').value = ''; $('evNote').value = ''; $('status').style.display = 'none'; reload(); }
     else showErr('Add event failed.');
   });

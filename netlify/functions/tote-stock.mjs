@@ -1,5 +1,7 @@
 // POST /.netlify/functions/inventory
-// Tote stock ledger. Actions: list, add, delete.
+// Stock ledger for totes and dollies. Actions: list, add, delete.
+// Each event has item "tote" or "dolly"; events saved before dollies were
+// tracked have no item and are totes.
 // Protected by INVOICE_SECRET.
 
 import { getStore } from "@netlify/blobs";
@@ -47,6 +49,7 @@ export default async (request) => {
         const key = `inv_${body.date}_${Date.now()}`;
         await store.setJSON(key, {
           date: body.date,
+          item: body.item === "dolly" ? "dolly" : "tote",
           type: body.type,
           quantity,
           note: body.note || "",

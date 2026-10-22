@@ -32,8 +32,21 @@
 import { getStore } from "@netlify/blobs";
 
 const ADD_TYPES = ["purchased", "returned-to-service"];
+// Stock events without an item predate dolly tracking and are totes
+const isDolly = (e) => e.item === "dolly";
 const HOLD_REQUEST_STATUSES = ["awaiting_confirmation", "confirmed"];
 const DAYS_AHEAD = 120; // ~4 months of lookahead, plenty for a 2-week rental window
+
+function dolliesInPackage(pkg) {
+  const s = String(pkg || "");
+  const m = s.match(/(\d+)\s*doll(?:y|ies)/i);
+  if (m) return parseInt(m[1], 10);
+  return /doll(?:y|ies)/i.test(s) ? 1 : 0;
+}
+function dolliesFor(record) {
+  if (typeof record.dollyCount === "number") return record.dollyCount;
+  return dolliesInPackage(record.package);
+}
 
 function totesInPackage(pkg) {
   const m = String(pkg || "").match(/(\d+)\s*totes?/i);
@@ -78,10 +91,13 @@ export default async (request) => {
 
   try {
     const invEvents = await listAll(getStore("inventory"));
-    const totalOwned = invEvents.reduce(
-      (t, e) => t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity),
-      0
-    );
+    const net = (list) => list.reduce((t, e) => t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity), 0);
+    const totalOwned = net(invEvents.filter((e) => !isDolly(e)));
+    // Dollies are only counted once at least one dolly stock change is logged;
+    // until then there's no owned number to subtract from.
+    const dollyEvents = invEvents.filter(isDolly);
+    const dolliesTracked = dollyEvents.length > 0;
+    const dolliesOwned = dolliesTracked ? net(dollyEvents) : null;
 
     const rentals = await listAll(getStore("rentals"));
     const requests = await listAll(getStore("requests"));
@@ -90,11 +106,11 @@ export default async (request) => {
     // per-day loop below doesn't need to know which store anything came from.
     const rentalWindows = rentals
       .filter((r) => r.dropoffDate && r.pickupDate)
-      .map((r) => ({ start: r.dropoffDate, end: r.pickupDate, totes: totesFor(r) }));
+      .map((r) => ({ start: r.dropoffDate, end: r.pickupDate, totes: totesFor(r), dollies: dolliesFor(r) }));
 
     const heldRequestWindows = requests
       .filter((r) => HOLD_REQUEST_STATUSES.includes(r.status) && r.deliveryDate && r.pickupDate)
-      .map((r) => ({ start: r.deliveryDate, end: r.pickupDate, totes: totesFor(r) }));
+      .map((r) => ({ start: r.deliveryDate, end: r.pickupDate, totes: totesFor(r), dollies: dolliesFor(r) }));
 
     const deployedWindows = [...rentalWindows, ...heldRequestWindows];
 
@@ -102,14 +118,14 @@ export default async (request) => {
     const days = [];
     for (let i = 0; i < DAYS_AHEAD; i++) {
       const date = shiftDate(today, i);
-      const deployed = deployedWindows.reduce((t, w) => {
-        if (w.start <= date && w.end >= date) return t + w.totes;
-        return t;
-      }, 0);
-      days.push({ date, available: totalOwned - deployed });
+      const out = deployedWindows.filter((w) => w.start <= date && w.end >= date);
+      const deployed = out.reduce((t, w) => t + w.totes, 0);
+      const day = { date, available: totalOwned - deployed };
+      if (dolliesTracked) day.dolliesAvailable = dolliesOwned - out.reduce((t, w) => t + w.dollies, 0);
+      days.push(day);
     }
 
-    return new Response(JSON.stringify({ totalOwned, today, days }), {
+    return new Response(JSON.stringify({ totalOwned, dolliesTracked, dolliesOwned, today, days }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
