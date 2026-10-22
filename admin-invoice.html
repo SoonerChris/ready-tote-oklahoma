@@ -7,7 +7,7 @@
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="robots" content="noindex, nofollow">
-<title>Send Invoice — Ready Tote Oklahoma (Internal)</title>
+<title>Send invoice · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
 <script src="admin-shared.js?v=20261026"></script>
 <script src="admin-availability.js?v=20261024"></script>
@@ -30,6 +30,17 @@
   .send-summary dd{margin:0; min-width:0; overflow-wrap:anywhere;}
   .send-summary .row-btns{display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;}
   .send-summary .row-btns button{width:auto; margin:0;}
+  .send-summary .warn{display:block; margin:0 0 6px; padding:7px 10px; border-radius:6px; background:var(--red-bg); color:#831C1E; font-weight:600; line-height:1.4;}
+  /* Form sections */
+  .sec{margin:28px 0 0; padding-top:20px; border-top:1px solid var(--line); font-size:15px; font-weight:700; color:var(--ink);}
+  .sec.first{border-top:none; padding-top:0; margin-top:20px;}
+  label.check{display:flex; align-items:center; gap:8px; font-weight:normal;}
+  label.check input{width:auto; margin:0;}
+  .linkish{all:unset; cursor:pointer; margin-top:6px; font-size:13px; font-weight:600; color:var(--ink); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
+  .linkish[hidden]{display:none;}
+  .note.bad{color:#831C1E; font-weight:600;}
+  .after-send{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:14px;}
+  .after-send .sms-btn[aria-disabled="true"]{background:var(--track); color:var(--steel); pointer-events:none;}
 </style>
 </head>
 <body>
@@ -55,154 +66,151 @@
 
   <input type="hidden" id="secret">
 
+  <h2 class="sec first">Customer</h2>
   <div class="grid2">
     <div>
-      <label>Customer name</label>
+      <label for="name">Name</label>
       <input type="text" id="name" placeholder="Jane Smith">
     </div>
     <div>
-      <label>Customer email<span class="log-only"> (optional)</span></label>
-      <input type="email" id="email" placeholder="jane@example.com">
+      <label for="phone">Phone</label>
+      <input type="tel" id="phone" placeholder="405-555-0123">
     </div>
   </div>
+  <label for="email">Email<span class="log-only"> (optional)</span></label>
+  <input type="email" id="email" placeholder="jane@example.com">
 
-  <label>Customer phone</label>
-  <input type="tel" id="phone" placeholder="405-555-0123">
-
-  <div class="send-only">
-  <label>Paste booking email (optional)</label>
-  <textarea id="pasteBox" rows="4" placeholder="Paste the Netlify booking notification email here, then click Parse to auto-fill name, email, package, and dates." style="resize:vertical;"></textarea>
-  <button type="button" id="parseBtn" class="secondary" style="margin-top:8px;width:auto;padding:8px 14px;font-size:14px;">Parse booking email</button>
-  </div>
-
-  <label>Package</label>
+  <h2 class="sec">Package and price</h2>
+  <label for="package">Package</label>
   <select id="package">
     <option value="">Loading packages…</option>
   </select>
-  <p class="note">Packages load from <strong>packages.json</strong> in the site repo — edit that file on GitHub to add or update packages, tote/dolly counts, and Stripe links. Choose "Custom package" for ad-hoc rentals.</p>
+
+  <div id="customPackageBlock" style="display:none;">
+    <label for="customPackageName">Custom package description</label>
+    <input type="text" id="customPackageName" placeholder="e.g. 10 Totes + Extra Dolly">
+  </div>
 
   <div class="grid2">
     <div>
-      <label>Tote count</label>
+      <label for="toteCount">Totes</label>
       <input type="number" id="toteCount" min="0" step="1" placeholder="20">
     </div>
     <div>
-      <label>Dolly count</label>
+      <label for="dollyCount">Dollies</label>
       <input type="number" id="dollyCount" min="0" step="1" placeholder="1">
     </div>
   </div>
-  <p class="note">Auto-filled from the package you pick, but always editable — this is what Inventory actually counts, so it stays accurate no matter what the package name says.</p>
+  <p class="note">Filled from the package. Inventory counts these, so change them if this rental is different.</p>
 
-  <div id="customPackageBlock" style="display:none;">
-    <label>Custom package description</label>
-    <input type="text" id="customPackageName" placeholder="e.g. 10 Totes + Extra Dolly">
-    <p class="note">Just a human-readable label — set the Tote count / Dolly count above for inventory tracking.</p>
-  </div>
+  <label class="check" style="margin-top:14px;">
+    <input type="checkbox" id="isMilitary"> Military discount (15%)
+  </label>
 
   <div class="grid2">
     <div>
-      <label>Rental price</label>
+      <label for="price">Price</label>
       <input type="text" id="price" placeholder="$99" value="$">
-      <button type="button" id="recalcBtn" class="secondary" style="margin-top:6px;width:auto;padding:6px 12px;font-size:13px;">Recalculate (package + rush + military)</button>
       <p class="note" id="estimateNote" style="display:none;"></p>
+      <button type="button" id="recalcBtn" class="linkish" hidden>Recalculate from package</button>
     </div>
     <div>
-      <label>Duration</label>
+      <label for="duration">Duration</label>
       <input type="text" id="duration" value="2 Weeks">
     </div>
   </div>
 
+  <h2 class="sec">Dates</h2>
   <div class="grid2">
     <div>
-      <label>Drop-off date</label>
+      <label for="dropoffDate">Drop-off date</label>
       <input type="date" id="dropoffDate">
     </div>
     <div>
-      <label>Drop-off time</label>
+      <label for="dropoffTime">Drop-off time</label>
       <input type="time" id="dropoffTime" value="10:00">
     </div>
   </div>
 
   <div class="grid2">
     <div>
-      <label>Pickup date</label>
+      <label for="pickupDate">Pickup date</label>
       <input type="date" id="pickupDate">
       <p class="note" id="pickupNote" hidden></p>
     </div>
     <div>
-      <label>Pickup time</label>
+      <label for="pickupTime">Pickup time</label>
       <input type="time" id="pickupTime" value="10:00">
     </div>
   </div>
+  <p class="note" id="timeNote" hidden></p>
   <div id="availLine" style="margin-top:12px;"></div>
 
-  <label>Service type</label>
+  <h2 class="sec">Where</h2>
+  <label for="serviceType">Service</label>
   <select id="serviceType">
-    <option value="delivery">We deliver & pick up (standard)</option>
-    <option value="self">Customer picks up & returns totes</option>
+    <option value="delivery">We deliver and pick up</option>
+    <option value="self">Customer picks up and returns the totes</option>
   </select>
 
   <div id="addressSection">
-  <label>Drop-off street address</label>
+  <label for="street">Drop-off street address</label>
   <input type="text" id="street" placeholder="123 Main St">
 
   <div class="grid2">
     <div>
-      <label>City</label>
+      <label for="city">City</label>
       <input type="text" id="city" placeholder="Oklahoma City">
     </div>
     <div class="grid2">
       <div>
-        <label>State</label>
+        <label for="state">State</label>
         <input type="text" id="state" value="OK">
       </div>
       <div>
-        <label>Zip</label>
+        <label for="zip">Zip</label>
         <input type="text" id="zip" placeholder="73102" inputmode="numeric" maxlength="10">
       </div>
     </div>
   </div>
 
-  <label style="display:flex; align-items:center; gap:8px; font-weight:normal; margin-top:18px;">
-    <input type="checkbox" id="sameAddress" checked style="width:auto;"> Pickup address is the same as drop-off
+  <label class="check" style="margin-top:18px;">
+    <input type="checkbox" id="sameAddress" checked> Pickup address is the same as drop-off
   </label>
 
   <div id="pickupAddressBlock" style="display:none;">
-    <label>Pickup street address</label>
+    <label for="pstreet">Pickup street address</label>
     <input type="text" id="pstreet" placeholder="456 Oak Ave">
     <div class="grid2">
       <div>
-        <label>City</label>
+        <label for="pcity">City</label>
         <input type="text" id="pcity" placeholder="Moore">
       </div>
       <div class="grid2">
         <div>
-          <label>State</label>
+          <label for="pstate">State</label>
           <input type="text" id="pstate" value="OK">
         </div>
         <div>
-          <label>Zip</label>
+          <label for="pzip">Zip</label>
           <input type="text" id="pzip" placeholder="73160" inputmode="numeric" maxlength="10">
         </div>
       </div>
     </div>
   </div>
-
   </div><!-- /addressSection -->
 
   <div class="send-only">
-  <label>Stripe payment link</label>
+  <h2 class="sec">Payment</h2>
+  <label for="stripeUrl">Stripe payment link</label>
   <input type="url" id="stripeUrl" placeholder="https://buy.stripe.com/...">
-  <p class="note">Paste the Stripe Payment Link for this package. Tip: edit this file to hard-code your three links in the package dropdown (data-stripe attributes) so this auto-fills.</p>
+  <p class="note" id="stripeNote">Filled from the package. If the price changes (military, rush), paste a Stripe link for the new amount.</p>
   </div>
 
-  <label style="display:flex; align-items:center; gap:8px; font-weight:normal; margin-top:18px;">
-    <input type="checkbox" id="isMilitary" style="width:auto;"> Military discount (ID on file or being verified)
-  </label>
-  <p class="note">If this came from a booking request with an ID photo already attached, it carries over automatically. Otherwise, add the photo from All Rentals once this rental is logged.</p>
-
-  <label>Notes (optional)</label>
+  <h2 class="sec">Notes</h2>
+  <label for="notes">Notes (optional)</label>
   <textarea id="notes" rows="3" placeholder="Gate code, dog on property, special instructions…" style="resize:vertical;"></textarea>
+  <p class="note">A military ID photo from the booking request carries over. Otherwise add it from All Rentals once this rental is saved.</p>
 
   <div class="send-summary" id="sendSummary" hidden></div>
   <button id="sendBtn">Review and send</button>
@@ -262,6 +270,19 @@
       }
     }
 
+    // Start the time pickers inside the window the customer asked for
+    const WINDOW_TIME = { morning: '09:00', afternoon: '13:00', evening: '17:00' };
+    const timeFor = w => { const m = String(w || '').toLowerCase().match(/morning|afternoon|evening/); return m ? WINDOW_TIME[m[0]] : null; };
+    const dT = timeFor(r.deliveryWindow), pT = timeFor(r.pickupWindow);
+    if (dT) $('dropoffTime').value = dT;
+    if (pT) $('pickupTime').value = pT;
+    if (dT || pT) {
+      const word = w => w.replace(/\s*\(.*\)/, '').toLowerCase();
+      $('timeNote').textContent = 'Times set from what the customer asked for: '
+        + [dT ? 'drop-off ' + word(r.deliveryWindow) : '', pT ? 'pickup ' + word(r.pickupWindow) : ''].filter(Boolean).join(', ') + '.';
+      $('timeNote').hidden = false;
+    }
+
     let noteParts = [];
     if (r.reviewNotes) noteParts.push(r.reviewNotes);
     if (r.deliveryWindow && !/no preference/i.test(r.deliveryWindow)) noteParts.push('Delivery pref: ' + r.deliveryWindow + '.');
@@ -269,7 +290,7 @@
     if (noteParts.length) $('notes').value = noteParts.join(' ');
 
     matchPrefillPackage(r);
-    showStatus('ok', 'Prefilled from a confirmed booking request — verify address, times, and price before sending.');
+    showStatus('ok', 'Filled in from the booking request. Check the address, times and price before sending.');
   }
 
   function matchPrefillPackage(r) {
@@ -280,7 +301,6 @@
     if (idx >= 0) {
       $('package').value = String(idx);
       $('package').dispatchEvent(new Event('change'));
-      recalcEstimate();
     }
   }
 
@@ -299,9 +319,16 @@
   // timestamp (no prefilled request — a from-scratch invoice), there's
   // no basis to judge rush eligibility, so that part is skipped; add it
   // by hand if it applies.
+  // Price follows the package, rush and military automatically until you
+  // type a price yourself; then it's left alone and "Recalculate" appears.
+  let PRICE_BY_HAND = false;
+  function autoPrice() {
+    if (!PRICE_BY_HAND) recalcEstimate();
+    stripeCheck();
+  }
   function recalcEstimate() {
     const pkgVal = $('package').value;
-    if (!pkgVal || pkgVal === 'custom') return showStatus('err', 'Pick a package first to calculate an estimate.');
+    if (!pkgVal || pkgVal === 'custom') { $('estimateNote').style.display = 'none'; return; }
     const p = PACKAGES[Number(pkgVal)];
     if (!p || !p.price) return;
     const base = Number(String(p.price).replace(/[^0-9.]/g, ''));
@@ -328,9 +355,42 @@
     }
 
     $('price').value = '$' + trimZeros(total);
-    $('estimateNote').textContent = notes.join('  \u00b7  ') + `  =  $${trimZeros(total)}`;
-    $('estimateNote').style.display = 'block';
+    $('estimateNote').textContent = notes.length > 1 ? notes.join('  \u00b7  ') + `  =  $${trimZeros(total)}` : '';
+    $('estimateNote').style.display = notes.length > 1 ? 'block' : 'none';
+    $('recalcBtn').hidden = true;
   }
+
+  // ---- Does the Stripe link charge what the invoice says? ----
+  // Each package's payment link has a fixed amount. A discount or rush fee
+  // changes the price on the invoice but not what Stripe charges.
+  const money = v => { const n = parseFloat(String(v || '').replace(/[^0-9.]/g, '')); return Number.isFinite(n) ? n : null; };
+  function linkPrice() {
+    const url = $('stripeUrl').value.trim();
+    const pkg = url && PACKAGES.find(p => p.stripeUrl && p.stripeUrl === url);
+    return pkg ? money(pkg.price) : null;
+  }
+  function stripeMismatch() {
+    const lp = linkPrice(), ip = money($('price').value);
+    return lp !== null && ip !== null && Math.abs(lp - ip) > 0.004 ? { link: lp, invoice: ip } : null;
+  }
+  function stripeCheck() {
+    const note = $('stripeNote'), url = $('stripeUrl').value.trim(), mm = stripeMismatch(), lp = linkPrice();
+    note.classList.toggle('bad', !!mm);
+    if (!url) note.textContent = 'Paste the Stripe payment link for this amount.';
+    else if (mm) note.textContent = `This link charges $${trimZeros(mm.link)}, but the price is $${trimZeros(mm.invoice)}. Paste a Stripe link for $${trimZeros(mm.invoice)}.`;
+    else if (lp !== null) note.textContent = `This link charges $${trimZeros(lp)}, which matches the price.`;
+    else note.textContent = `Your own link. Make sure it charges ${$('price').value.trim() || 'the price'}.`;
+  }
+  $('stripeUrl').addEventListener('input', stripeCheck);
+  $('price').addEventListener('input', () => {
+    PRICE_BY_HAND = true;
+    $('recalcBtn').hidden = !$('package').value || $('package').value === 'custom';
+    $('estimateNote').style.display = 'none';
+    stripeCheck();
+  });
+  $('isMilitary').addEventListener('change', autoPrice);
+  $('dropoffDate').addEventListener('change', autoPrice);
+  $('dropoffTime').addEventListener('change', autoPrice);
 
   // "169" -> "169", "164.9" -> "164.90", "164" -> "164"
   function trimZeros(n) {
@@ -342,7 +402,7 @@
     $('pickupAddressBlock').style.display = e.target.checked ? 'none' : 'block';
   });
 
-  $('recalcBtn').addEventListener('click', recalcEstimate);
+  $('recalcBtn').addEventListener('click', () => { PRICE_BY_HAND = false; autoPrice(); });
 
   // Hide address section entirely for customer self pickup/return
   $('serviceType').addEventListener('change', (e) => {
@@ -359,7 +419,7 @@
       PACKAGES.forEach((p, i) => {
         const opt = document.createElement('option');
         opt.value = String(i);
-        opt.textContent = p.name + ' — ' + p.price;
+        opt.textContent = p.name + ' · ' + p.price;
         sel.appendChild(opt);
       });
       const custom = document.createElement('option');
@@ -376,99 +436,17 @@
   $('package').addEventListener('change', (e) => {
     const v = e.target.value;
     $('customPackageBlock').style.display = (v === 'custom') ? 'block' : 'none';
-    if (v === '' || v === 'custom') return;
+    if (v === '' || v === 'custom') { $('estimateNote').style.display = 'none'; $('recalcBtn').hidden = true; stripeCheck(); return; }
     const p = PACKAGES[Number(v)];
     if (!p) return;
-    $('price').value = p.price || '$';
     $('duration').value = p.duration || '2 Weeks';
     autoPickup();
     $('stripeUrl').value = (p.stripeUrl && !p.stripeUrl.startsWith('PASTE')) ? p.stripeUrl : '';
     $('toteCount').value = (p.toteCount ?? '');
     $('dollyCount').value = (p.dollyCount ?? '');
-  });
-
-  // ---- Parse a pasted Netlify booking notification email ----
-  $('parseBtn').addEventListener('click', () => {
-    const text = $('pasteBox').value;
-    if (!text.trim()) return showStatus('err', 'Paste the booking email first.');
-
-    const grab = (keys) => {
-      for (const key of keys) {
-        const re = new RegExp(key + '\\s*[:\\-]?\\s*(.+)', 'i');
-        const m = text.match(re);
-        if (m) return m[1].trim();
-      }
-      return '';
-    };
-
-    const name = grab(['^name', 'full name']);
-    const email = (text.match(/[\w.+-]+@[\w-]+\.[\w.]+/) || [''])[0];
-    const phone = grab(['phone']);
-    const pkgText = grab(['package']);
-    const dropDate = grab(['delivery[_ ]?date']);
-    const pickDate = grab(['pickup[_ ]?date']);
-    const addrStreet = grab(['delivery[_ ]?address[_ ]?street']);
-    const addrCity = grab(['delivery[_ ]?address[_ ]?city']);
-    const addrState = grab(['delivery[_ ]?address[_ ]?state']);
-    const addrZip = grab(['delivery[_ ]?address[_ ]?zip']);
-    const addr = grab(['delivery[_ ]?address']); // legacy combined field, older emails only
-    const dropWin = grab(['delivery[_ ]?window']);
-    const pickWin = grab(['pickup[_ ]?window']);
-
-    let filled = [];
-    if (name) { $('name').value = name; filled.push('name'); }
-    if (email) { $('email').value = email; filled.push('email'); }
-    if (phone) { $('phone').value = phone; filled.push('phone'); }
-    if (dropDate && /^\d{4}-\d{2}-\d{2}/.test(dropDate)) { $('dropoffDate').value = dropDate.slice(0,10); filled.push('drop-off date'); }
-    if (pickDate && /^\d{4}-\d{2}-\d{2}/.test(pickDate)) { $('pickupDate').value = pickDate.slice(0,10); filled.push('pickup date'); }
-
-    if (addrStreet || addrCity || addrZip) {
-      if (addrStreet) $('street').value = addrStreet;
-      if (addrCity) $('city').value = addrCity;
-      if (addrState) $('state').value = addrState;
-      if (addrZip) $('zip').value = addrZip;
-      filled.push('address');
-    } else if (addr) {
-      // Legacy combined field ("Street, City, Zip") — split it out best-effort
-      const parts = addr.split(',').map(s => s.trim());
-      if (parts.length >= 2) {
-        $('street').value = parts[0];
-        const last = parts[parts.length - 1];
-        const zipMatch = last.match(/\b(\d{5})(?:-\d{4})?\b/);
-        const stateMatch = last.match(/\b([A-Za-z]{2})\b/);
-        $('city').value = parts.length >= 3 ? parts[1] : last.replace(zipMatch ? zipMatch[0] : '', '').replace(stateMatch ? stateMatch[0] : '', '').trim() || parts[1] || '';
-        if (parts.length >= 3) {
-          if (zipMatch) $('zip').value = zipMatch[1];
-          if (stateMatch && stateMatch[1].toUpperCase() !== $('city').value.toUpperCase()) $('state').value = stateMatch[1].toUpperCase();
-        } else if (zipMatch) { $('zip').value = zipMatch[1]; }
-        filled.push('address');
-      } else {
-        $('street').value = addr; filled.push('address (street only — add city/zip)');
-      }
-    }
-    // Preferred windows: note them in the status so you pick times accordingly
-    let winNote = '';
-    if (dropWin && !/no preference/i.test(dropWin)) winNote += ' Delivery pref: ' + dropWin + '.';
-    if (pickWin && !/no preference/i.test(pickWin)) winNote += ' Pickup pref: ' + pickWin + '.';
-    if (winNote) filled.push('(' + winNote.trim() + ')');
-
-    // Match package text against loaded packages
-    if (pkgText) {
-      const idx = PACKAGES.findIndex(p =>
-        pkgText.toLowerCase().includes(p.name.toLowerCase().slice(0, 12)) ||
-        (p.price && pkgText.includes(p.price)));
-      if (idx >= 0) {
-        $('package').value = String(idx);
-        $('package').dispatchEvent(new Event('change'));
-        filled.push('package');
-      }
-    }
-
-    if (filled.length) {
-      showStatus('ok', 'Filled: ' + filled.join(', ') + '. Add address, times, and verify before sending.');
-    } else {
-      showStatus('err', 'Could not find booking fields in that text — fill the form manually.');
-    }
+    // A new package is a new starting price: recalculate even if typed before
+    PRICE_BY_HAND = false;
+    autoPrice();
   });
 
   // ---- Pickup date follows drop-off ----
@@ -527,6 +505,17 @@
   }
   document.querySelectorAll('.mode-seg button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode === 'log')));
   document.addEventListener('DOMContentLoaded', () => setMode(LOG_MODE));
+
+  // ---- Earlier rentals, for the "already invoiced?" check ----
+  let RENTALS = [];
+  fetch('/.netlify/functions/get-rentals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: $('secret').value }) })
+    .then(r => r.ok ? r.json() : null).then(d => { if (d) RENTALS = d.rentals || []; }).catch(() => {});
+  const digits = v => String(v || '').replace(/\D/g, '').slice(-10);
+  function duplicatesOf(p) {
+    return RENTALS.filter(r => r.dropoffDate === p.dropoffDate && (
+      (p.email && r.email && r.email.toLowerCase() === p.email.toLowerCase()) ||
+      (digits(p.phone).length === 10 && digits(r.phone) === digits(p.phone))));
+  }
 
   // ---- Send: build and check the payload, show a summary, send once ----
   let SENT = false, PENDING_PAYLOAD = null;
@@ -636,6 +625,11 @@
   function showSummary(p) {
     const day = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     const res = checkAvailability(p.dropoffDate, p.pickupDate, p.toteCount, prefillHold(), p.dollyCount);
+    const short = d => new Date(String(d).slice(0, 10) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const issues = [];
+    const mm = !LOG_MODE && stripeMismatch();
+    if (mm) issues.push(`Stripe will charge $${trimZeros(mm.link)}, but the invoice says $${trimZeros(mm.invoice)}. Paste a Stripe link for $${trimZeros(mm.invoice)}, or the customer pays the wrong amount.`);
+    for (const d of duplicatesOf(p)) issues.push(`${d.name || 'This customer'} already has a rental starting ${short(d.dropoffDate)}${d.invoicedAt ? ' (' + (d.backfilled ? 'added' : 'invoiced') + ' ' + short(d.invoicedAt) + ')' : ''}. Make sure this isn't a second copy.`);
     const box = $('sendSummary');
     box.innerHTML = `
       <h3>${LOG_MODE ? 'Add this rental to the log?' : 'Send this invoice?'}</h3>
@@ -647,9 +641,10 @@
         <dt>Where</dt><dd>${p.serviceType === 'self' ? 'Customer picks up and returns' : LOG_MODE ? (esc([p.dropoffAddressStreet, p.dropoffAddressCity].filter(Boolean).join(', ')) || 'No address') : esc(p.dropoffAddress) + (p.pickupAddress !== p.dropoffAddress ? '<br>Pickup: ' + esc(p.pickupAddress) : '')}</dd>
         ${LOG_MODE ? '<dt>Email</dt><dd>None. The customer isn’t emailed.</dd>' : ''}
         ${res && !res.ok ? `<dt>Stock</dt><dd>${availabilityHtml(res)}</dd>` : ''}
+        ${issues.length ? `<dt>Check</dt><dd>${issues.map(t => `<span class="warn">${esc(t)}</span>`).join('')}</dd>` : ''}
       </dl>
       <div class="row-btns">
-        <button type="button" id="confirmSendBtn">${LOG_MODE ? 'Add to rental log' : 'Send invoice email'}</button>
+        <button type="button" id="confirmSendBtn">${issues.length || (res && !res.ok) ? (LOG_MODE ? 'Add anyway' : 'Send anyway') : (LOG_MODE ? 'Add to rental log' : 'Send invoice email')}</button>
         <button type="button" class="secondary" id="editAgainBtn">Back to edit</button>
       </div>`;
     box.hidden = false;
@@ -680,6 +675,7 @@
         body: JSON.stringify(payload),
       });
       if (resp.ok) {
+        const out = await resp.json().catch(() => ({}));
         // Lock the form: one more tap must not email the customer a second invoice
         SENT = true;
         $('sendSummary').hidden = true;
@@ -687,13 +683,14 @@
         $('newInvoiceBtn').hidden = false;
         document.querySelectorAll('.card input, .card select, .card textarea').forEach(el => { el.disabled = true; });
         document.querySelectorAll('.mode-seg button').forEach(b => { b.disabled = true; });
-        if (PREFILL_REQUEST_KEY) markRequestInvoiced(PREFILL_REQUEST_KEY);
-        if (LOG_MODE) {
-          showStatus('ok', 'Added ' + payload.name + ' to the rental log. No email was sent.');
-        } else {
-          showStatus('ok', 'Invoice sent to ' + payload.email + ' (BCC to you).');
-          showInvoiceTextPrompt(payload.name, payload.phone, payload.email);
+        const okMsg = LOG_MODE
+          ? 'Added ' + payload.name + ' to the rental log. No email was sent.'
+          : 'Invoice sent to ' + payload.email + ' (BCC to you).';
+        showStatus('ok', okMsg);
+        if (PREFILL_REQUEST_KEY && !(await markRequestInvoiced(PREFILL_REQUEST_KEY))) {
+          showStatus('err', okMsg + ' But the booking request didn’t move to Invoiced, so it still holds its totes. Open Requests and decline it or try again.');
         }
+        showAfterSend(payload, out.key);
       } else if (resp.status === 401) {
         showStatus('err', 'Wrong admin secret.');
       } else {
@@ -701,7 +698,7 @@
         showStatus('err', 'Send failed (' + resp.status + '): ' + (detail || 'check function logs.'));
       }
     } catch (e) {
-      showStatus('err', 'Network error. The invoice may not have sent; check your inbox for the BCC before trying again.');
+      showStatus('err', 'Network error. The invoice may not have sent. Check your inbox for the BCC copy before trying again.');
     }
     if (!SENT) { btn.disabled = false; btn.textContent = LOG_MODE ? 'Add to rental log' : 'Send invoice email'; }
   }
@@ -736,30 +733,50 @@
   // through get-rentals (so it couldn't reuse pre-built sms fields), but
   // the actual link-building logic didn't need to be duplicated too.
 
-  // Right after an invoice email goes out, offer a one-tap text that
-  // includes the email address on file — if a customer typo'd their email
-  // on the booking form, this is the safety net that catches it immediately
-  // instead of the invoice silently vanishing into nowhere.
-  function showInvoiceTextPrompt(name, phone, email) {
+  // After it's sent: a one-tap text saying the invoice went out (it names
+  // the email on file, so a typo'd address gets caught right away), marked
+  // as sent the same way All Rentals tracks it, plus a way back to Requests.
+  function showAfterSend(p, rentalKey) {
     const box = $('invoiceTextPrompt');
-    if (!phone) { box.style.display = 'none'; return; }
-    const first = (name || 'there').split(' ')[0];
-    const msg = `Hi ${first}, it's Ready Tote Oklahoma! Your invoice just went out to ${email}. Don't see it? Reply here and we'll get you fixed up!`;
-    box.innerHTML = `<a class="sms-btn" href="${smsLink(phone, msg)}">Text invoice confirmation to ${esc(first)} →</a>`;
+    const first = esc((p.name || 'there').split(' ')[0]);
+    const parts = [];
+    if (!LOG_MODE && p.phone) {
+      const msg = `Hi ${(p.name || 'there').split(' ')[0]}, it's Ready Tote Oklahoma! Your invoice just went out to ${p.email}. Don't see it? Reply here and we'll get you fixed up!`;
+      parts.push(`<a class="sms-btn" id="invoiceTextBtn" href="${escAttr(smsLink(p.phone, msg))}">Text ${first} that it went out</a>`);
+    }
+    parts.push(`<a href="admin-requests.html" class="linkish">Back to requests</a>`);
+    box.innerHTML = `<div class="after-send">${parts.join('')}</div><div class="ask-sent" hidden></div>`;
     box.style.display = 'block';
+    const btn = $('invoiceTextBtn');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      if (!rentalKey) return;
+      setTimeout(async () => {
+        if (!confirm(`Did you send the text to ${(p.name || 'them').split(' ')[0]}?`)) return;
+        try {
+          const r = await fetch('/.netlify/functions/mark-sent', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ secret: $('secret').value.trim(), flagId: 'invoiceSent:' + rentalKey }) });
+          if (r.ok) { btn.textContent = 'Text sent'; btn.setAttribute('aria-disabled', 'true'); }
+        } catch {}
+      }, 500);
+    });
   }
 
-  // Closes the loop with admin-requests.html: once the invoice email is
-  // confirmed sent, flag the originating request as invoiced so it drops
-  // out of the active pipeline. Best-effort — invoice send already succeeded.
-  function markRequestInvoiced(key) {
-    fetch('/.netlify/functions/update-request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ secret: $('secret').value.trim(), key, action: 'invoice' }),
-    }).catch(() => {});
-    PREFILL_REQUEST_KEY = null;
-    PREFILL_MILITARY_ID_KEY = null;
+  // Closes the loop with admin-requests.html: once the invoice is sent,
+  // the originating request moves to Invoiced so it stops holding totes.
+  // Returns false if that didn't save, so the page can say so.
+  async function markRequestInvoiced(key) {
+    try {
+      const resp = await fetch('/.netlify/functions/update-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: $('secret').value.trim(), key, action: 'invoice' }),
+      });
+      if (!resp.ok) return false;
+      PREFILL_REQUEST_KEY = null;
+      PREFILL_MILITARY_ID_KEY = null;
+      return true;
+    } catch { return false; }
   }
 
   // "14:30" -> "2:30 PM", "09:00" -> "9:00 AM"

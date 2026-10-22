@@ -124,10 +124,12 @@ export default async (request) => {
     return new Response(JSON.stringify({ ok: false, error: errText }), { status: 502 });
   }
 
-  // Log the rental so reminders and review requests can find it
+  // Log the rental so reminders and review requests can find it. The key
+  // goes back to the page so it can mark the "invoice sent" text for it.
+  let key = null;
   try {
     const store = getStore("rentals");
-    const key = `${body.dropoffDate}_${body.email.replace(/[^a-zA-Z0-9@.]/g, "")}_${Date.now()}`;
+    key = `${body.dropoffDate}_${body.email.replace(/[^a-zA-Z0-9@.]/g, "")}_${Date.now()}`;
     await store.setJSON(key, {
       name: body.name,
       email: body.email,
@@ -152,9 +154,10 @@ export default async (request) => {
     });
   } catch (e) {
     console.error("Rental log failed (invoice still sent):", e.message);
+    key = null;
   }
 
-  return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  return new Response(JSON.stringify({ ok: true, key }), { status: 200 });
 };
 
 function escapeHtml(str) {
