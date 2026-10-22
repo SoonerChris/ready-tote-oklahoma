@@ -1,6 +1,7 @@
 // POST /.netlify/functions/add-rental
-// Logs a rental record directly (no email sent). For backfilling past/active
-// bookings that were made before the rental log existed.
+// Logs a rental record directly (no email sent). Used by the "Log only, no
+// email" mode of admin-invoice.html, for bookings paid another way or for
+// backfilling past rentals.
 // Protected by INVOICE_SECRET.
 
 import { getStore } from "@netlify/blobs";
@@ -65,6 +66,8 @@ export default async (request) => {
       pickupAddressZip: body.pickupAddressZip || "",
       serviceType: body.serviceType || "delivery",
       notes: body.notes || "",
+      isMilitary: !!body.isMilitary,
+      ...(body.militaryIdKey ? { militaryIdKey: body.militaryIdKey } : {}),
       invoicedAt: new Date().toISOString(),
       backfilled: true,
     });

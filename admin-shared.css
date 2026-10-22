@@ -1,68 +1,109 @@
 /* admin-shared.css
-   Shared design tokens, resets, and components for all admin-*.html pages
-   (admin.html, admin-invoice.html, admin-add-rental.html, admin-reminders.html,
-   admin-contacts.html, admin-finance.html, admin-outreach.html, admin-inventory.html).
+   Shared design tokens, resets, and components for all admin-*.html pages.
    Keeps look/behavior consistent and avoids re-defining the same CSS in every
    file. Page-specific styles stay inline in each page's own <style> block.
 
-   Design refresh (Aug 2026): brought the admin tool in line with the public
-   readytoteokc.com brand system (Archivo Black / Barlow / JetBrains Mono,
-   crate-red accent) instead of the generic Arial/soft-SaaS look it started with. */
+   Design (Oct 2026): a "framed sheet". The brand cream is the frame (body
+   and sidebar, no rule between them); each page's content sits on one white
+   sheet inset 8px from the window's top, right and bottom edges. One face
+   (Barlow); Archivo Black is kept to the wordmark in the sidebar. Colour
+   goes on data and status, not on chrome: the main buttons are near-black. */
 
-@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&display=swap');
 
 :root{
   --ink:#1E1B18;
   --ink-2:#2B2620;
-  --gold:#C99A32;
-  --gold-2:#D9AE4E;
-  --gold-bg:rgba(201,154,50,0.10);
-  --cream:#F5F1E7;
-  --steel:#6B6259;
-  --green:#1E8E52;
-  --green-bg:rgba(30,142,82,0.08);
-  --red:#C0392B;
-  --red-bg:rgba(192,57,43,0.07);
-  --crate-red:#B3481D;
-  --crate-red-bg:rgba(179,72,29,0.08);
-  --line:rgba(30,27,24,0.14);
+  --gold:#8A6819;        /* brand gold darkened to 5.5:1 on white so it can carry text */
+  --gold-2:#B8892B;
+  --gold-bg:#FBF0D6;
+  --cream:#F5F1E7;       /* the frame */
+  --steel:#6B6259;       /* secondary text, 5.9:1 on white */
+  --green:#247B50;
+  --green-bg:#E3F4E9;
+  --red:#C4242A;
+  --red-bg:#FFEDEA;
+  --crate-red:#A8431B;
+  --crate-red-bg:#FCEDE6;
+  --line:#E9E4D8;        /* card edges and row rules, about 1.2:1 on white */
+  --control:#D6CFBF;     /* input and secondary-button borders, one step darker */
+  --track:#EFEBE2;       /* quiet fills: bar tracks, sent buttons, segmented controls */
   --white:#FFFFFF;
+  --col:880px;           /* content column inside the sheet; pages may override */
 }
 *{box-sizing:border-box;}
 body{
   font-family:'Barlow', Arial, sans-serif;
+  font-size:15px; line-height:1.45;
   background:var(--cream);
   color:var(--ink);
   margin:0;
   padding:24px 14px;
 }
-h1{font-family:'Archivo Black', sans-serif; font-size:1.3rem; margin:0 0 4px; letter-spacing:-0.01em;}
-.sub{color:var(--steel);font-size:0.88rem;margin:0 0 20px;}
-h2{font-family:'Archivo Black', sans-serif; font-size:0.95rem;margin:26px 0 10px; letter-spacing:-0.005em;}
+h1{font-family:'Barlow', Arial, sans-serif; font-weight:700; font-size:24px; line-height:1.2; margin:0 0 4px; letter-spacing:-0.01em;}
+.sub{color:var(--steel);font-size:15px;margin:0 0 24px;max-width:640px;}
+h2{font-family:'Barlow', Arial, sans-serif; font-weight:700; font-size:17px; line-height:1.3; margin:32px 0 12px; letter-spacing:0;}
+h3{font-family:'Barlow', Arial, sans-serif; font-weight:700; font-size:15px;}
+a{color:var(--ink);}
+
+/* The sheet: whichever container a page wraps its content in (.wrap or
+   .card directly under <body>) becomes the white sheet. Its side padding
+   centres a column of --col on wide screens. */
+body > .wrap, body > .card:not(.login-card){
+  position:relative;
+  max-width:none; margin:0;
+  min-height:calc(100vh - 16px);
+  background:var(--white);
+  border:1px solid var(--line); border-radius:16px; box-shadow:none;
+  padding:28px max(32px, calc((100% - var(--col)) / 2)) 48px;
+}
+body > footer{margin:12px 16px 4px; font-size:13px; color:var(--steel); text-align:left;}
+body > footer a{color:var(--steel);}
 
 .card{
-  max-width:640px;margin:0 auto;background:#fff;border-radius:8px;
-  border:1px solid var(--line);padding:26px;
-  box-shadow:0 1px 2px rgba(30,27,24,0.04), 0 4px 14px rgba(30,27,24,0.04);
+  max-width:640px;margin:0 auto;background:#fff;border-radius:10px;
+  border:1px solid var(--line);padding:24px;
 }
 
-label{display:block;font-size:0.85rem;font-weight:bold;margin:14px 0 6px;}
-input, select, textarea{width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:6px;background:var(--cream);font-family:inherit;}
-input:focus, select:focus, textarea:focus{outline:2px solid var(--gold);}
-button{margin-top:16px;width:100%;padding:14px;font-size:0.95rem;font-weight:bold;font-family:'Barlow',sans-serif;background:var(--gold);color:var(--ink);border:none;border-radius:8px;cursor:pointer;transition:background 0.12s ease, transform 0.05s ease;}
-button:hover{background:var(--gold-2);}
+/* Refresh: every list page has a #loadBtn; it sits at the top right of the
+   sheet, beside the title, since the page loads itself on open. */
+body > .wrap #loadBtn, body > .card #loadBtn{
+  position:absolute; top:28px; right:max(32px, calc((100% - var(--col)) / 2));
+  width:auto; height:32px; margin:0; padding:0 14px;
+  background:var(--white); color:var(--ink); border:1px solid var(--control);
+  font-size:13px; font-weight:600;
+}
+body > .wrap #loadBtn:hover, body > .card #loadBtn:hover{background:var(--white); border-color:var(--ink);}
+body > .wrap h1, body > .card h1{padding-right:110px;}
+.secret-bar{display:contents;}
+
+label{display:block;font-size:14px;font-weight:600;margin:16px 0 6px;}
+input, select, textarea{width:100%;padding:10px 12px;font-size:15px;border:1px solid var(--control);border-radius:6px;background:var(--white);font-family:inherit;color:var(--ink);}
+input::placeholder, textarea::placeholder{color:#7A7168;}
+input:focus, select:focus, textarea:focus{outline:2px solid var(--ink);outline-offset:-1px;border-color:var(--ink);}
+input[type=checkbox], input[type=radio]{accent-color:var(--ink);}
+
+/* Buttons: one near-black primary; secondary is white with a border */
+button{margin-top:16px;width:100%;padding:12px 16px;font-size:15px;font-weight:600;font-family:'Barlow',sans-serif;background:var(--ink);color:#fff;border:1px solid var(--ink);border-radius:6px;cursor:pointer;transition:background 0.12s ease, border-color 0.12s ease;}
+button:hover{background:#3A342D;}
 button:active{transform:translateY(1px);}
+button:focus-visible, a:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
 button:disabled{opacity:0.6;cursor:wait;}
-button.secondary{background:transparent;border:1px solid var(--ink);color:var(--ink);}
-button.secondary:hover{background:var(--gold-bg);}
+button.secondary{background:var(--white);border:1px solid var(--control);color:var(--ink);}
+button.secondary:hover{background:var(--white);border-color:var(--ink);}
 
-.rem{border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 2px rgba(30,27,24,0.03);}
-.empty{color:var(--steel);font-size:0.88rem;}
-.note{font-size:0.78rem;color:var(--steel);margin-top:6px;}
+/* Text links styled as buttons (SMS links and the like) */
+.sms-btn{display:inline-flex;align-items:center;justify-content:center;background:var(--white);color:var(--ink);font-weight:600;text-decoration:none;padding:9px 16px;border:1px solid var(--control);border-radius:6px;font-size:14px;transition:border-color 0.12s ease;}
+.sms-btn:hover{border-color:var(--ink);opacity:1;}
 
-.status{margin-top:12px;padding:10px 14px;border-radius:6px;font-size:0.88rem;display:none;}
-.status.err{display:block;background:var(--red-bg);border:1px solid rgba(192,57,43,0.35);color:var(--red);}
-.status.ok{display:block;background:var(--green-bg);border:1px solid rgba(30,142,82,0.4);color:var(--green);}
+/* Boxed groups inside a page: white, a whisper of a border, no shadow */
+.rem{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:12px;box-shadow:none;}
+.empty{color:var(--steel);font-size:14px;}
+.note{font-size:13px;color:var(--steel);margin-top:6px;}
+
+.status{margin-top:12px;padding:10px 14px;border-radius:6px;font-size:14px;display:none;}
+.status.err{display:block;background:var(--red-bg);border:none;color:#831C1E;}
+.status.ok{display:block;background:var(--green-bg);border:none;color:#14492F;}
 
 /* Tote-tag badge -- the one signature detail, used for package/tier tags.
    The small notch reads like a hole-punched rental tag. Status pills
@@ -70,35 +111,34 @@ button.secondary:hover{background:var(--gold-bg);}
    element, not decoration everywhere. */
 .tag{
   position:relative;display:inline-flex;align-items:center;
-  padding:4px 10px 4px 18px;
-  font-family:'JetBrains Mono', monospace; font-size:0.72rem; font-weight:700;
-  letter-spacing:0.02em;
-  background:var(--gold-bg); color:var(--ink-2); border:1px solid var(--gold);
-  border-radius:3px 10px 10px 3px;
+  padding:3px 10px 3px 18px;
+  font-size:12px; font-weight:600; font-variant-numeric:tabular-nums;
+  background:var(--gold-bg); color:#6B4C0C; border:none;
+  border-radius:3px 10px 10px 3px; white-space:nowrap;
 }
 .tag::before{
-  content:''; position:absolute; left:6px; top:50%; transform:translateY(-50%);
+  content:''; position:absolute; left:7px; top:50%; transform:translateY(-50%);
   width:5px;height:5px;border-radius:50%;
-  background:var(--white); border:1px solid var(--gold);
+  background:var(--white);
 }
-.tag.red{background:var(--crate-red-bg); border-color:var(--crate-red); color:var(--crate-red);}
-.tag.red::before{border-color:var(--crate-red);}
+.tag.red{background:var(--crate-red-bg); color:var(--crate-red);}
 
-.pill{display:inline-block;font-size:0.72rem;font-weight:bold;padding:3px 10px;border-radius:999px;}
-.pill.ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green);}
-.pill.err{background:var(--red-bg);color:var(--red);border:1px solid var(--red);}
-.pill.pending{background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold);}
+/* Status pills: a pale tint with dark text of the same hue */
+.pill{display:inline-flex;align-items:center;height:22px;font-size:12px;font-weight:600;padding:0 8px;border-radius:4px;white-space:nowrap;flex:none;}
+.pill.ok{background:var(--green-bg);color:#14492F;border:none;}
+.pill.err{background:var(--red-bg);color:#831C1E;border:none;}
+.pill.pending{background:var(--gold-bg);color:#6B4C0C;border:none;}
 
-/* Data-dense text (phone, email, dates, codes, IDs) reads better in mono */
-.mono{font-family:'JetBrains Mono', monospace;}
+/* Phone numbers, dates and amounts: same face, figures that line up */
+.mono{font-variant-numeric:tabular-nums;}
 
 /* Reusable data table (contacts, monthly breakdowns, etc.) */
-.tbl-wrap{background:var(--white);border:1px solid var(--line);border-radius:8px;overflow-x:auto;box-shadow:0 1px 2px rgba(30,27,24,0.04);}
-.tbl-wrap table{width:100%;border-collapse:collapse;font-size:0.86rem;}
-.tbl-wrap thead th{text-align:left;padding:12px 14px;background:var(--cream);border-bottom:1px solid var(--line);font-size:0.7rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;color:var(--steel);white-space:nowrap;}
-.tbl-wrap tbody td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top;}
+.tbl-wrap{background:var(--white);border:1px solid var(--line);border-radius:10px;overflow-x:auto;box-shadow:none;}
+.tbl-wrap table{width:100%;border-collapse:collapse;font-size:14px;}
+.tbl-wrap thead th{text-align:left;padding:10px 14px;background:none;border-bottom:1px solid var(--line);font-size:12px;font-weight:500;color:var(--steel);white-space:nowrap;}
+.tbl-wrap tbody td{padding:12px 14px;border-bottom:1px solid #F1EDE4;vertical-align:top;font-variant-numeric:tabular-nums;}
 .tbl-wrap tbody tr:last-child td{border-bottom:none;}
-.tbl-wrap tbody tr:hover{background:var(--gold-bg);}
+.tbl-wrap tbody tr:hover{background:#FAF8F3;}
 
 /* Two-column form rows that collapse to one column on phones */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
@@ -116,63 +156,72 @@ button.secondary:hover{background:var(--gold-bg);}
 .money-field > input{padding-left:26px;}
 .money-field::before{
   content:'$'; position:absolute; left:12px; top:50%; transform:translateY(-50%);
-  color:var(--steel); font-weight:600; font-size:0.95rem; pointer-events:none;
+  color:var(--steel); font-weight:600; font-size:15px; pointer-events:none;
 }
 .money-field.compact > input{padding-left:22px;}
 .money-field.compact::before{left:9px; font-size:0.85rem;}
 
 /* Shared admin nav bar -- lets Chris jump directly between admin tools.
-   Desktop: a fixed sidebar down the left edge (out of normal flow, so it
-   doesn't matter whether a given page nests <nav> inside .wrap or drops it
-   right after <body> -- both patterns exist across the admin-*.html files).
-   body gets padding-left to reserve room for it; !important because a few
-   pages set their own body{padding:...} shorthand in a later <style> block,
-   which would otherwise zero the left padding back out.
-   Narrow screens revert to the original horizontal top bar -- a fixed
-   sidebar eats too much width on a phone to be worth it there. */
+   Desktop: a fixed sidebar down the left edge on the cream frame (out of
+   normal flow, so it doesn't matter whether a given page nests <nav> inside
+   .wrap or drops it right after <body> -- both patterns exist across the
+   admin-*.html files). body gets padding-left to reserve room for it;
+   !important because a few pages set their own body{padding:...} shorthand
+   in a later <style> block, which would otherwise zero it back out.
+   Narrow screens fold it into a 48px top bar with a Menu button. */
 .admin-nav{
   position:fixed; top:0; left:0; bottom:0;
-  width:190px;
+  width:228px;
   display:flex; flex-direction:column; gap:2px;
-  background:var(--white); border-right:1px solid var(--line);
-  padding:20px 10px; margin:0;
+  background:var(--cream); border:none;
+  padding:16px 12px; margin:0;
   overflow-y:auto;
 }
 .admin-nav.wide{max-width:none;}
 .admin-nav a{
-  position:relative;
   display:flex; align-items:center; gap:8px;
   flex:none; text-align:left; white-space:nowrap;
-  padding:10px 12px; font-size:0.82rem; font-weight:600;
-  color:var(--steel); text-decoration:none; border-radius:6px;
+  height:34px; padding:0 12px; font-size:14px; font-weight:500;
+  color:var(--ink-2); text-decoration:none; border-radius:8px;
 }
-.admin-nav .nav-icon{flex:none; font-size:0.92rem; line-height:1;}
-.admin-nav a:hover{background:var(--gold-bg); color:var(--ink);}
-.admin-nav a[aria-current="page"]{background:var(--gold-bg); color:var(--ink); font-weight:700;}
-.admin-nav a[aria-current="page"]::after{
-  content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px;
-  background:var(--gold); border-radius:2px;
-}
-.admin-nav a.logout-link{margin-top:auto; color:var(--red); border:1px solid rgba(192,57,43,0.3);}
-.admin-nav a.logout-link:hover{background:var(--red-bg);}
+.admin-nav a:hover{background:rgba(30,27,24,0.05); color:var(--ink);}
+.admin-nav a[aria-current="page"]{background:rgba(30,27,24,0.08); color:var(--ink); font-weight:600;}
+.admin-nav a:focus-visible{outline:2px solid var(--ink); outline-offset:-2px;}
+.admin-nav a.logout-link{margin-top:auto; color:var(--steel);}
+.admin-nav a.logout-link:hover{color:var(--red); background:var(--red-bg);}
 
-body{padding-left:214px !important;}
+/* Product mark at the top of the sidebar (injected by admin-shared.js) */
+.admin-brand{display:flex; align-items:center; gap:10px; padding:4px 8px 16px; text-decoration:none; color:var(--ink);}
+.admin-brand img{width:32px; height:32px; flex:none;}
+.admin-brand b{display:block; font-family:'Archivo Black', sans-serif; font-weight:400; font-size:15px; line-height:1.1; letter-spacing:-0.01em;}
+.admin-brand small{display:block; font-size:12px; color:var(--steel); margin-top:2px;}
+.admin-menu-btn{display:none;}
 
+body:has(.admin-nav){padding:8px 8px 8px 236px !important;}
+
+/* Phone: the sidebar folds into a 48px top bar with a Menu button, and the
+   sheet becomes the whole screen */
 @media(max-width:760px){
-  body{padding-left:14px !important;}
+  body:has(.admin-nav){padding:48px 0 0 !important;}
+  body > .wrap, body > .card:not(.login-card){border:none; border-radius:0; min-height:0; padding:20px 16px 32px;}
+  body > .wrap #loadBtn, body > .card #loadBtn{top:20px; right:16px;}
   .admin-nav{
-    position:static; width:auto; max-width:640px; margin:0 auto 14px;
-    flex-direction:row; flex-wrap:wrap; justify-content:center;
-    border:1px solid var(--line); border-radius:8px;
-    padding:6px; gap:4px; bottom:auto; overflow-y:visible;
+    position:fixed; top:0; left:0; right:0; bottom:auto; z-index:20; width:auto;
+    flex-direction:row; flex-wrap:wrap; align-items:center; gap:2px;
+    padding:0 8px 0 16px; min-height:48px; max-height:100vh;
+    overflow-y:auto;
   }
-  .admin-nav.wide{max-width:840px;}
-  .admin-nav a{flex:0 1 auto; justify-content:center; text-align:center; padding:10px 12px 8px;}
-  .admin-nav a[aria-current="page"]::after{left:12px; right:12px; top:auto; bottom:2px; width:auto; height:3px;}
-  .admin-nav a.logout-link{margin-top:0;}
-}
-@media(max-width:500px){
-  .admin-nav{gap:4px;}
-  .admin-nav a{flex:1 1 40%; font-size:0.78rem; padding:8px 6px 7px;}
-  .admin-nav a[aria-current="page"]::after{left:6px; right:6px;}
+  .admin-brand{padding:8px 0; flex:1;}
+  .admin-brand img{width:28px; height:28px;}
+  .admin-brand small{display:none;}
+  .admin-menu-btn{
+    display:inline-flex; align-items:center; width:auto; height:44px; margin:0; padding:0 12px;
+    background:transparent; border:none; color:var(--ink); font:600 15px 'Barlow', sans-serif; cursor:pointer;
+  }
+  .admin-menu-btn:hover{background:transparent; text-decoration:underline;}
+  .admin-nav a{display:none; flex:1 1 100%; height:44px; font-size:16px;}
+  .admin-nav a.admin-brand{display:flex; flex:1; height:auto;}
+  .admin-nav.open{padding-bottom:12px; box-shadow:0 8px 24px rgba(30,27,24,0.12);}
+  .admin-nav.open a{display:flex;}
+  .admin-nav a.logout-link{margin-top:8px;}
 }

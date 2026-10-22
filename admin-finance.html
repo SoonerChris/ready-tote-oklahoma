@@ -7,149 +7,302 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<title>Finance — Ready Tote Oklahoma (Internal)</title>
-<link rel="stylesheet" href="admin-shared.css?v=20260819">
-<script src="admin-shared.js?v=20260819"></script>
+<title>Finance · Ready Tote Oklahoma admin</title>
+<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<script src="admin-shared.js?v=20261022"></script>
 <style>
-  /* Collapsible finance sections -- Sales/Expenses/Mileage can each get
-     long, so the whole block folds away via <details>/<summary> instead of
-     forcing a scroll past data Chris isn't looking at right now. */
-  details.fin-section{border-top:1px solid var(--line); margin-top:22px; padding-top:18px;}
-  details.fin-section:first-of-type{border-top:none; margin-top:0; padding-top:0;}
-  details.fin-section > summary{
-    list-style:none; cursor:pointer; user-select:none;
-    display:flex; align-items:center; gap:8px;
-    font-family:'Archivo Black', sans-serif; font-size:0.95rem; margin:0;
+  /* Finance answers one question first: how is the business doing in the
+     period picked (a month, a year, or all time), and where is the money
+     coming from and going. The period drives the figures, the chart's
+     highlight and both breakdowns; the work areas (expenses, mileage,
+     rentals) sit in tabs underneath. */
+  :root{--col:1140px; --data:#A87F22; --data-2:#B9AFA0; --row-rule:#F1EDE4;}
+  .num{font-variant-numeric:tabular-nums;}
+  .finding{margin:4px 0 20px; font-size:15px; max-width:760px;}
+  .finding .when{color:var(--steel);}
+
+  /* Period: segmented control + stepper, one row */
+  .scope{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px;}
+  .seg{display:inline-flex; gap:2px; padding:2px; background:var(--track); border-radius:8px;}
+  .seg button{all:unset; box-sizing:border-box; height:32px; line-height:30px; padding:0 14px; border:1px solid transparent; border-radius:6px; font-size:14px; font-weight:600; color:var(--steel); cursor:pointer;}
+  .seg button:hover{color:var(--ink);}
+  .seg button[aria-pressed="true"]{background:#fff; color:var(--ink); border-color:var(--line);}
+  .seg button:focus-visible,.step button:focus-visible,.tabs button:focus-visible,.link:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
+  .step{display:inline-flex; align-items:center; gap:4px;}
+  .step button{all:unset; box-sizing:border-box; width:32px; height:32px; text-align:center; line-height:30px; border:1px solid var(--control); border-radius:6px; font-size:16px; cursor:pointer; color:var(--ink);}
+  .step button:hover{border-color:var(--ink);}
+  .step button:disabled{opacity:.35; cursor:default; border-color:var(--control);}
+  .step .label{min-width:132px; text-align:center; font-weight:600; font-size:15px;}
+
+  /* KPI strip: one container split by dividers */
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--line); border-radius:10px; margin-bottom:24px;}
+  .kpi{padding:16px 20px; border-left:1px solid var(--line); min-width:0;}
+  .kpi:first-child{border-left:none;}
+  .kpi .lbl{font-size:14px; color:var(--steel);}
+  .kpi .val{font-size:24px; font-weight:600; line-height:1.2; margin-top:4px;}
+  .kpi.lead .val{font-size:32px;}
+  .kpi .cap{font-size:13px; color:var(--steel); margin-top:4px;}
+  .kpi .cap .good{color:var(--green); font-weight:600;}
+  .kpi .cap .bad{color:var(--red); font-weight:600;}
+
+  .panel{border:1px solid var(--line); border-radius:10px; padding:16px 20px 18px; margin-bottom:24px; min-width:0;}
+  .panel-head{display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:8px;}
+  .panel-head h2{margin:0; font-size:16px;}
+  .panel-head .meta{font-size:13px; color:var(--steel);}
+  .legend{display:flex; gap:16px; font-size:13px; color:var(--steel);}
+  .legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px;}
+
+  /* Chart */
+  .chart svg{display:block; width:100%; height:auto; overflow:visible;}
+  .chart .tick{font-size:12px; fill:var(--steel);}
+  .chart .mlabel{font-size:12px; fill:var(--steel);}
+  .chart .mlabel.sel{fill:var(--ink); font-weight:600;}
+  .chart .hit{fill:transparent; cursor:pointer;}
+  .chart .hit:hover{fill:rgba(30,27,24,0.035);}
+  .chart .band{fill:var(--track);}
+  .chart-note{font-size:13px; color:var(--steel); margin-top:6px;}
+
+  .split{display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:24px;}
+  .split .panel{margin-bottom:0;}
+
+  /* Bar lists */
+  .blist .item{padding:7px 0;}
+  .blist .top{display:flex; justify-content:space-between; gap:12px; font-size:14px;}
+  .blist .top .name{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .blist .top .amt{font-weight:600; white-space:nowrap;}
+  .blist .minor{font-size:12px; color:var(--steel); margin-top:2px;}
+  .blist .bar{height:4px; background:var(--track); border-radius:2px; margin:6px 0 4px; overflow:hidden;}
+  .blist .bar span{display:block; height:100%; border-radius:2px;}
+  .empty-line{margin:4px 0; padding:10px 12px; border:1px dashed var(--control); border-radius:8px; color:var(--steel); font-size:14px;}
+
+  /* Tables */
+  table.data{width:100%; border-collapse:collapse; font-size:14px;}
+  table.data th{font-size:12px; font-weight:500; color:var(--steel); text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap;}
+  table.data td{padding:10px; border-bottom:1px solid var(--row-rule); vertical-align:top; font-variant-numeric:tabular-nums;}
+  table.data tr:last-child td{border-bottom:none;}
+  table.data .r{text-align:right;}
+  table.data td.r{white-space:nowrap;}
+  table.data tfoot td{border-top:1px solid var(--line); border-bottom:none; font-weight:600;}
+  table.data tbody tr.pick{cursor:pointer;}
+  table.data tbody tr.pick:hover td{background:#FAF8F3;}
+  table.data tbody tr.sel td{background:var(--track);}
+  table.data .minor{display:block; font-size:12px; color:var(--steel); margin-top:2px;}
+  .scroll-x{overflow-x:auto;}
+  .scroll-x table{min-width:560px;}
+
+  /* Tabs */
+  .tabs{display:flex; gap:24px; border-bottom:1px solid var(--line); margin:8px 0 20px; overflow-x:auto;}
+  .tabs button{all:unset; cursor:pointer; padding:10px 0; font-size:15px; font-weight:600; color:var(--steel); border-bottom:2px solid transparent; margin-bottom:-1px; white-space:nowrap;}
+  .tabs button:hover{color:var(--ink);}
+  .tabs button[aria-selected="true"]{color:var(--ink); border-bottom-color:var(--ink);}
+  .tabs .count{font-weight:500; color:var(--steel); margin-left:4px;}
+  .tabpanel[hidden]{display:none;}
+
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;}
+  .toolbar select,.toolbar input{width:auto; flex:1 1 150px; padding:7px 10px; font-size:14px; height:36px;}
+  .toolbar input[type=search]{flex:2 1 200px;}
+  .btn-sm{width:auto; margin:0; height:36px; padding:0 14px; font-size:14px;}
+  .link{all:unset; cursor:pointer; font-size:13px; font-weight:600; color:var(--ink); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
+  .link:hover{text-decoration-color:var(--ink);}
+  .link.danger{color:var(--red);}
+  .row-actions{display:flex; gap:14px; justify-content:flex-end;}
+  .totals-line{font-size:14px; color:var(--steel); margin:0 0 8px;}
+  .totals-line b{color:var(--ink);}
+
+  .form-panel{background:#FAF8F3; border-radius:10px; padding:16px; margin-bottom:16px;}
+  .form-panel[hidden]{display:none;}
+  .form-panel h3{margin:0 0 4px;}
+  .form-panel label{margin-top:12px;}
+  .form-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:0 12px;}
+  .form-grid .wide{grid-column:span 2;}
+  .form-actions{display:flex; gap:8px; margin-top:16px;}
+  .form-actions button{width:auto; margin:0;}
+  .chips{display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 4px;}
+  .chips button{width:auto; margin:0; padding:6px 12px; font-size:13px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:999px; font-weight:500;}
+  .chips button:hover{background:#fff; border-color:var(--ink);}
+  .rate{display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .rate input{width:96px; height:36px; padding:6px 10px 6px 22px; font-size:14px;}
+
+  .pill.neutral{background:var(--track); color:#4A433B;}
+
+  @media(max-width:900px){
+    .kpis{grid-template-columns:repeat(2,1fr);}
+    .kpi:nth-child(3){border-left:none;}
+    .kpi:nth-child(n+3){border-top:1px solid var(--line);}
+    .split{grid-template-columns:1fr;}
+    .form-grid{grid-template-columns:1fr 1fr;}
   }
-  details.fin-section > summary::-webkit-details-marker{display:none;}
-  details.fin-section > summary::before{
-    content:'▸'; color:var(--gold); font-size:0.8rem; flex:none;
-    transition:transform 0.15s ease;
+  @media(max-width:640px){
+    .kpi{padding:12px 14px;}
+    .kpi.lead .val{font-size:26px;}
+    .kpi .val{font-size:20px;}
+    .panel{padding:14px 14px 16px;}
+    .step .label{min-width:110px;}
+    .form-grid{grid-template-columns:1fr;}
+    .form-grid .wide{grid-column:auto;}
+    /* Expense and mileage tables become two-line rows */
+    table.stack thead{display:none;}
+    table.stack, table.stack tbody, table.stack tr{display:block;}
+    table.stack tr{padding:10px 0; border-bottom:1px solid var(--row-rule); display:grid; grid-template-columns:1fr auto; gap:2px 12px; align-items:baseline;}
+    table.stack td{display:block; padding:0; border:none;}
+    table.stack td.c-main{grid-column:1; grid-row:1;}
+    table.stack td.c-amt{grid-column:2; grid-row:1; text-align:right; font-weight:600;}
+    table.stack td.c-meta{grid-column:1; grid-row:2; font-size:13px; color:var(--steel);}
+    table.stack td.c-act{grid-column:2; grid-row:2;}
+    table.stack td.c-hide{display:none;}
   }
-  details.fin-section[open] > summary::before{transform:rotate(90deg);}
-  details.fin-section > summary:hover{color:var(--gold);}
-  details.fin-section .fin-section-body{margin-top:14px;}
 </style>
 </head>
 <body>
 <nav class="admin-nav" aria-label="Admin tools">
-  <a href="admin.html"><span class="nav-icon" aria-hidden="true">📊</span> Dashboard</a>
-  <a href="admin-requests.html"><span class="nav-icon" aria-hidden="true">📥</span> Requests</a>
-  <a href="admin-invoice.html"><span class="nav-icon" aria-hidden="true">🧾</span> Send Invoice</a>
-  <a href="admin-add-rental.html"><span class="nav-icon" aria-hidden="true">➕</span> Add Rental</a>
-  <a href="admin-reminders.html"><span class="nav-icon" aria-hidden="true">🚚</span> Reminders</a>
-  <a href="admin-rentals.html"><span class="nav-icon" aria-hidden="true">📋</span> All Rentals</a>
-  <a href="admin-contacts.html"><span class="nav-icon" aria-hidden="true">📇</span> Contacts</a>
-  <a href="admin-finance.html" aria-current="page"><span class="nav-icon" aria-hidden="true">💰</span> Finance</a>
-  <a href="admin-outreach.html"><span class="nav-icon" aria-hidden="true">🤝</span> Outreach</a>
-  <a href="admin-inventory.html"><span class="nav-icon" aria-hidden="true">📦</span> Inventory</a>
+  <a href="admin.html">Dashboard</a>
+  <a href="admin-requests.html">Requests</a>
+  <a href="admin-invoice.html">Send Invoice</a>
+  <a href="admin-invoice.html?mode=log">Add Rental</a>
+  <a href="admin-reminders.html">Reminders</a>
+  <a href="admin-rentals.html">All Rentals</a>
+  <a href="admin-contacts.html">Contacts</a>
+  <a href="admin-finance.html" aria-current="page">Finance</a>
+  <a href="admin-outreach.html">Outreach</a>
+  <a href="admin-inventory.html">Inventory</a>
 </nav>
 <div class="card">
   <h1>Finance</h1>
-  <p class="sub">Sales totals, expenses, and mileage. All amounts in USD.</p>
+  <p class="finding" id="finding"><span class="when">Loading your numbers…</span></p>
 
   <input type="hidden" id="secret">
-  <button id="loadBtn">Load finance data</button>
+  <button id="loadBtn">Refresh</button>
   <div class="status" id="status"></div>
 
   <div id="results" style="display:none;">
-    <div class="rem" id="netIncomeBubble" style="text-align:center; background:var(--cream); border:2px solid var(--gold); margin-bottom:20px;">
-      <div style="font-size:0.7rem; color:var(--steel); font-weight:bold; letter-spacing:0.05em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;">📈 Net Income (YTD)</div>
-      <div id="netIncomeAmount" style="font-family:'Archivo Black',sans-serif; font-size:2rem; margin:8px 0 2px;">$0.00</div>
-      <div id="netIncomeSub" style="font-size:0.78rem; color:var(--steel); font-family:'JetBrains Mono',monospace;"></div>
+    <div class="scope">
+      <div class="seg" role="group" aria-label="Period">
+        <button type="button" data-mode="month" aria-pressed="true">Month</button>
+        <button type="button" data-mode="year" aria-pressed="false">Year</button>
+        <button type="button" data-mode="all" aria-pressed="false">All time</button>
+      </div>
+      <div class="step" id="stepper">
+        <button type="button" id="prevBtn" aria-label="Previous period">‹</button>
+        <span class="label num" id="periodLabel"></span>
+        <button type="button" id="nextBtn" aria-label="Next period">›</button>
+      </div>
     </div>
 
-    <details class="fin-section">
-      <summary>💰 Sales</summary>
-      <div class="fin-section-body">
-        <div class="rem" id="salesSummary" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
-        <div id="salesByMonth"></div>
+    <div class="kpis" id="kpis"></div>
 
-        <h3 style="font-size:0.88rem; margin:22px 0 8px;">📊 Monthly Breakdown</h3>
-        <div id="monthlyBreakdown"></div>
-
-        <div class="grid2" id="salesDetails">
-          <div>
-            <h3 style="font-size:0.88rem; margin:16px 0 8px;">📦 By Package</h3>
-            <div id="salesByPackage"></div>
-          </div>
-          <div>
-            <h3 style="font-size:0.88rem; margin:16px 0 8px;">🕐 Recent Rentals</h3>
-            <div id="recentRentals"></div>
-          </div>
+    <section class="panel chart" aria-labelledby="chartTitle">
+      <div class="panel-head">
+        <h2 id="chartTitle">Revenue and expenses by month</h2>
+        <div class="legend" id="chartLegend">
+          <span><i style="background:var(--data)"></i>Revenue</span>
+          <span><i style="background:var(--data-2)"></i>Expenses</span>
         </div>
-        <button type="button" id="csvBtn" style="background:var(--ink); color:#fff; margin-top:14px;">Download rental log (CSV)</button>
       </div>
-    </details>
+      <div id="chart"></div>
+      <p class="chart-note">Click a month to see it in detail. Revenue counts each rental in the month it's dropped off.</p>
+    </section>
 
-    <details class="fin-section">
-      <summary>💵 Expenses</summary>
-      <div class="fin-section-body">
-        <div class="rem" id="expTotals" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
-        <div class="rem">
-          <div class="grid2" style="gap:10px;">
-            <input type="date" id="expDate">
+    <div class="split">
+      <section class="panel" aria-labelledby="pkgTitle">
+        <div class="panel-head"><h2 id="pkgTitle">Revenue by package</h2><span class="meta" id="pkgMeta"></span></div>
+        <div class="blist" id="byPackage"></div>
+      </section>
+      <section class="panel" aria-labelledby="catTitle">
+        <div class="panel-head"><h2 id="catTitle">Expenses by category</h2><span class="meta" id="catMeta"></span></div>
+        <div class="blist" id="byCategory"></div>
+      </section>
+    </div>
+
+    <section class="panel" aria-labelledby="monthsTitle">
+      <div class="panel-head"><h2 id="monthsTitle">Month by month</h2><span class="meta">Click a row to see that month</span></div>
+      <div class="scroll-x" id="monthTable"></div>
+    </section>
+
+    <div class="tabs" role="tablist" aria-label="Records">
+      <button type="button" role="tab" id="tab-expenses" aria-controls="panel-expenses" aria-selected="true">Expenses<span class="count num" id="expTabCount"></span></button>
+      <button type="button" role="tab" id="tab-mileage" aria-controls="panel-mileage" aria-selected="false">Mileage<span class="count num" id="mileTabCount"></span></button>
+      <button type="button" role="tab" id="tab-rentals" aria-controls="panel-rentals" aria-selected="false">Rentals<span class="count num" id="rentTabCount"></span></button>
+    </div>
+
+    <!-- Expenses -->
+    <div class="tabpanel" role="tabpanel" id="panel-expenses" aria-labelledby="tab-expenses">
+      <div class="toolbar">
+        <button type="button" class="btn-sm" id="expNewBtn">Add expense</button>
+        <select id="expFilterMonth" aria-label="Month"><option value="">All months</option></select>
+        <select id="expFilterCategory" aria-label="Category"><option value="">All categories</option></select>
+        <select id="expFilterPayment" aria-label="Payment method"><option value="">All payment methods</option></select>
+        <input type="search" id="expFilterSearch" placeholder="Search vendor or notes" aria-label="Search vendor or notes">
+        <button type="button" class="link" id="expFilterClear">Clear</button>
+      </div>
+
+      <div class="form-panel" id="expForm" hidden>
+        <h3 id="expFormTitle">Add expense</h3>
+        <div class="form-grid">
+          <div><label for="expDate">Date</label><input type="date" id="expDate"></div>
+          <div><label for="expAmount">Amount</label><div class="money-field"><input type="number" id="expAmount" placeholder="0.00" step="0.01" min="0"></div></div>
+          <div><label for="expCategory">Category</label>
             <select id="expCategory">
               <option>Equipment</option><option>Supplies</option><option>Fuel</option>
               <option>Software &amp; Fees</option><option>Insurance</option><option>Marketing</option><option>Other</option>
-            </select>
+            </select></div>
+          <div><label for="expRecurring">How often</label>
             <select id="expRecurring">
-              <option value="one-time">One-time cost</option>
-              <option value="monthly">Recurring — monthly</option>
-              <option value="yearly">Recurring — yearly</option>
-            </select>
-            <div class="money-field"><input type="number" id="expAmount" placeholder="Amount" step="0.01" min="0"></div>
-          </div>
-          <div class="grid2" style="gap:10px; margin-top:10px;">
-            <input type="text" id="expVendor" placeholder="Vendor (e.g., Amazon, Home Depot)">
-            <select id="expPayment" style="width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:8px;background:var(--cream);">
-              <option value="">Payment method…</option>
+              <option value="one-time">One-time</option>
+              <option value="monthly">Every month</option>
+              <option value="yearly">Every year</option>
+            </select></div>
+          <div class="wide"><label for="expVendor">Vendor</label><input type="text" id="expVendor" placeholder="Amazon, Home Depot…"></div>
+          <div class="wide"><label for="expPayment">Paid with</label>
+            <select id="expPayment">
+              <option value="">Choose…</option>
               <option>Chris's Prime CC</option>
               <option>Lendy's Prime CC</option>
               <option>Chris's AAdvantage CC</option>
               <option>Lendy's AAdvantage CC</option>
               <option>TFCU Checking Account</option>
               <option>Other</option>
-            </select>
-          </div>
-          <input type="text" id="expDesc" placeholder="Description / notes (optional)" style="margin-top:10px;">
-          <input type="hidden" id="expEditKey" value="">
-          <div style="display:flex; gap:10px;">
-            <button type="button" id="expAddBtn" style="flex:1;">Add expense</button>
-            <button type="button" id="expCancelBtn" class="secondary" onclick="finEditCancel()" style="display:none; flex:1;">Cancel edit</button>
-          </div>
+            </select></div>
         </div>
-        <div class="rem" style="display:flex; gap:10px; flex-wrap:wrap;">
-          <select id="expFilterMonth" style="flex:1; min-width:140px;"><option value="">All months</option></select>
-          <select id="expFilterCategory" style="flex:1; min-width:140px;"><option value="">All categories</option></select>
-          <select id="expFilterPayment" style="flex:1; min-width:160px;"><option value="">All payment methods</option></select>
-          <input type="text" id="expFilterSearch" placeholder="Search vendor / notes…" style="flex:2; min-width:160px;">
-          <button type="button" id="expFilterClear" class="secondary" style="width:auto; margin:0; padding:11px 16px; flex:0 0 auto;">Clear</button>
+        <label for="expDesc">Notes (optional)</label>
+        <input type="text" id="expDesc" placeholder="What it was for">
+        <input type="hidden" id="expEditKey" value="">
+        <div class="form-actions">
+          <button type="button" id="expAddBtn">Add expense</button>
+          <button type="button" id="expCancelBtn" class="secondary" onclick="finEditCancel()">Cancel</button>
         </div>
-        <p class="note" id="expCount" style="margin:2px 0 10px;"></p>
-        <div id="expList"></div>
-        <button type="button" id="expCsvBtn" style="background:var(--ink); color:#fff;">Download expenses (CSV)</button>
       </div>
-    </details>
 
-    <details class="fin-section">
-      <summary>🚗 Mileage</summary>
-      <div class="fin-section-body">
-        <div class="rem" id="mileTotals" style="display:flex; gap:20px; flex-wrap:wrap; align-items:center;"></div>
-        <div class="rem">
-          <p class="empty" style="margin:0 0 8px;">Quick-fill from recent trips:</p>
-          <div id="tripChips" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
-          <div class="grid2" style="gap:10px;">
-            <input type="date" id="mileDate">
-            <input type="number" id="mileMiles" placeholder="Miles" step="0.1" min="0">
-          </div>
-          <input type="text" id="milePurpose" placeholder="Purpose (e.g., Deliver — Jane Smith, Moore)" style="margin-top:10px;">
-          <button type="button" id="mileAddBtn">Add trip</button>
+      <p class="totals-line" id="expCount"></p>
+      <div id="expList"></div>
+      <div style="margin-top:12px;"><button type="button" id="expCsvBtn" class="secondary btn-sm">Download expenses (CSV)</button></div>
+    </div>
+
+    <!-- Mileage -->
+    <div class="tabpanel" role="tabpanel" id="panel-mileage" aria-labelledby="tab-mileage" hidden>
+      <div class="kpis" id="mileTotals" style="grid-template-columns:repeat(3,1fr);"></div>
+
+      <div class="form-panel" id="mileForm">
+        <h3>Log a trip</h3>
+        <p class="note" style="margin:0;">Quick-fill from deliveries and pickups in the last and next 7 days:</p>
+        <div class="chips" id="tripChips"></div>
+        <div class="form-grid">
+          <div><label for="mileDate">Date</label><input type="date" id="mileDate"></div>
+          <div><label for="mileMiles">Miles</label><input type="number" id="mileMiles" placeholder="0.0" step="0.1" min="0"></div>
+          <div class="wide"><label for="milePurpose">Purpose</label><input type="text" id="milePurpose" placeholder="Deliver, Jane Smith, Moore"></div>
         </div>
-        <div id="mileList"></div>
-        <button type="button" id="mileCsvBtn" style="background:var(--ink); color:#fff;">Download mileage (CSV)</button>
+        <div class="form-actions"><button type="button" id="mileAddBtn">Add trip</button></div>
       </div>
-    </details>
+
+      <div id="mileList"></div>
+      <div style="margin-top:12px;"><button type="button" id="mileCsvBtn" class="secondary btn-sm">Download mileage (CSV)</button></div>
+    </div>
+
+    <!-- Rentals -->
+    <div class="tabpanel" role="tabpanel" id="panel-rentals" aria-labelledby="tab-rentals" hidden>
+      <p class="totals-line" id="rentCount"></p>
+      <div class="scroll-x" id="rentList"></div>
+      <div style="margin-top:12px;"><button type="button" id="csvBtn" class="secondary btn-sm">Download rental log (CSV)</button></div>
+    </div>
   </div>
 </div>
 
@@ -161,6 +314,10 @@
 
   let ALL_RENTALS = [];
   let FIN = { expenses: [], mileage: [], mileageRate: null };
+  const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+  const CUR_MONTH = TODAY.slice(0, 7);
+  // The period everything above the tabs describes
+  let P = { mode: 'month', y: +TODAY.slice(0, 4), m: +TODAY.slice(5, 7) };
 
   $('loadBtn').addEventListener('click', load);
   // Auto-load if a secret is already saved (matches admin.html behavior)
@@ -170,7 +327,7 @@
     const secret = $('secret').value.trim();
     if (!secret) return showErr('Enter the admin secret.');
     const btn = $('loadBtn');
-    btn.disabled = true; btn.textContent = 'Loading…';
+    btn.disabled = true; btn.textContent = 'Refreshing…';
     try {
       const [rentalsResp, finResp] = await Promise.all([
         fetch('/.netlify/functions/get-rentals', {
@@ -186,123 +343,300 @@
         const rd = await rentalsResp.json();
         ALL_RENTALS = rd.rentals || [];
         FIN = await finResp.json();
-        renderSales(ALL_RENTALS);
-        renderFinance();
-        renderNetIncome();
-        renderMonthlyBreakdown(ALL_RENTALS, FIN.expenses);
-        $('results').style.display = 'block';
+        $('results').style.display = 'block';   // shown first so the chart can measure its width
+        renderAll();
         $('status').style.display = 'none';
       }
-    } catch { showErr('Network error — use this page on the live site.'); }
-    btn.disabled = false; btn.textContent = 'Load finance data';
+    } catch { showErr('Network error. This page only works on the live site.'); }
+    btn.disabled = false; btn.textContent = 'Refresh';
   }
 
-
+  // ---- Formatting ----
   function fmtPrice(p){ const s=String(p||'').trim(); return s ? (s.startsWith('$') ? esc(s) : '$'+esc(s)) : ''; }
-  function showErr(m){const s=$('status');s.className='status err';s.textContent=m;}
-  function thisYear(d){ return (d||'').slice(0,4) === String(new Date().getFullYear()); }
+  function showErr(m){const s=$('status');s.className='status err';s.textContent=m;s.style.display='block';}
   const money = n => '$' + Number(n||0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
-
+  const signed = n => (n < 0 ? '−' : '') + money(Math.abs(n));
+  const whole = n => '$' + Math.round(n).toLocaleString('en-US');
+  const plural = (n, one, many) => `${n.toLocaleString('en-US')} ${n === 1 ? one : (many || one + 's')}`;
   function priceNum(p){ const m = String(p||'').replace(/[^0-9.]/g,''); return m ? parseFloat(m) : 0; }
-  function renderSales(rentals){
-    const now = new Date();
-    const thisMonth = now.toISOString().slice(0,7);
-    const thisYear = now.getFullYear().toString();
-    const today = now.toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+  const monthKey = d => (d||'').slice(0,7);
+  const ymKey = (y, m) => `${y}-${String(m).padStart(2,'0')}`;
+  function monthName(key, opts = { month: 'long', year: 'numeric' }) {
+    return new Date(key + '-01T12:00:00').toLocaleDateString('en-US', opts);
+  }
+  const totesOf = r => typeof r.toteCount === 'number' ? r.toteCount
+    : (String(r.package||'').match(/(\d+)\s*totes?/i) || [0, 0])[1] * 1;
 
-    const pn = p => { const m = String(p||'').replace(/[^0-9.]/g,''); return m ? parseFloat(m) : 0; };
-    const sum = arr => arr.reduce((t,r) => t + pn(r.price), 0);
-    const fmt = n => '$' + n.toLocaleString('en-US', {maximumFractionDigits:0});
-
-    const monthRentals = rentals.filter(r => (r.dropoffDate||'').slice(0,7) === thisMonth);
-    const ytdRentals = rentals.filter(r => (r.dropoffDate||'').slice(0,4) === thisYear);
-    const activeRentals = rentals.filter(r => r.dropoffDate <= today && r.pickupDate >= today);
-    const avgValue = rentals.length ? sum(rentals) / rentals.length : 0;
-
-    // Previous month comparison
-    const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const prevMonth = prevDate.toISOString().slice(0,7);
-    const prevRentals = rentals.filter(r => (r.dropoffDate||'').slice(0,7) === prevMonth);
-    const monthDiff = sum(monthRentals) - sum(prevRentals);
-    const monthDiffPct = sum(prevRentals) > 0 ? ((monthDiff / sum(prevRentals)) * 100).toFixed(0) : null;
-
-    // Summary cards
-    $('salesSummary').innerHTML = `
-      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--green);">${activeRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">Active Now</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${monthRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">This Month</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--gold);">${fmt(sum(monthRentals))}</div><div style="font-size:0.72rem;color:var(--steel);">Month Revenue</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${ytdRentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">YTD Rentals</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--gold);">${fmt(sum(ytdRentals))}</div><div style="font-size:0.72rem;color:var(--steel);">YTD Revenue</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${rentals.length}</div><div style="font-size:0.72rem;color:var(--steel);">All Time</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--gold);">${fmt(sum(rentals))}</div><div style="font-size:0.72rem;color:var(--steel);">Total Invoiced</div></div>
-      <div><div style="font-size:1.3rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${fmt(avgValue)}</div><div style="font-size:0.72rem;color:var(--steel);">Avg Order</div></div>
-    `;
-
-    // Monthly revenue (last 6 months)
-    const months = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push(d.toISOString().slice(0,7));
+  // ---- Periods ----
+  // Turns P into an inclusive date range, a matching previous range for the
+  // comparison, and the words used for both.
+  function range(p = P) {
+    if (p.mode === 'month') {
+      const key = ymKey(p.y, p.m);
+      const prev = p.m === 1 ? ymKey(p.y - 1, 12) : ymKey(p.y, p.m - 1);
+      const last = new Date(Date.UTC(p.y, p.m, 0)).getUTCDate();
+      return { start: key + '-01', end: `${key}-${String(last).padStart(2,'0')}`,
+        prevStart: prev + '-01', prevEnd: `${prev}-${String(new Date(Date.UTC(+prev.slice(0,4), +prev.slice(5), 0)).getUTCDate()).padStart(2,'0')}`,
+        label: monthName(key), short: monthName(key, { month: 'long' }), prevLabel: monthName(prev, { month: 'long' }),
+        current: key === CUR_MONTH };
     }
-    const monthlyData = months.map(m => {
-      const mrs = rentals.filter(r => (r.dropoffDate||'').slice(0,7) === m);
-      return { month: m, count: mrs.length, revenue: sum(mrs) };
-    });
-    const maxRev = Math.max(...monthlyData.map(m => m.revenue), 1);
-    const monthLabel = m => {
-      const d = new Date(m + '-01T12:00:00');
-      return d.toLocaleDateString('en-US', { month: 'short' });
+    if (p.mode === 'year') {
+      return { start: `${p.y}-01-01`, end: `${p.y}-12-31`, prevStart: `${p.y-1}-01-01`, prevEnd: `${p.y-1}-12-31`,
+        label: String(p.y), short: String(p.y), prevLabel: String(p.y - 1), current: p.y === +TODAY.slice(0,4) };
+    }
+    return { start: '0000-01-01', end: '9999-12-31', prevStart: null, prevEnd: null, label: 'All time', short: 'All time', prevLabel: '', current: true };
+  }
+  const inR = (d, s, e) => !!d && d >= s && d <= e;
+  function totals(s, e) {
+    const rentals = ALL_RENTALS.filter(r => inR(r.dropoffDate, s, e));
+    const expenses = FIN.expenses.filter(x => inR(x.date, s, e));
+    const miles = FIN.mileage.filter(x => inR(x.date, s, e)).reduce((t, x) => t + Number(x.miles||0), 0);
+    const revenue = rentals.reduce((t, r) => t + priceNum(r.price), 0);
+    const spent = expenses.reduce((t, x) => t + Number(x.amount||0), 0);
+    return { rentals, expenses, revenue, spent, net: revenue - spent, miles };
+  }
+  function monthlyOverhead() {
+    let o = 0;
+    for (const e of FIN.expenses) {
+      if (e.recurring === 'monthly') o += Number(e.amount||0);
+      else if (e.recurring === 'yearly') o += Number(e.amount||0) / 12;
+    }
+    return o;
+  }
+
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+    P.mode = b.dataset.mode;
+    if (P.mode !== 'all' && !P.y) { P.y = +TODAY.slice(0,4); P.m = +TODAY.slice(5,7); }
+    renderPeriod();
+  }));
+  $('prevBtn').addEventListener('click', () => stepPeriod(-1));
+  $('nextBtn').addEventListener('click', () => stepPeriod(1));
+  function stepPeriod(d) {
+    if ($(d < 0 ? 'prevBtn' : 'nextBtn').disabled) return;
+    if (P.mode === 'year') P.y += d;
+    else if (P.mode === 'month') { P.m += d; if (P.m < 1) { P.m = 12; P.y--; } if (P.m > 12) { P.m = 1; P.y++; } }
+    renderPeriod();
+  }
+  function pickMonth(key) {
+    P = { mode: 'month', y: +key.slice(0,4), m: +key.slice(5,7) };
+    renderPeriod();
+    $('kpis').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function renderAll() {
+    renderPeriod();
+    renderMonthTable();
+    renderFinance();
+    renderRentalsTab();
+  }
+
+  // Everything that follows the period: stepper, finding, KPIs, chart highlight, breakdowns
+  function renderPeriod() {
+    document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === P.mode)));
+    const R = range();
+    $('stepper').style.display = P.mode === 'all' ? 'none' : '';
+    $('periodLabel').textContent = R.label;
+    $('nextBtn').disabled = P.mode === 'month' ? ymKey(P.y, P.m) >= CUR_MONTH : P.mode === 'year' ? P.y >= +TODAY.slice(0,4) : true;
+    const first = firstMonth();
+    $('prevBtn').disabled = P.mode === 'month' ? ymKey(P.y, P.m) <= first : P.mode === 'year' ? String(P.y) <= first.slice(0,4) : true;
+
+    const T = totals(R.start, R.end);
+    // Only compare against a period that has records; a change from nothing says nothing
+    const Pv0 = R.prevStart ? totals(R.prevStart, R.prevEnd) : null;
+    const Pv = Pv0 && (Pv0.rentals.length || Pv0.expenses.length) ? Pv0 : null;
+
+    // Finding: the period's result in one sentence, with its baseline named
+    const so = R.current && P.mode !== 'all' ? ' so far' : '';
+    let f = `${signed(T.net)} net on ${plural(T.rentals.length, 'rental')}`;
+    if (!Pv && Pv0) f += `. Nothing recorded in ${R.prevLabel} to compare with`;
+    if (Pv) {
+      const d = T.net - Pv.net;
+      f += d === 0 ? `, the same as ${R.prevLabel}` : `, ${d > 0 ? 'up' : 'down'} ${money(Math.abs(d))} on ${R.prevLabel}`;
+    }
+    $('finding').innerHTML = `<span class="when">${esc(R.label)}${so}:</span> ${esc(f)}.`;
+
+    // KPIs. A change is good or bad by its metric: costs are better when they fall.
+    const delta = (cur, prev, goodUp = true) => {
+      if (!Pv) return '<span>&nbsp;</span>';
+      const d = cur - prev;
+      if (prev === 0 && cur === 0) return `No change vs ${esc(R.prevLabel)}`;
+      if (d === 0) return `Same as ${esc(R.prevLabel)}`;
+      const good = goodUp ? d > 0 : d < 0;
+      return `<span class="${good ? 'good' : 'bad'}">${d > 0 ? '+' : '−'}${money(Math.abs(d))}</span> vs ${esc(R.prevLabel)}`;
     };
+    const margin = T.revenue > 0 && T.net >= 0 ? Math.round(T.net / T.revenue * 100) + '% of revenue kept' : T.revenue > 0 ? 'Expenses were more than revenue' : 'No revenue in this period';
+    const avg = T.rentals.length ? money(T.revenue / T.rentals.length) + ' average' : 'No rentals';
+    const rate = FIN.mileageRate;
+    $('kpis').innerHTML = `
+      <div class="kpi lead"><div class="lbl">Net income</div><div class="val num" style="color:${T.net < 0 ? 'var(--red)' : 'var(--ink)'}">${signed(T.net)}</div><div class="cap">${margin}</div><div class="cap">${Pv ? delta(T.net, Pv.net) : ''}</div></div>
+      <div class="kpi"><div class="lbl">Revenue</div><div class="val num">${money(T.revenue)}</div><div class="cap">${plural(T.rentals.length, 'rental')} · ${avg}</div><div class="cap">${Pv ? delta(T.revenue, Pv.revenue) : ''}</div></div>
+      <div class="kpi"><div class="lbl">Expenses</div><div class="val num">${money(T.spent)}</div><div class="cap">${plural(T.expenses.length, 'expense')}</div><div class="cap">${Pv ? delta(T.spent, Pv.spent, false) : ''}</div></div>
+      <div class="kpi"><div class="lbl">Mileage deduction</div><div class="val num">${rate ? money(T.miles * rate) : '—'}</div><div class="cap num">${T.miles.toLocaleString('en-US', { maximumFractionDigits: 1 })} mi${rate ? ' at $' + Number(rate).toFixed(2) + ' a mile' : ' · set a rate under Mileage'}</div></div>`;
 
-    $('salesByMonth').innerHTML = `
-      <h3 style="font-size:0.88rem; margin:16px 0 8px;">📊 Monthly Revenue (Last 6 Months)${monthDiffPct !== null ? ` <span style="font-size:0.75rem; color:${monthDiff >= 0 ? 'var(--green)' : 'var(--red)'}; margin-left:8px;">${monthDiff >= 0 ? '▲' : '▼'} ${Math.abs(monthDiffPct)}% vs last month</span>` : ''}</h3>
-      <div style="display:flex; align-items:flex-end; gap:8px; height:120px; padding:8px 0; border-bottom:1px solid var(--line);">
-        ${monthlyData.map(m => `
-          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
-            <div style="font-size:0.7rem; font-weight:bold; color:var(--ink);">${m.revenue > 0 ? fmt(m.revenue) : ''}</div>
-            <div style="width:100%; max-width:50px; background:${m.month === thisMonth ? 'var(--gold)' : 'var(--cream)'}; border:1px solid ${m.month === thisMonth ? 'var(--gold)' : 'var(--line)'}; border-radius:4px 4px 0 0; height:${Math.max(m.revenue / maxRev * 80, 4)}px;"></div>
-            <div style="font-size:0.68rem; color:var(--steel);">${monthLabel(m.month)}</div>
-            <div style="font-size:0.65rem; color:var(--steel);">${m.count} rental${m.count !== 1 ? 's' : ''}</div>
-          </div>
-        `).join('')}
-      </div>`;
+    renderChart();
 
-    // By package type
+    // Breakdowns for the period
+    const when = R.label + so;
+    $('pkgMeta').textContent = when; $('catMeta').textContent = when;
     const byPkg = {};
-    for (const r of rentals) {
-      const pkg = r.package || 'Unknown';
-      if (!byPkg[pkg]) byPkg[pkg] = { count: 0, revenue: 0 };
-      byPkg[pkg].count++;
-      byPkg[pkg].revenue += pn(r.price);
+    for (const r of T.rentals) {
+      const k = shortPkg(r.package);
+      byPkg[k] = byPkg[k] || { n: 0, v: 0 };
+      byPkg[k].n++; byPkg[k].v += priceNum(r.price);
     }
-    const pkgEntries = Object.entries(byPkg).sort((a,b) => b[1].revenue - a[1].revenue);
-    $('salesByPackage').innerHTML = pkgEntries.length ? pkgEntries.map(([pkg, d]) => `
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); font-size:0.82rem;">
-        <div>
-          <div style="font-weight:bold;">${esc(pkg)}</div>
-          <div style="color:var(--steel); font-size:0.75rem;">${d.count} rental${d.count !== 1 ? 's' : ''}</div>
-        </div>
-        <div style="font-weight:bold; color:var(--gold);">${fmt(d.revenue)}</div>
-      </div>`).join('') : '<div style="color:var(--steel);font-size:0.82rem;">No data yet.</div>';
+    $('byPackage').innerHTML = barList(Object.entries(byPkg).map(([k, d]) => ({ name: k, v: d.v, sub: plural(d.n, 'rental') })), T.revenue, 'var(--data)', 'No rentals in this period.');
 
-    // Recent rentals (last 8)
-    const recent = [...rentals].sort((a,b) => (b.invoicedAt||'').localeCompare(a.invoicedAt||'')).slice(0, 8);
-    $('recentRentals').innerHTML = recent.length ? recent.map(r => {
-      const invoiceDate = fmtDate((r.invoicedAt||'').slice(0,10));
-      const isActive = r.dropoffDate <= today && r.pickupDate >= today;
-      const isPast = r.pickupDate < today;
-      const status = isActive ? '<span style="color:var(--green);font-size:0.7rem;font-weight:bold;">● Active</span>'
-                   : isPast ? '<span style="color:var(--steel);font-size:0.7rem;">Completed</span>'
-                   : '<span style="color:var(--gold);font-size:0.7rem;font-weight:bold;">Upcoming</span>';
-      return `
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); font-size:0.82rem;">
-        <div>
-          <div style="font-weight:bold;">${esc(r.name)} ${status}</div>
-          <div style="color:var(--steel); font-size:0.75rem;">${esc(invoiceDate)} · ${esc(r.package || '')}</div>
-        </div>
-        <div style="font-weight:bold;">${fmtPrice(r.price)}</div>
-      </div>`;
-    }).join('') : '<div style="color:var(--steel);font-size:0.82rem;">No rentals yet.</div>';
+    const byCat = {};
+    for (const e of T.expenses) {
+      byCat[e.category || 'Other'] = byCat[e.category || 'Other'] || { n: 0, v: 0, rec: 0 };
+      const b = byCat[e.category || 'Other']; b.n++; b.v += Number(e.amount||0);
+      if (e.recurring === 'monthly' || e.recurring === 'yearly') b.rec++;
+    }
+    const oh = monthlyOverhead();
+    $('byCategory').innerHTML = barList(Object.entries(byCat).map(([k, d]) => ({ name: k, v: d.v, sub: plural(d.n, 'expense') + (d.rec ? ` · ${d.rec} recurring` : '') })), T.spent, '#8C8377', 'No expenses in this period.')
+      + (oh ? `<p class="note" style="margin-top:10px;">Recurring costs come to about <b class="num" style="color:var(--ink)">${money(oh)}</b> a month.</p>` : '');
+
+    document.querySelectorAll('#monthTable tbody tr').forEach(tr => tr.classList.toggle('sel', P.mode === 'month' && tr.dataset.month === ymKey(P.y, P.m)));
+  }
+
+  // "2–3 Bedrooms — 40 Totes + 2 Dollies — $169" -> "2–3 Bedrooms · 40 totes"
+  function shortPkg(p) {
+    const parts = String(p || 'Unknown').split(/\s+—\s+/);
+    if (parts.length >= 2) {
+      const t = parts[1].match(/(\d+)\s*totes?/i);
+      return parts[0] + (t ? ` · ${t[1]} totes` : '');
+    }
+    return parts[0];
+  }
+
+  function barList(rows, total, color, emptyMsg) {
+    if (!rows.length) return `<p class="empty-line">${emptyMsg}</p>`;
+    rows.sort((a, b) => b.v - a.v);
+    const max = rows[0].v || 1;
+    return rows.map(r => `
+      <div class="item">
+        <div class="top"><span class="name">${esc(r.name)}</span><span class="amt num">${money(r.v)}</span></div>
+        <div class="bar"><span style="width:${(r.v / max * 100).toFixed(1)}%; background:${color};"></span></div>
+        <div class="minor num">${r.sub}${total > 0 ? ` · ${Math.round(r.v / total * 100)}% of the total` : ''}</div>
+      </div>`).join('');
+  }
+
+  function firstMonth() {
+    const seen = [...ALL_RENTALS.map(r => monthKey(r.dropoffDate)), ...FIN.expenses.map(e => monthKey(e.date))].filter(Boolean).sort();
+    return seen.length && seen[0] < CUR_MONTH ? seen[0] : CUR_MONTH;
+  }
+  function monthsBetween(a, b) {
+    const out = []; let [y, m] = a.split('-').map(Number); const [by, bm] = b.split('-').map(Number);
+    while (y < by || (y === by && m <= bm)) { out.push(ymKey(y, m)); m++; if (m > 12) { m = 1; y++; } }
+    return out;
+  }
+  function monthRow(mo) {
+    const last = new Date(Date.UTC(+mo.slice(0,4), +mo.slice(5), 0)).getUTCDate();
+    const t = totals(mo + '-01', `${mo}-${String(last).padStart(2,'0')}`);
+    return { month: mo, count: t.rentals.length, rev: t.revenue, exp: t.spent, net: t.net };
+  }
+
+  // ---- Chart: the 12 months ending at the picked month (or this month) ----
+  function renderChart() {
+    const W = Math.max(320, $('chart').clientWidth || 800), H = 220;
+    const padL = 44, padR = 4, padT = 10, padB = 26;
+    const endKey = P.mode === 'month' ? ymKey(P.y, P.m) : P.mode === 'year' && P.y < +TODAY.slice(0,4) ? `${P.y}-12` : CUR_MONTH;
+    const [ey, em] = endKey.split('-').map(Number);
+    const startKey = em === 12 ? `${ey}-01` : ymKey(ey - 1, em + 1);
+    const rows = monthsBetween(startKey, endKey).map(monthRow);
+    const top = niceMax(Math.max(1, ...rows.map(r => Math.max(r.rev, r.exp))));
+    const ticks = [0, top / 4, top / 2, top * 3 / 4, top];
+    const plotW = W - padL - padR, plotH = H - padT - padB, slot = plotW / rows.length;
+    const bw = Math.min(18, slot * 0.32), gap = 2;
+    const y = v => padT + plotH - (v / top) * plotH;
+    const sel = m => (P.mode === 'month' && m === endKey) || (P.mode === 'year' && m.startsWith(String(P.y)));
+    const narrow = W < 520;
+
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Revenue and expenses for the 12 months ending ${monthName(endKey)}">`;
+    rows.forEach((r, i) => { if (sel(r.month)) s += `<rect class="band" x="${padL + i * slot + 1}" y="${padT}" width="${slot - 2}" height="${plotH}" rx="4"></rect>`; });
+    ticks.forEach(t => {
+      s += `<line x1="${padL}" x2="${W - padR}" y1="${y(t)}" y2="${y(t)}" stroke="${t === 0 ? '#CFC7B8' : '#EEEAE1'}" stroke-width="1"></line>`;
+      s += `<text class="tick" x="${padL - 8}" y="${y(t) + 4}" text-anchor="end">${t >= 1000 ? '$' + (t / 1000).toLocaleString('en-US', { maximumFractionDigits: 1 }) + 'k' : '$' + t}</text>`;
+    });
+    rows.forEach((r, i) => {
+      const cx = padL + i * slot + slot / 2;
+      if (r.rev > 0) s += `<rect x="${cx - bw - gap / 2}" y="${y(r.rev)}" width="${bw}" height="${y(0) - y(r.rev)}" fill="#A87F22"></rect>`;
+      if (r.exp > 0) s += `<rect x="${cx + gap / 2}" y="${y(r.exp)}" width="${bw}" height="${y(0) - y(r.exp)}" fill="#B9AFA0"></rect>`;
+      const lbl = monthName(r.month, { month: narrow ? 'narrow' : 'short' }) + (r.month.endsWith('-01') && !narrow ? ' ' + r.month.slice(2, 4) : '');
+      s += `<text class="mlabel${sel(r.month) ? ' sel' : ''}" x="${cx}" y="${H - 8}" text-anchor="middle">${lbl}</text>`;
+      s += `<rect class="hit" x="${padL + i * slot}" y="${padT}" width="${slot}" height="${plotH + padB}" data-month="${r.month}"><title>${monthName(r.month)}: revenue ${money(r.rev)}, expenses ${money(r.exp)}, net ${signed(r.net)}</title></rect>`;
+    });
+    $('chart').innerHTML = s + '</svg>';
+    $('chart').querySelectorAll('.hit').forEach(h => h.addEventListener('click', () => pickMonth(h.dataset.month)));
+  }
+  // Axis top: four even steps of 1, 2, 2.5 or 5 x 10^n, so ticks land on round numbers
+  function niceMax(v) {
+    const x = v / 4, p = Math.pow(10, Math.floor(Math.log10(x)));
+    for (const k of [1, 2, 2.5, 5, 10]) if (k * p >= x) return 4 * k * p;
+  }
+  let resizeT;
+  window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (ALL_RENTALS.length || FIN.expenses.length) renderChart(); }, 150); });
+
+  // ---- Month-by-month table ----
+  function renderMonthTable() {
+    const rows = monthsBetween(firstMonth(), CUR_MONTH).map(monthRow).reverse();
+    const sum = k => rows.reduce((t, r) => t + r[k], 0);
+    // Margin only means something when the month made money
+    const pct = (n, d) => d > 0 && n >= 0 ? Math.round(n / d * 100) + '%' : '—';
+    $('monthTable').innerHTML = `
+      <table class="data">
+        <thead><tr><th>Month</th><th class="r">Rentals</th><th class="r">Revenue</th><th class="r">Expenses</th><th class="r">Net income</th><th class="r">Margin</th></tr></thead>
+        <tbody>${rows.map(r => `
+          <tr class="pick" data-month="${r.month}" tabindex="0">
+            <td>${monthName(r.month)}${r.month === CUR_MONTH ? ' <span class="pill neutral">So far</span>' : ''}</td>
+            <td class="r">${r.count}</td>
+            <td class="r">${money(r.rev)}</td>
+            <td class="r">${money(r.exp)}</td>
+            <td class="r" style="font-weight:600;${r.net < 0 ? 'color:var(--red);' : ''}">${signed(r.net)}</td>
+            <td class="r" style="color:var(--steel);">${pct(r.net, r.rev)}</td>
+          </tr>`).join('')}
+        </tbody>
+        <tfoot><tr><td>All time</td><td class="r">${sum('count')}</td><td class="r">${money(sum('rev'))}</td><td class="r">${money(sum('exp'))}</td><td class="r"${sum('net') < 0 ? ' style="color:var(--red)"' : ''}>${signed(sum('net'))}</td><td class="r" style="color:var(--steel);">${pct(sum('net'), sum('rev'))}</td></tr></tfoot>
+      </table>`;
+    $('monthTable').querySelectorAll('tr.pick').forEach(tr => {
+      tr.addEventListener('click', () => pickMonth(tr.dataset.month));
+      tr.addEventListener('keydown', e => { if (e.key === 'Enter') pickMonth(tr.dataset.month); });
+    });
+    document.querySelectorAll('#monthTable tbody tr').forEach(tr => tr.classList.toggle('sel', P.mode === 'month' && tr.dataset.month === ymKey(P.y, P.m)));
+  }
+
+  // ---- Tabs ----
+  const TABS = ['expenses', 'mileage', 'rentals'];
+  function showTab(name) {
+    TABS.forEach(t => {
+      $('tab-' + t).setAttribute('aria-selected', String(t === name));
+      $('panel-' + t).hidden = t !== name;
+    });
+    try { history.replaceState(null, '', '#' + name); } catch {}
+  }
+  TABS.forEach(t => $('tab-' + t).addEventListener('click', () => showTab(t)));
+  if (TABS.includes(location.hash.slice(1))) showTab(location.hash.slice(1));
+
+  // ---- Rentals tab: every rental, newest drop-off first ----
+  function renderRentalsTab() {
+    const rows = [...ALL_RENTALS].sort((a, b) => (b.dropoffDate||'').localeCompare(a.dropoffDate||''));
+    $('rentTabCount').textContent = ' ' + rows.length;
+    $('rentCount').innerHTML = rows.length ? `<b class="num">${plural(rows.length, 'rental')}</b> · <b class="num">${money(rows.reduce((t, r) => t + priceNum(r.price), 0))}</b> invoiced` : '';
+    const status = r => r.dropoffDate <= TODAY && r.pickupDate >= TODAY ? '<span class="pill ok">Out now</span>'
+      : r.pickupDate < TODAY ? '<span class="pill neutral">Done</span>' : '<span class="pill pending">Upcoming</span>';
+    $('rentList').innerHTML = rows.length ? `
+      <table class="data">
+        <thead><tr><th>Drop-off</th><th>Customer</th><th>Package</th><th>Status</th><th class="r">Price</th></tr></thead>
+        <tbody>${rows.map(r => `
+          <tr>
+            <td style="white-space:nowrap;">${esc(fmtDate(r.dropoffDate))}<span class="minor">back ${esc(fmtDate(r.pickupDate))}</span></td>
+            <td>${esc(r.name)}</td>
+            <td>${esc(shortPkg(r.package))}</td>
+            <td>${status(r)}</td>
+            <td class="r" style="font-weight:600;">${fmtPrice(r.price)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : '<p class="empty-line">No rentals yet.</p>';
   }
 
   $('csvBtn').addEventListener('click', () => {
@@ -314,132 +648,65 @@
     dlCsv('ready-tote-rentals', cols, rows);
   });
 
-  // ---- Finance ----
+  // ---- Finance records (expenses, mileage) ----
   const finCall = (payload) => fetch('/.netlify/functions/finance', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ secret: $('secret').value.trim(), ...payload }),
   });
   async function reloadFinance(){
     const resp = await finCall({ action: 'list' });
-    if (resp.ok) { FIN = await resp.json(); renderFinance(); renderNetIncome(); renderMonthlyBreakdown(ALL_RENTALS, FIN.expenses); }
+    if (resp.ok) { FIN = await resp.json(); renderPeriod(); renderMonthTable(); renderFinance(); }
   }
 
   function renderFinance() {
-    const ytdExp = FIN.expenses.filter(e => thisYear(e.date));
-    let ytdTotal = 0, monthlyOverhead = 0;
-    const byCat = {};
-    for (const e of FIN.expenses) {
-      if (e.recurring === 'monthly') monthlyOverhead += e.amount;
-      else if (e.recurring === 'yearly') monthlyOverhead += e.amount / 12;
-    }
-    for (const e of ytdExp) {
-      ytdTotal += e.amount;
-      const b = byCat[e.category] || { oneTime: 0, monthly: 0 };
-      if (e.recurring === 'one-time' || !e.recurring) b.oneTime += e.amount;
-      else b.monthly += e.amount;
-      byCat[e.category] = b;
-    }
-    $('expTotals').innerHTML =
-      `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${money(ytdTotal)}</div><div style="font-size:0.75rem;color:var(--steel);">YTD expenses</div></div>` +
-      `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;color:var(--gold);">${money(monthlyOverhead)}/mo</div><div style="font-size:0.75rem;color:var(--steel);">Est. monthly overhead</div></div>` +
-      Object.entries(byCat).map(([cat,amt]) => {
-        const sub = amt.monthly > 0 && amt.oneTime > 0 ? `${money(amt.oneTime)} + ${money(amt.monthly)} recurring`
-                  : amt.monthly > 0 ? `${money(amt.monthly)} recurring` : money(amt.oneTime);
-        return `<div><div style="font-size:0.9rem;font-weight:bold;">${sub}</div><div style="font-size:0.72rem;color:var(--steel);">${esc(cat)}</div></div>`;
-      }).join('');
-
+    $('expTabCount').textContent = ' ' + FIN.expenses.length;
+    $('mileTabCount').textContent = ' ' + FIN.mileage.length;
     populateExpenseFilters();
     renderExpenseTable();
 
-    const ytdMiles = FIN.mileage.filter(m => thisYear(m.date)).reduce((t,m)=>t+m.miles,0);
+    // Mileage summary: this year
+    const yr = TODAY.slice(0, 4);
+    const ytdMiles = FIN.mileage.filter(m => (m.date||'').startsWith(yr)).reduce((t,m)=>t+Number(m.miles||0),0);
     const rate = FIN.mileageRate;
-    $('mileTotals').innerHTML =
-      `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${ytdMiles.toLocaleString('en-US',{maximumFractionDigits:1})} mi</div><div style="font-size:0.75rem;color:var(--steel);">YTD business miles</div></div>` +
-      (rate ? `<div><div style="font-size:1.2rem;font-weight:bold;font-family:'Archivo Black',sans-serif;">${money(ytdMiles*rate)}</div><div style="font-size:0.75rem;color:var(--steel);">Est. deduction @ $${rate}/mi</div></div>` : '') +
-      `<div style="display:flex; align-items:center; gap:6px;">
-        <div class="money-field compact" style="display:inline-block;">
-          <input type="number" id="rateInput" step="0.005" min="0" placeholder="0.65" value="${rate ?? ''}" style="width:110px; padding:8px 10px 8px 22px;">
-        </div>
-        <span style="font-size:0.78rem; color:var(--steel);">/mi</span>
-        <button type="button" onclick="saveRate()" style="width:auto; margin:0; padding:8px 14px; font-size:0.8rem;">Save rate</button>
-      </div>`;
+    $('mileTotals').innerHTML = `
+      <div class="kpi"><div class="lbl">Business miles, ${yr}</div><div class="val num">${ytdMiles.toLocaleString('en-US',{maximumFractionDigits:1})} mi</div><div class="cap">${plural(FIN.mileage.filter(m => (m.date||'').startsWith(yr)).length, 'trip')}</div></div>
+      <div class="kpi"><div class="lbl">Estimated deduction, ${yr}</div><div class="val num">${rate ? money(ytdMiles * rate) : '—'}</div><div class="cap">${rate ? 'at $' + Number(rate).toFixed(2) + ' a mile' : 'Set your rate to see this'}</div></div>
+      <div class="kpi"><div class="lbl"><label for="rateInput" style="all:unset;">Rate per mile</label></div>
+        <div class="rate" style="margin-top:6px;">
+          <div class="money-field compact"><input type="number" id="rateInput" step="0.005" min="0" placeholder="0.70" value="${rate ?? ''}"></div>
+          <button type="button" class="secondary btn-sm" onclick="saveRate()">Save</button>
+        </div></div>`;
 
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
-    const lo = new Date(today+'T12:00:00Z'); lo.setUTCDate(lo.getUTCDate()-7);
-    const hi = new Date(today+'T12:00:00Z'); hi.setUTCDate(hi.getUTCDate()+7);
+    const lo = new Date(TODAY+'T12:00:00Z'); lo.setUTCDate(lo.getUTCDate()-7);
+    const hi = new Date(TODAY+'T12:00:00Z'); hi.setUTCDate(hi.getUTCDate()+7);
     const loS = lo.toISOString().slice(0,10), hiS = hi.toISOString().slice(0,10);
     const trips = [];
     for (const r of ALL_RENTALS) {
       if (r.serviceType === 'self') continue;
       if (r.dropoffDate >= loS && r.dropoffDate <= hiS)
-        trips.push({ date: r.dropoffDate, purpose: 'Deliver — ' + r.name + (dropoffAddressOf(r) ? ', ' + dropoffAddressOf(r) : '') });
+        trips.push({ date: r.dropoffDate, purpose: 'Deliver, ' + r.name + (dropoffAddressOf(r) ? ', ' + dropoffAddressOf(r) : '') });
       if (r.pickupDate >= loS && r.pickupDate <= hiS)
-        trips.push({ date: r.pickupDate, purpose: 'Pick up — ' + r.name + (pickupAddressOf(r) ? ', ' + pickupAddressOf(r) : '') });
+        trips.push({ date: r.pickupDate, purpose: 'Pick up, ' + r.name + (pickupAddressOf(r) ? ', ' + pickupAddressOf(r) : '') });
     }
     trips.sort((a,b)=>b.date.localeCompare(a.date));
     $('tripChips').innerHTML = trips.slice(0,8).map(t => `
-      <button type="button" style="width:auto; margin:0; padding:7px 12px; font-size:0.75rem; background:var(--cream); color:var(--ink); border:1px solid var(--line); border-radius:999px;"
-        onclick="fillTrip('${esc(t.date)}', '${esc(t.purpose).replaceAll("'","&#39;")}')">${esc(fmtDate(t.date).slice(0,5))} · ${esc(t.purpose.slice(0,34))}${t.purpose.length>34?'…':''}</button>`).join('')
-      || '<span class="empty">No rental trips in the last/next 7 days.</span>';
+      <button type="button" onclick="fillTrip('${esc(t.date)}', '${esc(t.purpose).replaceAll("'","&#39;")}')">${esc(fmtDate(t.date).slice(0,5))} · ${esc(t.purpose.slice(0,34))}${t.purpose.length>34?'…':''}</button>`).join('')
+      || '<span class="note">No delivery or pickup trips in the last or next 7 days.</span>';
 
     const mileSorted = [...FIN.mileage].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-    $('mileList').innerHTML = mileSorted.slice(0,15).map(m => `
-      <div class="rem" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
-        <div>
-          <div style="font-weight:bold; font-size:0.9rem;">${m.miles} mi</div>
-          <div style="font-size:0.78rem; color:var(--steel); margin:0;">${esc(fmtDate(m.date))} · ${esc(m.purpose)}</div>
-        </div>
-        <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
-          onclick="finDelete('${esc(m.key)}')">Delete</button>
-      </div>`).join('') || '<p class="empty">No trips logged yet.</p>';
-  }
-
-  function monthKey(d){ return (d||'').slice(0,7); }
-  function monthLabel(m){
-    const d = new Date(m + '-01T12:00:00');
-    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  }
-
-  // Splits revenue, expenses, and net income out by calendar month, from the
-  // earliest rental/expense on record through the current month -- so this
-  // stays accurate whether there's 1 month of data or several years of it.
-  function renderMonthlyBreakdown(rentals, expenses){
-    const currentMonth = new Date().toISOString().slice(0,7);
-    const seen = [...rentals.map(r => monthKey(r.dropoffDate)), ...expenses.map(e => monthKey(e.date))].filter(Boolean);
-    const firstMonth = seen.length ? seen.sort()[0] : currentMonth;
-
-    const months = [];
-    let [y, m] = firstMonth.split('-').map(Number);
-    const [cy, cm] = currentMonth.split('-').map(Number);
-    while (y < cy || (y === cy && m <= cm)) {
-      months.push(`${y}-${String(m).padStart(2,'0')}`);
-      m++; if (m > 12) { m = 1; y++; }
-    }
-
-    const fmt = n => '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
-    const rows = months.map(mo => {
-      const rev = rentals.filter(r => monthKey(r.dropoffDate) === mo).reduce((t,r) => t + priceNum(r.price), 0);
-      const exp = expenses.filter(e => monthKey(e.date) === mo).reduce((t,e) => t + Number(e.amount||0), 0);
-      const count = rentals.filter(r => monthKey(r.dropoffDate) === mo).length;
-      return { month: mo, count, rev, exp, net: rev - exp };
-    });
-
-    $('monthlyBreakdown').innerHTML = `
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr><th>Month</th><th>Rentals</th><th>Revenue</th><th>Expenses</th><th>Net Income</th></tr></thead>
-          <tbody>
-            ${rows.slice().reverse().map(r => `
-              <tr${r.month === currentMonth ? ' style="background:var(--gold-bg);"' : ''}>
-                <td style="font-weight:bold;">${monthLabel(r.month)}${r.month === currentMonth ? ' <span class="pill pending">Current</span>' : ''}</td>
-                <td class="mono">${r.count}</td>
-                <td class="mono">${fmt(r.rev)}</td>
-                <td class="mono">${fmt(r.exp)}</td>
-                <td class="mono" style="font-weight:bold;color:${r.net >= 0 ? 'var(--green)' : 'var(--crate-red)'};">${r.net >= 0 ? '' : '−'}${fmt(Math.abs(r.net))}</td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>`;
+    $('mileList').innerHTML = mileSorted.length ? `
+      <table class="data stack">
+        <thead><tr><th>Date</th><th>Trip</th><th class="r">Miles</th><th class="r">Deduction</th><th></th></tr></thead>
+        <tbody>${mileSorted.map(m => `
+          <tr>
+            <td class="c-meta" style="white-space:nowrap;">${esc(fmtDate(m.date))}</td>
+            <td class="c-main">${esc(m.purpose)}</td>
+            <td class="r c-amt">${Number(m.miles).toLocaleString('en-US',{maximumFractionDigits:1})} mi</td>
+            <td class="r c-hide" style="color:var(--steel);">${rate ? money(m.miles * rate) : '—'}</td>
+            <td class="c-act"><div class="row-actions"><button type="button" class="link danger" onclick="finDelete('${esc(m.key)}')">Delete</button></div></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : '<p class="empty-line">No trips logged yet.</p>';
   }
 
   // Keeps each filter's own selection intact while refreshing the option
@@ -456,7 +723,7 @@
     $('expFilterPayment').innerHTML = '<option value="">All payment methods</option>' +
       pays.map(p => `<option${p === prevPay ? ' selected' : ''}>${esc(p)}</option>`).join('');
     $('expFilterMonth').innerHTML = '<option value="">All months</option>' +
-      months.map(m => `<option value="${m}"${m === prevMonth ? ' selected' : ''}>${esc(monthLabel(m))}</option>`).join('');
+      months.map(m => `<option value="${m}"${m === prevMonth ? ' selected' : ''}>${esc(monthName(m))}</option>`).join('');
   }
 
   function renderExpenseTable(){
@@ -472,21 +739,29 @@
     }).sort((a,b) => (b.date||'').localeCompare(a.date||''));
 
     const total = filtered.reduce((t,e) => t + Number(e.amount||0), 0);
-    $('expCount').textContent = FIN.expenses.length
-      ? `Showing ${filtered.length} of ${FIN.expenses.length} expenses · ${money(total)} total`
+    const filteredOn = fMonth || fCat || fPay || search;
+    $('expCount').innerHTML = FIN.expenses.length
+      ? `${filteredOn ? `Showing ${filtered.length} of ${FIN.expenses.length}` : plural(filtered.length, 'expense')} · <b class="num">${money(total)}</b> total`
       : '';
+    const often = e => e.recurring === 'monthly' ? 'Every month' : e.recurring === 'yearly' ? 'Every year' : '';
 
-    $('expList').innerHTML = filtered.length ? filtered.map(e => `
-      <div class="rem" style="padding:10px 14px;">
-        <div style="font-weight:bold; font-size:0.9rem;">${money(e.amount)} — ${esc(e.category)}${(e.recurring === 'monthly' || e.recurring === 'yearly') ? ` <span class="pill pending" style="font-size:0.65rem;">${e.recurring}</span>` : ''}</div>
-        <div style="font-size:0.78rem; color:var(--steel); margin:2px 0 8px;">${esc(fmtDate(e.date))}${e.vendor ? ' · ' + esc(e.vendor) : ''}${e.paymentMethod ? ' · ' + esc(e.paymentMethod) : ''}${e.description ? ' · ' + esc(e.description) : ''}</div>
-        <div style="display:flex; gap:6px;">
-          <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:var(--cream); color:var(--ink); border:1px solid var(--line); border-radius:8px;"
-            onclick="finEditStart('${esc(e.key)}')">Edit</button>
-          <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:0.75rem; background:rgba(200,60,50,0.1); color:#C0392B; border:1px solid rgba(200,60,50,0.35); border-radius:8px;"
-            onclick="finDelete('${esc(e.key)}')">Delete</button>
-        </div>
-      </div>`).join('') : `<p class="empty">${FIN.expenses.length ? 'No expenses match these filters.' : 'No expenses logged yet.'}</p>`;
+    $('expList').innerHTML = filtered.length ? `
+      <table class="data stack">
+        <thead><tr><th>Date</th><th>Vendor</th><th>Category</th><th>Paid with</th><th class="r">Amount</th><th></th></tr></thead>
+        <tbody>${filtered.map(e => `
+          <tr>
+            <td class="c-meta" style="white-space:nowrap;">${esc(fmtDate(e.date))}</td>
+            <td class="c-main">${esc(e.vendor || e.category || '—')}${e.description ? `<span class="minor">${esc(e.description)}</span>` : ''}</td>
+            <td class="c-hide">${esc(e.category || '—')}${often(e) ? `<span class="minor">${often(e)}</span>` : ''}</td>
+            <td class="c-hide" style="color:var(--steel);">${esc(e.paymentMethod || '—')}</td>
+            <td class="r c-amt" style="font-weight:600;">${money(e.amount)}</td>
+            <td class="c-act"><div class="row-actions">
+              <button type="button" class="link" onclick="finEditStart('${esc(e.key)}')">Edit</button>
+              <button type="button" class="link danger" onclick="finDelete('${esc(e.key)}')">Delete</button>
+            </div></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : `<p class="empty-line">${FIN.expenses.length ? 'No expenses match these filters.' : 'No expenses logged yet.'}</p>`;
   }
 
   $('expFilterMonth').addEventListener('change', renderExpenseTable);
@@ -498,22 +773,12 @@
     renderExpenseTable();
   });
 
-  function renderNetIncome(){
-    const thisYearStr = new Date().getFullYear().toString();
-    const ytdRevenue = ALL_RENTALS
-      .filter(r => (r.dropoffDate||'').slice(0,4) === thisYearStr)
-      .reduce((t,r) => t + priceNum(r.price), 0);
-    const ytdExpenses = FIN.expenses
-      .filter(e => (e.date||'').slice(0,4) === thisYearStr)
-      .reduce((t,e) => t + Number(e.amount||0), 0);
-    const net = ytdRevenue - ytdExpenses;
-    const positive = net >= 0;
-    const color = positive ? 'var(--green)' : 'var(--red)';
-    $('netIncomeBubble').style.borderColor = color;
-    $('netIncomeAmount').style.color = color;
-    $('netIncomeAmount').textContent = (positive ? '' : '−') + money(Math.abs(net));
-    $('netIncomeSub').textContent = `${money(ytdRevenue)} revenue − ${money(ytdExpenses)} expenses`;
-  }
+  $('expNewBtn').addEventListener('click', () => {
+    finEditCancel();
+    $('expForm').hidden = false;
+    if (!$('expDate').value) $('expDate').value = TODAY;
+    $('expAmount').focus();
+  });
 
   window.fillTrip = (date, purpose) => { $('mileDate').value = date; $('milePurpose').value = purpose; $('mileMiles').focus(); };
   window.finDelete = async (key) => {
@@ -524,7 +789,7 @@
   window.saveRate = async () => {
     const rate = document.getElementById('rateInput').value;
     const resp = await finCall({ action: 'setRate', rate });
-    if (resp.ok) reloadFinance(); else showErr('Rate must be $/mile, like 0.70.');
+    if (resp.ok) reloadFinance(); else showErr('Rate must be dollars per mile, like 0.70.');
   };
 
   window.finEditStart = (key) => {
@@ -538,16 +803,18 @@
     $('expPayment').value = e.paymentMethod || '';
     $('expDesc').value = e.description || '';
     $('expEditKey').value = key;
+    $('expFormTitle').textContent = 'Edit expense';
     $('expAddBtn').textContent = 'Save changes';
-    $('expCancelBtn').style.display = 'block';
-    $('expDate').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    $('expForm').hidden = false;
+    $('expForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
   window.finEditCancel = () => {
     $('expEditKey').value = '';
     $('expDate').value = ''; $('expAmount').value = ''; $('expVendor').value = ''; $('expDesc').value = '';
     $('expCategory').selectedIndex = 0; $('expRecurring').value = 'one-time'; $('expPayment').value = '';
+    $('expFormTitle').textContent = 'Add expense';
     $('expAddBtn').textContent = 'Add expense';
-    $('expCancelBtn').style.display = 'none';
+    $('expForm').hidden = true;
   };
 
   $('expAddBtn').addEventListener('click', async () => {
@@ -555,19 +822,18 @@
           description = $('expDesc').value.trim(), amount = $('expAmount').value,
           recurring = $('expRecurring').value, vendor = $('expVendor').value.trim(),
           paymentMethod = $('expPayment').value, editKey = $('expEditKey').value;
-    if (!date || !amount) return showErr('Expense needs a date and amount.');
+    if (!date || !amount) return showErr('An expense needs a date and an amount.');
     const resp = editKey
       ? await finCall({ action: 'editExpense', key: editKey, date, category, description, amount, recurring, vendor, paymentMethod })
       : await finCall({ action: 'addExpense', date, category, description, amount, recurring, vendor, paymentMethod });
     if (resp.ok) {
-      if (editKey) finEditCancel();
-      else { $('expDesc').value=''; $('expAmount').value=''; $('expVendor').value=''; }
+      finEditCancel();
       reloadFinance();
     } else showErr(editKey ? 'Update expense failed.' : 'Add expense failed.');
   });
   $('mileAddBtn').addEventListener('click', async () => {
     const date = $('mileDate').value, purpose = $('milePurpose').value.trim(), miles = $('mileMiles').value;
-    if (!date || !purpose || !miles) return showErr('Trip needs date, purpose, and miles.');
+    if (!date || !purpose || !miles) return showErr('A trip needs a date, a purpose and miles.');
     const resp = await finCall({ action: 'addMileage', date, purpose, miles });
     if (resp.ok) { $('milePurpose').value=''; $('mileMiles').value=''; reloadFinance(); }
     else showErr('Add trip failed.');

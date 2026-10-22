@@ -8,19 +8,18 @@
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>All Rentals — Ready Tote Oklahoma (Internal)</title>
-<link rel="stylesheet" href="admin-shared.css?v=20260819">
-<script src="admin-shared.js?v=20260819"></script>
-<script src="admin-rentals-shared.js?v=20260818"></script>
+<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<script src="admin-shared.js?v=20261022"></script>
+<script src="admin-rentals-shared.js?v=20261022"></script>
 <style>
-  .rem .who{font-weight:bold;}
-  .rem .meta{color:var(--steel);font-size:0.82rem;margin:3px 0 0;font-family:inherit;line-height:1.45;}
+  .rem .who{font-weight:600;font-size:16px;}
+  .rem .meta{color:var(--steel);font-size:14px;margin:3px 0 0;line-height:1.45;font-variant-numeric:tabular-nums;}
   .rem .meta.addr{margin-top:2px;}
-  #results h2{margin:16px 0 6px; font-size:0.9rem;}
-  #results .empty{margin:0 0 0 2px; font-size:0.85rem;}
+  #results h2{margin:32px 0 10px; font-size:17px;}
+  #results h2:first-child{margin-top:8px;}
+  #results .empty{margin:0 0 0 2px; font-size:14px;}
   .rem{margin-bottom:8px;}
-  .rem .msg{background:var(--cream);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:12px 14px;font-size:0.88rem;color:var(--ink);line-height:1.55;margin-bottom:10px;}
-  .sms-btn{display:inline-block;background:#fff;color:var(--ink);font-weight:normal;text-decoration:none;padding:10px 20px;border:1.5px solid var(--line);border-radius:8px;font-size:0.88rem;transition:opacity 0.12s ease;}
-  .sms-btn:hover{opacity:0.88;}
+  .rem .msg{background:#FAF8F3;border-radius:8px;padding:12px 14px;font-size:14px;color:var(--ink);line-height:1.55;margin-bottom:10px;}
   /* Group related row buttons so each group wraps independently and
      lines up the same way regardless of which buttons are "Sent" */
   .rem .actions{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px;}
@@ -40,24 +39,25 @@
      buttons are present (4 for self-service, 5 otherwise) and shrinks
      them together instead of letting the row wrap to a second line. */
   .rem .actions.text-actions{display:flex; flex-wrap:nowrap; gap:6px;}
-  .rem .actions.text-actions > *{flex:1 1 0; min-width:0; box-sizing:border-box; text-align:center; margin:0; display:flex; align-items:center; justify-content:center; padding:6px 4px !important; font-size:0.7rem !important; line-height:1.15; white-space:normal;}
-  .delete-btn{width:auto; padding:8px 16px; font-size:0.8rem; background:var(--red-bg); color:var(--red); border:1px solid rgba(192,57,43,0.35); border-radius:6px; cursor:pointer;}
+  .rem .actions.text-actions > *{flex:1 1 0; min-width:0; box-sizing:border-box; text-align:center; margin:0; display:flex; align-items:center; justify-content:center; padding:6px 4px !important; font-size:13px !important; line-height:1.15; white-space:normal; min-height:40px;}
+  .delete-btn{width:auto; padding:8px 16px; font-size:14px; background:var(--white); color:var(--red); border:1px solid var(--control); border-radius:6px; cursor:pointer;}
+  .delete-btn:hover{background:var(--red-bg); border-color:var(--red);}
 
   /* Collapsible card: summary always visible, tap to reveal the buttons */
   .rem-summary{display:flex; align-items:flex-start; gap:10px; cursor:pointer; user-select:none;}
-  .rem-summary .chevron{flex:none; color:var(--gold); font-size:0.75rem; line-height:1.6; width:12px; text-align:center; transition:transform 0.15s ease;}
+  .rem-summary .chevron{flex:none; color:var(--steel); font-size:13px; line-height:1.6; width:12px; text-align:center; transition:transform 0.15s ease;}
   .rem.open .rem-summary .chevron{transform:rotate(90deg);}
   .rem-details{display:none; margin-top:10px;}
   .rem.open .rem-details{display:block;}
   h2{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
-  .section-toggle{width:auto; margin:0; padding:2px 10px; font-size:0.7rem; font-weight:bold; background:none; border:1px solid var(--line); color:var(--steel); border-radius:20px; cursor:pointer;}
-  .section-toggle:hover{border-color:var(--gold); color:var(--gold);}
+  .section-toggle{width:auto; margin:0 0 0 auto; padding:0; font-size:13px; font-weight:600; background:none; border:none; color:var(--ink); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control); cursor:pointer;}
+  .section-toggle:hover{background:none; text-decoration-color:var(--ink);}
 
   .date-edit-block, .addr-edit-block{display:none; margin-top:10px; padding-top:12px; border-top:1px dashed var(--line);}
   .date-edit-block .grid2, .addr-edit-block .grid2, .addr-edit-block .grid3{margin-bottom:10px;}
-  .date-edit-block label, .addr-edit-block label{font-size:0.75rem; margin:0 0 4px; display:block;}
-  .date-edit-block button, .addr-edit-block button{margin-top:6px; width:auto; padding:7px 14px; font-size:0.8rem;}
-  .addr-edit-block h4{font-size:0.78rem; margin:10px 0 6px; color:var(--steel); text-transform:uppercase; letter-spacing:0.03em;}
+  .date-edit-block label, .addr-edit-block label{font-size:13px; margin:0 0 4px; display:block;}
+  .date-edit-block button, .addr-edit-block button{margin-top:6px; width:auto; padding:7px 14px; font-size:14px;}
+  .addr-edit-block h4{font-size:14px; margin:12px 0 6px; color:var(--ink);}
   .addr-edit-block h4:first-child{margin-top:0;}
 
   /* Edit rental / More: the per-rental edit fields and rare/destructive
@@ -71,40 +71,100 @@
   /* Currently active rentals (dropped off, not yet picked up) get a light
      green tint + left border so they stand out at a glance in the list,
      same green used for the "Active rentals" stat on Dashboard/Inventory. */
-  .rem.active-rental{background:var(--green-bg); border-left:4px solid var(--green); padding-left:12px;}
+  .rem.active-rental{border-left:3px solid var(--green);}
+
+  /* Find: search + filter buttons with counts */
+  .list-tools{display:flex; flex-direction:column; gap:10px; margin:8px 0 16px;}
+  .fchips{display:flex; flex-wrap:wrap; gap:6px;}
+  .fchips button{width:auto; margin:0; height:34px; padding:0 12px; font-size:14px; font-weight:600; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:999px;}
+  .fchips button:hover{background:#fff; border-color:var(--ink);}
+  .fchips button[aria-pressed="true"]{background:var(--ink); color:#fff; border-color:var(--ink);}
+  .fchips .n{font-weight:500; opacity:.75; margin-left:4px; font-variant-numeric:tabular-nums;}
+  .unpaid-link{display:flex; justify-content:space-between; align-items:center; gap:12px; width:100%; margin:0 0 14px; padding:10px 14px; background:var(--red-bg); color:#831C1E; border:none; border-radius:8px; font-size:14px; font-weight:600; text-align:left;}
+  .unpaid-link:hover{background:#FFE1DC;}
+  .group-h{display:flex; justify-content:space-between; align-items:baseline; margin:20px 0 8px; font-size:15px; font-weight:700;}
+  .group-h:first-child{margin-top:0;}
+  .group-h .n{font-weight:500; color:var(--steel); margin-left:6px;}
+  .show-past{width:auto; margin:8px 0 0; background:#fff; color:var(--ink); border:1px solid var(--control);}
+  .show-past:hover{background:#fff; border-color:var(--ink);}
+  .no-match{padding:14px; border:1px dashed var(--control); border-radius:8px; color:var(--steel); font-size:14px;}
+
+  /* Card summary: name and one line of facts on the left, price and status on the right */
+  .rem-summary .sum-main{flex:1; min-width:0;}
+  .rem-summary .sum-side{flex:none; text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px;}
+  .rem-summary .price{font-weight:600; font-size:16px; font-variant-numeric:tabular-nums;}
+  .rem-summary .pills{display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end;}
+  .facts{font-size:14px; color:var(--ink-2); line-height:1.7; margin:0 0 12px; font-variant-numeric:tabular-nums;}
+  .facts .k{color:var(--steel); display:inline-block; min-width:76px;}
+
+  /* Next step: the one text that's due next, as the main button */
+  .next{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 14px; background:#FAF8F3; border-radius:8px; margin-bottom:12px;}
+  .next .what{font-size:14px;}
+  .next .what b{display:block; font-size:15px;}
+  .next .what span{color:var(--steel);}
+  .next .sms-btn{background:var(--ink); color:#fff; border-color:var(--ink);}
+  .next .sms-btn:hover{background:#3A342D;}
+  .tool-row{display:flex; flex-wrap:wrap; gap:8px; padding-top:10px; border-top:1px solid var(--line);}
+  .tool-row button{width:auto; margin:0; padding:8px 14px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control);}
+  .tool-row button:hover{background:#fff; border-color:var(--ink);}
+  .tool-row button[aria-expanded="true"]{background:var(--track); border-color:var(--track);}
+  .xpanel{display:none; margin-top:12px;}
+  .xpanel.shown{display:block;}
+
+  /* One edit form per rental */
+  .edit-form{background:#FAF8F3; border-radius:10px; padding:14px 16px;}
+  .edit-form h4{margin:16px 0 0; font-size:14px;}
+  .edit-form h4:first-child{margin-top:0;}
+  .edit-form label{font-size:13px; margin:10px 0 4px;}
+  .edit-form .g4{display:grid; grid-template-columns:repeat(4,1fr); gap:0 12px;}
+  .edit-form .g4 .w2{grid-column:span 2;}
+  .edit-form .g4 .w4{grid-column:1 / -1;}
+  .edit-form .form-actions{display:flex; gap:8px; margin-top:16px;}
+  .edit-form .form-actions button{width:auto; margin:0;}
+  .edit-form .copy{width:auto; margin:0 0 0 8px; padding:2px 0; background:none; border:none; color:var(--ink); font-size:13px; font-weight:600; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
+  @media(max-width:640px){
+    .edit-form .g4{grid-template-columns:1fr 1fr;}
+    .edit-form .g4 .w2{grid-column:1 / -1;}
+    .rem-summary .sum-side .pills{max-width:120px;}
+  }
+  .pill.neutral{background:var(--track); color:#4A433B;}
+  .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 16px; border-radius:8px; font-size:14px; font-weight:600; z-index:30; box-shadow:0 8px 24px rgba(30,27,24,.2);}
 </style>
 </head>
 <body>
 <nav class="admin-nav" aria-label="Admin tools">
-  <a href="admin.html"><span class="nav-icon" aria-hidden="true">📊</span> Dashboard</a>
-  <a href="admin-requests.html"><span class="nav-icon" aria-hidden="true">📥</span> Requests</a>
-  <a href="admin-invoice.html"><span class="nav-icon" aria-hidden="true">🧾</span> Send Invoice</a>
-  <a href="admin-add-rental.html"><span class="nav-icon" aria-hidden="true">➕</span> Add Rental</a>
-  <a href="admin-reminders.html"><span class="nav-icon" aria-hidden="true">🚚</span> Reminders</a>
-  <a href="admin-rentals.html" aria-current="page"><span class="nav-icon" aria-hidden="true">📋</span> All Rentals</a>
-  <a href="admin-contacts.html"><span class="nav-icon" aria-hidden="true">📇</span> Contacts</a>
-  <a href="admin-finance.html"><span class="nav-icon" aria-hidden="true">💰</span> Finance</a>
-  <a href="admin-outreach.html"><span class="nav-icon" aria-hidden="true">🤝</span> Outreach</a>
-  <a href="admin-inventory.html"><span class="nav-icon" aria-hidden="true">📦</span> Inventory</a>
+  <a href="admin.html">Dashboard</a>
+  <a href="admin-requests.html">Requests</a>
+  <a href="admin-invoice.html">Send Invoice</a>
+  <a href="admin-invoice.html?mode=log">Add Rental</a>
+  <a href="admin-reminders.html">Reminders</a>
+  <a href="admin-rentals.html" aria-current="page">All Rentals</a>
+  <a href="admin-contacts.html">Contacts</a>
+  <a href="admin-finance.html">Finance</a>
+  <a href="admin-outreach.html">Outreach</a>
+  <a href="admin-inventory.html">Inventory</a>
 </nav>
 <div class="card">
-  <h1>All Rentals</h1>
-  <p class="sub">Search, edit, and manage every rental on the books — payment status, photos, dates, and more. For today's due texts, see the Reminders page instead.</p>
+  <h1>All rentals</h1>
+  <p class="sub">Find any rental, see what's due next, and update it in one place. Today's texts across all rentals are on Reminders.</p>
 
   <input type="hidden" id="secret">
 
-  <label>Starting from (optional, for "On the Way" texts)</label>
-  <input type="text" id="startFrom" placeholder="Leave blank to use your home address">
-
-  <button id="loadBtn">Load rentals</button>
+  <button id="loadBtn">Refresh</button>
   <div class="status" id="status"></div>
   <input type="file" id="photoFileInput" accept="image/*" style="display:none">
 
   <div id="results" style="display:none;">
-    <h2>📋 All rentals <button type="button" class="section-toggle" onclick="toggleAllSection('allRentals', this)">Expand all</button></h2>
-    <p class="empty" style="margin:0 0 10px;">Delete an entry to remove a cancellation or to re-add one with corrected details.</p>
+    <div class="list-tools">
+      <input type="search" id="search" placeholder="Search name, phone, email, address or package" aria-label="Search rentals">
+      <div class="fchips" id="filterChips" role="group" aria-label="Show"></div>
+    </div>
     <div id="unpaidSummary"></div>
     <div id="allRentals"></div>
+    <div style="margin-top:28px; max-width:520px;">
+      <label for="startFrom">Starting point for “On the way” texts</label>
+      <input type="text" id="startFrom" placeholder="Leave blank to use your home address">
+    </div>
   </div>
 </div>
 
@@ -117,6 +177,10 @@
   $('startFrom').addEventListener('input', () => sessionStorage.setItem('rto-admin-startfrom', $('startFrom').value));
 
   let ALL_RENTALS = [];
+  let FILTER = 'all', SEARCH = '', SHOW_PAST = false;
+  // ?q=Name opens the list searched for that name (links from Inventory's day breakdown)
+  const Q0 = new URLSearchParams(location.search).get('q');
+  const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
 
   $('loadBtn').addEventListener('click', load);
   // Auto-load if a secret is already saved (matches admin.html behavior)
@@ -126,7 +190,7 @@
     const secret = $('secret').value.trim();
     if (!secret) return showErr('Enter the admin secret.');
     const btn = $('loadBtn');
-    btn.disabled = true; btn.textContent = 'Loading…';
+    btn.disabled = true; btn.textContent = 'Refresh';
     try {
       const resp = await fetch('/.netlify/functions/get-rentals', {
         method: 'POST',
@@ -140,192 +204,265 @@
         ALL_RENTALS = data.rentals || [];
         SENT_FLAGS = data.sentFlags || {};
         PAID_FLAGS = data.paidFlags || {};
+        // Every action reloads the list from the server so text links and
+        // flags stay right; the open cards, open panels and scroll position
+        // are put back so you don't lose your place.
+        const ui = captureUi();
         renderAll(ALL_RENTALS);
+        restoreUi(ui);
         $('results').style.display = 'block';
         $('status').style.display = 'none';
       }
     } catch { showErr('Network error — use this page on the live site.'); }
-    btn.disabled = false; btn.textContent = 'Load rentals';
+    btn.disabled = false; btn.textContent = 'Refresh';
   }
 
-  // Builds the compact two-line summary for an "All rentals" card: a short
-  // date-range line that never wraps, plus an address line shown once when
-  // drop-off and pickup share the same address (the common case), or as
-  // one line per address when they differ. Omitted entirely for self-service
-  // rentals with no address on file.
-  function rentalMetaHtml(r) {
-    const dOff = dropoffAddressOf(r);
-    const pOff = pickupAddressOf(r);
-    const dateLine = `${esc(r.package)} · 🚚 ${esc(fmtDate(r.dropoffDate))} → 📦 ${esc(fmtDate(r.pickupDate))}`;
-    let addrLine = '';
-    if (dOff && dOff === pOff) {
-      addrLine = esc(dOff);
-    } else if (dOff || pOff) {
-      addrLine = [dOff ? '🚚 ' + esc(dOff) : '', pOff ? '📦 ' + esc(pOff) : ''].filter(Boolean).join(' · ');
-    }
-    return `<div class="meta">${dateLine}</div>${addrLine ? `<div class="meta addr">${addrLine}</div>` : ''}`;
+  // ---- Find: groups, filters, search ----
+  const isOut = r => r.dropoffDate && r.pickupDate && r.dropoffDate <= TODAY && r.pickupDate >= TODAY;
+  const isUpcoming = r => !!r.dropoffDate && r.dropoffDate > TODAY;
+  const isDone = r => !!r.pickupDate && r.pickupDate < TODAY;
+  // "Needs info": missing what Inventory or the texts depend on
+  function missingInfo(r) {
+    const out = [];
+    if (typeof r.toteCount !== 'number') out.push('tote count');
+    if (!r.phone) out.push('phone');
+    if (r.serviceType !== 'self' && !dropoffAddressOf(r)) out.push('address');
+    return out;
+  }
+  const FILTERS = [
+    ['all', 'All', () => true],
+    ['out', 'Out now', isOut],
+    ['upcoming', 'Upcoming', isUpcoming],
+    ['unpaid', 'Unpaid', r => isUnpaid(r)],
+    ['info', 'Needs info', r => missingInfo(r).length > 0],
+    ['done', 'Done', isDone],
+  ];
+  function matchesSearch(r) {
+    if (!SEARCH) return true;
+    const hay = [r.name, r.phone, String(r.phone || '').replace(/\D/g, ''), r.email, r.package, dropoffAddressOf(r), pickupAddressOf(r), r.notes].join(' ').toLowerCase();
+    return SEARCH.split(/\s+/).every(w => hay.includes(w));
   }
 
-  // ---- All rentals management ----
+  $('search').addEventListener('input', () => { SEARCH = $('search').value.trim().toLowerCase(); renderAll(ALL_RENTALS); });
+  if (Q0) { $('search').value = Q0; SEARCH = Q0.trim().toLowerCase(); }
+  window.setFilter = (f) => { FILTER = f; SHOW_PAST = false; renderAll(ALL_RENTALS); window.scrollTo({ top: $('results').offsetTop - 60, behavior: 'smooth' }); };
+
+  const shortDate = iso => iso ? new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+  const cityOf = r => r.dropoffAddressCity || (dropoffAddressOf(r).split(',').map(x => x.trim()).slice(-2, -1)[0] || '');
+  const pill = (cls, text, title) => `<span class="pill ${cls}"${title ? ` title="${escAttr(title)}"` : ''}>${esc(text)}</span>`;
+
   function renderAll(rentals){
     const el = $('allRentals');
-    if (!rentals.length) { el.innerHTML = '<p class="empty">No rentals logged yet.</p>'; $('unpaidSummary').innerHTML = ''; return; }
-    const sorted = [...rentals].sort((a,b) => (b.dropoffDate||'').localeCompare(a.dropoffDate||''));
+    if (!rentals.length) { el.innerHTML = '<p class="empty">No rentals logged yet.</p>'; $('unpaidSummary').innerHTML = ''; $('filterChips').innerHTML = ''; return; }
 
-    // Same "active" definition used on Dashboard and Inventory: dropped off,
-    // not yet picked up, as of today (Central time).
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
-    const isActive = (r) => r.dropoffDate && r.pickupDate && r.dropoffDate <= today && r.pickupDate >= today;
+    const found = rentals.filter(matchesSearch);
+    $('filterChips').innerHTML = FILTERS.map(([id, label, fn]) =>
+      `<button type="button" aria-pressed="${FILTER === id}" onclick="setFilter('${id}')">${label}<span class="n">${found.filter(fn).length}</span></button>`).join('');
 
-    const unpaidCount = sorted.filter(isUnpaid).length;
-    $('unpaidSummary').innerHTML = unpaidCount
-      ? `<p style="margin:0 0 10px; padding:8px 12px; background:var(--red-bg); color:var(--red); font-weight:bold; font-size:0.85rem; border-radius:8px;">⚠️ ${unpaidCount} invoice${unpaidCount === 1 ? '' : 's'} sent, awaiting payment</p>`
+    const unpaidCount = rentals.filter(isUnpaid).length;
+    $('unpaidSummary').innerHTML = unpaidCount && FILTER !== 'unpaid'
+      ? `<button type="button" class="unpaid-link" onclick="setFilter('unpaid')"><span>${unpaidCount} invoice${unpaidCount === 1 ? '' : 's'} sent, waiting on payment</span><span>Show ${unpaidCount === 1 ? 'it' : 'them'} ›</span></button>`
       : '';
 
-    el.innerHTML = sorted.map(r => {
-      const paymentControls = payBtn(r) + invoiceReminderBtn(r) + emailReminderBtn(r) + textReminderBtn(r);
-      return `
-      <div class="rem${isActive(r) ? ' active-rental' : ''}">
+    const shown = found.filter(FILTERS.find(f => f[0] === FILTER)[2]);
+    if (!shown.length) {
+      el.innerHTML = `<p class="no-match">${SEARCH ? `No rentals match “${esc($('search').value.trim())}”` : 'Nothing here right now'}${FILTER !== 'all' ? ` in ${FILTERS.find(f => f[0] === FILTER)[1]}` : ''}.</p>`;
+      return;
+    }
+
+    // Out now: soonest back first. Upcoming: soonest out first. Past: newest first.
+    const byPickup = (a, b) => (a.pickupDate||'').localeCompare(b.pickupDate||'');
+    const byDropAsc = (a, b) => (a.dropoffDate||'').localeCompare(b.dropoffDate||'');
+    const byDropDesc = (a, b) => (b.dropoffDate||'').localeCompare(a.dropoffDate||'');
+    let html = '';
+    if (FILTER === 'all' && !SEARCH) {
+      const out = shown.filter(isOut).sort(byPickup), up = shown.filter(isUpcoming).sort(byDropAsc);
+      const past = shown.filter(r => !isOut(r) && !isUpcoming(r)).sort(byDropDesc);
+      const group = (title, list) => list.length ? `<div class="group-h"><span>${title}<span class="n">${list.length}</span></span></div>` + list.map(card).join('') : '';
+      html += group('Out now', out) + group('Upcoming', up);
+      if (past.length) {
+        html += SHOW_PAST
+          ? group('Past', past)
+          : `<button type="button" class="show-past" onclick="SHOW_PAST = true; renderAll(ALL_RENTALS);">Show ${past.length} past rental${past.length === 1 ? '' : 's'}</button>`;
+      }
+    } else {
+      const sorter = FILTER === 'out' ? byPickup : FILTER === 'upcoming' ? byDropAsc : byDropDesc;
+      html = shown.sort(sorter).map(card).join('');
+    }
+    el.innerHTML = html;
+    wireCards(el);
+  }
+
+  function card(r) {
+    const k = esc(r.key);
+    const grouped = FILTER === 'all' && !SEARCH;
+    const status = grouped ? '' : isOut(r) ? pill('ok', 'Out now') : isUpcoming(r) ? pill('pending', 'Upcoming') : '';
+    const pay = PAID_FLAGS[r.key] ? pill('ok', 'Paid') : isUnpaid(r) ? pill('err', 'Unpaid') : '';
+    const missing = missingInfo(r);
+    const totes = typeof r.toteCount === 'number' ? `${r.toteCount} totes` : (String(r.package || '').match(/(\d+)\s*totes?/i) ? String(r.package).match(/(\d+)\s*totes?/i)[1] + ' totes' : 'Totes not set');
+    const city = r.serviceType === 'self' ? 'Customer pickup' : cityOf(r);
+    const facts = [totes, `${shortDate(r.dropoffDate)} to ${shortDate(r.pickupDate)}`, city].filter(Boolean).join(' · ');
+    const dOff = dropoffAddressOf(r), pOff = pickupAddressOf(r);
+    const addr = r.serviceType === 'self' ? 'Customer picks up and returns' : dOff && dOff === pOff ? esc(dOff) : [dOff ? 'Drop-off: ' + esc(dOff) : '', pOff ? 'Pickup: ' + esc(pOff) : ''].filter(Boolean).join('<br>') || '—';
+    const counts = typeof r.toteCount === 'number' || typeof r.dollyCount === 'number'
+      ? `${typeof r.toteCount === 'number' ? r.toteCount : '—'} totes · ${typeof r.dollyCount === 'number' ? r.dollyCount : '—'} ${r.dollyCount === 1 ? 'dolly' : 'dollies'}` : '<span style="color:#831C1E;">Not set. Inventory can’t count this rental</span>';
+    // Paid rentals keep "Mark unpaid" under More; it's rarely needed
+    const paid = !!PAID_FLAGS[r.key];
+    const paymentControls = paid ? '' : payBtn(r) + invoiceReminderBtn(r) + emailReminderBtn(r) + textReminderBtn(r);
+    const tbtn = (panel, label) => `<button type="button" class="panel-btn" data-panel="${panel}-${k}" aria-expanded="false">${label}</button>`;
+
+    return `
+      <div class="rem${isOut(r) ? ' active-rental' : ''}" data-key="${k}">
         <div class="rem-summary" onclick="this.closest('.rem').classList.toggle('open')">
           <span class="chevron">▸</span>
-          <div>
-            <div class="who">${esc(r.name)} — ${fmtPrice(r.price)} ${paymentBadge(r)} ${militaryBadge(r)} ${tosBadge(r)} ${countBadge(r)}</div>
-            ${rentalMetaHtml(r)}
+          <div class="sum-main">
+            <div class="who">${esc(r.name)}</div>
+            <div class="meta">${esc(facts)}</div>
+          </div>
+          <div class="sum-side">
+            <div class="price">${fmtPrice(r.price)}</div>
+            <div class="pills">${status}${pay}${r.isMilitary ? pill('neutral', 'Military') : ''}${missing.length ? pill('err', 'Needs info', 'Missing ' + missing.join(', ')) : ''}</div>
           </div>
         </div>
         <div class="rem-details">
-          ${r.notes ? `<div class="msg" style="margin-bottom:8px;">📝 ${esc(r.notes)}</div>` : ''}
-          ${progressStrip(r)}
-          <div class="actions text-actions">
-            ${textBtn('delivery', r.key, r.deliverySms, '🚚', 'Delivery', 'var(--green)')}
-            ${textBtn('pickup', r.key, r.pickupSms, '📦', 'Pickup', 'var(--gold)')}
-            ${r.serviceType !== 'self' ? textBtn('addressCheck', r.key, r.addressCheckSms, '📍', 'Confirm address', 'var(--green)') : ''}
-            ${textBtn('review', r.key, r.reviewSms, '⭐', 'Review', 'var(--green)')}
-            ${textBtn('followup', r.key, r.followupSms, '💬', 'Follow-up', 'var(--gold)')}
+          <div class="facts">
+            <div><span class="k">Package</span>${esc(r.package || '—')}</div>
+            <div><span class="k">Counts</span>${counts}</div>
+            <div><span class="k">Times</span>out ${esc(fmtDate(r.dropoffDate))} ${esc(r.dropoffTime || '')}, back ${esc(fmtDate(r.pickupDate))} ${esc(r.pickupTime || '')}</div>
+            <div><span class="k">Address</span>${addr}</div>
+            <div><span class="k">Contact</span>${r.phone ? `<a href="tel:${escAttr(r.phone)}">${esc(r.phone)}</a>` : '—'}${r.email ? ` · <a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : ''}</div>
+            ${r.tosAccepted ? `<div><span class="k">Terms</span>Accepted ${esc(fmtDate((r.tosAcceptedAt || '').slice(0, 10)))}</div>` : ''}
+            ${missing.length ? `<div><span class="k">Missing</span><span style="color:#831C1E;">${esc(missing.join(', '))}</span></div>` : ''}
           </div>
-          ${r.serviceType !== 'self' ? `<div class="actions">
-            ${dropoffAddressOf(r) ? onTheWayBtn('delivery', r.key) : ''}
-            ${pickupAddressOf(r) ? onTheWayBtn('pickup', r.key) : ''}
-          </div>` : ''}
+          ${r.notes ? `<div class="msg">${esc(r.notes)}</div>` : ''}
+          ${nextStep(r)}
           ${paymentControls ? `<div class="actions payment-actions">${paymentControls}</div>` : ''}
-          <div class="actions delete-row">
-            <button type="button" class="toggle-panel-btn" data-target="edit-${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">✏️ Edit rental</button>
-            <button type="button" class="toggle-panel-btn" data-target="photos-${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📷 Photos</button>
-            <button type="button" class="toggle-panel-btn" data-target="more-${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">⋯ More</button>
+          ${r.serviceType !== 'self' && (dOff || pOff) && !isDone(r) ? `<div class="actions">
+            ${dOff && !isOut(r) ? onTheWayBtn('delivery', r.key) : ''}
+            ${pOff ? onTheWayBtn('pickup', r.key) : ''}
+          </div>` : ''}
+          <div class="tool-row">
+            ${tbtn('edit', 'Edit rental')}${tbtn('texts', 'Other texts')}${tbtn('photos', 'Photos')}${tbtn('more', 'More')}
           </div>
-          <div class="photo-panel" id="photos-${esc(r.key)}">
-            <div class="actions">
-              ${photoBtn(r, 'delivery')}
-              ${photoBtn(r, 'pickup')}
-              ${photoBtn(r, 'military_id')}
-            </div>
-          </div>
-          <div class="edit-panel" id="edit-${esc(r.key)}">
-            <div class="actions">
-              <button type="button" class="edit-contact-btn" data-key="${esc(r.key)}" data-name="${esc(r.name || '')}" data-phone="${esc(r.phone || '')}" data-email="${esc(r.email || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">👤 Edit contact</button>
-              <button type="button" class="edit-pkg-btn" data-key="${esc(r.key)}" data-pkg="${esc(r.package || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">✏️ Edit package</button>
-              <button type="button" class="edit-price-btn" data-key="${esc(r.key)}" data-price="${esc(r.price || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">💲 Edit price</button>
-              <button type="button" class="edit-count-btn" data-key="${esc(r.key)}" data-totes="${typeof r.toteCount === 'number' ? r.toteCount : ''}" data-dollies="${typeof r.dollyCount === 'number' ? r.dollyCount : ''}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">🔢 Edit tote/dolly count</button>
-              <button type="button" class="edit-notes-btn" data-key="${esc(r.key)}" data-notes="${esc(r.notes || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📝 ${r.notes ? 'Edit' : 'Add'} notes</button>
-              <button type="button" class="toggle-panel-btn" data-target="dates-${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📅 Edit dates</button>
-              <button type="button" class="toggle-panel-btn" data-target="addr-${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📍 Edit addresses</button>
-              <button type="button" class="edit-stripe-btn" data-key="${esc(r.key)}" data-stripe="${esc(r.stripeUrl || '')}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">🔗 ${r.stripeUrl ? 'Edit' : 'Add'} payment link</button>
-            </div>
-            <div class="date-edit-block" id="dates-${esc(r.key)}">
-              <div class="grid2">
-                <div><label>Drop-off date</label><input type="date" data-df="dropoffDate" value="${esc(r.dropoffDate || '')}"></div>
-                <div><label>Drop-off time</label><input type="time" data-df="dropoffTime" value="${esc(to24Hour(r.dropoffTime || ''))}"></div>
-              </div>
-              <div class="grid2">
-                <div><label>Pickup date</label><input type="date" data-df="pickupDate" value="${esc(r.pickupDate || '')}"></div>
-                <div><label>Pickup time</label><input type="time" data-df="pickupTime" value="${esc(to24Hour(r.pickupTime || ''))}"></div>
-              </div>
-              <button type="button" class="save-dates-btn" data-key="${esc(r.key)}">Save dates</button>
-            </div>
-            <div class="addr-edit-block" id="addr-${esc(r.key)}">
-              <h4>Drop-off address</h4>
-              <div><label>Street</label><input type="text" data-af="dropoffAddressStreet" value="${escAttr(r.dropoffAddressStreet || '')}"></div>
-              <div class="grid3">
-                <div><label>City</label><input type="text" data-af="dropoffAddressCity" value="${escAttr(r.dropoffAddressCity || '')}"></div>
-                <div><label>State</label><input type="text" data-af="dropoffAddressState" value="${escAttr(r.dropoffAddressState || 'OK')}" maxlength="2"></div>
-                <div><label>Zip</label><input type="text" data-af="dropoffAddressZip" value="${escAttr(r.dropoffAddressZip || '')}" inputmode="numeric" maxlength="10"></div>
-              </div>
-              <h4>Pickup address</h4>
-              <button type="button" class="copy-addr-btn" data-key="${esc(r.key)}" style="margin-bottom:8px;">Same as drop-off</button>
-              <div><label>Street</label><input type="text" data-af="pickupAddressStreet" value="${escAttr(r.pickupAddressStreet || '')}"></div>
-              <div class="grid3">
-                <div><label>City</label><input type="text" data-af="pickupAddressCity" value="${escAttr(r.pickupAddressCity || '')}"></div>
-                <div><label>State</label><input type="text" data-af="pickupAddressState" value="${escAttr(r.pickupAddressState || 'OK')}" maxlength="2"></div>
-                <div><label>Zip</label><input type="text" data-af="pickupAddressZip" value="${escAttr(r.pickupAddressZip || '')}" inputmode="numeric" maxlength="10"></div>
-              </div>
-              <button type="button" class="save-addr-btn" data-key="${esc(r.key)}">Save addresses</button>
+          <div class="xpanel" id="texts-${k}">
+            <div class="actions text-actions">
+              ${textBtn('delivery', r.key, r.deliverySms, '', 'Delivery', '')}
+              ${r.serviceType !== 'self' ? textBtn('addressCheck', r.key, r.addressCheckSms, '', 'Confirm address', '') : ''}
+              ${textBtn('pickup', r.key, r.pickupSms, '', 'Pickup', '')}
+              ${textBtn('review', r.key, r.reviewSms, '', 'Review', '')}
+              ${textBtn('followup', r.key, r.followupSms, '', 'Follow-up', '')}
             </div>
           </div>
-          <div class="more-panel" id="more-${esc(r.key)}">
+          <div class="xpanel" id="photos-${k}">
+            <div class="actions">${photoBtn(r, 'delivery')}${photoBtn(r, 'pickup')}${photoBtn(r, 'military_id')}</div>
+          </div>
+          <div class="xpanel" id="edit-${k}">${editForm(r)}</div>
+          <div class="xpanel" id="more-${k}">
             <div class="actions">
-              <button type="button" class="edit-military-btn" data-key="${esc(r.key)}" data-military="${r.isMilitary ? 'true' : 'false'}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">🎖️ ${r.isMilitary ? 'Unmark military' : 'Mark military'}</button>
-              <button type="button" class="delete-btn" onclick="deleteRental('${esc(r.key)}', '${esc(r.name)}')">Delete</button>
+              ${paid ? payBtn(r) : ''}
+              <button type="button" class="edit-military-btn" data-key="${k}" data-military="${r.isMilitary ? 'true' : 'false'}" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">${r.isMilitary ? 'Remove military discount' : 'Mark as military'}</button>
+              <button type="button" class="delete-btn" onclick="deleteRental('${k}', '${esc(r.name).replaceAll("'", '&#39;')}')">Delete rental</button>
             </div>
+            <p class="note">Delete is for cancellations, or to re-add a rental with corrected details. It can't be undone.</p>
           </div>
         </div>
       </div>`;
-    }).join('');
+  }
 
-    // Wire up pay/unpay and email-reminder buttons via delegation
-    el.querySelectorAll('.pay-btn').forEach(btn => {
-      btn.addEventListener('click', () => togglePaid(btn.dataset.key, btn.dataset.setpaid === 'true'));
-    });
-    el.querySelectorAll('.email-reminder-btn').forEach(btn => {
-      btn.addEventListener('click', () => sendEmailReminder(btn.dataset.key));
-    });
-    el.querySelectorAll('.otw-btn').forEach(btn => {
-      btn.addEventListener('click', () => onTheWay(btn.dataset.key, btn.dataset.type));
-    });
-    el.querySelectorAll('.unsend-btn').forEach(btn => {
-      btn.addEventListener('click', () => unmarkSent(btn.dataset.flagid));
-    });
-    el.querySelectorAll('.edit-pkg-btn').forEach(btn => {
-      btn.addEventListener('click', () => editPackage(btn.dataset.key, btn.dataset.pkg));
-    });
-    el.querySelectorAll('.edit-price-btn').forEach(btn => {
-      btn.addEventListener('click', () => editPrice(btn.dataset.key, btn.dataset.price));
-    });
-    el.querySelectorAll('.edit-contact-btn').forEach(btn => {
-      btn.addEventListener('click', () => editContact(btn.dataset.key, btn.dataset.name, btn.dataset.phone, btn.dataset.email));
-    });
-    el.querySelectorAll('.edit-notes-btn').forEach(btn => {
-      btn.addEventListener('click', () => editNotes(btn.dataset.key, btn.dataset.notes));
-    });
-    el.querySelectorAll('.edit-count-btn').forEach(btn => {
-      btn.addEventListener('click', () => editCounts(btn.dataset.key, btn.dataset.totes, btn.dataset.dollies));
-    });
-    el.querySelectorAll('.toggle-panel-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const block = document.getElementById(btn.dataset.target);
-        block.style.display = block.style.display === 'block' ? 'none' : 'block';
-      });
-    });
-    el.querySelectorAll('.save-dates-btn').forEach(btn => {
-      btn.addEventListener('click', () => saveDates(btn));
-    });
-    el.querySelectorAll('.save-addr-btn').forEach(btn => {
-      btn.addEventListener('click', () => saveAddresses(btn));
-    });
-    el.querySelectorAll('.copy-addr-btn').forEach(btn => {
-      btn.addEventListener('click', () => copyDropoffToPickup(btn));
-    });
-    el.querySelectorAll('.edit-stripe-btn').forEach(btn => {
-      btn.addEventListener('click', () => editStripeUrl(btn.dataset.key, btn.dataset.stripe));
-    });
-    el.querySelectorAll('.edit-military-btn').forEach(btn => {
-      btn.addEventListener('click', () => toggleMilitary(btn.dataset.key, btn.dataset.military === 'true'));
-    });
-    el.querySelectorAll('.add-photo-btn').forEach(btn => {
-      btn.addEventListener('click', () => triggerPhotoCapture(btn.dataset.key, btn.dataset.type));
-    });
-    el.querySelectorAll('.view-photo-btn').forEach(btn => {
-      btn.addEventListener('click', () => viewPhoto(btn.dataset.key, btn.dataset.type));
-    });
+  // ---- Next step: the text that's due next, on the same schedule as Reminders ----
+  // Each text has a due date; a text whose moment has passed (a delivery
+  // reminder after drop-off, a payment follow-up once paid) drops out.
+  const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  function nextStep(r) {
+    const steps = [];
+    const self = r.serviceType === 'self';
+    if (r.invoicedAt && !r.backfilled && !PAID_FLAGS[r.key])
+      steps.push({ type: 'followup', label: 'Invoice follow-up', due: addDays(r.invoicedAt.slice(0, 10), 3), until: '9999-12-31', sms: r.followupSms });
+    if (r.dropoffDate) steps.push({ type: 'delivery', label: self ? 'Pickup-day reminder' : 'Delivery reminder', due: addDays(r.dropoffDate, -1), until: r.dropoffDate, sms: r.deliverySms });
+    if (r.pickupDate && !self) steps.push({ type: 'addressCheck', label: 'Confirm pickup address', due: addDays(r.pickupDate, -5), until: r.pickupDate, sms: r.addressCheckSms });
+    if (r.pickupDate) steps.push({ type: 'pickup', label: self ? 'Return reminder' : 'Pickup reminder', due: addDays(r.pickupDate, -2), until: r.pickupDate, sms: r.pickupSms });
+    if (r.pickupDate) steps.push({ type: 'review', label: 'Ask for a review', due: addDays(r.pickupDate, 3), until: addDays(r.pickupDate, 21), sms: r.reviewSms });
+    const open = steps.filter(s => !SENT_FLAGS[s.type + ':' + r.key] && TODAY <= s.until && s.sms).sort((a, b) => a.due.localeCompare(b.due));
+    if (!open.length) return '';
+    const s = open[0];
+    const when = s.due < TODAY ? `was due ${shortDate(s.due)}` : s.due === TODAY ? 'due today' : `due ${shortDate(s.due)}`;
+    return `<div class="next"><div class="what"><b>Next: ${esc(s.label)}</b><span>${when}</span></div>${textBtn(s.type, r.key, s.sms, '', 'Text ' + (r.name || '').split(' ')[0], '')}</div>`;
+  }
+
+  // ---- One edit form per rental ----
+  function editForm(r) {
+    const k = esc(r.key);
+    const v = x => escAttr(x == null ? '' : x);
+    const f = (name, label, value, attrs = '', cls = '') => `<div class="${cls}"><label>${label}</label><input data-ef="${name}" value="${v(value)}" ${attrs}></div>`;
+    return `<form class="edit-form" data-key="${k}" onsubmit="event.preventDefault(); saveEdit(this);">
+      <h4>Customer</h4>
+      <div class="g4">
+        ${f('name', 'Name', r.name, 'type="text"', 'w2')}${f('phone', 'Phone', r.phone, 'type="tel"')}${f('email', 'Email', r.email, 'type="email"')}
+      </div>
+      <h4>Rental</h4>
+      <div class="g4">
+        ${f('package', 'Package', r.package, 'type="text"', 'w2')}${f('price', 'Price', r.price, 'type="text"')}<div></div>
+        ${f('toteCount', 'Totes', typeof r.toteCount === 'number' ? r.toteCount : '', 'type="number" min="0" step="1"')}${f('dollyCount', 'Dollies', typeof r.dollyCount === 'number' ? r.dollyCount : '', 'type="number" min="0" step="1"')}
+        ${f('dropoffDate', 'Drop-off date', r.dropoffDate, 'type="date"')}${f('dropoffTime', 'Drop-off time', to24Hour(r.dropoffTime || ''), 'type="time"')}
+        ${f('pickupDate', 'Pickup date', r.pickupDate, 'type="date"')}${f('pickupTime', 'Pickup time', to24Hour(r.pickupTime || ''), 'type="time"')}
+      </div>
+      <h4>Drop-off address</h4>
+      <div class="g4">
+        ${f('dropoffAddressStreet', 'Street', r.dropoffAddressStreet, 'type="text"', 'w4')}
+        ${f('dropoffAddressCity', 'City', r.dropoffAddressCity, 'type="text"', 'w2')}${f('dropoffAddressState', 'State', r.dropoffAddressState || 'OK', 'type="text" maxlength="2"')}${f('dropoffAddressZip', 'Zip', r.dropoffAddressZip, 'type="text" inputmode="numeric" maxlength="10"')}
+      </div>
+      <h4>Pickup address <button type="button" class="copy" onclick="copyDropoffToPickup(this)">Same as drop-off</button></h4>
+      <div class="g4">
+        ${f('pickupAddressStreet', 'Street', r.pickupAddressStreet, 'type="text"', 'w4')}
+        ${f('pickupAddressCity', 'City', r.pickupAddressCity, 'type="text"', 'w2')}${f('pickupAddressState', 'State', r.pickupAddressState || 'OK', 'type="text" maxlength="2"')}${f('pickupAddressZip', 'Zip', r.pickupAddressZip, 'type="text" inputmode="numeric" maxlength="10"')}
+      </div>
+      <h4>Other</h4>
+      <div class="g4">
+        ${f('stripeUrl', 'Stripe payment link', r.stripeUrl, 'type="url" placeholder="https://buy.stripe.com/…"', 'w4')}
+        <div class="w4"><label>Notes</label><textarea data-ef="notes" rows="2" style="resize:vertical;">${esc(r.notes || '')}</textarea></div>
+      </div>
+      <div class="form-actions"><button type="submit">Save changes</button><button type="button" class="secondary" onclick="closePanel('edit-${k}')">Cancel</button></div>
+    </form>`;
+  }
+
+  function wireCards(el) {
+    el.querySelectorAll('.pay-btn').forEach(btn => btn.addEventListener('click', () => togglePaid(btn.dataset.key, btn.dataset.setpaid === 'true')));
+    el.querySelectorAll('.email-reminder-btn').forEach(btn => btn.addEventListener('click', () => sendEmailReminder(btn.dataset.key)));
+    el.querySelectorAll('.otw-btn').forEach(btn => btn.addEventListener('click', () => onTheWay(btn.dataset.key, btn.dataset.type)));
+    el.querySelectorAll('.unsend-btn').forEach(btn => btn.addEventListener('click', () => unmarkSent(btn.dataset.flagid)));
+    el.querySelectorAll('.edit-military-btn').forEach(btn => btn.addEventListener('click', () => toggleMilitary(btn.dataset.key, btn.dataset.military === 'true')));
+    el.querySelectorAll('.add-photo-btn').forEach(btn => btn.addEventListener('click', () => triggerPhotoCapture(btn.dataset.key, btn.dataset.type)));
+    el.querySelectorAll('.view-photo-btn').forEach(btn => btn.addEventListener('click', () => viewPhoto(btn.dataset.key, btn.dataset.type)));
+    el.querySelectorAll('.panel-btn').forEach(btn => btn.addEventListener('click', () => {
+      const p = $(btn.dataset.panel), show = !p.classList.contains('shown');
+      p.classList.toggle('shown', show);
+      btn.setAttribute('aria-expanded', String(show));
+    }));
+  }
+  window.closePanel = (id) => {
+    $(id).classList.remove('shown');
+    const b = document.querySelector(`.panel-btn[data-panel="${CSS.escape(id)}"]`);
+    if (b) b.setAttribute('aria-expanded', 'false');
+  };
+
+  // ---- Keep your place across reloads ----
+  function captureUi() {
+    return {
+      open: [...document.querySelectorAll('#allRentals .rem.open')].map(e => e.dataset.key),
+      panels: [...document.querySelectorAll('#allRentals .xpanel.shown')].map(e => e.id).filter(id => !id.startsWith('edit-')),
+      y: window.scrollY,
+    };
+  }
+  function restoreUi(ui) {
+    ui.open.forEach(k => { const e = document.querySelector(`#allRentals .rem[data-key="${CSS.escape(k)}"]`); if (e) e.classList.add('open'); });
+    ui.panels.forEach(id => { const p = $(id); if (p) { p.classList.add('shown'); const b = document.querySelector(`.panel-btn[data-panel="${CSS.escape(id)}"]`); if (b) b.setAttribute('aria-expanded', 'true'); } });
+    window.scrollTo(0, ui.y);
+  }
+  function toast(msg) {
+    const t = document.createElement('div');
+    t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2200);
   }
 
   // Delivery/pickup proof-of-photo button, or the military ID photo
@@ -344,56 +481,19 @@
     const label = type === 'delivery' ? 'Delivery' : type === 'pickup' ? 'Pickup' : 'Military ID';
     const key = type === 'military_id' ? r.militaryIdKey : r.key;
     if (!has) {
-      return `<button type="button" class="add-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">📷 Add ${label} photo</button>`;
+      return `<button type="button" class="add-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">Add ${label} photo</button>`;
     }
-    const viewBtn = `<button type="button" class="view-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:var(--cream); color:var(--steel); border:1px solid var(--line); border-radius:8px; cursor:pointer;">📷 View ${label} photo</button>`;
+    const viewBtn = `<button type="button" class="view-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:14px; background:var(--track); color:var(--steel); border:1px solid transparent; border-radius:6px; cursor:pointer;">View ${label} photo</button>`;
     if (type !== 'military_id') return viewBtn;
-    const replaceBtn = `<button type="button" class="add-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">🔄 Replace ID photo</button>`;
+    const replaceBtn = `<button type="button" class="add-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">Replace ID photo</button>`;
     return viewBtn + replaceBtn;
-  }
-
-  // Shows the authoritative counts Inventory reads. Flags records logged
-  // before toteCount/dollyCount existed so they can be backfilled.
-  function countBadge(r) {
-    const hasTote = typeof r.toteCount === 'number';
-    const hasDolly = typeof r.dollyCount === 'number';
-    if (!hasTote && !hasDolly) {
-      return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--red-bg); color:var(--red); border-radius:20px; vertical-align:middle;">⚠️ No tote/dolly count set</span>`;
-    }
-    const toteText = hasTote ? `🧺 ${r.toteCount}` : '🧺 —';
-    const dollyText = hasDolly ? `🛒 ${r.dollyCount}` : '🛒 —';
-    return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--gold-bg); color:var(--gold); border-radius:20px; vertical-align:middle;">${toteText} · ${dollyText}</span>`;
-  }
-
-  // Read-only summary of which texts have already been sent for this
-  // rental, derived from the same SENT_FLAGS that decide each text
-  // button's Sent/unsent state below. Doesn't replace the buttons — just
-  // lets you see progress at a glance without expanding every one.
-  function progressStrip(r) {
-    const steps = [
-      { type: 'delivery', label: 'Delivery' },
-      { type: 'pickup', label: 'Pickup' },
-    ];
-    if (r.serviceType !== 'self') steps.push({ type: 'addressCheck', label: 'Confirm address' });
-    steps.push({ type: 'review', label: 'Review' }, { type: 'followup', label: 'Follow-up' });
-
-    const chips = steps.map(s => {
-      const sent = SENT_FLAGS[s.type + ':' + r.key];
-      return sent
-        ? `<span style="color:var(--green); font-size:0.75rem;">✓ ${esc(s.label)}</span>`
-        : `<span style="color:var(--steel); font-size:0.75rem;">${esc(s.label)}</span>`;
-    });
-    return `<div style="margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid var(--line);">
-      <p style="font-size:0.68rem; color:var(--steel); text-transform:uppercase; letter-spacing:0.03em; margin:0 0 5px;">Progress</p>
-      <div style="display:flex; flex-wrap:wrap; gap:3px 10px;">${chips.join('')}</div>
-    </div>`;
   }
 
   // "On the Way" button: starts as a plain button, calculates a live ETA via
   // the on-my-way function, then swaps in a ready-to-tap text link.
   function onTheWayBtn(type, key) {
     const label = type === 'delivery' ? 'Delivery' : 'Pickup';
-    return `<span id="otw-wrap-${type}-${key}"><button type="button" id="otw-${type}-${key}" class="otw-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">🚗 On the Way (${label})</button></span>`;
+    return `<span id="otw-wrap-${type}-${key}"><button type="button" id="otw-${type}-${key}" class="otw-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">On the Way (${label})</button></span>`;
   }
 
   window.onTheWay = async (key, type) => {
@@ -403,7 +503,7 @@
     const label = type === 'delivery' ? 'Delivery' : 'Pickup';
     const btn = $('otw-' + type + '-' + key);
     const wrap = $('otw-wrap-' + type + '-' + key);
-    if (btn) { btn.disabled = true; btn.textContent = '🚗 Calculating ETA…'; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Calculating ETA…'; }
     try {
       const resp = await fetch('/.netlify/functions/on-my-way', {
         method: 'POST',
@@ -413,13 +513,13 @@
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok || data.error) {
         showErr(data.error || ('On the Way calculation failed (' + resp.status + ').'));
-        if (btn) { btn.disabled = false; btn.textContent = '🚗 On the Way (' + label + ')'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'On the Way (' + label + ')'; }
         return;
       }
-      wrap.innerHTML = `<a class="sms-btn" href="${data.sms}" style="padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line);">🚗 Text ETA — ${esc(data.arrivalTime)} →</a>`;
+      wrap.innerHTML = `<a class="sms-btn" href="${data.sms}" style="padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control);">Text ETA — ${esc(data.arrivalTime)} →</a>`;
     } catch {
       showErr('Network error calculating ETA.');
-      if (btn) { btn.disabled = false; btn.textContent = '🚗 On the Way (' + label + ')'; }
+      if (btn) { btn.disabled = false; btn.textContent = 'On the Way (' + label + ')'; }
     }
   };
 
@@ -431,10 +531,10 @@
 
   function paymentBadge(r) {
     if (PAID_FLAGS[r.key]) {
-      return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--green-bg); color:var(--green); border-radius:20px; vertical-align:middle;">✓ Paid</span>`;
+      return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--green-bg); color:#14492F; border-radius:4px; vertical-align:middle;">Paid</span>`;
     }
     if (!r.invoicedAt || r.backfilled) return '';
-    return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--red-bg); color:var(--red); border-radius:20px; vertical-align:middle;">🧾 Invoiced — Unpaid</span>`;
+    return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--red-bg); color:#831C1E; border-radius:4px; vertical-align:middle;">Invoiced — Unpaid</span>`;
   }
 
   // Shows only once the customer has checked the terms-of-service box at
@@ -442,19 +542,19 @@
   function tosBadge(r) {
     if (!r.tosAccepted) return '';
     const acceptedDate = esc(fmtDate((r.tosAcceptedAt || '').slice(0, 10)));
-    return `<span title="Accepted ${acceptedDate}" style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--gold-bg); color:var(--gold); border-radius:20px; vertical-align:middle;">📝 Terms Accepted</span>`;
+    return `<span title="Accepted ${acceptedDate}" style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--gold-bg); color:#6B4C0C; border-radius:4px; vertical-align:middle;">Terms Accepted</span>`;
   }
 
   function militaryBadge(r) {
     if (!r.isMilitary) return '';
-    return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:0.72rem; font-weight:bold; background:var(--gold-bg); color:var(--gold); border-radius:20px; vertical-align:middle;">🎖️ Military</span>`;
+    return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--gold-bg); color:#6B4C0C; border-radius:4px; vertical-align:middle;">Military</span>`;
   }
 
   function payBtn(r) {
     if (PAID_FLAGS[r.key]) {
-      return `<button type="button" class="pay-btn" data-key="${esc(r.key)}" data-setpaid="false" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--steel); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">Mark unpaid</button>`;
+      return `<button type="button" class="pay-btn" data-key="${esc(r.key)}" data-setpaid="false" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--steel); border:1px solid var(--control); border-radius:6px; cursor:pointer;">Mark unpaid</button>`;
     }
-    return `<button type="button" class="pay-btn" data-key="${esc(r.key)}" data-setpaid="true" style="width:auto; padding:8px 16px; font-size:0.8rem; background:#fff; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; cursor:pointer;">✓ Mark paid</button>`;
+    return `<button type="button" class="pay-btn" data-key="${esc(r.key)}" data-setpaid="true" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">Mark paid</button>`;
   }
 
   window.togglePaid = async (key, setPaid) => {
@@ -513,200 +613,67 @@
     return (h % 12 || 12) + ':' + m[2] + ' ' + (h >= 12 ? 'PM' : 'AM');
   }
 
-  window.saveDates = async (btn) => {
-    const key = btn.dataset.key;
-    const block = btn.closest('.date-edit-block');
-    const fields = {};
-    block.querySelectorAll('[data-df]').forEach(inp => {
-      fields[inp.dataset.df] = inp.type === 'time' ? to12Hour(inp.value) : inp.value;
-    });
-
-    const secret = $('secret').value.trim();
-    if (!secret) return showErr('Enter the admin secret first.');
-    try {
-      const resp = await fetch('/.netlify/functions/edit-rental', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret, key, ...fields }),
-      });
-      if (resp.ok) { $('loadBtn').click(); }
-      else {
-        const detail = await resp.text().catch(() => '');
-        showErr('Edit failed (' + resp.status + '): ' + detail);
-      }
-    } catch { showErr('Network error.'); }
-  };
-
-  window.saveAddresses = async (btn) => {
-    const key = btn.dataset.key;
-    const block = btn.closest('.addr-edit-block');
-    const fields = {};
-    block.querySelectorAll('[data-af]').forEach(inp => { fields[inp.dataset.af] = inp.value; });
-
-    const secret = $('secret').value.trim();
-    if (!secret) return showErr('Enter the admin secret first.');
-    try {
-      const resp = await fetch('/.netlify/functions/edit-rental', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret, key, ...fields }),
-      });
-      if (resp.ok) { $('loadBtn').click(); }
-      else {
-        const detail = await resp.text().catch(() => '');
-        showErr('Edit failed (' + resp.status + '): ' + detail);
-      }
-    } catch { showErr('Network error.'); }
-  };
-
-  // Convenience for the common case where pickup is the same address as
-  // drop-off: copies the drop-off street/city/state/zip inputs into the
-  // pickup inputs, right in the form, before Save is clicked.
+  // Fills the pickup address fields from the drop-off ones, in the form, before Save.
   window.copyDropoffToPickup = (btn) => {
-    const block = btn.closest('.addr-edit-block');
+    const form = btn.closest('form');
     ['Street', 'City', 'State', 'Zip'].forEach(part => {
-      const from = block.querySelector(`[data-af="dropoffAddress${part}"]`);
-      const to = block.querySelector(`[data-af="pickupAddress${part}"]`);
+      const from = form.querySelector(`[data-ef="dropoffAddress${part}"]`);
+      const to = form.querySelector(`[data-ef="pickupAddress${part}"]`);
       if (from && to) to.value = from.value;
     });
   };
 
-  window.editContact = async (key, currentName, currentPhone, currentEmail) => {
-    const newName = prompt('Name:', currentName || '');
-    if (newName === null) return; // cancelled
-    const newPhone = prompt('Phone:', currentPhone || '');
-    if (newPhone === null) return;
-    const newEmail = prompt('Email:', currentEmail || '');
-    if (newEmail === null) return;
-
-    const secret = $('secret').value.trim();
-    if (!secret) return showErr('Enter the admin secret first.');
-    try {
-      const resp = await fetch('/.netlify/functions/edit-rental', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          secret, key,
-          name: newName.trim(), phone: newPhone.trim(), email: newEmail.trim(),
-        }),
-      });
-      if (resp.ok) { $('loadBtn').click(); }
-      else {
-        const detail = await resp.text().catch(() => '');
-        showErr('Edit failed (' + resp.status + '): ' + detail);
+  // One Save for the whole edit form. Only fields that changed are sent;
+  // edit-rental skips blank text fields (except notes), so a cleared box
+  // can't wipe real data.
+  window.saveEdit = async (form) => {
+    const key = form.dataset.key;
+    const r = ALL_RENTALS.find(x => x.key === key);
+    if (!r) return showErr('That rental is no longer on file. Refresh and try again.');
+    const fields = {};
+    form.querySelectorAll('[data-ef]').forEach(inp => {
+      const name = inp.dataset.ef;
+      let val = inp.value.trim();
+      let cur = r[name] == null ? '' : String(r[name]);
+      if (inp.type === 'time') { cur = to24Hour(cur); }
+      if (name === 'dropoffAddressState' || name === 'pickupAddressState') { val = val.toUpperCase(); if (!r[name] && val === 'OK') return; }
+      if (val !== cur) fields[name] = inp.type === 'time' ? to12Hour(val) : val;
+    });
+    if (!Object.keys(fields).length) { closePanel('edit-' + key); return toast('No changes to save'); }
+    if ('package' in fields && !fields.package) return showErr('Package can’t be empty.');
+    if ('price' in fields && !fields.price) return showErr('Price can’t be empty.');
+    if ('stripeUrl' in fields && fields.stripeUrl && !/^https:\/\/([a-z0-9-]+\.)?stripe\.com\//.test(fields.stripeUrl)) return showErr('That doesn’t look like a stripe.com link.');
+    if ('stripeUrl' in fields && !fields.stripeUrl) return showErr('The payment link can’t be removed here. Delete the rental if it was cancelled.');
+    for (const n of ['toteCount', 'dollyCount']) {
+      if (n in fields) {
+        if (fields[n] === '') { delete fields[n]; continue; }
+        const num = Number(fields[n]);
+        if (!Number.isInteger(num) || num < 0) return showErr((n === 'toteCount' ? 'Totes' : 'Dollies') + ' must be a whole number, 0 or more.');
+        fields[n] = num;
       }
-    } catch { showErr('Network error.'); }
-  };
-
-  window.editPackage = async (key, currentPkg) => {
-    const newPkg = prompt('Update package description (include the tote count, e.g. "10 Totes", so Inventory can count it correctly):', currentPkg || '');
-    if (newPkg === null) return; // cancelled
-    if (!newPkg.trim()) return showErr('Package description cannot be empty.');
-    const secret = $('secret').value.trim();
-    if (!secret) return showErr('Enter the admin secret first.');
-    try {
-      const resp = await fetch('/.netlify/functions/edit-rental', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret, key, package: newPkg.trim() }),
-      });
-      if (resp.ok) { $('loadBtn').click(); }
-      else {
-        const detail = await resp.text().catch(() => '');
-        showErr('Edit failed (' + resp.status + '): ' + detail);
-      }
-    } catch { showErr('Network error.'); }
-  };
-
-  window.editPrice = async (key, currentPrice) => {
-    const newPrice = prompt('Update price for this rental (e.g. $250):', currentPrice || '$');
-    if (newPrice === null) return; // cancelled
-    const trimmed = newPrice.trim();
-    if (!trimmed) return showErr('Price cannot be empty.');
-    const secret = $('secret').value.trim();
-    if (!secret) return showErr('Enter the admin secret first.');
-    try {
-      const resp = await fetch('/.netlify/functions/edit-rental', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret, key, price: trimmed }),
-      });
-      if (resp.ok) { $('loadBtn').click(); }
-      else {
-        const detail = await resp.text().catch(() => '');
-        showErr('Edit failed (' + resp.status + '): ' + detail);
-      }
-    } catch { showErr('Network error.'); }
-  };
-
-  window.editNotes = async (key, currentNotes) => {
-    const newNotes = prompt('Update notes for this rental (leave blank to clear):', currentNotes || '');
-    if (newNotes === null) return; // cancelled
-    const secret = $('secret').value.trim();
-    if (!secret) return showErr('Enter the admin secret first.');
-    try {
-      const resp = await fetch('/.netlify/functions/edit-rental', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret, key, notes: newNotes.trim() }),
-      });
-      if (resp.ok) { $('loadBtn').click(); }
-      else {
-        const detail = await resp.text().catch(() => '');
-        showErr('Edit failed (' + resp.status + '): ' + detail);
-      }
-    } catch { showErr('Network error.'); }
-  };
-
-  window.editStripeUrl = async (key, currentUrl) => {
-    const newUrl = prompt('Stripe payment link (https://buy.stripe.com/...):', currentUrl || '');
-    if (newUrl === null) return; // cancelled
-    const trimmed = newUrl.trim();
-    if (!trimmed) return showErr('Payment link cannot be empty — delete the rental instead if you need to remove it.');
-    if (!/^https:\/\/([a-z0-9-]+\.)?stripe\.com\//.test(trimmed)) {
-      return showErr('That doesn\'t look like a stripe.com link.');
     }
+    if ((fields.dropoffDate || r.dropoffDate) > (fields.pickupDate || r.pickupDate)) return showErr('Pickup date is before the drop-off date.');
+
     const secret = $('secret').value.trim();
     if (!secret) return showErr('Enter the admin secret first.');
+    const btn = form.querySelector('button[type=submit]');
+    btn.disabled = true; btn.textContent = 'Saving…';
     try {
       const resp = await fetch('/.netlify/functions/edit-rental', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret, key, stripeUrl: trimmed }),
+        body: JSON.stringify({ secret, key, ...fields }),
       });
-      if (resp.ok) { $('loadBtn').click(); }
-      else {
+      if (resp.ok) {
+        closePanel('edit-' + key);
+        toast('Saved');
+        $('loadBtn').click();
+      } else {
         const detail = await resp.text().catch(() => '');
-        showErr('Edit failed (' + resp.status + '): ' + detail);
+        showErr('Save failed (' + resp.status + '): ' + detail);
       }
-    } catch { showErr('Network error.'); }
-  };
-
-  window.editCounts = async (key, currentTotes, currentDollies) => {
-    const toteStr = prompt('Tote count for this rental (whole number):', currentTotes || '0');
-    if (toteStr === null) return; // cancelled
-    const toteCount = Number(toteStr);
-    if (!Number.isInteger(toteCount) || toteCount < 0) return showErr('Tote count must be a whole number (0 or more).');
-
-    const dollyStr = prompt('Dolly count for this rental (whole number):', currentDollies || '0');
-    if (dollyStr === null) return; // cancelled
-    const dollyCount = Number(dollyStr);
-    if (!Number.isInteger(dollyCount) || dollyCount < 0) return showErr('Dolly count must be a whole number (0 or more).');
-
-    const secret = $('secret').value.trim();
-    if (!secret) return showErr('Enter the admin secret first.');
-    try {
-      const resp = await fetch('/.netlify/functions/edit-rental', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret, key, toteCount, dollyCount }),
-      });
-      if (resp.ok) { $('loadBtn').click(); }
-      else {
-        const detail = await resp.text().catch(() => '');
-        showErr('Edit failed (' + resp.status + '): ' + detail);
-      }
-    } catch { showErr('Network error.'); }
+    } catch { showErr('Network error. Nothing was saved.'); }
+    btn.disabled = false; btn.textContent = 'Save changes';
   };
 
   window.deleteRental = async (key, name) => {

@@ -8,3 +8,7 @@ https://www.readytoteok.com/*  https://www.readytoteokc.com/:splat   301!
 # the one on the homepage (#book). Sends old links and search results there.
 /book.html  /#book  301!
 /book       /#book  301!
+
+# Add Rental is now the "Log only, no email" mode of the Send Invoice form.
+/admin-add-rental.html  /admin-invoice.html?mode=log  301!
+/admin-add-rental       /admin-invoice.html?mode=log  301!

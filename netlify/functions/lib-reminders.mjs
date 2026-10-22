@@ -73,9 +73,23 @@ function friendlyDate(isoDate) {
   return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 
+// Each reminder has a due day and a last day it still makes sense to send.
+// It shows from its due day until it's marked sent or its last day passes,
+// so a day the dashboard isn't opened doesn't mean a missed text. Items
+// carry dueDate and overdue (true once today is past the due day).
+//
+//   delivery          day before drop-off      -> drop-off day ("today" wording on the day)
+//   pickup (2 days)   2 days before pickup     -> that day only; "pickup tomorrow" is its catch-up
+//   pickupTomorrow    day before pickup        -> pickup day ("today" wording on the day)
+//   addressCheck      5 days before pickup     -> 2 days before pickup
+//   review            3 days after pickup      -> 14 days after pickup
+//   followup          3 days after invoicing   -> 10 days after, and only while unpaid
+//   emailReminder     5 days after invoicing   -> 30 days after, and only while unpaid
 export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags = {}) {
   const today = todayInOklahoma();
   const out = { delivery: [], pickupTomorrow: [], pickup: [], review: [], followup: [], emailReminder: [], addressCheck: [] };
+  const open = (due, last) => today >= due && today <= last;
+  const timing = (due) => ({ dueDate: due, overdue: today > due });
 
   for (const r of rentals) {
     const first = (r.name || "there").split(" ")[0];
@@ -83,74 +97,76 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
     const pickAddr = pickupAddressOf(r);
     const self = r.serviceType === "self";
 
-    // Confirm pickup address: 5 days out from pickup, delivery-service rentals
-    // only (self-service has no real pickup address to confirm). Catches
-    // cases where the address on file was a placeholder or has since changed.
-    if (!self && r.pickupDate === shiftDate(today, 5)) {
+    // Confirm pickup address: delivery-service rentals only (self-service has
+    // no real pickup address to confirm). Catches cases where the address on
+    // file was a placeholder or has since changed.
+    if (!self && r.pickupDate && open(shiftDate(r.pickupDate, -5), shiftDate(r.pickupDate, -2))) {
       const flagId = "addressCheck:" + (r.key || r.phone + r.pickupDate);
       if (!sentFlags[flagId]) {
         const { message, sms } = pickupAddressRequestMessageFor(r);
-        out.addressCheck.push({ ...r, flagId, address: confirmedPickupAddressOf(r) || "Pickup address not confirmed yet", message, sms });
+        out.addressCheck.push({ ...r, flagId, ...timing(shiftDate(r.pickupDate, -5)), address: confirmedPickupAddressOf(r) || "Pickup address not confirmed yet", message, sms });
       }
     }
 
-    // Invoice follow-up: invoiced 3 days ago, skip historical backfilled entries
-    if (!r.backfilled && r.invoicedAt) {
+    // Invoice follow-up: skip historical backfilled entries and paid invoices
+    if (!r.backfilled && r.invoicedAt && !paidFlags[r.key]) {
       const invoicedDate = r.invoicedAt.slice(0, 10);
-      if (invoicedDate === shiftDate(today, -3)) {
+      if (open(shiftDate(invoicedDate, 3), shiftDate(invoicedDate, 10))) {
         const msg = `Hi ${first}, it's Chris with Ready Tote Oklahoma! Just wanted to make sure you got the invoice we sent over for your tote rental. Let me know if you have any questions, happy to help however I can!`;
         const flagId = "followup:" + (r.key || r.phone + invoicedDate);
         if (!sentFlags[flagId]) {
-          out.followup.push({ ...r, flagId, address: `Invoiced ${friendlyDate(invoicedDate)}`, message: msg, sms: smsLink(r.phone, msg) });
+          out.followup.push({ ...r, flagId, ...timing(shiftDate(invoicedDate, 3)), address: `Invoiced ${friendlyDate(invoicedDate)}`, message: msg, sms: smsLink(r.phone, msg) });
         }
       }
     }
 
-    // Email/text payment reminder: invoiced 5 days ago, still unpaid, skip backfilled entries
+    // Email/text payment reminder: still unpaid 5+ days after invoicing, skip backfilled entries
     if (!r.backfilled && r.invoicedAt && !paidFlags[r.key]) {
       const invoicedDate = r.invoicedAt.slice(0, 10);
-      if (invoicedDate === shiftDate(today, -5)) {
+      if (open(shiftDate(invoicedDate, 5), shiftDate(invoicedDate, 30))) {
         const flagId = "emailReminder:" + (r.key || r.phone + invoicedDate);
         if (!sentFlags[flagId]) {
           const { message, sms } = paymentReminderMessageFor(r);
-          out.emailReminder.push({ ...r, flagId, message, sms });
+          out.emailReminder.push({ ...r, flagId, ...timing(shiftDate(invoicedDate, 5)), message, sms });
         }
       }
     }
 
-    // Delivery reminder: drop-off is tomorrow
-    if (r.dropoffDate === shiftDate(today, 1)) {
+    // Delivery reminder: the day before drop-off, or on the day if missed
+    if (r.dropoffDate && open(shiftDate(r.dropoffDate, -1), r.dropoffDate)) {
+      const when = r.dropoffDate === today ? "today" : "tomorrow";
       const msg = self
-        ? `Hi ${first}, it's Ready Tote Oklahoma! Reminder: your totes are ready for pickup tomorrow (${friendlyDate(r.dropoffDate)}) around ${friendlyTime(r.dropoffTime)}. See you then!`
-        : `Hi ${first}, it's Ready Tote Oklahoma! Friendly reminder: your totes arrive tomorrow (${friendlyDate(r.dropoffDate)}) around ${friendlyTime(r.dropoffTime)}. Reply here with any questions!`;
+        ? `Hi ${first}, it's Ready Tote Oklahoma! Reminder: your totes are ready for pickup ${when} (${friendlyDate(r.dropoffDate)}) around ${friendlyTime(r.dropoffTime)}. See you then!`
+        : `Hi ${first}, it's Ready Tote Oklahoma! Friendly reminder: your totes arrive ${when} (${friendlyDate(r.dropoffDate)}) around ${friendlyTime(r.dropoffTime)}. Reply here with any questions!`;
       const flagId = "delivery:" + (r.key || r.phone + r.dropoffDate);
-      if (!sentFlags[flagId]) out.delivery.push({ ...r, flagId, address: self ? "Customer pickup" : dropAddr, message: msg, sms: smsLink(r.phone, msg) });
+      if (!sentFlags[flagId]) out.delivery.push({ ...r, flagId, ...timing(shiftDate(r.dropoffDate, -1)), address: self ? "Customer pickup" : dropAddr, message: msg, sms: smsLink(r.phone, msg) });
     }
 
-    // Pickup reminder: pickup is tomorrow
-    if (r.pickupDate === shiftDate(today, 1)) {
+    // Pickup reminder: the day before pickup, or on the day if missed
+    if (r.pickupDate && open(shiftDate(r.pickupDate, -1), r.pickupDate)) {
+      const when = r.pickupDate === today ? "today" : "tomorrow";
       const msg = self
-        ? `Hi ${first}, it's Ready Tote Oklahoma! Reminder: please have your totes ready for return tomorrow (${friendlyDate(r.pickupDate)}) around ${friendlyTime(r.pickupTime)}. Thanks!`
-        : `Hi ${first}, it's Ready Tote Oklahoma! Reminder: we'll be picking up your totes tomorrow (${friendlyDate(r.pickupDate)}) around ${friendlyTime(r.pickupTime)}. Please have them empty and accessible. Thanks!`;
+        ? `Hi ${first}, it's Ready Tote Oklahoma! Reminder: please have your totes ready for return ${when} (${friendlyDate(r.pickupDate)}) around ${friendlyTime(r.pickupTime)}. Thanks!`
+        : `Hi ${first}, it's Ready Tote Oklahoma! Reminder: we'll be picking up your totes ${when} (${friendlyDate(r.pickupDate)}) around ${friendlyTime(r.pickupTime)}. Please have them empty and accessible. Thanks!`;
       const flagId = "pickupTomorrow:" + (r.key || r.phone + r.pickupDate);
-      if (!sentFlags[flagId]) out.pickupTomorrow.push({ ...r, flagId, address: self ? "Customer return" : pickAddr, message: msg, sms: smsLink(r.phone, msg) });
+      if (!sentFlags[flagId]) out.pickupTomorrow.push({ ...r, flagId, ...timing(shiftDate(r.pickupDate, -1)), address: self ? "Customer return" : pickAddr, message: msg, sms: smsLink(r.phone, msg) });
     }
 
-    // Pickup reminder: pickup is in 2 days
+    // Pickup reminder: pickup is in 2 days (the day-before text covers a miss)
     if (r.pickupDate === shiftDate(today, 2)) {
       const msg = self
         ? `Hi ${first}, Ready Tote Oklahoma here. Friendly reminder to return your totes on ${friendlyDate(r.pickupDate)} around ${friendlyTime(r.pickupTime)}. Thanks!`
         : `Hi ${first}, Ready Tote Oklahoma here. We'll pick up your totes on ${friendlyDate(r.pickupDate)} around ${friendlyTime(r.pickupTime)}. Please have them empty and accessible. Thanks!`;
       const flagId = "pickup:" + (r.key || r.phone + r.pickupDate);
-      if (!sentFlags[flagId]) out.pickup.push({ ...r, flagId, address: self ? "Customer return" : pickAddr, message: msg, sms: smsLink(r.phone, msg) });
+      if (!sentFlags[flagId]) out.pickup.push({ ...r, flagId, ...timing(today), address: self ? "Customer return" : pickAddr, message: msg, sms: smsLink(r.phone, msg) });
     }
 
-    // Review request: pickup was 3 days ago
-    if (r.pickupDate === shiftDate(today, -3)) {
+    // Review request: from 3 days after pickup, for up to two weeks
+    if (r.pickupDate && open(shiftDate(r.pickupDate, 3), shiftDate(r.pickupDate, 14))) {
       const link = reviewLink || "[ADD GOOGLE_REVIEW_LINK ENV VAR]";
       const msg = `Hi ${first}, thanks for renting with Ready Tote Oklahoma! If we made your move easier, we'd love a quick Google review: ${link}`;
       const flagId = "review:" + (r.key || r.phone + r.pickupDate);
-      if (!sentFlags[flagId]) out.review.push({ ...r, flagId, address: self ? "" : pickAddr, message: msg, sms: smsLink(r.phone, msg) });
+      if (!sentFlags[flagId]) out.review.push({ ...r, flagId, ...timing(shiftDate(r.pickupDate, 3)), address: self ? "" : pickAddr, message: msg, sms: smsLink(r.phone, msg) });
     }
   }
   return out;

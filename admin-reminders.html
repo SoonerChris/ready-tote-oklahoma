@@ -7,75 +7,80 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<title>Today's Reminders — Ready Tote Oklahoma (Internal)</title>
-<link rel="stylesheet" href="admin-shared.css?v=20260819">
-<script src="admin-shared.js?v=20260819"></script>
-<script src="admin-rentals-shared.js?v=20260818"></script>
+<title>Reminders · Ready Tote Oklahoma admin</title>
+<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<script src="admin-shared.js?v=20261022"></script>
+<script src="admin-rentals-shared.js?v=20261022"></script>
 <style>
-  .rem .who{font-weight:bold;}
-  .rem .meta{color:var(--steel);font-size:0.82rem;margin:3px 0 0;font-family:inherit;line-height:1.45;}
-  .rem .meta.addr{margin-top:2px;}
-  #results h2{margin:16px 0 6px; font-size:0.9rem;}
-  #results h2 .h2-note{font-family:'Barlow',sans-serif; font-weight:400; font-size:0.72rem; color:var(--steel);}
-  #results .empty{margin:0 0 0 2px; font-size:0.85rem;}
-  .rem{margin-bottom:8px;}
-  .rem .msg{background:var(--cream);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:12px 14px;font-size:0.88rem;color:var(--ink);line-height:1.55;margin-bottom:10px;}
-  .sms-btn{display:inline-block;background:var(--green);color:#fff;font-weight:bold;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:0.88rem;transition:opacity 0.12s ease;}
-  .sms-btn:hover{opacity:0.88;}
-  /* Group related row buttons so each group wraps independently and
-     lines up the same way regardless of which buttons are "Sent" */
-  .rem .actions{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px;}
-  .rem .actions:last-child{margin-bottom:0;}
-
-  /* Collapsible card: summary always visible, tap to reveal the buttons */
-  .rem-summary{display:flex; align-items:flex-start; gap:10px; cursor:pointer; user-select:none;}
-  .rem-summary .chevron{flex:none; color:var(--gold); font-size:0.75rem; line-height:1.6; width:12px; text-align:center; transition:transform 0.15s ease;}
-  .rem.open .rem-summary .chevron{transform:rotate(90deg);}
-  .rem-details{display:none; margin-top:10px;}
-  .rem.open .rem-details{display:block;}
-  h2{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
-  .section-toggle{width:auto; margin:0; padding:2px 10px; font-size:0.7rem; font-weight:bold; background:none; border:1px solid var(--line); color:var(--steel); border-radius:20px; cursor:pointer;}
-  .section-toggle:hover{border-color:var(--gold); color:var(--gold);}
+  /* Reminders answers one question: what do I need to send right now?
+     A summary line, then only the sections with something due (most urgent
+     first), each card with its Text button in reach, then what was sent
+     today and the week ahead. */
+  :root{--col:760px;}
+  .summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 16px; padding:14px 16px; border-radius:10px; background:#FAF8F3; margin:0 0 8px;}
+  .summary b{font-size:20px; font-weight:600; font-variant-numeric:tabular-nums;}
+  .summary .od{color:#831C1E; font-weight:600;}
+  .summary.done{background:var(--green-bg); color:#14492F;}
+  .sec-h{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin:28px 0 10px; font-size:17px; font-weight:700;}
+  .sec-h .n{font-weight:500; color:var(--steel);}
+  .sec-h .note{font-size:13px; font-weight:400; color:var(--steel);}
+  .rcard{padding:12px 14px;}
+  .rtop{display:flex; align-items:center; gap:12px;}
+  .rmain{flex:1; min-width:0;}
+  .rcard .who{font-weight:600; font-size:16px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .rcard .meta{color:var(--steel); font-size:14px; margin-top:2px; line-height:1.45; font-variant-numeric:tabular-nums;}
+  .ract{flex:none; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;}
+  .ract .sms-btn{background:var(--ink); color:#fff; border-color:var(--ink); min-height:40px;}
+  .ract .sms-btn:hover{background:#3A342D;}
+  .ract button{width:auto; margin:0; min-height:40px;}
+  details.preview{margin-top:6px;}
+  details.preview summary{cursor:pointer; font-size:13px; font-weight:600; color:var(--ink); list-style:none; display:inline-block; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
+  details.preview summary::-webkit-details-marker{display:none;}
+  details.preview .msg{margin-top:8px; background:#FAF8F3; border-radius:8px; padding:10px 12px; font-size:14px; line-height:1.55;}
+  .sent-row,.week-row{display:flex; align-items:baseline; gap:12px; padding:9px 0; border-top:1px solid #F1EDE4; font-size:14px;}
+  .sent-row:first-child,.week-row:first-child{border-top:none;}
+  .sent-row .what,.week-row .what{flex:1; min-width:0;}
+  .sent-row .t,.week-row .t{color:var(--steel); white-space:nowrap; font-variant-numeric:tabular-nums;}
+  .week-day{font-size:13px; font-weight:600; color:var(--steel); margin:14px 0 2px;}
+  .week-day:first-child{margin-top:0;}
+  .undo{all:unset; cursor:pointer; font-size:13px; font-weight:600; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
+  .undo:hover{text-decoration-color:var(--ink);}
+  .undo:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
+  @media(max-width:560px){
+    .rtop{flex-direction:column; align-items:stretch;}
+    .ract{justify-content:stretch;}
+    .ract > *{flex:1; justify-content:center;}
+  }
 </style>
 </head>
 <body>
 <nav class="admin-nav" aria-label="Admin tools">
-  <a href="admin.html"><span class="nav-icon" aria-hidden="true">📊</span> Dashboard</a>
-  <a href="admin-requests.html"><span class="nav-icon" aria-hidden="true">📥</span> Requests</a>
-  <a href="admin-invoice.html"><span class="nav-icon" aria-hidden="true">🧾</span> Send Invoice</a>
-  <a href="admin-add-rental.html"><span class="nav-icon" aria-hidden="true">➕</span> Add Rental</a>
-  <a href="admin-reminders.html" aria-current="page"><span class="nav-icon" aria-hidden="true">🚚</span> Reminders</a>
-  <a href="admin-rentals.html"><span class="nav-icon" aria-hidden="true">📋</span> All Rentals</a>
-  <a href="admin-contacts.html"><span class="nav-icon" aria-hidden="true">📇</span> Contacts</a>
-  <a href="admin-finance.html"><span class="nav-icon" aria-hidden="true">💰</span> Finance</a>
-  <a href="admin-outreach.html"><span class="nav-icon" aria-hidden="true">🤝</span> Outreach</a>
-  <a href="admin-inventory.html"><span class="nav-icon" aria-hidden="true">📦</span> Inventory</a>
+  <a href="admin.html">Dashboard</a>
+  <a href="admin-requests.html">Requests</a>
+  <a href="admin-invoice.html">Send Invoice</a>
+  <a href="admin-invoice.html?mode=log">Add Rental</a>
+  <a href="admin-reminders.html" aria-current="page">Reminders</a>
+  <a href="admin-rentals.html">All Rentals</a>
+  <a href="admin-contacts.html">Contacts</a>
+  <a href="admin-finance.html">Finance</a>
+  <a href="admin-outreach.html">Outreach</a>
+  <a href="admin-inventory.html">Inventory</a>
 </nav>
 <div class="card">
-  <h1>Today's Reminder Texts</h1>
-  <p class="sub">Tap a button to open Messages with the text pre-filled, then confirm it was sent. Best used on your phone. For searching, editing, or managing any rental directly, see All Rentals.</p>
+  <h1>Reminders</h1>
+  <p class="sub">Tap Text to open Messages with the reminder filled in, then confirm you sent it. Anything you miss stays here, marked overdue, until it's sent or no longer makes sense.</p>
 
   <input type="hidden" id="secret">
 
-  <button id="loadBtn">Load today's reminders</button>
+  <button id="loadBtn">Refresh</button>
   <div class="status" id="status"></div>
 
   <div id="results" style="display:none;">
-    <h2>📅 This week</h2>
-    <div id="thisWeek"></div>
-
-    <h2>🚚 Delivery tomorrow <button type="button" class="section-toggle" onclick="toggleAllSection('delivery', this)">Expand all</button></h2>
-    <div id="delivery"></div>
-    <h2>📦 Pickup in 2 days <button type="button" class="section-toggle" onclick="toggleAllSection('pickup', this)">Expand all</button></h2>
-    <div id="pickup"></div>
-    <h2>📍 Confirm pickup address <span class="h2-note">5 days before pickup</span> <button type="button" class="section-toggle" onclick="toggleAllSection('addressCheck', this)">Expand all</button></h2>
-    <div id="addressCheck"></div>
-    <h2>⭐ Review requests <span class="h2-note">picked up 3 days ago</span> <button type="button" class="section-toggle" onclick="toggleAllSection('review', this)">Expand all</button></h2>
-    <div id="review"></div>
-    <h2>💬 Invoice follow-ups <span class="h2-note">invoiced 3 days ago</span> <button type="button" class="section-toggle" onclick="toggleAllSection('followup', this)">Expand all</button></h2>
-    <div id="followup"></div>
-    <h2>📧 Email payment reminders <span class="h2-note">invoiced 5+ days, unpaid</span> <button type="button" class="section-toggle" onclick="toggleAllSection('emailReminder', this)">Expand all</button></h2>
-    <div id="emailReminder"></div>
+    <div class="summary" id="summary"></div>
+    <div id="due"></div>
+    <div id="sentToday"></div>
+    <h2 class="sec-h">Next 7 days</h2>
+    <div class="rem" id="thisWeek" style="padding:12px 14px;"></div>
   </div>
 </div>
 
@@ -84,7 +89,8 @@
   // Restore shared secret
   $('secret').value = localStorage.getItem('rto-admin-password') || '';
 
-  let ALL_RENTALS = [];
+  let ALL_RENTALS = [], REM = {};
+  const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
 
   $('loadBtn').addEventListener('click', load);
   // Auto-load if a secret is already saved (matches admin.html behavior)
@@ -94,7 +100,7 @@
     const secret = $('secret').value.trim();
     if (!secret) return showErr('Enter the admin secret.');
     const btn = $('loadBtn');
-    btn.disabled = true; btn.textContent = 'Loading…';
+    btn.disabled = true; btn.textContent = 'Refreshing…';
     try {
       const resp = await fetch('/.netlify/functions/get-rentals', {
         method: 'POST',
@@ -108,61 +114,132 @@
         ALL_RENTALS = data.rentals || [];
         SENT_FLAGS = data.sentFlags || {};
         PAID_FLAGS = data.paidFlags || {};
-        render('delivery', data.reminders.delivery);
-        render('pickup', data.reminders.pickup);
-        render('addressCheck', data.reminders.addressCheck);
-        render('review', data.reminders.review);
-        render('followup', data.reminders.followup);
-        renderEmailDue(data.reminders.emailReminder || []);
+        REM = data.reminders || {};
+        // Marking a text sent reloads the list; keep the scroll position and
+        // any open message previews so you don't lose your place.
+        const y = window.scrollY;
+        const openPrev = [...document.querySelectorAll('details.preview[open]')].map(d => d.dataset.flag);
+        renderDue();
+        renderSentToday();
         renderWeek(ALL_RENTALS);
         $('results').style.display = 'block';
         $('status').style.display = 'none';
+        openPrev.forEach(f => { const d = document.querySelector(`details.preview[data-flag="${CSS.escape(f)}"]`); if (d) d.open = true; });
+        window.scrollTo(0, y);
       }
-    } catch { showErr('Network error — use this page on the live site.'); }
-    btn.disabled = false; btn.textContent = 'Load today\'s reminders';
+    } catch { showErr('Network error. This page only works on the live site.'); }
+    btn.disabled = false; btn.textContent = 'Refresh';
   }
 
-  // Same per-type text buttons as the All Rentals page (textBtn in
-  // admin-rentals-shared.js): tapping one opens Messages pre-filled, then asks
-  // "Did you send the text?" and marks it sent. Section id -> [flag type, icon, label].
-  const SECTION_BTN = {
-    delivery:     ['delivery',     '🚚', 'Delivery'],
-    pickup:       ['pickup',       '📦', 'Pickup'],
-    addressCheck: ['addressCheck', '📍', 'Confirm address'],
-    review:       ['review',       '⭐', 'Review'],
-    followup:     ['followup',     '💬', 'Follow-up'],
-  };
+  // Most urgent first. "type" is the sent-flag type the server uses.
+  const SECTIONS = [
+    { id: 'delivery',       title: 'Delivery reminders',     note: 'the day before drop-off' },
+    { id: 'pickupTomorrow', title: 'Pickup tomorrow',        note: 'the day before pickup' },
+    { id: 'pickup',         title: 'Pickup in 2 days',       note: '' },
+    { id: 'addressCheck',   title: 'Confirm pickup address', note: 'from 5 days before pickup' },
+    { id: 'emailReminder',  title: 'Unpaid invoices',        note: '5 or more days after invoicing' },
+    { id: 'followup',       title: 'Invoice follow-ups',     note: 'from 3 days after invoicing' },
+    { id: 'review',         title: 'Review requests',        note: 'from 3 days after pickup' },
+  ];
+  const shortDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const totesOf = r => typeof r.toteCount === 'number' ? r.toteCount : +((String(r.package || '').match(/(\d+)\s*totes?/i) || [0, 0])[1]);
+  const first = r => String(r.name || '').split(' ')[0] || 'them';
 
-  function render(id, items) {
-    const el = $(id);
-    if (!items.length) { el.innerHTML = '<p class="empty">None today.</p>'; return; }
-    const [type, icon, label] = SECTION_BTN[id];
-    el.innerHTML = items.map(r => {
-      // r.flagId is "<type>:<key>" as computed by the server. Reuse its key
-      // part so the sent flag set here matches the one the server checks.
-      const key = String(r.flagId || '').slice(type.length + 1);
-      return `
-      <div class="rem">
-        <div class="rem-summary" onclick="this.closest('.rem').classList.toggle('open')">
-          <span class="chevron">▸</span>
-          <div>
-            <div class="who">${esc(r.name)}</div>
-            <div class="meta">${esc(r.phone)}${r.package ? ' · ' + esc(r.package) : ''}${r.address ? ' · ' + esc(r.address) : ''}</div>
+  function renderDue() {
+    let texts = 0, overdue = 0, payments = 0, html = '';
+    for (const sec of SECTIONS) {
+      const items = (REM[sec.id] || []).slice().sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+      if (!items.length) continue;
+      if (sec.id === 'emailReminder') payments += items.length; else texts += items.length;
+      overdue += items.filter(r => r.overdue).length;
+      html += `<h2 class="sec-h">${sec.title}<span class="n">${items.length}</span>${sec.note ? `<span class="note">${sec.note}</span>` : ''}</h2>`
+        + items.map(r => sec.id === 'emailReminder' ? paymentCard(r) : textCard(sec.id, r)).join('');
+    }
+    $('due').innerHTML = html;
+    $('due').querySelectorAll('.email-reminder-btn').forEach(btn => btn.addEventListener('click', () => sendEmailReminder(btn.dataset.key)));
+    $('due').querySelectorAll('.unsend-btn').forEach(btn => btn.addEventListener('click', () => unmarkSent(btn.dataset.flagid)));
+
+    const s = $('summary');
+    if (!texts && !payments) {
+      s.className = 'summary done';
+      s.innerHTML = '<b>All caught up.</b><span>Nothing to send right now.</span>';
+      return;
+    }
+    s.className = 'summary';
+    const parts = [];
+    if (texts) parts.push(`<b>${texts}</b><span>text${texts === 1 ? '' : 's'} to send</span>`);
+    if (payments) parts.push(`<b>${payments}</b><span>unpaid invoice${payments === 1 ? '' : 's'} to nudge</span>`);
+    if (overdue) parts.push(`<span class="od">${overdue} overdue</span>`);
+    s.innerHTML = parts.join('');
+  }
+
+  function dueTag(r) {
+    if (!r.overdue) return '';
+    return `<span class="pill err">Overdue · due ${esc(shortDate(r.dueDate))}</span>`;
+  }
+
+  function textCard(type, r) {
+    // r.flagId is "<type>:<key>" as computed by the server. Reuse its key
+    // part so the sent flag set here matches the one the server checks.
+    const key = String(r.flagId || '').slice(type.length + 1);
+    const facts = [r.phone, totesOf(r) ? totesOf(r) + ' totes' : '', r.address].filter(Boolean).map(esc).join(' · ');
+    return `
+      <div class="rem rcard">
+        <div class="rtop">
+          <div class="rmain">
+            <div class="who">${esc(r.name)}${dueTag(r)}</div>
+            <div class="meta">${facts}</div>
           </div>
+          <div class="ract">${textBtn(type, key, r.sms, '', 'Text ' + first(r), '')}</div>
         </div>
-        <div class="rem-details">
-          <div class="msg">${esc(r.message)}</div>
-          <div class="actions">${textBtn(type, key, r.sms, icon, label, 'var(--green)')}</div>
+        <details class="preview" data-flag="${escAttr(r.flagId)}"><summary>Show message</summary><div class="msg">${esc(r.message)}</div></details>
+      </div>`;
+  }
+
+  // Payment nudges: an email the site sends, a text you send, or both
+  function paymentCard(r) {
+    const facts = [r.email, 'invoiced ' + fmtDate((r.invoicedAt || '').slice(0, 10)), fmtPrice(r.price)].filter(Boolean).join(' · ');
+    return `
+      <div class="rem rcard">
+        <div class="rtop">
+          <div class="rmain">
+            <div class="who">${esc(r.name)}${dueTag(r)}</div>
+            <div class="meta">${facts}</div>
+          </div>
+          <div class="ract">${emailReminderBtn(r)}${textReminderBtn(r)}</div>
         </div>
       </div>`;
-    }).join('');
   }
 
-  // ---- This Week lookahead: deliveries and pickups in the next 7 days ----
+  // ---- Sent today: what's done, with undo ----
+  const SENT_LABEL = {
+    delivery: 'Delivery reminder', pickupTomorrow: 'Pickup tomorrow', pickup: 'Pickup in 2 days', addressCheck: 'Confirm address',
+    review: 'Review request', followup: 'Invoice follow-up', emailReminder: 'Payment email', textReminder: 'Payment text', invoiceSent: 'Invoice sent text',
+  };
+  function renderSentToday() {
+    const chicagoDay = v => { const d = new Date(v); return isNaN(d) ? '' : d.toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }); };
+    const rows = Object.entries(SENT_FLAGS)
+      .filter(([, v]) => chicagoDay(v) === TODAY)
+      .map(([flagId, v]) => {
+        const i = flagId.indexOf(':'), type = flagId.slice(0, i), key = flagId.slice(i + 1);
+        const r = ALL_RENTALS.find(x => x.key === key);
+        return { flagId, type, name: r ? r.name : key, at: new Date(v) };
+      })
+      .sort((a, b) => b.at - a.at);
+    if (!rows.length) { $('sentToday').innerHTML = ''; return; }
+    $('sentToday').innerHTML = `<h2 class="sec-h">Sent today<span class="n">${rows.length}</span></h2>
+      <div class="rem" style="padding:6px 14px;">${rows.map(x => `
+        <div class="sent-row">
+          <div class="what"><b>${esc(x.name)}</b> · ${esc(SENT_LABEL[x.type] || x.type)}</div>
+          <span class="t">${x.at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' })}</span>
+          ${x.type === 'emailReminder' ? '' : `<button type="button" class="undo" onclick="unmarkSent('${escAttr(x.flagId)}')">Undo</button>`}
+        </div>`).join('')}</div>`;
+  }
+
+  // ---- Next 7 days: deliveries and pickups ----
   function renderWeek(rentals){
     const el = $('thisWeek');
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
-    const end = new Date(today + 'T12:00:00Z'); end.setUTCDate(end.getUTCDate() + 7);
+    const end = new Date(TODAY + 'T12:00:00Z'); end.setUTCDate(end.getUTCDate() + 7);
     const endStr = end.toISOString().slice(0,10);
 
     // Any stored time ("14:30" or "2:30 PM") -> "2:30 PM" for display
@@ -183,47 +260,19 @@
     const events = [];
     for (const r of rentals) {
       const self = r.serviceType === 'self';
-      if (r.dropoffDate >= today && r.dropoffDate <= endStr)
-        events.push({ date: r.dropoffDate, time: r.dropoffTime, label: self ? 'Customer pickup' : 'Deliver', r,
-                      addr: self ? '' : dropoffAddressOf(r) });
-      if (r.pickupDate >= today && r.pickupDate <= endStr)
-        events.push({ date: r.pickupDate, time: r.pickupTime, label: self ? 'Customer return' : 'Pick up', r,
-                      addr: self ? '' : pickupAddressOf(r) });
+      if (r.dropoffDate >= TODAY && r.dropoffDate <= endStr)
+        events.push({ date: r.dropoffDate, time: r.dropoffTime, label: self ? 'Customer pickup' : 'Deliver', r, addr: self ? '' : dropoffAddressOf(r) });
+      if (r.pickupDate >= TODAY && r.pickupDate <= endStr)
+        events.push({ date: r.pickupDate, time: r.pickupTime, label: self ? 'Customer return' : 'Pick up', r, addr: self ? '' : pickupAddressOf(r) });
     }
-    if (!events.length) { el.innerHTML = '<p class="empty">Nothing scheduled in the next 7 days.</p>'; return; }
+    if (!events.length) { el.innerHTML = '<p class="empty" style="margin:0;">Nothing scheduled in the next 7 days.</p>'; return; }
     events.sort((a,b) => a.date.localeCompare(b.date) || timeKey(a.time) - timeKey(b.time));
-    el.innerHTML = events.map(e => `
-      <div class="rem" style="padding:10px 14px;">
-        <div class="who" style="font-size:0.9rem;">${esc(fmtDay(e.date))} · <span style="color:var(--gold);">${esc(e.label)}</span> — ${esc(e.r.name)}</div>
-        <div class="meta" style="margin:2px 0 0;">${esc(fmtTime(e.time))}${e.addr ? ' · ' + esc(e.addr) : ''} · ${esc(e.r.package)}</div>
-      </div>`).join('');
-  }
-  function fmtDay(iso){
-    const d = new Date(iso + 'T12:00:00');
-    const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
-    return weekday + ' ' + fmtDate(iso);
-  }
-
-  // ---- Email payment reminders (computed: invoiced 5+ days ago, unpaid) ----
-  function renderEmailDue(items) {
-    const el = $('emailReminder');
-    if (!items.length) { el.innerHTML = '<p class="empty">None today.</p>'; return; }
-    el.innerHTML = items.map(r => `
-      <div class="rem">
-        <div class="rem-summary" onclick="this.closest('.rem').classList.toggle('open')">
-          <span class="chevron">▸</span>
-          <div>
-            <div class="who">${esc(r.name)}</div>
-            <div class="meta">${r.email ? esc(r.email) + ' · ' : ''}${esc(r.package)} · Invoiced ${esc(fmtDate((r.invoicedAt || '').slice(0, 10)))} · ${fmtPrice(r.price)}</div>
-          </div>
-        </div>
-        <div class="rem-details">
-          <div class="actions">${emailReminderBtn(r)}${textReminderBtn(r)}</div>
-        </div>
-      </div>`).join('');
-    el.querySelectorAll('.email-reminder-btn').forEach(btn => {
-      btn.addEventListener('click', () => sendEmailReminder(btn.dataset.key));
-    });
+    let last = '';
+    el.innerHTML = events.map(e => {
+      const head = e.date !== last ? `<div class="week-day">${e.date === TODAY ? 'Today' : esc(new Date(e.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }))}</div>` : '';
+      last = e.date;
+      return head + `<div class="week-row"><span class="t" style="min-width:68px;">${esc(fmtTime(e.time)) || '—'}</span><div class="what"><b>${esc(e.label)}</b> · ${esc(e.r.name)}${e.addr ? `<div class="t" style="white-space:normal;">${esc(e.addr)}</div>` : ''}</div><span class="t">${totesOf(e.r) || '—'} totes</span></div>`;
+    }).join('');
   }
 
   function showErr(m){const s=$('status');s.style.display='block';s.className='status err';s.textContent=m;}

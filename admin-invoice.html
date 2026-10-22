@@ -8,31 +8,50 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="robots" content="noindex, nofollow">
 <title>Send Invoice — Ready Tote Oklahoma (Internal)</title>
-<link rel="stylesheet" href="admin-shared.css?v=20260819">
-<script src="admin-shared.js?v=20260819"></script>
+<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<script src="admin-shared.js?v=20261022"></script>
+<script src="admin-availability.js?v=20261023"></script>
 <style>
-  body{padding:32px 16px;}
-  .card{padding:32px;}
-  .sms-btn{display:inline-block;background:var(--green);color:#fff;font-weight:bold;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:0.88rem;transition:opacity 0.12s ease;}
-  .sms-btn:hover{opacity:0.88;}
+  :root{--col:720px;}
+  /* One form, two jobs: send the invoice email, or just log the rental */
+  .mode-seg{display:inline-flex; gap:2px; padding:2px; background:var(--track); border-radius:8px; margin:0 0 8px;}
+  .mode-seg button{all:unset; box-sizing:border-box; height:34px; line-height:32px; padding:0 14px; border:1px solid transparent; border-radius:6px; font-size:14px; font-weight:600; color:var(--steel); cursor:pointer;}
+  .mode-seg button:hover{color:var(--ink);}
+  .mode-seg button[aria-pressed="true"]{background:#fff; color:var(--ink); border-color:var(--line);}
+  .mode-seg button:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
+  .log-only{display:none;}
+  body.log-mode .log-only{display:inline;}
+  body.log-mode .send-only{display:none;}
+  /* The check before an invoice email goes out */
+  .send-summary{margin-top:24px; padding:16px; border-radius:10px; background:#FAF8F3; border:1px solid var(--line);}
+  .send-summary h3{margin:0 0 8px; font-size:16px;}
+  .send-summary dl{display:grid; grid-template-columns:max-content 1fr; gap:4px 16px; margin:0; font-size:14px; font-variant-numeric:tabular-nums;}
+  .send-summary dt{color:var(--steel);}
+  .send-summary dd{margin:0; min-width:0; overflow-wrap:anywhere;}
+  .send-summary .row-btns{display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;}
+  .send-summary .row-btns button{width:auto; margin:0;}
 </style>
 </head>
 <body>
 <nav class="admin-nav" aria-label="Admin tools">
-  <a href="admin.html"><span class="nav-icon" aria-hidden="true">📊</span> Dashboard</a>
-  <a href="admin-requests.html"><span class="nav-icon" aria-hidden="true">📥</span> Requests</a>
-  <a href="admin-invoice.html" aria-current="page"><span class="nav-icon" aria-hidden="true">🧾</span> Send Invoice</a>
-  <a href="admin-add-rental.html"><span class="nav-icon" aria-hidden="true">➕</span> Add Rental</a>
-  <a href="admin-reminders.html"><span class="nav-icon" aria-hidden="true">🚚</span> Reminders</a>
-  <a href="admin-rentals.html"><span class="nav-icon" aria-hidden="true">📋</span> All Rentals</a>
-  <a href="admin-contacts.html"><span class="nav-icon" aria-hidden="true">📇</span> Contacts</a>
-  <a href="admin-finance.html"><span class="nav-icon" aria-hidden="true">💰</span> Finance</a>
-  <a href="admin-outreach.html"><span class="nav-icon" aria-hidden="true">🤝</span> Outreach</a>
-  <a href="admin-inventory.html"><span class="nav-icon" aria-hidden="true">📦</span> Inventory</a>
+  <a href="admin.html">Dashboard</a>
+  <a href="admin-requests.html">Requests</a>
+  <a href="admin-invoice.html" aria-current="page">Send Invoice</a>
+  <a href="admin-invoice.html?mode=log">Add Rental</a>
+  <a href="admin-reminders.html">Reminders</a>
+  <a href="admin-rentals.html">All Rentals</a>
+  <a href="admin-contacts.html">Contacts</a>
+  <a href="admin-finance.html">Finance</a>
+  <a href="admin-outreach.html">Outreach</a>
+  <a href="admin-inventory.html">Inventory</a>
 </nav>
 <div class="card">
-  <h1>Send Customer Invoice</h1>
-  <p class="sub">Internal tool — fills out and sends the branded invoice email with a Stripe payment button.</p>
+  <h1 id="pageTitle">Send invoice</h1>
+  <p class="sub" id="pageSub">Fills out and sends the branded invoice email with a Stripe payment button, and adds the rental to the log.</p>
+  <div class="mode-seg" role="group" aria-label="What to do">
+    <button type="button" data-mode="send" aria-pressed="true">Send invoice</button>
+    <button type="button" data-mode="log" aria-pressed="false">Log only, no email</button>
+  </div>
 
   <input type="hidden" id="secret">
 
@@ -42,7 +61,7 @@
       <input type="text" id="name" placeholder="Jane Smith">
     </div>
     <div>
-      <label>Customer email</label>
+      <label>Customer email<span class="log-only"> (optional)</span></label>
       <input type="email" id="email" placeholder="jane@example.com">
     </div>
   </div>
@@ -50,9 +69,11 @@
   <label>Customer phone</label>
   <input type="tel" id="phone" placeholder="405-555-0123">
 
+  <div class="send-only">
   <label>Paste booking email (optional)</label>
-  <textarea id="pasteBox" rows="4" placeholder="Paste the Netlify booking notification email here, then click Parse to auto-fill name, email, package, and dates." style="width:100%;padding:11px 12px;font-size:0.9rem;border:1px solid var(--line);border-radius:6px;background:var(--cream);font-family:inherit;resize:vertical;"></textarea>
-  <button type="button" id="parseBtn" style="margin-top:8px;width:auto;padding:9px 18px;font-size:0.85rem;background:var(--ink);color:#fff;">Parse booking email</button>
+  <textarea id="pasteBox" rows="4" placeholder="Paste the Netlify booking notification email here, then click Parse to auto-fill name, email, package, and dates." style="resize:vertical;"></textarea>
+  <button type="button" id="parseBtn" class="secondary" style="margin-top:8px;width:auto;padding:8px 14px;font-size:14px;">Parse booking email</button>
+  </div>
 
   <label>Package</label>
   <select id="package">
@@ -82,7 +103,7 @@
     <div>
       <label>Rental price</label>
       <input type="text" id="price" placeholder="$99" value="$">
-      <button type="button" id="recalcBtn" style="margin-top:6px;width:auto;padding:7px 14px;font-size:0.78rem;background:var(--cream);color:var(--ink);border:1px solid var(--line);">🔄 Recalculate (package + rush + military)</button>
+      <button type="button" id="recalcBtn" class="secondary" style="margin-top:6px;width:auto;padding:6px 12px;font-size:13px;">Recalculate (package + rush + military)</button>
       <p class="note" id="estimateNote" style="display:none;"></p>
     </div>
     <div>
@@ -106,12 +127,14 @@
     <div>
       <label>Pickup date</label>
       <input type="date" id="pickupDate">
+      <p class="note" id="pickupNote" hidden></p>
     </div>
     <div>
       <label>Pickup time</label>
       <input type="time" id="pickupTime" value="10:00">
     </div>
   </div>
+  <div id="availLine" style="margin-top:12px;"></div>
 
   <label>Service type</label>
   <select id="serviceType">
@@ -167,9 +190,11 @@
 
   </div><!-- /addressSection -->
 
+  <div class="send-only">
   <label>Stripe payment link</label>
   <input type="url" id="stripeUrl" placeholder="https://buy.stripe.com/...">
   <p class="note">Paste the Stripe Payment Link for this package. Tip: edit this file to hard-code your three links in the package dropdown (data-stripe attributes) so this auto-fills.</p>
+  </div>
 
   <label style="display:flex; align-items:center; gap:8px; font-weight:normal; margin-top:18px;">
     <input type="checkbox" id="isMilitary" style="width:auto;"> Military discount (ID on file or being verified)
@@ -177,9 +202,11 @@
   <p class="note">If this came from a booking request with an ID photo already attached, it carries over automatically. Otherwise, add the photo from All Rentals once this rental is logged.</p>
 
   <label>Notes (optional)</label>
-  <textarea id="notes" rows="3" placeholder="Gate code, dog on property, special instructions…" style="width:100%;padding:11px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:6px;background:var(--cream);font-family:inherit;resize:vertical;"></textarea>
+  <textarea id="notes" rows="3" placeholder="Gate code, dog on property, special instructions…" style="resize:vertical;"></textarea>
 
-  <button id="sendBtn">Send Invoice Email</button>
+  <div class="send-summary" id="sendSummary" hidden></div>
+  <button id="sendBtn">Review and send</button>
+  <button type="button" id="newInvoiceBtn" class="secondary" hidden onclick="location.href = LOG_MODE ? 'admin-invoice.html?mode=log' : 'admin-invoice.html'">Start a new invoice</button>
   <div class="status" id="status"></div>
   <div id="invoiceTextPrompt" style="display:none; margin-top:14px;"></div>
 </div>
@@ -211,7 +238,7 @@
     if (r.email) $('email').value = r.email;
     if (r.phone) $('phone').value = r.phone;
     if (r.deliveryDate) $('dropoffDate').value = r.deliveryDate;
-    if (r.pickupDate) $('pickupDate').value = r.pickupDate;
+    if (r.pickupDate) { $('pickupDate').value = r.pickupDate; PICKUP_BY_HAND = true; }
 
     if (r.deliveryAddressStreet || r.deliveryAddressCity || r.deliveryAddressZip) {
       $('street').value = r.deliveryAddressStreet || '';
@@ -354,6 +381,7 @@
     if (!p) return;
     $('price').value = p.price || '$';
     $('duration').value = p.duration || '2 Weeks';
+    autoPickup();
     $('stripeUrl').value = (p.stripeUrl && !p.stripeUrl.startsWith('PASTE')) ? p.stripeUrl : '';
     $('toteCount').value = (p.toteCount ?? '');
     $('dollyCount').value = (p.dollyCount ?? '');
@@ -443,23 +471,112 @@
     }
   });
 
-  $('sendBtn').addEventListener('click', async () => {
+  // ---- Pickup date follows drop-off ----
+  // Same idea as the public booking form: picking a drop-off date fills the
+  // pickup date one rental length later (from Duration, "2 Weeks" = 14 days).
+  // Once pickup is set by hand, or came with the customer's request, it's left
+  // alone, unless it would land before drop-off.
+  var PICKUP_BY_HAND = PICKUP_BY_HAND || false;   // var: the request prefill above can set it first
+  function rentalDays() {
+    const m = String($('duration').value || '').match(/(\d+(?:\.\d+)?)\s*(day|week|month)/i);
+    if (!m) return 14;
+    const n = parseFloat(m[1]), unit = m[2].toLowerCase();
+    return Math.round(unit === 'day' ? n : unit === 'week' ? n * 7 : n * 30);
+  }
+  function autoPickup() {
+    const d = $('dropoffDate').value;
+    if (!d) return;
+    $('pickupDate').min = d;
+    const cur = $('pickupDate').value;
+    if (PICKUP_BY_HAND && cur && cur >= d) return;
+    const p = new Date(d + 'T12:00:00Z');
+    p.setUTCDate(p.getUTCDate() + rentalDays());
+    $('pickupDate').value = p.toISOString().slice(0, 10);
+    PICKUP_BY_HAND = false;
+    const days = rentalDays();
+    $('pickupNote').textContent = `Set to ${days % 7 === 0 ? (days / 7) + ' week' + (days === 7 ? '' : 's') : days + ' days'} after drop-off. Change it if this rental is different.`;
+    $('pickupNote').hidden = false;
+    $('pickupDate').dispatchEvent(new Event('input', { bubbles: true }));   // updates the availability line
+  }
+  $('dropoffDate').addEventListener('change', autoPickup);
+  $('duration').addEventListener('change', () => { PICKUP_BY_HAND = false; autoPickup(); });
+  $('pickupDate').addEventListener('change', () => { PICKUP_BY_HAND = true; $('pickupNote').hidden = true; });
+
+  // ---- Mode: send the invoice email, or log the rental only (was admin-add-rental.html) ----
+  let LOG_MODE = new URLSearchParams(location.search).get('mode') === 'log';
+  function setMode(log) {
+    if (SENT) return;
+    LOG_MODE = log;
+    document.body.classList.toggle('log-mode', log);
+    document.querySelectorAll('.mode-seg button').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.mode === 'log') === log)));
+    $('pageTitle').textContent = log ? 'Add rental' : 'Send invoice';
+    $('pageSub').textContent = log
+      ? 'Adds a rental to the log without emailing the customer. Use it for bookings paid another way, or to backfill past rentals.'
+      : 'Fills out and sends the branded invoice email with a Stripe payment button, and adds the rental to the log.';
+    $('sendBtn').textContent = log ? 'Review and add' : 'Review and send';
+    $('newInvoiceBtn').textContent = log ? 'Add another rental' : 'Start a new invoice';
+    document.title = (log ? 'Add rental' : 'Send invoice') + ' · Ready Tote Oklahoma admin';
+    // The sidebar highlights whichever of the two this is
+    document.querySelectorAll('.admin-nav a').forEach(a => {
+      const h = a.getAttribute('href') || '';
+      if (h.startsWith('admin-invoice.html')) a.toggleAttribute('aria-current', log ? h.includes('mode=log') : !h.includes('mode=log'));
+      if (a.hasAttribute('aria-current')) a.setAttribute('aria-current', 'page');
+    });
+    try { history.replaceState(null, '', log ? '?mode=log' : location.pathname); } catch {}
+    hideSummary();
+  }
+  document.querySelectorAll('.mode-seg button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode === 'log')));
+  document.addEventListener('DOMContentLoaded', () => setMode(LOG_MODE));
+
+  // ---- Send: build and check the payload, show a summary, send once ----
+  let SENT = false, PENDING_PAYLOAD = null;
+  const FIELD_NAMES = {
+    name: 'the customer’s name', email: 'the customer’s email', phone: 'the customer’s phone',
+    price: 'the rental price', duration: 'the duration', dropoffDate: 'the drop-off date', dropoffTime: 'the drop-off time',
+    pickupDate: 'the pickup date', pickupTime: 'the pickup time', stripeUrl: 'the Stripe payment link',
+    street: 'the drop-off street', city: 'the drop-off city', state: 'the drop-off state', zip: 'the drop-off zip',
+  };
+  function missing(f) {
+    showStatus('err', 'Add ' + (FIELD_NAMES[f] || f) + '.');
+    const el = $(f); if (el && el.type !== 'hidden') { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    return null;
+  }
+
+  $('sendBtn').addEventListener('click', () => {
+    if (SENT) return;
     $('invoiceTextPrompt').style.display = 'none';
-    const fields = ['secret','name','email','phone','price','duration','dropoffDate','dropoffTime','pickupDate','pickupTime','stripeUrl'];
-    if ($('serviceType').value !== 'self') fields.push('street','city','state','zip');
+    const payload = buildPayload();
+    if (!payload) return;
+    PENDING_PAYLOAD = payload;
+    showSummary(payload);
+  });
+
+  function buildPayload() {
+    if (!$('secret').value.trim()) { showStatus('err', 'You’re signed out. Log in again.'); return null; }
+    // Logging only needs who, what, how much and when; the email and address are optional
+    const fields = LOG_MODE
+      ? ['secret','name','phone','price','dropoffDate','pickupDate']
+      : ['secret','name','email','phone','price','duration','dropoffDate','dropoffTime','pickupDate','pickupTime','stripeUrl'];
+    if (!LOG_MODE && $('serviceType').value !== 'self') fields.push('street','city','state','zip');
     const payload = {};
     for (const f of fields) {
       payload[f] = $(f).value.trim();
-      if (!payload[f]) return showStatus('err', 'Missing: ' + f);
+      if (!payload[f]) return missing(f);
     }
-    if (!payload.price.replace(/^\$+/, '').trim()) return showStatus('err', 'Enter a price after the $.');
+    if (LOG_MODE) {
+      for (const f of ['email', 'duration', 'street', 'city', 'state', 'zip']) payload[f] = $(f).value.trim();
+      payload.dropoffTime = $('dropoffTime').value || '10:00';
+      payload.pickupTime = $('pickupTime').value || '10:00';
+    }
+    if (!payload.price.replace(/^\$+/, '').trim()) return missing('price');
+    if (payload.pickupDate < payload.dropoffDate) { showStatus('err', 'The pickup date is before the drop-off date.'); $('pickupDate').focus(); return null; }
 
     // Resolve package display name from the dropdown selection
     const pkgVal = $('package').value;
-    if (!pkgVal) return showStatus('err', 'Missing: package');
+    if (!pkgVal) { showStatus('err', 'Choose a package.'); $('package').focus(); return null; }
     if (pkgVal === 'custom') {
       const customName = $('customPackageName').value.trim();
-      if (!customName) return showStatus('err', 'Missing: custom package description');
+      if (!customName) { showStatus('err', 'Describe the custom package.'); $('customPackageName').focus(); return null; }
       payload.package = customName;
     } else {
       payload.package = PACKAGES[Number(pkgVal)]?.name || 'Package';
@@ -469,10 +586,10 @@
     const toteCount = Number($('toteCount').value);
     const dollyCount = Number($('dollyCount').value);
     if ($('toteCount').value.trim() === '' || !Number.isInteger(toteCount) || toteCount < 0) {
-      return showStatus('err', 'Tote count must be a whole number (0 or more).');
+      showStatus('err', 'Tote count must be a whole number (0 or more).'); $('toteCount').focus(); return null;
     }
     if ($('dollyCount').value.trim() === '' || !Number.isInteger(dollyCount) || dollyCount < 0) {
-      return showStatus('err', 'Dolly count must be a whole number (0 or more).');
+      showStatus('err', 'Dolly count must be a whole number (0 or more).'); $('dollyCount').focus(); return null;
     }
     payload.toteCount = toteCount;
     payload.dollyCount = dollyCount;
@@ -491,28 +608,92 @@
       } else {
         const ps = $('pstreet').value.trim(), pc = $('pcity').value.trim(),
               pst = $('pstate').value.trim(), pz = $('pzip').value.trim();
-        if (!ps || !pc || !pst || !pz) return showStatus('err', 'Missing: pickup address fields');
+        if (!LOG_MODE && (!ps || !pc || !pst || !pz)) { showStatus('err', 'Fill in the whole pickup address, or tick “same as drop-off”.'); $('pstreet').focus(); return null; }
         payload.pickupAddress = ps + ', ' + pc + ', ' + pst + ' ' + pz;
       }
+    }
+    if (LOG_MODE) {
+      // add-rental stores the address in separate fields
+      const same = $('sameAddress').checked && payload.serviceType !== 'self';
+      Object.assign(payload, {
+        dropoffAddressStreet: payload.street, dropoffAddressCity: payload.city, dropoffAddressState: payload.street ? payload.state : '', dropoffAddressZip: payload.zip,
+        pickupAddressStreet: same ? payload.street : $('pstreet').value.trim(), pickupAddressCity: same ? payload.city : $('pcity').value.trim(),
+        pickupAddressState: same ? (payload.street ? payload.state : '') : ($('pstreet').value.trim() ? $('pstate').value.trim() : ''), pickupAddressZip: same ? payload.zip : $('pzip').value.trim(),
+      });
+      if (payload.serviceType === 'self') {
+        for (const k of Object.keys(payload)) if (/^(dropoff|pickup)Address(Street|City|State|Zip)$/.test(k)) payload[k] = '';
+      }
+      delete payload.dropoffAddress; delete payload.pickupAddress; delete payload.stripeUrl;
     }
     delete payload.street; delete payload.city; delete payload.state; delete payload.zip;
 
     // Convert 24h picker values ("14:30") to 12h display ("2:30 PM")
     payload.dropoffTime = to12Hour(payload.dropoffTime);
     payload.pickupTime = to12Hour(payload.pickupTime);
+    return payload;
+  }
 
-    const btn = $('sendBtn');
-    btn.disabled = true; btn.textContent = 'Sending...';
+  function showSummary(p) {
+    const day = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const res = checkAvailability(p.dropoffDate, p.pickupDate, p.toteCount, prefillHold());
+    const box = $('sendSummary');
+    box.innerHTML = `
+      <h3>${LOG_MODE ? 'Add this rental to the log?' : 'Send this invoice?'}</h3>
+      <dl>
+        <dt>${LOG_MODE ? 'Customer' : 'To'}</dt><dd>${esc(p.name)}${p.email ? ' · ' + esc(p.email) : ''}${LOG_MODE ? ' · ' + esc(p.phone) : ''}</dd>
+        <dt>Amount</dt><dd><b>${esc(p.price)}</b> · ${esc(p.package)}${p.isMilitary ? ' · military' : ''}</dd>
+        <dt>Totes</dt><dd>${p.toteCount} totes · ${p.dollyCount} ${p.dollyCount === 1 ? 'dolly' : 'dollies'}</dd>
+        <dt>Dates</dt><dd>${esc(day(p.dropoffDate))} ${esc(p.dropoffTime)} to ${esc(day(p.pickupDate))} ${esc(p.pickupTime)}</dd>
+        <dt>Where</dt><dd>${p.serviceType === 'self' ? 'Customer picks up and returns' : LOG_MODE ? (esc([p.dropoffAddressStreet, p.dropoffAddressCity].filter(Boolean).join(', ')) || 'No address') : esc(p.dropoffAddress) + (p.pickupAddress !== p.dropoffAddress ? '<br>Pickup: ' + esc(p.pickupAddress) : '')}</dd>
+        ${LOG_MODE ? '<dt>Email</dt><dd>None. The customer isn’t emailed.</dd>' : ''}
+        ${res && !res.ok ? `<dt>Stock</dt><dd>${availabilityHtml(res)}</dd>` : ''}
+      </dl>
+      <div class="row-btns">
+        <button type="button" id="confirmSendBtn">${LOG_MODE ? 'Add to rental log' : 'Send invoice email'}</button>
+        <button type="button" class="secondary" id="editAgainBtn">Back to edit</button>
+      </div>`;
+    box.hidden = false;
+    $('sendBtn').hidden = true;
+    $('status').className = 'status';
+    $('confirmSendBtn').addEventListener('click', () => doSend(PENDING_PAYLOAD));
+    $('editAgainBtn').addEventListener('click', hideSummary);
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function hideSummary() {
+    if (SENT) return;
+    $('sendSummary').hidden = true;
+    $('sendBtn').hidden = false;
+    PENDING_PAYLOAD = null;
+  }
+  // Any edit after the summary is shown sends you back to review it again
+  document.querySelector('.card').addEventListener('input', e => { if (!e.target.closest('#sendSummary')) hideSummary(); });
+
+  async function doSend(payload) {
+    if (SENT || !payload) return;
+    payload.secret = $('secret').value.trim();
+    const btn = $('confirmSendBtn');
+    btn.disabled = true; btn.textContent = LOG_MODE ? 'Adding…' : 'Sending…';
     try {
-      const resp = await fetch('/.netlify/functions/send-invoice', {
+      const resp = await fetch('/.netlify/functions/' + (LOG_MODE ? 'add-rental' : 'send-invoice'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       if (resp.ok) {
-        showStatus('ok', 'Invoice sent to ' + payload.email + ' (BCC to you).');
+        // Lock the form: one more tap must not email the customer a second invoice
+        SENT = true;
+        $('sendSummary').hidden = true;
+        $('sendBtn').hidden = true;
+        $('newInvoiceBtn').hidden = false;
+        document.querySelectorAll('.card input, .card select, .card textarea').forEach(el => { el.disabled = true; });
+        document.querySelectorAll('.mode-seg button').forEach(b => { b.disabled = true; });
         if (PREFILL_REQUEST_KEY) markRequestInvoiced(PREFILL_REQUEST_KEY);
-        showInvoiceTextPrompt(payload.name, payload.phone, payload.email);
+        if (LOG_MODE) {
+          showStatus('ok', 'Added ' + payload.name + ' to the rental log. No email was sent.');
+        } else {
+          showStatus('ok', 'Invoice sent to ' + payload.email + ' (BCC to you).');
+          showInvoiceTextPrompt(payload.name, payload.phone, payload.email);
+        }
       } else if (resp.status === 401) {
         showStatus('err', 'Wrong admin secret.');
       } else {
@@ -520,10 +701,29 @@
         showStatus('err', 'Send failed (' + resp.status + '): ' + (detail || 'check function logs.'));
       }
     } catch (e) {
-      showStatus('err', 'Network error — are you on the live site?');
+      showStatus('err', 'Network error. The invoice may not have sent; check your inbox for the BCC before trying again.');
     }
-    btn.disabled = false; btn.textContent = 'Send Invoice Email';
-  });
+    if (!SENT) { btn.disabled = false; btn.textContent = LOG_MODE ? 'Add to rental log' : 'Send invoice email'; }
+  }
+
+  // ---- Availability for the chosen dates and tote count ----
+  // A request that's awaiting confirmation or confirmed already holds its
+  // totes in the availability numbers; add them back (see admin-availability.js).
+  function prefillHold() {
+    const r = PENDING_PREFILL;
+    if (!r || !['awaiting_confirmation', 'confirmed'].includes(r.status)) return null;
+    const totes = totesInPackageText(r.package);
+    return totes ? { start: r.deliveryDate, end: r.pickupDate, totes } : null;
+  }
+  function renderAvailLine() {
+    const start = $('dropoffDate').value, end = $('pickupDate').value;
+    if (!start || !end) { $('availLine').innerHTML = ''; return; }
+    const need = Number($('toteCount').value) || 0;
+    $('availLine').innerHTML = availabilityHtml(checkAvailability(start, end, need, prefillHold()));
+  }
+  ['dropoffDate', 'pickupDate', 'toteCount'].forEach(id => $(id).addEventListener('input', renderAvailLine));
+  $('package').addEventListener('change', () => setTimeout(renderAvailLine, 0));
+  loadAvailability().then(renderAvailLine);
 
   function showStatus(kind, msg) {
     const s = $('status');
@@ -545,7 +745,7 @@
     if (!phone) { box.style.display = 'none'; return; }
     const first = (name || 'there').split(' ')[0];
     const msg = `Hi ${first}, it's Ready Tote Oklahoma! Your invoice just went out to ${email}. Don't see it? Reply here and we'll get you fixed up!`;
-    box.innerHTML = `<a class="sms-btn" href="${smsLink(phone, msg)}">📱 Text invoice confirmation to ${esc(first)} →</a>`;
+    box.innerHTML = `<a class="sms-btn" href="${smsLink(phone, msg)}">Text invoice confirmation to ${esc(first)} →</a>`;
     box.style.display = 'block';
   }
 

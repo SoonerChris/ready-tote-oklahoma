@@ -102,6 +102,25 @@ function pickupAddressOf(r) {
 document.addEventListener('DOMContentLoaded', () => {
   const nav = document.querySelector('.admin-nav');
   if (!nav) return;
+
+  // Product mark at the top of the sidebar, plus the Menu button that
+  // opens the folded nav on phones (hidden on wider screens by CSS).
+  const brand = document.createElement('a');
+  brand.className = 'admin-brand';
+  brand.href = 'admin.html';
+  brand.innerHTML = '<img src="images/logo.png" alt=""><span><b>Ready Tote</b><small>Admin</small></span>';
+  const menuBtn = document.createElement('button');
+  menuBtn.type = 'button';
+  menuBtn.className = 'admin-menu-btn';
+  menuBtn.textContent = 'Menu';
+  menuBtn.setAttribute('aria-expanded', 'false');
+  menuBtn.addEventListener('click', () => {
+    const open = nav.classList.toggle('open');
+    menuBtn.setAttribute('aria-expanded', String(open));
+    menuBtn.textContent = open ? 'Close' : 'Menu';
+  });
+  nav.prepend(brand, menuBtn);
+
   const logout = document.createElement('a');
   logout.href = '#';
   logout.className = 'logout-link';

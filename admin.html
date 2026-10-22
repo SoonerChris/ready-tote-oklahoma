@@ -7,171 +7,221 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<title>Admin Dashboard — Ready Tote Oklahoma</title>
-<link rel="stylesheet" href="admin-shared.css?v=20260819">
-<script src="admin-shared.js?v=20260819"></script>
+<title>Dashboard · Ready Tote Oklahoma admin</title>
+<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<script src="admin-shared.js?v=20261022"></script>
 <style>
-  .wrap{max-width:840px;margin:0 auto;}
-  .header{display:flex;align-items:center;gap:14px;margin-bottom:6px;}
-  .header img{height:52px;width:auto;}
-  h1{font-size:1.5rem;margin:0;}
-  .sub{color:var(--steel);font-size:0.9rem;margin:0 0 20px;}
-  .secret-bar{background:var(--white);border:1px solid var(--line);border-radius:8px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 1px 2px rgba(30,27,24,0.04);}
-  .secret-bar label{font-size:0.82rem;font-weight:bold;white-space:nowrap;}
-  .secret-bar input{flex:1;min-width:200px;padding:10px 12px;font-size:0.95rem;border:1px solid var(--line);border-radius:6px;background:var(--cream);}
-  .secret-bar button{margin-top:0;width:auto;padding:10px 20px;font-size:0.9rem;font-weight:bold;background:var(--gold);color:var(--ink);border:none;border-radius:8px;cursor:pointer;white-space:nowrap;}
-  .secret-bar button:disabled{opacity:0.6;}
+  /* Dashboard layout: the cream body is the frame (sidebar on it, no rule),
+     the work sits on one white sheet inset 8px from the window's right,
+     top and bottom edges.
+     Grid at 1440: 1440 - 228 sidebar - 8 inset = 1204 sheet;
+     1204 - 2 x 32 padding = 1140 = 732 main + 24 gap + 384 rail. */
+  :root{
+    --sheet:#FFFFFF;
+    --border:#E9E4D8;      /* card edge, about 1.2:1 on white */
+    --rule:#F1EDE4;        /* row rules, one step lighter */
+    --control:#D6CFBF;     /* control borders, one step darker */
+    --muted:#6B6259;       /* the brand's steel, 5.9:1 on white */
+    --data:#A87F22;        /* brand gold darkened to 3.6:1 on white, for marks only */
+    --track:#EFEBE2;
+    --positive:#247B50;
+    --negative:#C0392B;
+    --pill-go-bg:#E3F4E9;   --pill-go-ink:#14492F;
+    --pill-back-bg:#FBF0D6; --pill-back-ink:#6B4C0C;
+    --pill-self-bg:#F1EEE7; --pill-self-ink:#4A433B;
+  }
+  body{padding:8px 8px 8px 236px !important;font-size:15px;line-height:1.45;}
+  .sheet{background:var(--sheet);border:1px solid var(--border);border-radius:16px;min-height:calc(100vh - 16px);padding:28px 32px 40px;}
+  .num,.fig{font-variant-numeric:tabular-nums;}
 
-  /* KPI panel */
-  .kpi-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
-  .kpi-head h2{margin:0;font-size:1rem;}
-  .period-toggle{display:flex;gap:6px;flex-wrap:wrap;}
-  .period-toggle button{margin:0;width:auto;padding:8px 14px;font-size:0.78rem;font-weight:bold;background:var(--cream);color:var(--ink);border:1px solid var(--line);border-radius:999px;cursor:pointer;transition:background 0.1s,border-color 0.1s;}
-  .period-toggle button:hover{border-color:var(--gold);}
-  .period-toggle button.active{background:var(--gold);border-color:var(--gold);color:var(--ink);}
+  /* Title row */
+  .title-row{display:flex;justify-content:space-between;align-items:flex-end;gap:16px 24px;flex-wrap:wrap;margin-bottom:24px;}
+  .title-row h1{font-family:'Barlow',Arial,sans-serif;font-weight:700;font-size:24px;line-height:1.2;letter-spacing:-0.01em;margin:0;}
+  .finding{margin:4px 0 0;color:var(--ink);font-size:15px;max-width:640px;}
+  .finding .when{color:var(--muted);}
+  .title-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .fresh{font-size:13px;color:var(--muted);}
+  .linkbtn{all:unset;cursor:pointer;color:var(--ink);font-weight:600;font-size:13px;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--control);}
+  .linkbtn:hover{text-decoration-color:var(--ink);}
+  .linkbtn:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:2px;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;height:36px;padding:0 16px;border-radius:6px;font:600 14px/1 'Barlow',Arial,sans-serif;text-decoration:none;white-space:nowrap;cursor:pointer;transition:background .12s ease;}
+  .btn.primary{background:var(--ink);color:#fff;border:1px solid var(--ink);}
+  .btn.primary:hover{background:#3a342d;}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--control);}
+  .btn.ghost:hover{border-color:var(--ink);}
+  .btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
 
-  .net-bubble{text-align:center;background:var(--cream);border:2px solid var(--gold);border-radius:8px;padding:16px;margin-bottom:16px;}
-  .net-lbl{font-size:0.7rem;color:var(--steel);font-weight:bold;letter-spacing:0.05em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;}
-  .net-amt{font-family:'Archivo Black',sans-serif;font-size:2rem;margin:8px 0 2px;}
-  .net-sub{font-size:0.78rem;color:var(--steel);font-family:'JetBrains Mono',monospace;}
+  /* Grid */
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) 384px;gap:24px;align-items:start;}
+  .col{display:flex;flex-direction:column;gap:24px;min-width:0;}
+  .card{max-width:none;margin:0;background:#fff;border:1px solid var(--border);border-radius:10px;padding:0;box-shadow:none;}
+  .card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:16px 20px 12px;}
+  .card-head h2{font-family:'Barlow',Arial,sans-serif;font-weight:700;font-size:16px;margin:0;letter-spacing:0;}
+  .card-head .count{color:var(--muted);font-weight:500;margin-left:6px;}
+  .card-head a,.card-foot a{color:var(--ink);font-size:13px;font-weight:600;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--control);}
+  .card-head a:hover,.card-foot a:hover{text-decoration-color:var(--ink);}
+  .card-body{padding:0 20px 8px;}
+  .card-foot{padding:4px 20px 16px;}
+  .empty-line{margin:0 0 12px;padding:10px 12px;border:1px dashed var(--control);border-radius:8px;color:var(--muted);font-size:14px;}
 
-  .kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
-  @media(max-width:560px){.kpi-row{grid-template-columns:1fr;}}
+  /* Rows */
+  .row{display:grid;align-items:center;gap:4px 16px;padding:12px 0;border-top:1px solid var(--rule);}
+  .row:first-child{border-top:none;}
+  .who{font-weight:600;color:var(--ink);}
+  .meta{color:var(--muted);font-size:13px;}
+  .texts .row{grid-template-columns:minmax(0,1fr) auto auto;}
+  .texts .why{font-size:13px;color:var(--muted);white-space:nowrap;text-align:right;}
+  .texts .btn{height:34px;}
 
-  .ops-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;}
-  @media(max-width:560px){.ops-row{grid-template-columns:1fr;}}
+  .day{padding:14px 0 4px;font-size:13px;font-weight:600;color:var(--muted);}
+  .day:first-child{padding-top:0;}
+  .day b{color:var(--ink);font-weight:700;}
+  .sched .row{grid-template-columns:76px 96px minmax(0,1fr) auto;}
+  .sched .day + .row{border-top:none;}
+  .sched .time{font-size:14px;color:var(--ink);}
+  .sched .totes{text-align:right;font-size:14px;color:var(--muted);}
+  .kind{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:4px;font-size:12px;font-weight:600;white-space:nowrap;flex:none;justify-self:start;}
+  .kind.go{background:var(--pill-go-bg);color:var(--pill-go-ink);}
+  .kind.back{background:var(--pill-back-bg);color:var(--pill-back-ink);}
+  .kind.self{background:var(--pill-self-bg);color:var(--pill-self-ink);}
 
-  .scard{background:var(--white);border:1px solid var(--line);border-radius:8px;padding:18px 16px;text-align:center;box-shadow:0 1px 2px rgba(30,27,24,0.04);}
-  .scard .num{font-family:'Archivo Black',sans-serif;font-size:1.5rem;line-height:1.1;}
-  .scard .lbl{font-size:0.7rem;color:var(--steel);margin-top:4px;text-transform:uppercase;letter-spacing:0.04em;font-family:'JetBrains Mono',monospace;}
-  .scard .trend{font-size:0.72rem;font-weight:bold;margin-top:4px;}
-  .scard .cap{font-size:0.68rem;color:var(--steel);margin-top:2px;}
-  .scard.gold{border-color:var(--gold);background:var(--gold-bg);}
-  .scard.gold .num{color:var(--gold);}
-  .scard.green{border-color:var(--green);background:var(--green-bg);}
-  .scard.green .num{color:var(--green);}
-  .scard.red{border-color:var(--red);background:var(--red-bg);}
-  .scard.red .num{color:var(--red);}
+  /* Tote fleet: one segment per active rental, seams between them, the shelf as the grey track */
+  .fleet-figs{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;}
+  .fleet-figs .big{font-size:30px;font-weight:600;line-height:1;color:var(--ink);}
+  .fleet-figs .lbl{font-size:13px;color:var(--muted);margin-top:6px;}
+  .fleet-figs .right{text-align:right;}
+  .fleet-figs .right .big{font-size:22px;font-weight:500;}
+  .bar{display:flex;gap:2px;height:14px;margin:14px 0 6px;border-radius:3px;overflow:hidden;background:var(--track);}
+  .bar span{display:block;height:100%;background:var(--data);}
+  .bar span.over{background:var(--negative);}
+  .bar-scale{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px;}
+  .notice{margin:8px 0 12px;padding:8px 12px;border-radius:6px;background:#FFEDEA;color:#831C1E;font-size:13px;font-weight:600;}
+  .back-list .row{grid-template-columns:minmax(0,1fr) auto auto;padding:10px 0;}
+  .back-list .totes,.back-list .date{font-size:14px;text-align:right;}
+  .back-list .date{min-width:72px;color:var(--muted);}
 
-  /* Sections */
-  .section{background:var(--white);border:1px solid var(--line);border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(30,27,24,0.04);}
-  .section h2{font-size:1rem;margin:0 0 14px;display:flex;align-items:center;gap:8px;}
-  .section h2 .badge{font-size:0.72rem;font-family:'JetBrains Mono',monospace;background:var(--gold-bg);border:1px solid var(--gold);color:var(--gold);padding:2px 10px;border-radius:999px;font-weight:bold;}
+  /* Money */
+  .seg{display:flex;gap:2px;padding:2px;background:var(--track);border-radius:8px;margin:0 20px 16px;}
+  .seg button{all:unset;box-sizing:border-box;flex:1;text-align:center;height:30px;line-height:28px;border:1px solid transparent;border-radius:6px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;}
+  .seg button:hover{color:var(--ink);}
+  .seg button[aria-pressed="true"]{background:#fff;color:var(--ink);border-color:var(--border);}
+  .seg button:focus-visible{outline:2px solid var(--ink);outline-offset:1px;}
+  .net .lbl{font-size:14px;color:var(--muted);}
+  .net .big{font-size:30px;font-weight:600;line-height:1.15;margin-top:2px;}
+  .net .delta{font-size:13px;color:var(--muted);margin-top:4px;}
+  .net .delta .up{color:var(--positive);font-weight:600;}
+  .net .delta .down{color:var(--negative);font-weight:600;}
+  .kv{margin:12px 0 4px;}
+  .kv .row{grid-template-columns:1fr auto;padding:9px 0;font-size:14px;}
+  .kv .row > :last-child{text-align:right;font-weight:600;}
+  .kv .sub{display:block;font-size:12px;color:var(--muted);font-weight:400;}
 
-  /* Schedule list */
-  .sched-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:0.88rem;}
-  .sched-item:last-child{border-bottom:none;}
-  .sched-day{font-weight:bold;width:90px;flex:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;}
-  .sched-type{font-size:0.72rem;font-weight:bold;padding:3px 10px;border-radius:999px;flex:none;}
-  .sched-type.deliver{background:var(--green-bg);color:var(--green);border:1px solid var(--green);}
-  .sched-type.pickup{background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold);}
-  .sched-type.self{background:var(--cream);color:var(--steel);border:1px solid var(--line);}
-  .sched-who{flex:1;min-width:0;}
-  .sched-addr{color:var(--steel);font-size:0.78rem;}
+  /* Loading: the final layout with grey bars at real size */
+  .skel{display:block;height:14px;margin:14px 0;border-radius:3px;background:var(--track);}
+  .skel.w60{width:60%;} .skel.w40{width:40%;} .skel.w80{width:80%;}
+  .status{margin:0 0 16px;}
 
-  /* Action tiles */
-  .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:16px;}
-  @media(max-width:560px){.tiles{grid-template-columns:1fr;}}
-  .tile{display:flex;align-items:center;gap:14px;background:var(--white);border:1px solid var(--line);border-radius:8px;padding:16px 18px;text-decoration:none;color:var(--ink);transition:transform 0.1s,border-color 0.1s;box-shadow:0 1px 2px rgba(30,27,24,0.04);}
-  .tile:hover{transform:translateY(-2px);border-color:var(--gold);}
-  .tile .icon{font-size:1.4rem;flex:none;}
-  .tile h3{margin:0;font-size:0.95rem;font-family:'Barlow',sans-serif;font-weight:700;}
-  .tile h3 .badge{font-size:0.68rem;font-family:'JetBrains Mono',monospace;background:var(--crate-red-bg);border:1px solid var(--crate-red);color:var(--crate-red);padding:2px 8px;border-radius:999px;font-weight:bold;margin-left:6px;vertical-align:middle;}
-  .tile p{margin:2px 0 0;font-size:0.78rem;color:var(--steel);line-height:1.3;}
+  footer{margin:24px 0 0;font-size:13px;color:var(--muted);}
+  footer a{color:var(--ink);}
 
-  /* Alerts */
-  .alerts{margin-bottom:16px;}
-  .alert{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:8px;margin-bottom:8px;font-size:0.88rem;font-weight:500;}
-  .alert.warn{background:var(--gold-bg);border:1px solid var(--gold);color:var(--ink);}
-  .alert.info{background:var(--green-bg);border:1px solid var(--green);color:var(--green);}
-  .alert.danger{background:var(--red-bg);border:1px solid var(--red);color:var(--red);}
-
-  .loading{text-align:center;color:var(--steel);padding:30px 0;font-size:0.9rem;}
-  footer{text-align:center;font-size:0.78rem;color:var(--steel);margin-top:24px;}
-  footer a{color:var(--gold);}
+  @media(max-width:1100px){
+    .grid{grid-template-columns:minmax(0,1fr);}
+  }
+  @media(max-width:760px){
+    body{padding:48px 0 0 !important;}
+    .sheet{border:none;border-radius:0;min-height:0;padding:20px 16px 32px;}
+    .title-row{align-items:flex-start;}
+    .title-actions{width:100%;justify-content:space-between;}
+    .card-head,.card-body,.card-foot{padding-left:16px;padding-right:16px;}
+    .seg{margin-left:16px;margin-right:16px;}
+    .sched .row{grid-template-columns:64px minmax(0,1fr) auto;}
+    .sched .row .kind{grid-column:2;grid-row:1;}
+    .sched .row .person{grid-column:2 / -1;grid-row:2;}
+    .sched .row .time{grid-row:1 / span 2;align-self:start;padding-top:2px;}
+    .sched .row .totes{grid-column:3;grid-row:1;}
+    .texts .row{grid-template-columns:minmax(0,1fr) auto;}
+    .texts .why{grid-column:1;grid-row:2;text-align:left;}
+    .texts .row .btn{grid-column:2;grid-row:1 / span 2;min-height:44px;}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="header">
-    <img src="images/logo.png" alt="Ready Tote Oklahoma">
+<nav class="admin-nav" aria-label="Admin tools">
+  <a href="admin.html" aria-current="page">Dashboard</a>
+  <a href="admin-requests.html">Requests</a>
+  <a href="admin-invoice.html">Send Invoice</a>
+  <a href="admin-invoice.html?mode=log">Add Rental</a>
+  <a href="admin-reminders.html">Reminders</a>
+  <a href="admin-rentals.html">All Rentals</a>
+  <a href="admin-contacts.html">Contacts</a>
+  <a href="admin-finance.html">Finance</a>
+  <a href="admin-outreach.html">Outreach</a>
+  <a href="admin-inventory.html">Inventory</a>
+</nav>
+
+<main class="sheet">
+  <input type="hidden" id="secret">
+
+  <div class="title-row">
     <div>
-      <h1>Admin Dashboard</h1>
-      <p class="sub" style="margin:0;">Ready Tote Oklahoma — internal tools</p>
+      <h1>Dashboard</h1>
+      <p class="finding" id="finding"><span class="when">Loading today's jobs…</span></p>
+    </div>
+    <div class="title-actions">
+      <span class="fresh" id="fresh"></span>
+      <button type="button" class="linkbtn" id="loadBtn">Refresh</button>
+      <a class="btn primary" id="primaryAction" href="admin-invoice.html?mode=log">Add rental</a>
     </div>
   </div>
 
-  <nav class="admin-nav wide" aria-label="Admin tools">
-    <a href="admin.html" aria-current="page"><span class="nav-icon" aria-hidden="true">📊</span> Dashboard</a>
-  <a href="admin-requests.html"><span class="nav-icon" aria-hidden="true">📥</span> Requests</a>
-    <a href="admin-invoice.html"><span class="nav-icon" aria-hidden="true">🧾</span> Send Invoice</a>
-    <a href="admin-add-rental.html"><span class="nav-icon" aria-hidden="true">➕</span> Add Rental</a>
-    <a href="admin-reminders.html"><span class="nav-icon" aria-hidden="true">🚚</span> Reminders</a>
-    <a href="admin-rentals.html"><span class="nav-icon" aria-hidden="true">📋</span> All Rentals</a>
-    <a href="admin-contacts.html"><span class="nav-icon" aria-hidden="true">📇</span> Contacts</a>
-    <a href="admin-finance.html"><span class="nav-icon" aria-hidden="true">💰</span> Finance</a>
-    <a href="admin-outreach.html"><span class="nav-icon" aria-hidden="true">🤝</span> Outreach</a>
-    <a href="admin-inventory.html"><span class="nav-icon" aria-hidden="true">📦</span> Inventory</a>
-  </nav>
-
-  <div class="secret-bar">
-  <input type="hidden" id="secret">
-    <button id="loadBtn">Load dashboard</button>
-  </div>
   <div class="status" id="status"></div>
 
-  <div id="dashboard" style="display:none;">
-    <!-- Alerts -->
-    <div class="alerts" id="alerts"></div>
-
-    <!-- Interactive KPI panel -->
-    <div class="section" id="kpiSection">
-      <div class="kpi-head">
-        <h2>📊 Snapshot</h2>
-        <div class="period-toggle" id="periodToggle">
-          <button type="button" data-period="week">Last 7 Days</button>
-          <button type="button" data-period="month" class="active">This Month</button>
-          <button type="button" data-period="year">This Year</button>
-          <button type="button" data-period="all">All Time</button>
+  <div class="grid">
+    <div class="col">
+      <section class="card texts" aria-labelledby="textsTitle">
+        <div class="card-head">
+          <h2 id="textsTitle">Texts to send today<span class="count num" id="textsCount"></span></h2>
+          <a href="admin-reminders.html">Reminders</a>
         </div>
-      </div>
-      <div class="net-bubble">
-        <div class="net-lbl" id="netLbl">Net Income — This Month</div>
-        <div class="net-amt" id="netAmt">$0.00</div>
-        <div class="net-sub" id="netSub"></div>
-      </div>
-      <div class="kpi-row" id="kpiRow"></div>
+        <div class="card-body" id="textsList"><span class="skel w80"></span><span class="skel w60"></span><span class="skel w80"></span></div>
+      </section>
+
+      <section class="card sched" aria-labelledby="schedTitle">
+        <div class="card-head">
+          <h2 id="schedTitle">Next 7 days<span class="count num" id="schedCount"></span></h2>
+          <a href="admin-rentals.html">All rentals</a>
+        </div>
+        <div class="card-body" id="schedList"><span class="skel w80"></span><span class="skel w60"></span><span class="skel w80"></span><span class="skel w40"></span></div>
+      </section>
     </div>
 
-    <!-- Right-now operational numbers (don't change with the period toggle) -->
-    <div class="ops-row" id="opsCards"></div>
+    <div class="col">
+      <section class="card" aria-labelledby="fleetTitle">
+        <div class="card-head">
+          <h2 id="fleetTitle">Totes</h2>
+          <a href="admin-inventory.html">Inventory</a>
+        </div>
+        <div class="card-body" id="fleet"><span class="skel w60"></span><span class="skel w80"></span></div>
+      </section>
 
-    <!-- This Week schedule -->
-    <div class="section" id="schedSection">
-      <h2>📅 This Week <span class="badge" id="schedCount">0</span></h2>
-      <div id="schedList"></div>
-    </div>
-
-    <!-- Texts to send today -->
-    <div class="section" id="textsSection">
-      <h2>📱 Texts to Send Today <span class="badge" id="textsCount">0</span></h2>
-      <div id="textsList"></div>
-    </div>
-
-    <!-- Quick actions -->
-    <div class="tiles">
-      <a class="tile" href="admin-requests.html"><div class="icon">📥</div><div><h3>Booking Requests</h3><p>Review new requests, confirm with customers, then invoice</p></div></a>
-      <a class="tile" href="admin-invoice.html"><div class="icon">🧾</div><div><h3>Send Invoice</h3><p>Parse booking email, send branded Stripe invoice</p></div></a>
-      <a class="tile" href="admin-add-rental.html"><div class="icon">➕</div><div><h3>Add Rental</h3><p>Log a rental without sending an email</p></div></a>
-      <a class="tile" href="admin-reminders.html"><div class="icon">🚚</div><div><h3>Reminders</h3><p>Today's due texts — delivery, pickup, address checks, follow-ups</p></div></a>
-      <a class="tile" href="admin-rentals.html"><div class="icon">📋</div><div><h3>All Rentals</h3><p>Search, edit, mark paid, photos — every rental on the books</p></div></a>
-      <a class="tile" href="admin-contacts.html"><div class="icon">📇</div><div><h3>Contacts</h3><p>Search every renter's phone, email, and address</p></div></a>
-      <a class="tile" href="admin-finance.html"><div class="icon">💰</div><div><h3>Finance</h3><p>Sales, expenses, mileage, CSV exports</p></div></a>
+      <section class="card" aria-labelledby="moneyTitle">
+        <div class="card-head">
+          <h2 id="moneyTitle">Money</h2>
+          <a href="admin-finance.html">Finance</a>
+        </div>
+        <div class="seg" id="periodToggle" role="group" aria-label="Period">
+          <button type="button" data-period="week" aria-pressed="false">7 days</button>
+          <button type="button" data-period="month" aria-pressed="true">Month</button>
+          <button type="button" data-period="year" aria-pressed="false">Year</button>
+          <button type="button" data-period="all" aria-pressed="false">All</button>
+        </div>
+        <div class="card-body" id="money"><span class="skel w40"></span><span class="skel w80"></span></div>
+      </section>
     </div>
   </div>
-</div>
 
-<footer><a href="/">← readytoteokc.com</a></footer>
+  <footer><a href="/">readytoteokc.com</a></footer>
+</main>
 
 <script>
   const $ = (id) => document.getElementById(id);
@@ -183,20 +233,20 @@
 
   const priceNum = p => { const m = String(p||'').replace(/[^0-9.]/g,''); return m ? parseFloat(m) : 0; };
   const sumPrice = arr => arr.reduce((t,r) => t + priceNum(r.price), 0);
-  const money = n => '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
   const moneyDec = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + 's')}`;
+  const totesInPackage = p => { const m = String(p||'').match(/(\d+)\s*totes?/i); return m ? parseInt(m[1], 10) : 0; };
 
   let DATA = { rentals: [], expenses: [], mileage: [], invEvents: [], requests: [] };
   let TODAY = '';
   let PERIOD = 'month';
-  const PERIOD_LABEL = { week: 'Last 7 Days', month: 'This Month', year: 'This Year', all: 'All Time' };
 
   document.querySelectorAll('#periodToggle button').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('#periodToggle button').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+      document.querySelectorAll('#periodToggle button').forEach(b => b.setAttribute('aria-pressed', 'false'));
+      btn.setAttribute('aria-pressed', 'true');
       PERIOD = btn.dataset.period;
-      renderKPIs();
+      renderMoney();
     });
   });
 
@@ -204,7 +254,7 @@
     const secret = $('secret').value.trim();
     if (!secret) return showErr('Enter the admin secret.');
     const btn = $('loadBtn');
-    btn.disabled = true; btn.textContent = 'Loading…';
+    btn.disabled = true; btn.textContent = 'Refreshing…';
     try {
       const [rResp, fResp, iResp, qResp] = await Promise.all([
         post('get-rentals', { secret }),
@@ -212,8 +262,8 @@
         post('tote-stock', { secret, action: 'list' }),
         post('get-requests', { secret }),
       ]);
-      if ([rResp, fResp, iResp, qResp].some(r => r.status === 401)) return showErr('Wrong admin secret.');
-      if (![rResp, fResp, iResp, qResp].every(r => r.ok)) return showErr('Load failed.');
+      if ([rResp, fResp, iResp, qResp].some(r => r.status === 401)) return showErr('Wrong admin secret. Log out and sign in again.');
+      if (![rResp, fResp, iResp, qResp].every(r => r.ok)) return showErr(loadFailedMsg('Some data didn\'t load.'));
 
       const rd = await rResp.json();
       const fd = await fResp.json();
@@ -229,10 +279,14 @@
       TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
 
       render();
-      $('dashboard').style.display = 'block';
       $('status').style.display = 'none';
-    } catch { showErr('Network error — use on the live site.'); }
-    finally { btn.disabled = false; btn.textContent = 'Load dashboard'; }
+      $('fresh').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' });
+    } catch { showErr(loadFailedMsg('Network error. This only works on the live site.')); }
+    finally { btn.disabled = false; btn.textContent = 'Refresh'; }
+  }
+
+  function loadFailedMsg(m) {
+    return TODAY ? `${m} Showing data from ${$('fresh').textContent.replace('Updated ', '')}.` : m;
   }
 
   function post(fn, body) {
@@ -241,108 +295,148 @@
     });
   }
 
+  // Any stored time ("14:30" or "2:30 PM") -> "2:30 PM" for display
+  function fmtTime(t) {
+    const m = String(t || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return t || '';
+    const h = parseInt(m[1], 10);
+    return (h % 12 || 12) + ':' + m[2] + ' ' + (h >= 12 ? 'PM' : 'AM');
+  }
+  // Sort key in minutes since midnight, works for either format
+  function timeKey(t) {
+    const m = String(t || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+    if (!m) return 0;
+    let h = parseInt(m[1], 10);
+    if (m[3]) { const pm = m[3].toUpperCase() === 'PM'; if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
+    return h * 60 + parseInt(m[2], 10);
+  }
+  // "Today", "Tomorrow", else "Thu, Oct 22"
+  function dayName(iso) {
+    if (iso === TODAY) return 'Today';
+    if (iso === shiftDate(TODAY, 1)) return 'Tomorrow';
+    return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  const shortDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const cityOf = addr => { const parts = String(addr || '').split(',').map(s => s.trim()); return parts.length >= 3 ? parts[parts.length - 2] : ''; };
+
   function render() {
-    const { rentals, reminders, expenses, invEvents, requests } = DATA;
+    const { rentals, reminders, invEvents, requests } = DATA;
     const today = TODAY;
 
     const activeRentals = rentals.filter(r => r.dropoffDate <= today && r.pickupDate >= today);
-    const textsToday = reminders.delivery.length + reminders.pickup.length + reminders.review.length;
     const pendingRequests = requests.filter(r => r.status === 'new' || r.status === 'reviewed' || r.status === 'awaiting_confirmation').length;
 
     const ADD_TYPES = ['purchased', 'returned-to-service'];
-    const totesInPackage = p => { const m = String(p||'').match(/(\d+)\s*totes?/i); return m ? parseInt(m[1], 10) : 0; };
     const totalTotesOwned = invEvents.reduce((t,e) => t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity), 0);
     const totesDeployed = activeRentals.reduce((t,r) => t + totesInPackage(r.package), 0);
     const totesAvailable = totalTotesOwned - totesDeployed;
 
-    // ---- Alerts ----
-    const alerts = [];
-    if (textsToday > 0) alerts.push({ type: 'warn', msg: `📱 ${textsToday} reminder text${textsToday>1?'s':''} to send today` });
-    const tomorrow = shiftDate(today, 1);
-    const tomorrowDeliveries = rentals.filter(r => r.dropoffDate === tomorrow);
-    if (tomorrowDeliveries.length > 0) alerts.push({ type: 'info', msg: `🚚 ${tomorrowDeliveries.length} deliver${tomorrowDeliveries.length>1?'ies':'y'} tomorrow` });
-    if (totesAvailable < 0) alerts.push({ type: 'danger', msg: `📦 ${Math.abs(totesAvailable)} totes oversold — check availability before booking more` });
-    $('alerts').innerHTML = alerts.map(a => `<div class="alert ${a.type}">${a.msg}</div>`).join('');
+    // ---- Texts to send ----
+    const allTexts = [
+      ...reminders.delivery.map(r => ({ ...r, why: r.dropoffDate === today ? 'Delivery today' : 'Delivery tomorrow' })),
+      ...(reminders.pickupTomorrow || []).map(r => ({ ...r, why: r.pickupDate === today ? 'Pickup today' : 'Pickup tomorrow' })),
+      ...reminders.pickup.map(r => ({ ...r, why: 'Pickup in 2 days' })),
+      ...(reminders.addressCheck || []).map(r => ({ ...r, why: 'Confirm address' })),
+      ...(reminders.followup || []).map(r => ({ ...r, why: 'Invoice follow-up' })),
+      ...reminders.review.map(r => ({ ...r, why: 'Ask for a review' })),
+    ].map(r => ({ ...r, why: r.why + (r.overdue ? ' · overdue' : '') }));
+    $('textsCount').textContent = allTexts.length ? ' ' + allTexts.length : '';
+    $('textsList').innerHTML = allTexts.length ? allTexts.map(r => `
+      <div class="row">
+        <div class="person">
+          <div class="who">${esc(r.name)}</div>
+          <div class="meta"><span class="num">${esc(r.phone)}</span> · ${plural(totesInPackage(r.package), 'tote')}</div>
+        </div>
+        <div class="why">${r.why}</div>
+        <a class="btn ghost" href="${escAttr(r.sms)}">Text ${esc(String(r.name).split(' ')[0])}</a>
+      </div>`).join('') : '<p class="empty-line">No texts due today.</p>';
 
-    // ---- Right-now ops cards (not period-dependent) ----
-    $('opsCards').innerHTML = `
-      <div class="scard green"><div class="num">${activeRentals.length}</div><div class="lbl">Active rentals</div></div>
-      <div class="scard ${totesAvailable < 0 ? 'red' : 'green'}"><div class="num">${totesAvailable}</div><div class="lbl">Totes available</div></div>
-      <div class="scard ${pendingRequests > 0 ? 'gold' : ''}"><div class="num">${pendingRequests}</div><div class="lbl">Requests pending</div></div>
-    `;
-
-    renderKPIs();
-
-    // ---- This Week schedule ----
+    // ---- Next 7 days ----
     const endDate = shiftDate(today, 7);
-
-    // Any stored time ("14:30" or "2:30 PM") -> "2:30 PM" for display
-    function fmtTime(t) {
-      const m = String(t || '').trim().match(/^(\d{1,2}):(\d{2})$/);
-      if (!m) return t || '';
-      const h = parseInt(m[1], 10);
-      return (h % 12 || 12) + ':' + m[2] + ' ' + (h >= 12 ? 'PM' : 'AM');
-    }
-    // Sort key in minutes since midnight, works for either format
-    function timeKey(t) {
-      const m = String(t || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
-      if (!m) return 0;
-      let h = parseInt(m[1], 10);
-      if (m[3]) { const pm = m[3].toUpperCase() === 'PM'; if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
-      return h * 60 + parseInt(m[2], 10);
-    }
     const events = [];
     for (const r of rentals) {
       const self = r.serviceType === 'self';
       if (r.dropoffDate >= today && r.dropoffDate <= endDate) {
-        events.push({ date: r.dropoffDate, time: r.dropoffTime || '', type: self ? 'Customer pickup' : 'Deliver',
-          typeClass: self ? 'self' : 'deliver', name: r.name, pkg: r.package,
-          addr: self ? '' : dropoffAddressOf(r) });
+        events.push({ date: r.dropoffDate, time: r.dropoffTime || '', kind: self ? 'Customer pickup' : 'Deliver',
+          cls: self ? 'self' : 'go', name: r.name, totes: totesInPackage(r.package), addr: self ? 'At our place' : dropoffAddressOf(r) });
       }
       if (r.pickupDate >= today && r.pickupDate <= endDate) {
-        events.push({ date: r.pickupDate, time: r.pickupTime || '', type: self ? 'Customer return' : 'Pick up',
-          typeClass: self ? 'self' : 'pickup', name: r.name, pkg: r.package,
-          addr: self ? '' : pickupAddressOf(r) });
+        events.push({ date: r.pickupDate, time: r.pickupTime || '', kind: self ? 'Customer return' : 'Pick up',
+          cls: self ? 'self' : 'back', name: r.name, totes: totesInPackage(r.package), addr: self ? 'At our place' : pickupAddressOf(r) });
       }
     }
     events.sort((a,b) => a.date.localeCompare(b.date) || timeKey(a.time) - timeKey(b.time));
-    $('schedCount').textContent = events.length;
-    $('schedList').innerHTML = events.length ? events.map(e => `
-      <div class="sched-item">
-        <div class="sched-day">${fmtDay(e.date)}</div>
-        <div class="sched-type ${e.typeClass}">${e.type}</div>
-        <div class="sched-who">
-          <div>${esc(e.name)}<span style="color:var(--steel);font-size:0.78rem;margin-left:6px;">${esc(fmtTime(e.time))}</span></div>
-          ${e.addr ? `<div class="sched-addr">${esc(e.addr)}</div>` : ''}
-        </div>
-      </div>`).join('') : '<div style="color:var(--steel);font-size:0.88rem;">Nothing scheduled this week.</div>';
+    $('schedCount').textContent = events.length ? ' ' + events.length : '';
+    let lastDay = '';
+    $('schedList').innerHTML = events.length ? events.map(e => {
+      const head = e.date !== lastDay ? `<div class="day"><b>${dayName(e.date)}</b>${e.date === today || e.date === shiftDate(today, 1) ? ' · ' + shortDate(e.date) : ''}</div>` : '';
+      lastDay = e.date;
+      return head + `
+      <div class="row">
+        <div class="time num">${esc(fmtTime(e.time)) || '<span class="meta">—</span>'}</div>
+        <span class="kind ${e.cls}">${e.kind}</span>
+        <div class="person"><div class="who">${esc(e.name)}</div><div class="meta">${esc(e.addr) || '—'}</div></div>
+        <div class="totes num">${e.totes || '—'} totes</div>
+      </div>`;
+    }).join('') : '<p class="empty-line">Nothing scheduled in the next 7 days.</p>';
 
-    // ---- Texts to send ----
-    const allTexts = [
-      ...reminders.delivery.map(r => ({ ...r, cat: '🚚 Delivery tomorrow' })),
-      ...reminders.pickup.map(r => ({ ...r, cat: '📦 Pickup in 2 days' })),
-      ...reminders.review.map(r => ({ ...r, cat: '⭐ Review request' })),
-    ];
-    $('textsCount').textContent = allTexts.length;
-    $('textsList').innerHTML = allTexts.length ? allTexts.map(r => `
-      <div class="sched-item" style="flex-wrap:wrap;gap:8px;">
-        <div style="font-size:0.72rem;color:var(--steel);width:120px;flex:none;">${r.cat}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:bold;">${esc(r.name)} — ${esc(r.phone)}</div>
-          <div style="font-size:0.78rem;color:var(--steel);">${esc(r.package)}</div>
-        </div>
-        <a href="${r.sms}" style="display:inline-block;background:var(--green);color:#fff;font-weight:bold;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:0.8rem;flex:none;">Text →</a>
-      </div>`).join('') : '<div style="color:var(--steel);font-size:0.88rem;">No texts due today.</div>';
+    // ---- Finding line under the title ----
+    const nextOut = events.find(e => e.cls === 'go');
+    const parts = [];
+    parts.push(allTexts.length ? plural(allTexts.length, 'text') + ' to send' : 'No texts due');
+    if (nextOut) {
+      const when = nextOut.date === today ? 'today' : nextOut.date === shiftDate(today, 1) ? 'tomorrow' : dayName(nextOut.date);
+      const city = cityOf(nextOut.addr);
+      parts.push(`next delivery ${when}${nextOut.time ? ' at ' + fmtTime(nextOut.time) : ''}, ${nextOut.name}${city ? ' in ' + city : ''}`);
+    }
+    if (totesAvailable < 0) parts.push(`${Math.abs(totesAvailable)} totes oversold`);
+    const longDay = new Date(today + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    $('finding').innerHTML = `<span class="when">${longDay} ·</span> ${esc(parts.join(' · '))}.`;
+
+    // ---- Primary action follows the waiting work ----
+    const pa = $('primaryAction');
+    if (pendingRequests > 0) { pa.href = 'admin-requests.html'; pa.textContent = `Review ${plural(pendingRequests, 'request')}`; }
+    else { pa.href = 'admin-invoice.html?mode=log'; pa.textContent = 'Add rental'; }
+
+    // ---- Tote fleet ----
+    const scale = Math.max(totalTotesOwned, totesDeployed) || 1;
+    const segs = activeRentals.slice().sort((a,b) => a.pickupDate.localeCompare(b.pickupDate));
+    let used = 0;
+    const segHtml = segs.map(r => {
+      const n = totesInPackage(r.package);
+      const fits = Math.max(0, Math.min(n, totalTotesOwned - used));
+      const over = n - fits;
+      used += n;
+      return (fits ? `<span style="flex:0 0 calc(${(fits/scale*100).toFixed(3)}% - 2px)" title="${escAttr(r.name)}: ${n} totes"></span>` : '')
+        + (over ? `<span class="over" style="flex:0 0 calc(${(over/scale*100).toFixed(3)}% - 2px)" title="${over} oversold"></span>` : '');
+    }).join('');
+    const backRows = segs.slice(0, 4).map(r => `
+      <div class="row">
+        <div class="who">${esc(r.name)}</div>
+        <div class="totes num">${totesInPackage(r.package)}</div>
+        <div class="date num">${r.pickupDate === today ? 'Today' : r.pickupDate === shiftDate(today, 1) ? 'Tomorrow' : shortDate(r.pickupDate)}</div>
+      </div>`).join('');
+    $('fleet').innerHTML = `
+      <div class="fleet-figs">
+        <div><div class="big num">${totesAvailable}</div><div class="lbl">on the shelf</div></div>
+        <div class="right"><div class="big num">${totesDeployed}</div><div class="lbl">out with ${plural(activeRentals.length, 'customer')}</div></div>
+      </div>
+      <div class="bar" role="img" aria-label="${totesDeployed} of ${totalTotesOwned} totes out with customers">${segHtml}</div>
+      <div class="bar-scale num"><span>0</span><span>${totalTotesOwned} owned</span></div>
+      ${totesAvailable < 0 ? `<div class="notice">${Math.abs(totesAvailable)} totes oversold. Check availability before booking more.</div>` : ''}
+      ${segs.length ? `<div class="meta" style="margin-top:12px">Coming back, soonest first</div><div class="back-list">${backRows}</div>` : '<p class="empty-line">No totes out right now.</p>'}`;
+
+    renderMoney();
   }
 
   // Turns a period key into a [start, end] date range for "current" plus the
-  // matching prior range, so we can show a trend arrow against it. Mirrors
+  // matching prior range, so we can show a trend against it. Mirrors
   // the month-over-month comparison already used on the Finance page.
   function periodRange(period, todayISO) {
     const d = new Date(todayISO + 'T12:00:00Z');
     if (period === 'week') {
       const start = shiftDate(todayISO, -6);
-      return { start, end: todayISO, prevStart: shiftDate(start, -7), prevEnd: shiftDate(start, -1) };
+      return { start, end: todayISO, prevStart: shiftDate(start, -7), prevEnd: shiftDate(start, -1), label: 'Last 7 days', vs: 'the 7 days before' };
     }
     if (period === 'month') {
       const y = d.getUTCFullYear(), m = d.getUTCMonth();
@@ -350,13 +444,14 @@
       const end = new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0,10); // last day of this month
       const prevStart = new Date(Date.UTC(y, m-1, 1)).toISOString().slice(0,10);
       const prevEnd = new Date(Date.UTC(y, m, 0)).toISOString().slice(0,10);
-      return { start, end, prevStart, prevEnd };
+      const name = i => new Date(Date.UTC(y, i, 1)).toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
+      return { start, end, prevStart, prevEnd, label: name(m) + ', booked so far', vs: 'all of ' + name(m - 1) };
     }
     if (period === 'year') {
       const y = d.getUTCFullYear();
-      return { start: `${y}-01-01`, end: `${y}-12-31`, prevStart: `${y-1}-01-01`, prevEnd: `${y-1}-12-31` };
+      return { start: `${y}-01-01`, end: `${y}-12-31`, prevStart: `${y-1}-01-01`, prevEnd: `${y-1}-12-31`, label: y + ', booked so far', vs: 'all of ' + (y - 1) };
     }
-    return { start: '0000-01-01', end: '9999-12-31', prevStart: null, prevEnd: null };
+    return { start: '0000-01-01', end: '9999-12-31', prevStart: null, prevEnd: null, label: 'All time', vs: '' };
   }
 
   function computeKPIs(period) {
@@ -367,18 +462,14 @@
     const revenue = sumPrice(rentalsIn);
     const expTotal = expensesIn.reduce((t,e) => t + (e.amount||0), 0);
 
-    let trendPct = null;
-    if (range.prevStart) {
-      const prevRevenue = sumPrice(DATA.rentals.filter(r => inRange(r.dropoffDate, range.prevStart, range.prevEnd)));
-      if (prevRevenue > 0) trendPct = Math.round(((revenue - prevRevenue) / prevRevenue) * 100);
-    }
-    return { revenue, expTotal, net: revenue - expTotal, count: rentalsIn.length, trendPct };
+    let prevRevenue = null;
+    if (range.prevStart) prevRevenue = sumPrice(DATA.rentals.filter(r => inRange(r.dropoffDate, range.prevStart, range.prevEnd)));
+    return { range, revenue, expTotal, net: revenue - expTotal, count: rentalsIn.length, prevRevenue };
   }
 
-  function renderKPIs() {
+  function renderMoney() {
     if (!TODAY) return;
     const k = computeKPIs(PERIOD);
-    const label = PERIOD_LABEL[PERIOD];
 
     let monthlyOverhead = 0;
     for (const e of DATA.expenses) {
@@ -386,19 +477,25 @@
       else if (e.recurring === 'yearly') monthlyOverhead += e.amount / 12;
     }
 
-    $('netLbl').textContent = `Net Income — ${label}`;
-    $('netAmt').textContent = (k.net >= 0 ? '' : '−') + moneyDec(Math.abs(k.net));
-    $('netAmt').style.color = k.net >= 0 ? 'var(--green)' : 'var(--red)';
-    $('netSub').textContent = `${moneyDec(k.revenue)} revenue − ${moneyDec(k.expTotal)} expenses`;
+    // Revenue change in words, with its baseline named. Grey when there is nothing to compare.
+    let delta = '<span>No earlier period to compare</span>';
+    if (k.prevRevenue !== null) {
+      const diff = k.revenue - k.prevRevenue;
+      if (k.prevRevenue === 0) delta = k.revenue > 0 ? `Revenue ${moneyDec(k.revenue)} (new) vs ${k.range.vs}` : `No revenue here or in ${k.range.vs}`;
+      else if (diff === 0) delta = `Revenue unchanged vs ${k.range.vs}`;
+      else delta = `Revenue <span class="${diff > 0 ? 'up' : 'down'} num">${diff > 0 ? '+' : '−'}${moneyDec(Math.abs(diff))}</span> vs ${k.range.vs}`;
+    }
 
-    const trend = k.trendPct === null ? '' :
-      `<div class="trend" style="color:${k.trendPct >= 0 ? 'var(--green)' : 'var(--red)'};">${k.trendPct >= 0 ? '▲' : '▼'} ${Math.abs(k.trendPct)}% vs prior period</div>`;
-
-    $('kpiRow').innerHTML = `
-      <div class="scard gold"><div class="num">${money(k.revenue)}</div><div class="lbl">Revenue</div>${trend}</div>
-      <div class="scard"><div class="num">${k.count}</div><div class="lbl">Rentals</div></div>
-      <div class="scard"><div class="num">${moneyDec(k.expTotal)}</div><div class="lbl">Expenses</div><div class="cap">~${moneyDec(monthlyOverhead)}/mo recurring</div></div>
-    `;
+    $('money').innerHTML = `
+      <div class="net">
+        <div class="lbl">Net income · ${k.range.label}</div>
+        <div class="big num">${k.net < 0 ? '−' : ''}${moneyDec(Math.abs(k.net))}</div>
+        <div class="delta">${delta}</div>
+      </div>
+      <div class="kv">
+        <div class="row"><span>Revenue <span class="sub">${plural(k.count, 'rental')}</span></span><span class="num">${moneyDec(k.revenue)}</span></div>
+        <div class="row"><span>Expenses <span class="sub num">${moneyDec(monthlyOverhead)}/mo recurring</span></span><span class="num">−${moneyDec(k.expTotal)}</span></div>
+      </div>`;
   }
 
   function shiftDate(iso, days) {
@@ -406,12 +503,7 @@
     d.setUTCDate(d.getUTCDate() + days);
     return d.toISOString().slice(0, 10);
   }
-  function fmtDay(iso) {
-    const d = new Date(iso + 'T12:00:00');
-    const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
-    return weekday + ' ' + fmtDate(iso);
-  }
-  function showErr(m) { const s = $('status'); s.className = 'status err'; s.textContent = m; }
+  function showErr(m) { const s = $('status'); s.className = 'status err'; s.textContent = m; s.style.display = 'block'; }
 </script>
 </body>
 </html>
