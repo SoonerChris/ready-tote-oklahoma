@@ -2,6 +2,11 @@
 // "Today" is computed in Oklahoma time (America/Chicago).
 
 // Shows any stored time as "2:30 PM", even older records saved as "14:30".
+// Who customer texts are from. Change it here (and TEXT_SIGNER in
+// admin-shared.js for the texts built in the browser) if someone else sends.
+export const SIGNER = "Chris with Ready Tote Oklahoma";
+const hi = (first) => `Hi ${first}, it's ${SIGNER}!`;
+
 export function friendlyTime(t) {
   const m = String(t || "").trim().match(/^(\d{1,2}):(\d{2})$/);
   if (!m) return t;
@@ -83,10 +88,21 @@ function friendlyDate(isoDate) {
 //   pickupTomorrow    day before pickup        -> pickup day ("today" wording on the day)
 //   addressCheck      5 days before pickup     -> 2 days before pickup
 //   review            3 days after pickup      -> 14 days after pickup
-//   followup          3 days after invoicing   -> 10 days after, and only while unpaid
-//   emailReminder     5 days after invoicing   -> 30 days after, and only while unpaid
+//   followup          3 days after invoicing   -> 4 days after; unpaid, no payment reminder sent yet
+//   emailReminder     5 days after invoicing   -> 30 days after, unpaid; waits 2 days after a
+//                     follow-up text, and clears when either the email or the text reminder is sent
+//
+// Two days before pickup the address check and the "pickup in 2 days" text
+// would both go to the same person, so that day the address check carries
+// the pickup reminder too and "pickup in 2 days" is skipped. Review texts
+// are skipped entirely while GOOGLE_REVIEW_LINK isn't set.
 export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags = {}) {
   const today = todayInOklahoma();
+  // The Oklahoma date a flag was set ("" if never)
+  const sentOn = (id) => {
+    const v = sentFlags[id]; if (!v) return "";
+    const d = new Date(v); return isNaN(d) ? "" : d.toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+  };
   const out = { delivery: [], pickupTomorrow: [], pickup: [], review: [], followup: [], emailReminder: [], addressCheck: [] };
   const open = (due, last) => today >= due && today <= last;
   const timing = (due) => ({ dueDate: due, overdue: today > due });
@@ -103,16 +119,17 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
     if (!self && r.pickupDate && open(shiftDate(r.pickupDate, -5), shiftDate(r.pickupDate, -2))) {
       const flagId = "addressCheck:" + (r.key || r.phone + r.pickupDate);
       if (!sentFlags[flagId]) {
-        const { message, sms } = pickupAddressRequestMessageFor(r);
+        const { message, sms } = pickupAddressRequestMessageFor(r, { withPickup: today === shiftDate(r.pickupDate, -2) });
         out.addressCheck.push({ ...r, flagId, ...timing(shiftDate(r.pickupDate, -5)), address: confirmedPickupAddressOf(r) || "Pickup address not confirmed yet", message, sms });
       }
     }
 
     // Invoice follow-up: skip historical backfilled entries and paid invoices
-    if (!r.backfilled && r.invoicedAt && !paidFlags[r.key]) {
+    const paymentNudged = sentFlags["emailReminder:" + r.key] || sentFlags["textReminder:" + r.key];
+    if (!r.backfilled && r.invoicedAt && !paidFlags[r.key] && !paymentNudged) {
       const invoicedDate = r.invoicedAt.slice(0, 10);
-      if (open(shiftDate(invoicedDate, 3), shiftDate(invoicedDate, 10))) {
-        const msg = `Hi ${first}, it's Chris with Ready Tote Oklahoma! Just wanted to make sure you got the invoice we sent over for your tote rental. Let me know if you have any questions, happy to help however I can!`;
+      if (open(shiftDate(invoicedDate, 3), shiftDate(invoicedDate, 4))) {
+        const msg = `${hi(first)} Just wanted to make sure you got the invoice we sent over for your tote rental. Let me know if you have any questions, happy to help however I can!`;
         const flagId = "followup:" + (r.key || r.phone + invoicedDate);
         if (!sentFlags[flagId]) {
           out.followup.push({ ...r, flagId, ...timing(shiftDate(invoicedDate, 3)), address: `Invoiced ${friendlyDate(invoicedDate)}`, message: msg, sms: smsLink(r.phone, msg) });
@@ -121,13 +138,16 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
     }
 
     // Email/text payment reminder: still unpaid 5+ days after invoicing, skip backfilled entries
-    if (!r.backfilled && r.invoicedAt && !paidFlags[r.key]) {
+    if (!r.backfilled && r.invoicedAt && !paidFlags[r.key] && !paymentNudged) {
       const invoicedDate = r.invoicedAt.slice(0, 10);
-      if (open(shiftDate(invoicedDate, 5), shiftDate(invoicedDate, 30))) {
+      const followedUp = sentOn("followup:" + r.key);
+      let due = shiftDate(invoicedDate, 5);
+      if (followedUp && shiftDate(followedUp, 2) > due) due = shiftDate(followedUp, 2);
+      if (open(due, shiftDate(invoicedDate, 30))) {
         const flagId = "emailReminder:" + (r.key || r.phone + invoicedDate);
         if (!sentFlags[flagId]) {
           const { message, sms } = paymentReminderMessageFor(r);
-          out.emailReminder.push({ ...r, flagId, ...timing(shiftDate(invoicedDate, 5)), message, sms });
+          out.emailReminder.push({ ...r, flagId, ...timing(due), message, sms });
         }
       }
     }
@@ -136,8 +156,8 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
     if (r.dropoffDate && open(shiftDate(r.dropoffDate, -1), r.dropoffDate)) {
       const when = r.dropoffDate === today ? "today" : "tomorrow";
       const msg = self
-        ? `Hi ${first}, it's Ready Tote Oklahoma! Reminder: your totes are ready for pickup ${when} (${friendlyDate(r.dropoffDate)}) around ${friendlyTime(r.dropoffTime)}. See you then!`
-        : `Hi ${first}, it's Ready Tote Oklahoma! Friendly reminder: your totes arrive ${when} (${friendlyDate(r.dropoffDate)}) around ${friendlyTime(r.dropoffTime)}. Reply here with any questions!`;
+        ? `${hi(first)} Reminder: your totes are ready for pickup ${when} (${friendlyDate(r.dropoffDate)}) around ${friendlyTime(r.dropoffTime)}. See you then!`
+        : `${hi(first)} Friendly reminder: your totes arrive ${when} (${friendlyDate(r.dropoffDate)}) around ${friendlyTime(r.dropoffTime)}. Reply here with any questions!`;
       const flagId = "delivery:" + (r.key || r.phone + r.dropoffDate);
       if (!sentFlags[flagId]) out.delivery.push({ ...r, flagId, ...timing(shiftDate(r.dropoffDate, -1)), address: self ? "Customer pickup" : dropAddr, message: msg, sms: smsLink(r.phone, msg) });
     }
@@ -146,25 +166,28 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
     if (r.pickupDate && open(shiftDate(r.pickupDate, -1), r.pickupDate)) {
       const when = r.pickupDate === today ? "today" : "tomorrow";
       const msg = self
-        ? `Hi ${first}, it's Ready Tote Oklahoma! Reminder: please have your totes ready for return ${when} (${friendlyDate(r.pickupDate)}) around ${friendlyTime(r.pickupTime)}. Thanks!`
-        : `Hi ${first}, it's Ready Tote Oklahoma! Reminder: we'll be picking up your totes ${when} (${friendlyDate(r.pickupDate)}) around ${friendlyTime(r.pickupTime)}. Please have them empty and accessible. Thanks!`;
+        ? `${hi(first)} Reminder: please have your totes ready for return ${when} (${friendlyDate(r.pickupDate)}) around ${friendlyTime(r.pickupTime)}. Thanks!`
+        : `${hi(first)} Reminder: we'll be picking up your totes ${when} (${friendlyDate(r.pickupDate)}) around ${friendlyTime(r.pickupTime)}. Please have them empty and accessible. Thanks!`;
       const flagId = "pickupTomorrow:" + (r.key || r.phone + r.pickupDate);
       if (!sentFlags[flagId]) out.pickupTomorrow.push({ ...r, flagId, ...timing(shiftDate(r.pickupDate, -1)), address: self ? "Customer return" : pickAddr, message: msg, sms: smsLink(r.phone, msg) });
     }
 
     // Pickup reminder: pickup is in 2 days (the day-before text covers a miss)
-    if (r.pickupDate === shiftDate(today, 2)) {
+    // Skipped when the address check (still due, or sent today) carries it
+    const addrId = "addressCheck:" + (r.key || r.phone + r.pickupDate);
+    const carriedByAddressCheck = !self && (!sentFlags[addrId] || sentOn(addrId) === today);
+    if (r.pickupDate === shiftDate(today, 2) && !carriedByAddressCheck) {
       const msg = self
-        ? `Hi ${first}, Ready Tote Oklahoma here. Friendly reminder to return your totes on ${friendlyDate(r.pickupDate)} around ${friendlyTime(r.pickupTime)}. Thanks!`
-        : `Hi ${first}, Ready Tote Oklahoma here. We'll pick up your totes on ${friendlyDate(r.pickupDate)} around ${friendlyTime(r.pickupTime)}. Please have them empty and accessible. Thanks!`;
+        ? `${hi(first)} Friendly reminder to return your totes on ${friendlyDate(r.pickupDate)} around ${friendlyTime(r.pickupTime)}. Thanks!`
+        : `${hi(first)} We'll pick up your totes on ${friendlyDate(r.pickupDate)} around ${friendlyTime(r.pickupTime)}. Please have them empty and accessible. Thanks!`;
       const flagId = "pickup:" + (r.key || r.phone + r.pickupDate);
       if (!sentFlags[flagId]) out.pickup.push({ ...r, flagId, ...timing(today), address: self ? "Customer return" : pickAddr, message: msg, sms: smsLink(r.phone, msg) });
     }
 
     // Review request: from 3 days after pickup, for up to two weeks
-    if (r.pickupDate && open(shiftDate(r.pickupDate, 3), shiftDate(r.pickupDate, 14))) {
-      const link = reviewLink || "[ADD GOOGLE_REVIEW_LINK ENV VAR]";
-      const msg = `Hi ${first}, thanks for renting with Ready Tote Oklahoma! If we made your move easier, we'd love a quick Google review: ${link}`;
+    if (reviewLink && r.pickupDate && open(shiftDate(r.pickupDate, 3), shiftDate(r.pickupDate, 14))) {
+      const link = reviewLink;
+      const msg = `${hi(first)} Thanks for renting with us. If we made your move easier, we'd love a quick Google review: ${link}`;
       const flagId = "review:" + (r.key || r.phone + r.pickupDate);
       if (!sentFlags[flagId]) out.review.push({ ...r, flagId, ...timing(shiftDate(r.pickupDate, 3)), address: self ? "" : pickAddr, message: msg, sms: smsLink(r.phone, msg) });
     }
@@ -172,25 +195,35 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
   return out;
 }
 
-export function pickupAddressRequestMessageFor(rental) {
+export function pickupAddressRequestMessageFor(rental, { withPickup = false } = {}) {
   const first = (rental.name || "there").split(" ")[0];
   const onFile = confirmedPickupAddressOf(rental);
+  // Two days out: one text covering the pickup reminder and the address
+  if (withPickup) {
+    const when = `${friendlyDate(rental.pickupDate)} around ${friendlyTime(rental.pickupTime)}`;
+    const msg = onFile
+      ? `${hi(first)} We'll pick up your totes on ${when}. We have your pickup address as ${onFile}. Is that still right? Please have the totes empty and accessible. Thanks!`
+      : `${hi(first)} We'll pick up your totes on ${when}. What address should we pick them up from? Please reply with the full street address, city, and zip. Thanks!`;
+    return { message: msg, sms: smsLink(rental.phone, msg) };
+  }
   const msg = onFile
-    ? `Hi ${first}, it's Ready Tote Oklahoma! Quick check before we pick up your totes on ${friendlyDate(rental.pickupDate)} — we have your pickup address as ${onFile}. Let us know if that's still correct, or send us the right address if it's changed!`
-    : `Hi ${first}, it's Ready Tote Oklahoma! Quick check before we pick up your totes on ${friendlyDate(rental.pickupDate)} — what address should we pick them up from? Please reply with the full street address, city, and zip. Thanks!`;
+    ? `${hi(first)} Quick check before we pick up your totes on ${friendlyDate(rental.pickupDate)}. We have your pickup address as ${onFile}. Let us know if that's still correct, or send us the right address if it's changed!`
+    : `${hi(first)} Quick check before we pick up your totes on ${friendlyDate(rental.pickupDate)}. What address should we pick them up from? Please reply with the full street address, city, and zip. Thanks!`;
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
 
 export function reviewMessageFor(rental, reviewLink) {
   const first = (rental.name || "there").split(" ")[0];
-  const link = reviewLink || "[ADD GOOGLE_REVIEW_LINK ENV VAR]";
-  const msg = `Hi ${first}, thanks for renting with Ready Tote Oklahoma! If we made your move easier, we'd love a quick Google review: ${link}`;
+  // No link set: no review text at all, rather than a placeholder
+  if (!reviewLink) return { message: "", sms: "" };
+  const link = reviewLink;
+  const msg = `${hi(first)} Thanks for renting with us. If we made your move easier, we'd love a quick Google review: ${link}`;
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
 
 export function followupMessageFor(rental) {
   const first = (rental.name || "there").split(" ")[0];
-  const msg = `Hi ${first}, it's Chris with Ready Tote Oklahoma! Just wanted to make sure you got the invoice we sent over for your tote rental. Let me know if you have any questions, happy to help however I can!`;
+  const msg = `${hi(first)} Just wanted to make sure you got the invoice we sent over for your tote rental. Let me know if you have any questions, happy to help however I can!`;
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
 
@@ -201,8 +234,8 @@ export function invoiceSentMessageFor(rental) {
   const first = (rental.name || "there").split(" ")[0];
   const link = rental.stripeUrl || "";
   const msg = link
-    ? `Hi ${first}, it's Chris with Ready Tote Oklahoma! Just sent your invoice over — here's the payment link: ${link} Let me know if you have any questions!`
-    : `Hi ${first}, it's Chris with Ready Tote Oklahoma! Just sent your invoice over — check your email for the payment link. Let me know if you have any questions!`;
+    ? `${hi(first)} Just sent your invoice over. Here's the payment link: ${link} Let me know if you have any questions!`
+    : `${hi(first)} Just sent your invoice over. Check your email for the payment link. Let me know if you have any questions!`;
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
 
@@ -210,8 +243,8 @@ export function paymentReminderMessageFor(rental) {
   const first = (rental.name || "there").split(" ")[0];
   const link = rental.stripeUrl || "";
   const msg = link
-    ? `Hi ${first}, it's Chris with Ready Tote Oklahoma! Just checking in — your tote rental invoice is still open. Here's your payment link again: ${link} Let me know if you have any questions!`
-    : `Hi ${first}, it's Chris with Ready Tote Oklahoma! Just checking in — your tote rental invoice is still open. Let me know if you'd like me to resend the payment link!`;
+    ? `${hi(first)} Just checking in, your tote rental invoice is still open. Here's your payment link again: ${link} Let me know if you have any questions!`
+    : `${hi(first)} Just checking in, your tote rental invoice is still open. Let me know if you'd like me to resend the payment link!`;
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
 
@@ -219,8 +252,8 @@ export function deliveryMessageFor(rental) {
   const first = (rental.name || "there").split(" ")[0];
   const self = rental.serviceType === "self";
   const msg = self
-    ? `Hi ${first}, it's Ready Tote Oklahoma! Reminder: your totes are ready for pickup (${friendlyDate(rental.dropoffDate)}) around ${friendlyTime(rental.dropoffTime)}. See you then!`
-    : `Hi ${first}, it's Ready Tote Oklahoma! Friendly reminder: your totes arrive ${friendlyDate(rental.dropoffDate)} around ${friendlyTime(rental.dropoffTime)}. Reply here with any questions!`;
+    ? `${hi(first)} Reminder: your totes are ready for pickup (${friendlyDate(rental.dropoffDate)}) around ${friendlyTime(rental.dropoffTime)}. See you then!`
+    : `${hi(first)} Friendly reminder: your totes arrive ${friendlyDate(rental.dropoffDate)} around ${friendlyTime(rental.dropoffTime)}. Reply here with any questions!`;
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
 
@@ -228,8 +261,8 @@ export function pickupTomorrowMessageFor(rental) {
   const first = (rental.name || "there").split(" ")[0];
   const self = rental.serviceType === "self";
   const msg = self
-    ? `Hi ${first}, it's Ready Tote Oklahoma! Reminder: please have your totes ready for return tomorrow (${friendlyDate(rental.pickupDate)}) around ${friendlyTime(rental.pickupTime)}. Thanks!`
-    : `Hi ${first}, it's Ready Tote Oklahoma! Reminder: we'll be picking up your totes tomorrow (${friendlyDate(rental.pickupDate)}) around ${friendlyTime(rental.pickupTime)}. Please have them empty and accessible. Thanks!`;
+    ? `${hi(first)} Reminder: please have your totes ready for return tomorrow (${friendlyDate(rental.pickupDate)}) around ${friendlyTime(rental.pickupTime)}. Thanks!`
+    : `${hi(first)} Reminder: we'll be picking up your totes tomorrow (${friendlyDate(rental.pickupDate)}) around ${friendlyTime(rental.pickupTime)}. Please have them empty and accessible. Thanks!`;
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
 
@@ -237,8 +270,8 @@ export function pickupMessageFor(rental) {
   const first = (rental.name || "there").split(" ")[0];
   const self = rental.serviceType === "self";
   const msg = self
-    ? `Hi ${first}, Ready Tote Oklahoma here. Friendly reminder to return your totes on ${friendlyDate(rental.pickupDate)} around ${friendlyTime(rental.pickupTime)}. Thanks!`
-    : `Hi ${first}, Ready Tote Oklahoma here. We'll pick up your totes on ${friendlyDate(rental.pickupDate)} around ${friendlyTime(rental.pickupTime)}. Please have them empty and accessible. Thanks!`;
+    ? `${hi(first)} Friendly reminder to return your totes on ${friendlyDate(rental.pickupDate)} around ${friendlyTime(rental.pickupTime)}. Thanks!`
+    : `${hi(first)} We'll pick up your totes on ${friendlyDate(rental.pickupDate)} around ${friendlyTime(rental.pickupTime)}. Please have them empty and accessible. Thanks!`;
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
 

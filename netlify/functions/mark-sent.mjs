@@ -26,10 +26,19 @@ export default async (request) => {
     } catch {
       // Key doesn't exist yet, start fresh
     }
+    // "Skip" clears a reminder without a text going out: it counts as done
+    // (same sent flag), and is also noted in skippedFlags so it reads as
+    // skipped rather than sent. Undo clears both.
+    let skipped = null;
+    if (body.skip === true || body.unsent === true) {
+      try { skipped = (await store.get("skippedFlags", { type: "json" })) || {}; } catch { skipped = {}; }
+    }
     if (body.unsent === true) {
       delete flags[body.flagId];
+      if (skipped && skipped[body.flagId]) { delete skipped[body.flagId]; await store.setJSON("skippedFlags", skipped); }
     } else {
       flags[body.flagId] = new Date().toISOString();
+      if (body.skip === true) { skipped[body.flagId] = flags[body.flagId]; await store.setJSON("skippedFlags", skipped); }
     }
     await store.setJSON("sentFlags", flags);
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
