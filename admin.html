@@ -333,10 +333,13 @@
 
     // ---- Texts to send ----
     const allTexts = [
-      ...reminders.delivery.map(r => ({ ...r, why: 'Delivery tomorrow' })),
+      ...reminders.delivery.map(r => ({ ...r, why: r.dropoffDate === today ? 'Delivery today' : 'Delivery tomorrow' })),
+      ...(reminders.pickupTomorrow || []).map(r => ({ ...r, why: r.pickupDate === today ? 'Pickup today' : 'Pickup tomorrow' })),
       ...reminders.pickup.map(r => ({ ...r, why: 'Pickup in 2 days' })),
+      ...(reminders.addressCheck || []).map(r => ({ ...r, why: 'Confirm address' })),
+      ...(reminders.followup || []).map(r => ({ ...r, why: 'Invoice follow-up' })),
       ...reminders.review.map(r => ({ ...r, why: 'Ask for a review' })),
-    ];
+    ].map(r => ({ ...r, why: r.why + (r.overdue ? ' · overdue' : '') }));
     $('textsCount').textContent = allTexts.length ? ' ' + allTexts.length : '';
     $('textsList').innerHTML = allTexts.length ? allTexts.map(r => `
       <div class="row">
