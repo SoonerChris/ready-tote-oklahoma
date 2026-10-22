@@ -44,6 +44,23 @@
   .small-btn.danger{color:var(--red);}
 
   .empty{color:var(--steel);font-size:14px;padding:8px 0;}
+
+  /* Follow-ups: when each partner was last contacted and when to reach out next */
+  .dates{font-size:13px; color:var(--steel); margin-top:4px; font-variant-numeric:tabular-nums;}
+  .dates .due{color:#831C1E; font-weight:600;}
+  .dates .soon{color:#6B4C0C; font-weight:600;}
+  .due-box{border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin-bottom:24px;}
+  .due-box.clear{background:var(--green-bg); border-color:transparent; color:#14492F; font-size:14px; font-weight:600;}
+  .due-box h2{margin:0 0 8px; font-size:17px;}
+  .due-box h2 .n{font-weight:500; color:var(--steel); margin-left:6px;}
+  .due-row{display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid #F1EDE4; flex-wrap:wrap;}
+  .due-row:first-of-type{border-top:none;}
+  .due-row .who{flex:1; min-width:200px;}
+  .due-row .who b{font-size:15px;}
+  .due-row .who .cat{color:var(--steel); font-size:13px;}
+  .due-row .who .dates{margin-top:2px;}
+  .due-row .acts{display:flex; gap:8px; flex-wrap:wrap;}
+  .due-later{font-size:13px; color:var(--steel); margin:8px 0 0;}
   .toggle-add{width:auto;padding:8px 14px;font-size:14px;margin:0 8px 0 0;background:var(--white);color:var(--ink);border:1px solid var(--control);}
   .toggle-add:hover{background:var(--white);border-color:var(--ink);}
 </style>
@@ -72,6 +89,8 @@
   </div>
 
   <div class="status" id="status"></div>
+
+  <div id="dueBox"></div>
 
   <div class="summary" id="summary">
     <div class="scard"><div class="num" id="s-apt-total">–</div><div class="lbl">Apartments contacted</div></div>
@@ -188,6 +207,78 @@
 
   function secret() { return $('secret').value.trim(); }
 
+  const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+  const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const shortDay = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const CAT_LABEL = { apartment: 'Apartment', realtor: 'Realtor', remodeler: 'Remodeler', mover: 'Mover' };
+  // Partners that said no don't get follow-ups
+  const wantsFollowUp = e => e.nextFollowUp && e.status !== 'Not Interested';
+
+  function datesLine(e) {
+    const parts = [];
+    if (e.dateContacted) parts.push('Last contacted ' + shortDay(e.dateContacted));
+    if (wantsFollowUp(e)) {
+      const cls = e.nextFollowUp <= TODAY ? 'due' : e.nextFollowUp <= addDays(TODAY, 7) ? 'soon' : '';
+      const when = e.nextFollowUp < TODAY ? 'was due ' + shortDay(e.nextFollowUp) : e.nextFollowUp === TODAY ? 'due today' : shortDay(e.nextFollowUp);
+      parts.push(`<span class="${cls}">Follow up ${when}</span>`);
+    }
+    return parts.length ? `<div class="dates">${parts.join(' · ')}</div>` : '';
+  }
+
+  // Every save sends the whole entry; the server keeps any field left out
+  const entryPayload = e => ({ key: e.key, category: e.category, name: e.name, contactName: e.contactName, email: e.email, phone: e.phone, notes: e.notes, status: e.status, dateContacted: e.dateContacted || '', nextFollowUp: e.nextFollowUp || '' });
+
+  // "Contacted today": stamps today, schedules the next touch two weeks out
+  async function contactedToday(key) {
+    const e = ENTRIES.find(x => x.key === key);
+    if (!e) return;
+    const next = { ...e, dateContacted: TODAY, nextFollowUp: e.status === 'Not Interested' ? '' : addDays(TODAY, 14),
+      status: !e.status || e.status === 'Not Contacted' ? 'Contacted' : e.status };
+    try {
+      await api('save-outreach', entryPayload(next));
+      Object.assign(e, next);
+      render();
+      showStatus('ok', `${e.name}: contacted today${next.nextFollowUp ? ', follow up ' + shortDay(next.nextFollowUp) : ''}.`);
+    } catch (err) { showStatus('err', err.message); }
+  }
+  // Push a follow-up back a week without logging a contact
+  async function snooze(key) {
+    const e = ENTRIES.find(x => x.key === key);
+    if (!e) return;
+    const next = { ...e, nextFollowUp: addDays(e.nextFollowUp > TODAY ? e.nextFollowUp : TODAY, 7) };
+    try {
+      await api('save-outreach', entryPayload(next));
+      Object.assign(e, next);
+      render();
+      showStatus('ok', `${e.name}: follow up moved to ${shortDay(next.nextFollowUp)}.`);
+    } catch (err) { showStatus('err', err.message); }
+  }
+
+  function renderDue() {
+    const withDates = ENTRIES.filter(wantsFollowUp);
+    const due = withDates.filter(e => e.nextFollowUp <= TODAY).sort((a, b) => a.nextFollowUp.localeCompare(b.nextFollowUp));
+    const week = withDates.filter(e => e.nextFollowUp > TODAY && e.nextFollowUp <= addDays(TODAY, 7)).length;
+    const box = $('dueBox');
+    if (!ENTRIES.length) { box.innerHTML = ''; return; }
+    if (!due.length) {
+      box.innerHTML = `<div class="due-box clear">No follow-ups due.${week ? ` ${week} coming up this week.` : ''}</div>`;
+      return;
+    }
+    box.innerHTML = `<div class="due-box"><h2>Follow-ups due<span class="n">${due.length}</span></h2>
+      ${due.map(e => `
+        <div class="due-row">
+          <div class="who"><b>${escapeHtml(e.name)}</b> <span class="cat">· ${CAT_LABEL[e.category] || ''}${e.contactName ? ' · ' + escapeHtml(e.contactName) : ''}</span>
+            ${datesLine(e)}</div>
+          <div class="acts">
+            ${e.phone ? `<a class="sms-btn" href="tel:${escapeHtml(String(e.phone).replace(/[^0-9+]/g, ''))}" style="padding:7px 12px;">Call</a>` : ''}
+            ${e.email ? `<a class="sms-btn" href="mailto:${escapeHtml(e.email)}" style="padding:7px 12px;">Email</a>` : ''}
+            <button class="small-btn" onclick="contactedToday('${e.key}')">Contacted today</button>
+            <button class="small-btn" onclick="snooze('${e.key}')">Snooze a week</button>
+          </div>
+        </div>`).join('')}
+      ${week ? `<p class="due-later">${week} more coming up this week.</p>` : ''}</div>`;
+  }
+
   function showStatus(kind, msg) {
     const s = $('status');
     s.className = 'status ' + kind;
@@ -258,6 +349,7 @@
     $('s-remodeler-active').textContent = remodActive;
     $('s-mover-total').textContent = moverTotal;
     $('s-mover-active').textContent = moverActive;
+    renderDue();
   }
 
   function entryHtml(e) {
@@ -270,10 +362,12 @@
             <div class="entry-name">${escapeHtml(e.name)}</div>
             ${contactLine ? `<div class="entry-meta">${escapeHtml(contactLine)}</div>` : ''}
             ${e.notes ? `<div class="entry-notes">${escapeHtml(e.notes)}</div>` : ''}
+            ${datesLine(e)}
           </div>
           <div class="entry-actions">
             <span class="status-pill ${statusClass(e.status)}">${e.status}</span>
             <select class="inline-status" onchange="quickStatus('${e.key}', this.value)">${opts}</select>
+            <button class="small-btn" onclick="contactedToday('${e.key}')">Contacted today</button>
             <button class="small-btn" onclick="editEntry('${e.key}')">Edit</button>
             <button class="small-btn danger" onclick="deleteEntry('${e.key}')">Delete</button>
           </div>
@@ -289,8 +383,11 @@
     const e = ENTRIES.find(x => x.key === key);
     if (!e) return;
     try {
-      await api('save-outreach', { key, category: e.category, name: e.name, contactName: e.contactName, email: e.email, phone: e.phone, notes: e.notes, status });
-      e.status = status;
+      const next = { ...e, status };
+      if (status === 'Follow-Up Scheduled' && !e.nextFollowUp) next.nextFollowUp = addDays(TODAY, 7);
+      if (status === 'Not Interested') next.nextFollowUp = '';
+      await api('save-outreach', entryPayload(next));
+      Object.assign(e, next);
       render();
       showStatus('ok', 'Updated ' + e.name + '.');
     } catch (err) {
@@ -332,6 +429,10 @@
         <div><label>Email</label><input type="email" id="f-email-${cat}" value="${e.email ? escapeHtml(e.email) : ''}"></div>
         <div><label>Phone</label><input type="text" id="f-phone-${cat}" value="${e.phone ? escapeHtml(e.phone) : ''}"></div>
       </div>
+      <div class="grid2">
+        <div><label>Last contacted</label><input type="date" id="f-dateContacted-${cat}" value="${e.dateContacted ? escapeHtml(e.dateContacted) : ''}"></div>
+        <div><label>Follow up on</label><input type="date" id="f-nextFollowUp-${cat}" value="${e.nextFollowUp ? escapeHtml(e.nextFollowUp) : ''}"></div>
+      </div>
       <label>Notes</label>
       <input type="text" id="f-notes-${cat}" value="${e.notes ? escapeHtml(e.notes) : ''}" placeholder="Any context worth remembering">
       <button onclick="submitForm('${cat}'${existing ? `, '${existing.key}'` : ''})">${existing ? 'Save Changes' : 'Add Contact'}</button>
@@ -348,6 +449,8 @@
       email: $('f-email-' + cat).value.trim(),
       phone: $('f-phone-' + cat).value.trim(),
       notes: $('f-notes-' + cat).value.trim(),
+      dateContacted: $('f-dateContacted-' + cat).value,
+      nextFollowUp: $('f-nextFollowUp-' + cat).value,
     };
     if (key) payload.key = key;
     try {

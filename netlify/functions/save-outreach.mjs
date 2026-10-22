@@ -36,6 +36,8 @@ export default async (request) => {
       dateContacted: body.dateContacted ?? existing?.dateContacted ?? "",
       status: body.status || existing?.status || "Not Contacted",
       lastFollowUp: body.lastFollowUp ?? existing?.lastFollowUp ?? "",
+      // When to reach out next (YYYY-MM-DD); "" clears it
+      nextFollowUp: body.nextFollowUp ?? existing?.nextFollowUp ?? "",
       notes: body.notes ?? existing?.notes ?? "",
       updatedAt: new Date().toISOString(),
     });

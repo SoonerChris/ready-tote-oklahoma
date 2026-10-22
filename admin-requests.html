@@ -10,6 +10,7 @@
 <title>Booking Requests — Ready Tote Oklahoma (Internal)</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
 <script src="admin-shared.js?v=20261022"></script>
+<script src="admin-availability.js?v=20261023"></script>
 <style>
   :root{--col:820px;}
   .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
@@ -117,11 +118,14 @@
     const btn = $('loadBtn');
     btn.disabled = true; btn.textContent = 'Refresh';
     try {
-      const resp = await fetch('/.netlify/functions/get-requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret }),
-      });
+      const [resp] = await Promise.all([
+        fetch('/.netlify/functions/get-requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ secret }),
+        }),
+        loadAvailability(),   // refreshed on every load, so status changes show up
+      ]);
       if (resp.status === 401) { showErr('Wrong admin secret.'); return; }
       if (!resp.ok) { showErr('Load failed (' + resp.status + ').'); return; }
       const data = await resp.json();
@@ -157,6 +161,17 @@
     rows.forEach(wireCard);
   }
 
+  // Statuses still in play, where "do we have the totes?" matters
+  const OPEN_STATUSES = ['new', 'reviewed', 'awaiting_confirmation', 'confirmed'];
+  function requestAvailability(r) {
+    const need = totesInPackageText(r.package);
+    // Awaiting-confirmation and confirmed requests already hold their totes
+    // in the availability numbers; add them back so it isn't counted twice.
+    const held = ['awaiting_confirmation', 'confirmed'].includes(r.status) && need
+      ? { start: r.deliveryDate, end: r.pickupDate, totes: need } : null;
+    return availabilityHtml(checkAvailability(r.deliveryDate, r.pickupDate, need, held));
+  }
+
   function cardHtml(r) {
     const meta = STATUS_META[r.status] || STATUS_META.new;
     const phoneDigits = (r.phone || '').replace(/[^0-9+]/g, '');
@@ -175,6 +190,7 @@
         <div><span class="lbl">Delivery</span>${esc(fmtReqDate(r.deliveryDate))}${r.deliveryWindow && !/no preference/i.test(r.deliveryWindow) ? ' — pref: ' + esc(r.deliveryWindow) : ''}</div>
         <div><span class="lbl">Pickup</span>${esc(fmtReqDate(r.pickupDate))}${r.pickupWindow && !/no preference/i.test(r.pickupWindow) ? ' — pref: ' + esc(r.pickupWindow) : ''}</div>
         <div><span class="lbl">Address</span>${esc(deliveryAddressOf(r) || '—')}</div>
+        ${OPEN_STATUSES.includes(r.status) ? `<div><span class="lbl">Totes</span>${requestAvailability(r)}</div>` : ''}
         <div><span class="lbl">Phone</span>${r.phone ? `<a href="tel:${escAttr(phoneDigits)}">${esc(r.phone)}</a>` : '—'}</div>
         <div><span class="lbl">Email</span>${r.email ? `<a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : '—'}</div>
         ${r.reviewNotes ? `<div><span class="lbl">Notes</span>${esc(r.reviewNotes)}</div>` : ''}

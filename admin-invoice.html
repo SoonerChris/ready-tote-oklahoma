@@ -10,8 +10,17 @@
 <title>Send Invoice — Ready Tote Oklahoma (Internal)</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
 <script src="admin-shared.js?v=20261022"></script>
+<script src="admin-availability.js?v=20261023"></script>
 <style>
   :root{--col:720px;}
+  /* The check before an invoice email goes out */
+  .send-summary{margin-top:24px; padding:16px; border-radius:10px; background:#FAF8F3; border:1px solid var(--line);}
+  .send-summary h3{margin:0 0 8px; font-size:16px;}
+  .send-summary dl{display:grid; grid-template-columns:max-content 1fr; gap:4px 16px; margin:0; font-size:14px; font-variant-numeric:tabular-nums;}
+  .send-summary dt{color:var(--steel);}
+  .send-summary dd{margin:0; min-width:0; overflow-wrap:anywhere;}
+  .send-summary .row-btns{display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;}
+  .send-summary .row-btns button{width:auto; margin:0;}
 </style>
 </head>
 <body>
@@ -109,6 +118,7 @@
       <input type="time" id="pickupTime" value="10:00">
     </div>
   </div>
+  <div id="availLine" style="margin-top:12px;"></div>
 
   <label>Service type</label>
   <select id="serviceType">
@@ -176,7 +186,9 @@
   <label>Notes (optional)</label>
   <textarea id="notes" rows="3" placeholder="Gate code, dog on property, special instructions…" style="resize:vertical;"></textarea>
 
-  <button id="sendBtn">Send invoice email</button>
+  <div class="send-summary" id="sendSummary" hidden></div>
+  <button id="sendBtn">Review and send</button>
+  <button type="button" id="newInvoiceBtn" class="secondary" hidden onclick="location.href='admin-invoice.html'">Start a new invoice</button>
   <div class="status" id="status"></div>
   <div id="invoiceTextPrompt" style="display:none; margin-top:14px;"></div>
 </div>
@@ -440,23 +452,47 @@
     }
   });
 
-  $('sendBtn').addEventListener('click', async () => {
+  // ---- Send: build and check the payload, show a summary, send once ----
+  let SENT = false, PENDING_PAYLOAD = null;
+  const FIELD_NAMES = {
+    name: 'the customer’s name', email: 'the customer’s email', phone: 'the customer’s phone',
+    price: 'the rental price', duration: 'the duration', dropoffDate: 'the drop-off date', dropoffTime: 'the drop-off time',
+    pickupDate: 'the pickup date', pickupTime: 'the pickup time', stripeUrl: 'the Stripe payment link',
+    street: 'the drop-off street', city: 'the drop-off city', state: 'the drop-off state', zip: 'the drop-off zip',
+  };
+  function missing(f) {
+    showStatus('err', 'Add ' + (FIELD_NAMES[f] || f) + '.');
+    const el = $(f); if (el && el.type !== 'hidden') { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    return null;
+  }
+
+  $('sendBtn').addEventListener('click', () => {
+    if (SENT) return;
     $('invoiceTextPrompt').style.display = 'none';
+    const payload = buildPayload();
+    if (!payload) return;
+    PENDING_PAYLOAD = payload;
+    showSummary(payload);
+  });
+
+  function buildPayload() {
+    if (!$('secret').value.trim()) { showStatus('err', 'You’re signed out. Log in again.'); return null; }
     const fields = ['secret','name','email','phone','price','duration','dropoffDate','dropoffTime','pickupDate','pickupTime','stripeUrl'];
     if ($('serviceType').value !== 'self') fields.push('street','city','state','zip');
     const payload = {};
     for (const f of fields) {
       payload[f] = $(f).value.trim();
-      if (!payload[f]) return showStatus('err', 'Missing: ' + f);
+      if (!payload[f]) return missing(f);
     }
-    if (!payload.price.replace(/^\$+/, '').trim()) return showStatus('err', 'Enter a price after the $.');
+    if (!payload.price.replace(/^\$+/, '').trim()) return missing('price');
+    if (payload.pickupDate < payload.dropoffDate) { showStatus('err', 'The pickup date is before the drop-off date.'); $('pickupDate').focus(); return null; }
 
     // Resolve package display name from the dropdown selection
     const pkgVal = $('package').value;
-    if (!pkgVal) return showStatus('err', 'Missing: package');
+    if (!pkgVal) { showStatus('err', 'Choose a package.'); $('package').focus(); return null; }
     if (pkgVal === 'custom') {
       const customName = $('customPackageName').value.trim();
-      if (!customName) return showStatus('err', 'Missing: custom package description');
+      if (!customName) { showStatus('err', 'Describe the custom package.'); $('customPackageName').focus(); return null; }
       payload.package = customName;
     } else {
       payload.package = PACKAGES[Number(pkgVal)]?.name || 'Package';
@@ -466,10 +502,10 @@
     const toteCount = Number($('toteCount').value);
     const dollyCount = Number($('dollyCount').value);
     if ($('toteCount').value.trim() === '' || !Number.isInteger(toteCount) || toteCount < 0) {
-      return showStatus('err', 'Tote count must be a whole number (0 or more).');
+      showStatus('err', 'Tote count must be a whole number (0 or more).'); $('toteCount').focus(); return null;
     }
     if ($('dollyCount').value.trim() === '' || !Number.isInteger(dollyCount) || dollyCount < 0) {
-      return showStatus('err', 'Dolly count must be a whole number (0 or more).');
+      showStatus('err', 'Dolly count must be a whole number (0 or more).'); $('dollyCount').focus(); return null;
     }
     payload.toteCount = toteCount;
     payload.dollyCount = dollyCount;
@@ -488,7 +524,7 @@
       } else {
         const ps = $('pstreet').value.trim(), pc = $('pcity').value.trim(),
               pst = $('pstate').value.trim(), pz = $('pzip').value.trim();
-        if (!ps || !pc || !pst || !pz) return showStatus('err', 'Missing: pickup address fields');
+        if (!ps || !pc || !pst || !pz) { showStatus('err', 'Fill in the whole pickup address, or tick “same as drop-off”.'); $('pstreet').focus(); return null; }
         payload.pickupAddress = ps + ', ' + pc + ', ' + pst + ' ' + pz;
       }
     }
@@ -497,8 +533,47 @@
     // Convert 24h picker values ("14:30") to 12h display ("2:30 PM")
     payload.dropoffTime = to12Hour(payload.dropoffTime);
     payload.pickupTime = to12Hour(payload.pickupTime);
+    return payload;
+  }
 
-    const btn = $('sendBtn');
+  function showSummary(p) {
+    const day = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const res = checkAvailability(p.dropoffDate, p.pickupDate, p.toteCount, prefillHold());
+    const box = $('sendSummary');
+    box.innerHTML = `
+      <h3>Send this invoice?</h3>
+      <dl>
+        <dt>To</dt><dd>${esc(p.name)} · ${esc(p.email)}</dd>
+        <dt>Amount</dt><dd><b>${esc(p.price)}</b> · ${esc(p.package)}${p.isMilitary ? ' · military' : ''}</dd>
+        <dt>Totes</dt><dd>${p.toteCount} totes · ${p.dollyCount} ${p.dollyCount === 1 ? 'dolly' : 'dollies'}</dd>
+        <dt>Dates</dt><dd>${esc(day(p.dropoffDate))} ${esc(p.dropoffTime)} to ${esc(day(p.pickupDate))} ${esc(p.pickupTime)}</dd>
+        <dt>Where</dt><dd>${p.serviceType === 'self' ? 'Customer picks up and returns' : esc(p.dropoffAddress) + (p.pickupAddress !== p.dropoffAddress ? '<br>Pickup: ' + esc(p.pickupAddress) : '')}</dd>
+        ${res && !res.ok ? `<dt>Stock</dt><dd>${availabilityHtml(res)}</dd>` : ''}
+      </dl>
+      <div class="row-btns">
+        <button type="button" id="confirmSendBtn">Send invoice email</button>
+        <button type="button" class="secondary" id="editAgainBtn">Back to edit</button>
+      </div>`;
+    box.hidden = false;
+    $('sendBtn').hidden = true;
+    $('status').className = 'status';
+    $('confirmSendBtn').addEventListener('click', () => doSend(PENDING_PAYLOAD));
+    $('editAgainBtn').addEventListener('click', hideSummary);
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function hideSummary() {
+    if (SENT) return;
+    $('sendSummary').hidden = true;
+    $('sendBtn').hidden = false;
+    PENDING_PAYLOAD = null;
+  }
+  // Any edit after the summary is shown sends you back to review it again
+  document.querySelector('.card').addEventListener('input', e => { if (!e.target.closest('#sendSummary')) hideSummary(); });
+
+  async function doSend(payload) {
+    if (SENT || !payload) return;
+    payload.secret = $('secret').value.trim();
+    const btn = $('confirmSendBtn');
     btn.disabled = true; btn.textContent = 'Sending...';
     try {
       const resp = await fetch('/.netlify/functions/send-invoice', {
@@ -507,6 +582,12 @@
         body: JSON.stringify(payload),
       });
       if (resp.ok) {
+        // Lock the form: one more tap must not email the customer a second invoice
+        SENT = true;
+        $('sendSummary').hidden = true;
+        $('sendBtn').hidden = true;
+        $('newInvoiceBtn').hidden = false;
+        document.querySelectorAll('.card input, .card select, .card textarea').forEach(el => { el.disabled = true; });
         showStatus('ok', 'Invoice sent to ' + payload.email + ' (BCC to you).');
         if (PREFILL_REQUEST_KEY) markRequestInvoiced(PREFILL_REQUEST_KEY);
         showInvoiceTextPrompt(payload.name, payload.phone, payload.email);
@@ -517,10 +598,29 @@
         showStatus('err', 'Send failed (' + resp.status + '): ' + (detail || 'check function logs.'));
       }
     } catch (e) {
-      showStatus('err', 'Network error — are you on the live site?');
+      showStatus('err', 'Network error. The invoice may not have sent; check your inbox for the BCC before trying again.');
     }
-    btn.disabled = false; btn.textContent = 'Send Invoice Email';
-  });
+    if (!SENT) { btn.disabled = false; btn.textContent = 'Send invoice email'; }
+  }
+
+  // ---- Availability for the chosen dates and tote count ----
+  // A request that's awaiting confirmation or confirmed already holds its
+  // totes in the availability numbers; add them back (see admin-availability.js).
+  function prefillHold() {
+    const r = PENDING_PREFILL;
+    if (!r || !['awaiting_confirmation', 'confirmed'].includes(r.status)) return null;
+    const totes = totesInPackageText(r.package);
+    return totes ? { start: r.deliveryDate, end: r.pickupDate, totes } : null;
+  }
+  function renderAvailLine() {
+    const start = $('dropoffDate').value, end = $('pickupDate').value;
+    if (!start || !end) { $('availLine').innerHTML = ''; return; }
+    const need = Number($('toteCount').value) || 0;
+    $('availLine').innerHTML = availabilityHtml(checkAvailability(start, end, need, prefillHold()));
+  }
+  ['dropoffDate', 'pickupDate', 'toteCount'].forEach(id => $(id).addEventListener('input', renderAvailLine));
+  $('package').addEventListener('change', () => setTimeout(renderAvailLine, 0));
+  loadAvailability().then(renderAvailLine);
 
   function showStatus(kind, msg) {
     const s = $('status');
