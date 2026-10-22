@@ -373,10 +373,25 @@
     const lp = linkPrice(), ip = money($('price').value);
     return lp !== null && ip !== null && Math.abs(lp - ip) > 0.004 ? { link: lp, invoice: ip } : null;
   }
+  // Your process: a package's own link only when the price is the package
+  // price. A discount, rush fee or custom package needs a link you paste,
+  // so a package link that no longer matches is cleared, not left to send.
+  let LINK_CLEARED = null;   // the amount the cleared link charged, for the note
   function stripeCheck() {
+    const before = stripeMismatch();
+    if (before) { $('stripeUrl').value = ''; LINK_CLEARED = before.link; }
+    else if ($('stripeUrl').value.trim()) LINK_CLEARED = null;
+    else {
+      // Empty field at the package's own price (say, military unticked): use its link
+      const pkg = PACKAGES[Number($('package').value)];
+      if (pkg && pkg.stripeUrl && money(pkg.price) === money($('price').value)) { $('stripeUrl').value = pkg.stripeUrl; LINK_CLEARED = null; }
+    }
     const note = $('stripeNote'), url = $('stripeUrl').value.trim(), mm = stripeMismatch(), lp = linkPrice();
-    note.classList.toggle('bad', !!mm);
-    if (!url) note.textContent = 'Paste the Stripe payment link for this amount.';
+    const price = $('price').value.trim();
+    note.classList.toggle('bad', !!mm || (!url && !LOG_MODE));
+    if (!url && LINK_CLEARED !== null) note.textContent = `The price is ${price}, not the package's $${trimZeros(LINK_CLEARED)}, so its link was removed. Paste a Stripe link for ${price}.`;
+    else if (!url && $('package').value === 'custom') note.textContent = `Custom package: paste a Stripe link for ${price || 'the price'}.`;
+    else if (!url) note.textContent = 'Paste the Stripe payment link for this amount.';
     else if (mm) note.textContent = `This link charges $${trimZeros(mm.link)}, but the price is $${trimZeros(mm.invoice)}. Paste a Stripe link for $${trimZeros(mm.invoice)}.`;
     else if (lp !== null) note.textContent = `This link charges $${trimZeros(lp)}, which matches the price.`;
     else note.textContent = `Your own link. Make sure it charges ${$('price').value.trim() || 'the price'}.`;
@@ -436,7 +451,11 @@
   $('package').addEventListener('change', (e) => {
     const v = e.target.value;
     $('customPackageBlock').style.display = (v === 'custom') ? 'block' : 'none';
-    if (v === '' || v === 'custom') { $('estimateNote').style.display = 'none'; $('recalcBtn').hidden = true; stripeCheck(); return; }
+    if (v === '' || v === 'custom') {
+      $('estimateNote').style.display = 'none'; $('recalcBtn').hidden = true;
+      if (v === 'custom' && PACKAGES.some(p => p.stripeUrl === $('stripeUrl').value.trim())) $('stripeUrl').value = '';
+      stripeCheck(); return;
+    }
     const p = PACKAGES[Number(v)];
     if (!p) return;
     $('duration').value = p.duration || '2 Weeks';
@@ -446,6 +465,7 @@
     $('dollyCount').value = (p.dollyCount ?? '');
     // A new package is a new starting price: recalculate even if typed before
     PRICE_BY_HAND = false;
+    LINK_CLEARED = null;
     autoPrice();
   });
 
@@ -522,7 +542,7 @@
   const FIELD_NAMES = {
     name: 'the customer’s name', email: 'the customer’s email', phone: 'the customer’s phone',
     price: 'the rental price', duration: 'the duration', dropoffDate: 'the drop-off date', dropoffTime: 'the drop-off time',
-    pickupDate: 'the pickup date', pickupTime: 'the pickup time', stripeUrl: 'the Stripe payment link',
+    pickupDate: 'the pickup date', pickupTime: 'the pickup time', stripeUrl: 'a Stripe payment link for this price',
     street: 'the drop-off street', city: 'the drop-off city', state: 'the drop-off state', zip: 'the drop-off zip',
   };
   function missing(f) {
