@@ -205,6 +205,8 @@
   let FILTER = 'all', SEARCH = '', SHOW_PAST = false;
   // ?q=Name opens the list searched for that name (links from Inventory's day breakdown)
   const Q0 = new URLSearchParams(location.search).get('q');
+  // ?filter=info opens a filter directly (Inventory links to "Needs info")
+  const F0 = new URLSearchParams(location.search).get('filter');
   const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
 
   $('loadBtn').addEventListener('click', load);
@@ -274,6 +276,7 @@
 
   $('search').addEventListener('input', () => { SEARCH = $('search').value.trim().toLowerCase(); renderAll(ALL_RENTALS); });
   if (Q0) { $('search').value = Q0; SEARCH = Q0.trim().toLowerCase(); }
+  if (F0 && FILTERS.some(f => f[0] === F0)) FILTER = F0;
   window.setFilter = (f) => { FILTER = f; SHOW_PAST = false; renderAll(ALL_RENTALS); window.scrollTo({ top: $('results').offsetTop - 60, behavior: 'smooth' }); };
 
   const shortDate = iso => iso ? new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
@@ -360,6 +363,7 @@
             <div><span class="k">Times</span>out ${esc(fmtDate(r.dropoffDate))} ${esc(r.dropoffTime || '')}, back ${esc(fmtDate(r.pickupDate))} ${esc(r.pickupTime || '')}</div>
             <div><span class="k">Address</span>${addr}</div>
             <div><span class="k">Contact</span>${r.phone ? `<a href="tel:${escAttr(r.phone)}">${esc(r.phone)}</a>` : '—'}${r.email ? ` · <a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : ''}</div>
+            ${(r.stockLosses || []).length ? `<div><span class="k">Stock</span><span style="color:#831C1E;">${r.stockLosses.map(l => `${l.quantity} ${l.item === 'dolly' ? (l.quantity === 1 ? 'dolly' : 'dollies') : (l.quantity === 1 ? 'tote' : 'totes')} ${l.type === 'lost' ? 'not returned' : 'damaged'} (${esc(shortDate(l.date))})`).join(', ')}</span></div>` : ''}
             ${r.tosAccepted ? `<div><span class="k">Terms</span>Accepted ${esc(fmtDate((r.tosAcceptedAt || '').slice(0, 10)))}</div>` : ''}
             ${missing.length ? `<div><span class="k">Missing</span><span style="color:#831C1E;">${esc(missing.join(', '))}</span></div>` : ''}
           </div>
