@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Dashboard · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261028"></script>
+<script src="admin-shared.js?v=20261029"></script>
 <style>
   /* Dashboard layout: the cream body is the frame (sidebar on it, no rule),
      the work sits on one white sheet inset 8px from the window's right,
@@ -313,8 +313,10 @@
       DATA.rentals = (rd.rentals || []).filter(r => !r.cancelled);   // cancelled rentals count nowhere
       DATA.reminders = rd.reminders || { delivery: [], pickup: [], review: [] };
       DATA.paidFlags = rd.paidFlags || {};
+      DATA.paidVia = rd.paidVia || {};
       DATA.sentFlags = rd.sentFlags || {};
       DATA.expenses = fd.expenses || [];
+      DATA.stripeFees = fd.stripeFees || { pct: 2.9, fixed: 0.3 };
       DATA.mileage = fd.mileage || [];
       DATA.invEvents = id.events || [];
       DATA.requests = qd.requests || [];
@@ -567,26 +569,29 @@
       const prevStart = new Date(Date.UTC(y, m-1, 1)).toISOString().slice(0,10);
       const prevEnd = new Date(Date.UTC(y, m, 0)).toISOString().slice(0,10);
       const name = i => new Date(Date.UTC(y, i, 1)).toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
-      return { start, end, prevStart, prevEnd, label: name(m) + ', booked so far', vs: 'all of ' + name(m - 1) };
+      return { start, end, prevStart, prevEnd, label: name(m) + ' so far', vs: 'all of ' + name(m - 1) };
     }
     if (period === 'year') {
       const y = d.getUTCFullYear();
-      return { start: `${y}-01-01`, end: `${y}-12-31`, prevStart: `${y-1}-01-01`, prevEnd: `${y-1}-12-31`, label: y + ', booked so far', vs: 'all of ' + (y - 1) };
+      return { start: `${y}-01-01`, end: `${y}-12-31`, prevStart: `${y-1}-01-01`, prevEnd: `${y-1}-12-31`, label: y + ' so far', vs: 'all of ' + (y - 1) };
     }
     return { start: '0000-01-01', end: '9999-12-31', prevStart: null, prevEnd: null, label: 'All time', vs: '' };
   }
 
+  // Same rules as Finance (admin-shared.js): revenue when paid or by drop-off
+  // (whichever Finance is set to), recurring costs every month, Stripe fees
   function computeKPIs(period) {
     const range = periodRange(period, TODAY);
-    const inRange = (dateStr, s, e) => dateStr && dateStr >= s && dateStr <= e;
-    const rentalsIn = DATA.rentals.filter(r => inRange(r.dropoffDate, range.start, range.end));
-    const expensesIn = DATA.expenses.filter(e => inRange(e.date, range.start, range.end));
-    const revenue = sumPrice(rentalsIn);
-    const expTotal = expensesIn.reduce((t,e) => t + (e.amount||0), 0);
-
+    const basis = finBasis();
+    const rev = revenueEntries(DATA.rentals, DATA.paidFlags, basis);
+    const spend = [...expenseCharges(DATA.expenses, TODAY), ...stripeFeeCharges(rev, DATA.paidFlags, DATA.paidVia, DATA.stripeFees)];
+    const inRange = (d, s, e) => d && d >= s && d <= e;
+    const revIn = rev.filter(x => inRange(x.date, range.start, range.end));
+    const revenue = round2(revIn.reduce((t, x) => t + x.amount, 0));
+    const expTotal = round2(spend.filter(x => inRange(x.date, range.start, range.end)).reduce((t, x) => t + Number(x.amount || 0), 0));
     let prevRevenue = null;
-    if (range.prevStart) prevRevenue = sumPrice(DATA.rentals.filter(r => inRange(r.dropoffDate, range.prevStart, range.prevEnd)));
-    return { range, revenue, expTotal, net: revenue - expTotal, count: rentalsIn.length, prevRevenue };
+    if (range.prevStart) prevRevenue = round2(rev.filter(x => inRange(x.date, range.prevStart, range.prevEnd)).reduce((t, x) => t + x.amount, 0));
+    return { range, revenue, expTotal, net: round2(revenue - expTotal), count: revIn.length, prevRevenue, basis };
   }
 
   function renderMoney() {
@@ -594,7 +599,7 @@
     const k = computeKPIs(PERIOD);
 
     let monthlyOverhead = 0;
-    for (const e of DATA.expenses) {
+    for (const e of DATA.expenses.filter(x => !x.endDate || x.endDate >= TODAY)) {
       if (e.recurring === 'monthly') monthlyOverhead += e.amount;
       else if (e.recurring === 'yearly') monthlyOverhead += e.amount / 12;
     }
@@ -615,7 +620,7 @@
         <div class="delta">${delta}</div>
       </div>
       <div class="kv">
-        <div class="row"><span>Revenue <span class="sub">${plural(k.count, 'rental')}</span></span><span class="num">${moneyDec(k.revenue)}</span></div>
+        <div class="row"><span>${k.basis === 'paid' ? 'Collected' : 'Revenue'} <span class="sub">${plural(k.count, 'rental')}</span></span><span class="num">${moneyDec(k.revenue)}</span></div>
         <div class="row"><span>Expenses <span class="sub num">${moneyDec(monthlyOverhead)}/mo recurring</span></span><span class="num">−${moneyDec(k.expTotal)}</span></div>
       </div>`;
   }
