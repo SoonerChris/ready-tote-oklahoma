@@ -76,6 +76,43 @@ function pickupAddressOf(r) {
     || r.pickupAddress || r.address || "";
 }
 
+// ---- Tote and dolly counts ----
+// Shared by the Dashboard and Inventory so both pages always show the same
+// numbers. Rentals carry real toteCount/dollyCount fields (set by Send
+// Invoice, Add Rental and quick edits); the package text is only read for
+// older rentals saved before those fields existed, and for requests.
+function totesInPackage(pkg) {
+  const m = String(pkg || '').match(/(\d+)\s*totes?/i);
+  return m ? parseInt(m[1], 10) : 0;
+}
+function dolliesInPackage(pkg) {
+  const s = String(pkg || '');
+  const m = s.match(/(\d+)\s*doll(?:y|ies)/i);
+  if (m) return parseInt(m[1], 10);
+  return /doll(?:y|ies)/i.test(s) ? 1 : 0;
+}
+function toteQty(r) {
+  return typeof r.toteCount === 'number' ? r.toteCount : totesInPackage(r.package);
+}
+function dollyQty(r) {
+  return typeof r.dollyCount === 'number' ? r.dollyCount : dolliesInPackage(r.package);
+}
+
+// Requests that hold totes but have no rental yet: awaiting the customer's
+// confirmation, or confirmed, and not matched to an invoiced rental by
+// email+date or name+date. Same holds as the public availability function.
+// estTotes is 0 when the package text can't be read (e.g. "Custom package");
+// callers list those rather than guess.
+function findPendingConfirmed(requests, rentals) {
+  const byEmail = new Set(rentals.map(r => `${(r.email || '').toLowerCase()}|${r.dropoffDate}`));
+  const byName = new Set(rentals.map(r => `${(r.name || '').toLowerCase()}|${r.dropoffDate}`));
+  return requests
+    .filter(req => req.status === 'confirmed' || req.status === 'awaiting_confirmation')
+    .filter(req => !byEmail.has(`${(req.email || '').toLowerCase()}|${req.deliveryDate}`)
+      && !byName.has(`${(req.name || '').toLowerCase()}|${req.deliveryDate}`))
+    .map(req => ({ ...req, estTotes: totesInPackage(req.package), estDollies: dolliesInPackage(req.package) }));
+}
+
 // ---- Auth guard ----
 // Runs immediately (this script is a blocking, non-deferred <script src>
 // in <head>, so this executes before <body> is even parsed) rather than

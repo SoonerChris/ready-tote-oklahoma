@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Dashboard · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261025"></script>
+<script src="admin-shared.js?v=20261026"></script>
 <style>
   /* Dashboard layout: the cream body is the frame (sidebar on it, no rule),
      the work sits on one white sheet inset 8px from the window's right,
@@ -91,6 +91,17 @@
   .kind.go{background:var(--pill-go-bg);color:var(--pill-go-ink);}
   .kind.back{background:var(--pill-back-bg);color:var(--pill-back-ink);}
   .kind.self{background:var(--pill-self-bg);color:var(--pill-self-ink);}
+  .kind.due{background:#FFEDEA;color:#831C1E;height:20px;font-size:11px;margin-left:6px;vertical-align:1px;}
+  .sched .who a,.sched .meta a{color:inherit;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--control);}
+  .sched .who a:hover,.sched .meta a:hover{text-decoration-color:currentColor;}
+
+  /* Unpaid invoices */
+  .unpaid .owed{display:flex;justify-content:space-between;align-items:baseline;padding:0 0 10px;}
+  .unpaid .owed .lbl{font-size:14px;color:var(--muted);}
+  .unpaid .owed .big{font-size:22px;font-weight:600;}
+  .unpaid .row{grid-template-columns:minmax(0,1fr) auto auto;}
+  .unpaid .amt{font-size:14px;font-weight:600;text-align:right;}
+  .unpaid .btn{height:32px;padding:0 12px;font-size:13px;}
 
   /* Tote fleet: one segment per active rental, seams between them, the shelf as the grey track */
   .fleet-figs{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;}
@@ -101,6 +112,11 @@
   .bar{display:flex;gap:2px;height:14px;margin:14px 0 6px;border-radius:3px;overflow:hidden;background:var(--track);}
   .bar span{display:block;height:100%;background:var(--data);}
   .bar span.over{background:var(--negative);}
+  .bar span.held{background:repeating-linear-gradient(135deg,var(--data) 0 3px,#E7D6AE 3px 6px);}
+  .held-line{display:flex;align-items:center;gap:8px;margin:0 0 8px;}
+  .held-line .swatch{flex:none;width:12px;height:12px;border-radius:2px;background:repeating-linear-gradient(135deg,var(--data) 0 3px,#E7D6AE 3px 6px);}
+  .held-line a,.dolly-line a{color:var(--ink);font-weight:600;}
+  .dolly-line{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:4px 0 8px;padding:10px 0 0;border-top:1px solid var(--rule);font-size:14px;}
   .bar-scale{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px;}
   .notice{margin:8px 0 12px;padding:8px 12px;border-radius:6px;background:#FFEDEA;color:#831C1E;font-size:13px;font-weight:600;}
   .back-list .row{grid-template-columns:minmax(0,1fr) auto auto;padding:10px 0;}
@@ -147,6 +163,8 @@
     .sched .row .time{grid-row:1 / span 2;align-self:start;padding-top:2px;}
     .sched .row .totes{grid-column:3;grid-row:1;}
     .texts .row{grid-template-columns:minmax(0,1fr) auto;}
+    .unpaid .row{grid-template-columns:minmax(0,1fr) auto;}
+    .unpaid .row .btn{grid-column:1 / -1;justify-self:start;height:40px;}
     .texts .why{grid-column:1;grid-row:2;text-align:left;}
     .texts .row .btn{grid-column:2;grid-row:1 / span 2;min-height:44px;}
   }
@@ -211,6 +229,14 @@
         <div class="card-body" id="fleet"><span class="skel w60"></span><span class="skel w80"></span></div>
       </section>
 
+      <section class="card unpaid" aria-labelledby="unpaidTitle">
+        <div class="card-head">
+          <h2 id="unpaidTitle">Unpaid invoices<span class="count num" id="unpaidCount"></span></h2>
+          <a href="admin-reminders.html">Reminders</a>
+        </div>
+        <div class="card-body" id="unpaidList"><span class="skel w80"></span><span class="skel w60"></span></div>
+      </section>
+
       <section class="card" aria-labelledby="moneyTitle">
         <div class="card-head">
           <h2 id="moneyTitle">Money</h2>
@@ -235,6 +261,14 @@
   $('secret').value = adminSessionMarker();   // signed-in marker; the session cookie is what the server checks
 
   $('loadBtn').addEventListener('click', load);
+
+  // Coming back to this tab (say, from Messages after texting someone)
+  // refreshes the numbers, at most once a minute. Open "Sent to X?" questions
+  // stay open through the refresh.
+  let LOADED_AT = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && TODAY && Date.now() - LOADED_AT > 60000 && !$('loadBtn').disabled) load();
+  });
   // Auto-load if secret is saved
   if ($('secret').value) load();
 
@@ -242,9 +276,8 @@
   const sumPrice = arr => arr.reduce((t,r) => t + priceNum(r.price), 0);
   const moneyDec = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + 's')}`;
-  const totesInPackage = p => { const m = String(p||'').match(/(\d+)\s*totes?/i); return m ? parseInt(m[1], 10) : 0; };
 
-  let DATA = { rentals: [], expenses: [], mileage: [], invEvents: [], requests: [] };
+  let DATA = { rentals: [], expenses: [], mileage: [], invEvents: [], requests: [], paidFlags: {}, sentFlags: {} };
   let TODAY = '';
   let PERIOD = 'month';
 
@@ -279,6 +312,8 @@
 
       DATA.rentals = rd.rentals || [];
       DATA.reminders = rd.reminders || { delivery: [], pickup: [], review: [] };
+      DATA.paidFlags = rd.paidFlags || {};
+      DATA.sentFlags = rd.sentFlags || {};
       DATA.expenses = fd.expenses || [];
       DATA.mileage = fd.mileage || [];
       DATA.invEvents = id.events || [];
@@ -287,6 +322,7 @@
 
       render();
       $('status').style.display = 'none';
+      LOADED_AT = Date.now();
       $('fresh').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' });
     } catch { showErr(loadFailedMsg('Network error. This only works on the live site.')); }
     finally { btn.disabled = false; btn.textContent = 'Refresh'; }
@@ -334,10 +370,21 @@
     const pendingRequests = requests.filter(r => r.status === 'new' || r.status === 'reviewed' || r.status === 'awaiting_confirmation').length;
 
     const ADD_TYPES = ['purchased', 'returned-to-service'];
-    // Dolly stock changes are tracked separately; events with no item are totes
-    const totalTotesOwned = invEvents.filter(e => e.item !== 'dolly').reduce((t,e) => t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity), 0);
-    const totesDeployed = activeRentals.reduce((t,r) => t + totesInPackage(r.package), 0);
-    const totesAvailable = totalTotesOwned - totesDeployed;
+    // Same math as the Inventory page: real tote counts on each rental, and
+    // requests awaiting or confirmed (not invoiced yet) hold their totes too.
+    // Dolly stock changes are tracked separately; events with no item are totes.
+    const owned = item => invEvents.filter(e => (e.item === 'dolly') === (item === 'dolly') && e.date <= today)
+      .reduce((t,e) => t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity), 0);
+    const totalTotesOwned = owned('tote');
+    const totesDeployed = activeRentals.reduce((t,r) => t + toteQty(r), 0);
+    const heldToday = findPendingConfirmed(requests, rentals)
+      .filter(p => p.estTotes > 0 && p.deliveryDate <= today && p.pickupDate >= today);
+    const totesHeld = heldToday.reduce((t,p) => t + p.estTotes, 0);
+    const totesAvailable = totalTotesOwned - totesDeployed - totesHeld;
+    const dolliesTracked = invEvents.some(e => e.item === 'dolly');
+    const dolliesOut = activeRentals.reduce((t,r) => t + dollyQty(r), 0) + heldToday.reduce((t,p) => t + (p.estDollies || 0), 0);
+    const dolliesFree = owned('dolly') - dolliesOut;
+    const isUnpaid = r => !!r.invoicedAt && !r.backfilled && !DATA.paidFlags[r.key];
 
     // ---- Texts to send ----
     const allTexts = [
@@ -354,11 +401,11 @@
       <div class="row" data-flag="${escAttr(r.flagId)}">
         <div class="person">
           <div class="who">${esc(r.name)}</div>
-          <div class="meta"><span class="num">${esc(r.phone)}</span> · ${plural(totesInPackage(r.package), 'tote')}</div>
+          <div class="meta"><span class="num">${esc(r.phone)}</span> · ${plural(toteQty(r), 'tote')}</div>
         </div>
         <div class="why">${r.why}</div>
         <a class="btn ghost" data-text href="${escAttr(r.sms)}">Text ${firstName(r)}</a>
-        <div class="ask" hidden>
+        <div class="ask"${OPEN_ASKS.has(r.flagId) ? '' : ' hidden'}>
           <span>Sent to ${firstName(r)}?</span>
           <button type="button" class="btn primary" data-yes data-why="${escAttr(r.why)}" data-name="${escAttr(r.name)}">Yes, sent</button>
           <button type="button" class="linkbtn" data-no>Not yet</button>
@@ -374,11 +421,13 @@
       const self = r.serviceType === 'self';
       if (r.dropoffDate >= today && r.dropoffDate <= endDate) {
         events.push({ date: r.dropoffDate, time: r.dropoffTime || '', kind: self ? 'Customer pickup' : 'Deliver',
-          cls: self ? 'self' : 'go', name: r.name, totes: totesInPackage(r.package), addr: self ? 'At our place' : dropoffAddressOf(r) });
+          cls: self ? 'self' : 'go', name: r.name, phone: r.phone, totes: toteQty(r), unpaid: isUnpaid(r),
+          addr: self ? '' : dropoffAddressOf(r) });
       }
       if (r.pickupDate >= today && r.pickupDate <= endDate) {
         events.push({ date: r.pickupDate, time: r.pickupTime || '', kind: self ? 'Customer return' : 'Pick up',
-          cls: self ? 'self' : 'back', name: r.name, totes: totesInPackage(r.package), addr: self ? 'At our place' : pickupAddressOf(r) });
+          cls: self ? 'self' : 'back', name: r.name, phone: r.phone, totes: toteQty(r), unpaid: false,
+          addr: self ? '' : pickupAddressOf(r) });
       }
     }
     events.sort((a,b) => a.date.localeCompare(b.date) || timeKey(a.time) - timeKey(b.time));
@@ -391,7 +440,10 @@
       <div class="row">
         <div class="time num">${esc(fmtTime(e.time)) || '<span class="meta">—</span>'}</div>
         <span class="kind ${e.cls}">${e.kind}</span>
-        <div class="person"><div class="who">${esc(e.name)}</div><div class="meta">${esc(e.addr) || '—'}</div></div>
+        <div class="person">
+          <div class="who">${e.phone ? `<a href="tel:${escAttr(normalizePhone(e.phone))}" title="Call ${escAttr(e.name)}">${esc(e.name)}</a>` : esc(e.name)}${e.unpaid ? ' <span class="kind due">Unpaid</span>' : ''}</div>
+          <div class="meta">${e.addr ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.addr)}" target="_blank" rel="noopener" title="Open in Maps">${esc(e.addr)}</a>` : 'At our place'}</div>
+        </div>
         <div class="totes num">${e.totes || '—'} totes</div>
       </div>`;
     }).join('') : '<p class="empty-line">Nothing scheduled in the next 7 days.</p>';
@@ -415,35 +467,89 @@
     else { pa.href = 'admin-invoice.html?mode=log'; pa.textContent = 'Add rental'; }
 
     // ---- Tote fleet ----
-    const scale = Math.max(totalTotesOwned, totesDeployed) || 1;
+    const scale = Math.max(totalTotesOwned, totesDeployed + totesHeld) || 1;
     const segs = activeRentals.slice().sort((a,b) => a.pickupDate.localeCompare(b.pickupDate));
     let used = 0;
     const segHtml = segs.map(r => {
-      const n = totesInPackage(r.package);
+      const n = toteQty(r);
       const fits = Math.max(0, Math.min(n, totalTotesOwned - used));
       const over = n - fits;
       used += n;
       return (fits ? `<span style="flex:0 0 calc(${(fits/scale*100).toFixed(3)}% - 2px)" title="${escAttr(r.name)}: ${n} totes"></span>` : '')
         + (over ? `<span class="over" style="flex:0 0 calc(${(over/scale*100).toFixed(3)}% - 2px)" title="${over} oversold"></span>` : '');
-    }).join('');
+    }).join('') + (totesHeld ? `<span class="held" style="flex:0 0 calc(${(Math.max(0, Math.min(totesHeld, totalTotesOwned - used))/scale*100).toFixed(3)}% - 2px)" title="${totesHeld} held for bookings not invoiced yet"></span>` : '');
     const backRows = segs.slice(0, 4).map(r => `
       <div class="row">
         <div class="who">${esc(r.name)}</div>
-        <div class="totes num">${totesInPackage(r.package)}</div>
+        <div class="totes num">${toteQty(r)}</div>
         <div class="date num">${r.pickupDate === today ? 'Today' : r.pickupDate === shiftDate(today, 1) ? 'Tomorrow' : shortDate(r.pickupDate)}</div>
       </div>`).join('');
     $('fleet').innerHTML = `
       <div class="fleet-figs">
-        <div><div class="big num">${totesAvailable}</div><div class="lbl">on the shelf</div></div>
+        <div><div class="big num">${totesAvailable}</div><div class="lbl">${totesHeld ? 'free to book' : 'on the shelf'}</div></div>
         <div class="right"><div class="big num">${totesDeployed}</div><div class="lbl">out with ${plural(activeRentals.length, 'customer')}</div></div>
       </div>
       <div class="bar" role="img" aria-label="${totesDeployed} of ${totalTotesOwned} totes out with customers">${segHtml}</div>
       <div class="bar-scale num"><span>0</span><span>${totalTotesOwned} owned</span></div>
+      ${totesHeld ? `<div class="meta held-line"><span class="swatch"></span>${totesHeld} held for ${plural(heldToday.length, 'booking')} not invoiced yet. <a href="admin-inventory.html">See them</a></div>` : ''}
+      ${dolliesTracked
+        ? `<div class="dolly-line"><span class="num"><b>${dolliesFree}</b> ${dolliesFree === 1 ? 'dolly' : 'dollies'} free</span><span class="meta num">${dolliesOut} out · ${owned('dolly')} owned</span></div>`
+        : dolliesOut ? `<div class="dolly-line"><span class="num"><b>${dolliesOut}</b> ${dolliesOut === 1 ? 'dolly' : 'dollies'} out</span><a class="meta" href="admin-inventory.html">Track dollies owned</a></div>` : ''}
       ${totesAvailable < 0 ? `<div class="notice">${Math.abs(totesAvailable)} totes oversold. Check availability before booking more.</div>` : ''}
+      ${dolliesTracked && dolliesFree < 0 ? `<div class="notice">${Math.abs(dolliesFree)} ${Math.abs(dolliesFree) === 1 ? 'dolly' : 'dollies'} oversold.</div>` : ''}
       ${segs.length ? `<div class="meta" style="margin-top:12px">Coming back, soonest first</div><div class="back-list">${backRows}</div>` : '<p class="empty-line">No totes out right now.</p>'}`;
 
+    renderUnpaid(isUnpaid);
     renderMoney();
   }
+
+  // ---- Unpaid invoices ----
+  // Invoiced, not marked paid, oldest invoice first. Paid flags come from
+  // Stripe automatically (stripe-webhook) or from Mark paid on Reminders.
+  function renderUnpaid(isUnpaid) {
+    const list = DATA.rentals.filter(isUnpaid)
+      .sort((a,b) => (a.invoicedAt || '').localeCompare(b.invoicedAt || ''));
+    const total = sumPrice(list);
+    $('unpaidCount').textContent = list.length ? ' ' + list.length : '';
+    if (!list.length) { $('unpaidList').innerHTML = '<p class="empty-line">Every invoice is paid.</p>'; return; }
+    const ago = iso => {
+      const days = Math.round((Date.parse(TODAY + 'T12:00:00Z') - Date.parse(String(iso).slice(0,10) + 'T12:00:00Z')) / 864e5);
+      return days <= 0 ? 'today' : days === 1 ? 'yesterday' : days + ' days ago';
+    };
+    $('unpaidList').innerHTML = `
+      <div class="owed"><span class="lbl">Outstanding</span><span class="big num">${moneyDec(total)}</span></div>` + list.map(r => {
+      const reminded = DATA.sentFlags['emailReminder:' + r.key];
+      const late = r.dropoffDate && r.dropoffDate <= shiftDate(TODAY, 2);
+      const canEmail = r.email && r.stripeUrl;
+      return `
+      <div class="row" data-key="${escAttr(r.key)}">
+        <div class="person">
+          <div class="who">${esc(r.name)}${late ? ' <span class="kind due">' + (r.dropoffDate < TODAY ? 'Out now' : 'Soon') + '</span>' : ''}</div>
+          <div class="meta">Invoiced ${ago(r.invoicedAt)}${r.dropoffDate ? ' · drop-off ' + dayName(r.dropoffDate).replace(/^(Today|Tomorrow)$/, d => d.toLowerCase()) : ''}${reminded ? ' · emailed ' + shortDate(String(reminded).slice(0,10)) : ''}${canEmail ? '' : ' · no payment link on file'}</div>
+        </div>
+        <div class="amt num">${moneyDec(priceNum(r.price))}</div>
+        ${canEmail ? `<button type="button" class="btn ghost" data-remind>${reminded ? 'Email again' : 'Email reminder'}</button>` : ''}
+      </div>`;
+    }).join('');
+  }
+  $('unpaidList').addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-remind]');
+    if (!btn) return;
+    const row = btn.closest('.row');
+    const name = row.querySelector('.who').firstChild.textContent;
+    if (!confirm(`Email ${name} a payment reminder with their payment link?`)) return;
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      const resp = await post('send-payment-reminder', { secret: $('secret').value.trim(), key: row.dataset.key });
+      if (!resp.ok) throw new Error(await resp.text().catch(() => ''));
+      DATA.sentFlags['emailReminder:' + row.dataset.key] = new Date().toISOString();
+      for (const k of Object.keys(DATA.reminders)) DATA.reminders[k] = (DATA.reminders[k] || []).filter(x => x.flagId !== 'emailReminder:' + row.dataset.key);
+      render();
+    } catch (err) {
+      btn.disabled = false; btn.textContent = 'Email reminder';
+      showErr('Couldn’t send the reminder. ' + (err.message || 'Network error.'));
+    }
+  });
 
   // Turns a period key into a [start, end] date range for "current" plus the
   // matching prior range, so we can show a trend against it. Mirrors
@@ -518,19 +624,22 @@
   // Same sent flags as the Reminders page (mark-sent), so a text marked sent
   // here is gone there too, and the server stops listing it.
   let JUST_SENT = [];   // marked this visit, shown with Undo
+  const OPEN_ASKS = new Set();   // "Sent to X?" rows waiting for an answer; kept across refreshes
   $('textsList').addEventListener('click', async (e) => {
     const row = e.target.closest('.row');
     if (e.target.closest('[data-text]') && row) {
       // Messages opens; the question waits in the row for when you come back
+      OPEN_ASKS.add(row.dataset.flag);
       setTimeout(() => { const ask = row.querySelector('.ask'); if (ask) ask.hidden = false; }, 400);
       return;
     }
-    if (e.target.closest('[data-no]') && row) { row.querySelector('.ask').hidden = true; return; }
+    if (e.target.closest('[data-no]') && row) { OPEN_ASKS.delete(row.dataset.flag); row.querySelector('.ask').hidden = true; return; }
     const yes = e.target.closest('[data-yes]');
     if (yes && row) {
       yes.disabled = true; yes.textContent = 'Saving…';
       const ok = await setSent(row.dataset.flag, true);
       if (!ok) { yes.disabled = false; yes.textContent = 'Yes, sent'; return; }
+      OPEN_ASKS.delete(row.dataset.flag);
       JUST_SENT.push({ flagId: row.dataset.flag, name: yes.dataset.name, why: yes.dataset.why.replace(' · overdue', '') });
       for (const k of Object.keys(DATA.reminders)) DATA.reminders[k] = (DATA.reminders[k] || []).filter(x => x.flagId !== row.dataset.flag);
       render();
