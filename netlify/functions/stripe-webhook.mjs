@@ -11,13 +11,10 @@
 //   RESEND_FROM           - verified sender
 
 import { getStore } from "@netlify/blobs";
+import { emailLayout, heading, pill, steps, contactLine } from "./lib-email.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
-const SITE_URL = "https://readytoteokc.com";
-const LOGO_URL = `${SITE_URL}/images/logo.png`;
-const PHONE_DISPLAY = "580.399.3202";
-const PHONE_TEL = "+15803993202";
 
 export default async (request) => {
   if (request.method !== "POST") {
@@ -78,85 +75,20 @@ export default async (request) => {
 
   const from = process.env.RESEND_FROM || FROM_FALLBACK;
 
-  const html = `
-<!DOCTYPE html>
-<html lang="en">
-<body style="margin:0; padding:0; background-color:#F5F1E7;">
-  <div style="display:none; max-height:0; overflow:hidden;">
-    Payment received — your tote rental is confirmed!
-  </div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5F1E7; padding:32px 16px;">
-    <tr><td align="center">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;">
-
-        <tr>
-          <td align="center" style="background-color:#1E1B18; border-radius:16px 16px 0 0; padding:28px 24px;">
-            <img src="${LOGO_URL}" alt="Ready Tote Oklahoma" width="110" style="display:block; width:110px; height:auto;">
-          </td>
-        </tr>
-        <tr><td style="background-color:#C99A32; height:5px; font-size:0; line-height:0;">&nbsp;</td></tr>
-
-        <tr>
-          <td style="background-color:#FFFFFF; padding:36px 32px; font-family: Arial, Helvetica, sans-serif; color:#1E1B18;">
-
-            <h1 style="margin:0 0 6px; font-size:24px; line-height:1.2;">
-              You're all set, ${firstName}! &#127881;
-            </h1>
-            <p style="margin:0 0 24px; font-size:15px; line-height:1.6; color:#6B6259;">
-              We've received your payment${amount ? ` of <strong style="color:#1E1B18;">${amount}</strong>` : ""} and your reservation is <strong style="color:#1E8E52;">confirmed</strong>.
-            </p>
-
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                   style="background-color:#F5F1E7; border-radius:12px; border:1px solid #E5DFD2;">
-              <tr>
-                <td style="padding:20px 24px;">
-                  <p style="margin:0 0 12px; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#C99A32; font-weight:bold;">
-                    What Happens Next
-                  </p>
-                  <table role="presentation" cellpadding="0" cellspacing="0" style="font-family: Arial, Helvetica, sans-serif;">
-                    <tr>
-                      <td valign="top" style="padding:4px 10px 4px 0; font-size:14px; color:#C99A32; font-weight:bold;">1.</td>
-                      <td style="padding:4px 0; font-size:14px; line-height:1.6; color:#1E1B18;">We deliver clean totes to your door on your scheduled drop-off date</td>
-                    </tr>
-                    <tr>
-                      <td valign="top" style="padding:4px 10px 4px 0; font-size:14px; color:#C99A32; font-weight:bold;">2.</td>
-                      <td style="padding:4px 0; font-size:14px; line-height:1.6; color:#1E1B18;">You pack and move at your own pace</td>
-                    </tr>
-                    <tr>
-                      <td valign="top" style="padding:4px 10px 4px 0; font-size:14px; color:#C99A32; font-weight:bold;">3.</td>
-                      <td style="padding:4px 0; font-size:14px; line-height:1.6; color:#1E1B18;">We pick up the empty totes on your scheduled pickup date</td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-
-            <p style="margin:26px 0 0; font-size:14px; line-height:1.6; color:#6B6259;">
-              Need to adjust your dates or have questions? Just reply to this email or call
-              <a href="tel:${PHONE_TEL}" style="color:#1E1B18; font-weight:bold; text-decoration:none;">${PHONE_DISPLAY}</a>.
-            </p>
-          </td>
-        </tr>
-
-        <tr>
-          <td align="center" style="background-color:#1E1B18; border-radius:0 0 16px 16px; padding:24px 32px; font-family: Arial, Helvetica, sans-serif;">
-            <p style="margin:0 0 6px; font-size:13px; color:#FFFFFF; font-weight:bold;">
-              We Drop Off. You Pack. We Pick Up.
-            </p>
-            <p style="margin:0; font-size:12px; color:#9A938A;">
-              Ready Tote Oklahoma &bull; Serving the OKC Metro &amp; Ada Area<br>
-              <a href="tel:${PHONE_TEL}" style="color:#C99A32; text-decoration:none;">${PHONE_DISPLAY}</a>
-              &nbsp;&bull;&nbsp;
-              <a href="${SITE_URL}" style="color:#C99A32; text-decoration:none;">readytoteokc.com</a>
-            </p>
-          </td>
-        </tr>
-
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+  const html = emailLayout({
+    preheader: "Payment received. Your tote rental is confirmed.",
+    body: `
+            ${heading(`You're all set, ${firstName}`, {
+              badge: pill("Confirmed", "green"),
+              lead: `We received your payment${amount ? ` of <strong style="color:#1E1B18;">${amount}</strong>` : ""} and your reservation is confirmed.`,
+            })}
+            ${steps([
+              "We deliver clean totes to your door on your drop-off date",
+              "You pack and move at your own pace",
+              "We pick up the empty totes on your pickup date",
+            ], { top: 0 })}
+            ${contactLine("Need to adjust your dates or have questions?")}`,
+  });
 
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -169,7 +101,7 @@ export default async (request) => {
       to: [email],
       bcc: [OWNER_EMAIL],
       reply_to: OWNER_EMAIL,
-      subject: "Payment received — your tote rental is confirmed!",
+      subject: "Payment received: your tote rental is confirmed",
       html,
     }),
   });

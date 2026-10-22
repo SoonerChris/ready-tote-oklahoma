@@ -7,13 +7,10 @@
 //   RESEND_FROM    - verified sender, e.g. "Ready Tote Oklahoma <booking@readytoteokc.com>"
 
 import { getStore } from "@netlify/blobs";
+import { emailLayout, heading, pill, detailsCard, steps, callout, contactLine } from "./lib-email.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
-const SITE_URL = "https://readytoteokc.com";
-const LOGO_URL = `${SITE_URL}/images/logo.png`;
-const PHONE_DISPLAY = "580.399.3202";
-const PHONE_TEL = "+15803993202";
 
 export default async (request) => {
   const body = await request.json();
@@ -89,135 +86,29 @@ export default async (request) => {
   // already uploaded a photo on the booking form (militaryIdKey set), just
   // confirm we have it. If they checked the box but skipped the upload,
   // ask for it here so it isn't a follow-up email later.
-  const militaryBlock = !isMilitary ? "" : militaryIdKey ? `
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                   style="background-color:#F5F1E7; border-radius:12px; border:1px solid #E5DFD2; margin-top:16px;">
-              <tr>
-                <td style="padding:16px 20px; font-family: Arial, Helvetica, sans-serif;">
-                  <p style="margin:0; font-size:14px; line-height:1.6; color:#1E1B18;">
-                    <strong>&#127894; Military discount:</strong> Got your ID photo, thank you for your service! We'll verify it and apply the discount to your invoice.
-                  </p>
-                </td>
-              </tr>
-            </table>` : `
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                   style="background-color:#FBF4E2; border-radius:12px; border:1px solid #E8D9A8; margin-top:16px;">
-              <tr>
-                <td style="padding:16px 20px; font-family: Arial, Helvetica, sans-serif;">
-                  <p style="margin:0; font-size:14px; line-height:1.6; color:#1E1B18;">
-                    <strong>&#127894; Military discount:</strong> Looks like you qualify &mdash; thank you for your service! To apply it, just reply to this email with a photo of your military ID (active duty, veteran, or immediate family) and we'll take care of the rest.
-                  </p>
-                </td>
-              </tr>
-            </table>`;
+  const militaryBlock = !isMilitary ? "" : militaryIdKey
+    ? callout("<strong>Military discount:</strong> We got your ID photo. Thank you for your service! We'll verify it and apply the discount to your invoice.", "plain")
+    : callout("<strong>Military discount:</strong> Looks like you qualify. Thank you for your service! To apply it, reply to this email with a photo of your military ID (active duty, veteran, or immediate family) and we'll take care of the rest.", "gold");
 
-  const html = `
-<!DOCTYPE html>
-<html lang="en">
-<body style="margin:0; padding:0; background-color:#F5F1E7;">
-  <div style="display:none; max-height:0; overflow:hidden;">
-    We got your booking request — we'll confirm your dates shortly. No payment due yet.
-  </div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5F1E7; padding:32px 16px;">
-    <tr><td align="center">
-
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;">
-
-        <!-- Header -->
-        <tr>
-          <td align="center" style="background-color:#1E1B18; border-radius:16px 16px 0 0; padding:28px 24px;">
-            <img src="${LOGO_URL}" alt="Ready Tote Oklahoma" width="110" style="display:block; width:110px; height:auto;">
-          </td>
-        </tr>
-
-        <!-- Gold divider -->
-        <tr><td style="background-color:#C99A32; height:5px; font-size:0; line-height:0;">&nbsp;</td></tr>
-
-        <!-- Body -->
-        <tr>
-          <td style="background-color:#FFFFFF; padding:36px 32px; font-family: Arial, Helvetica, sans-serif; color:#1E1B18;">
-
-            <h1 style="margin:0 0 6px; font-size:24px; line-height:1.2;">
-              Request received, ${firstName}! &#9989;
-            </h1>
-            <p style="margin:0 0 24px; font-size:15px; line-height:1.6; color:#6B6259;">
-              Thanks for choosing Ready Tote Oklahoma. We'll reach out shortly to confirm
-              your dates and send your invoice. <strong style="color:#1E1B18;">No payment is due yet.</strong>
-            </p>
-
-            <!-- Details card -->
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                   style="background-color:#F5F1E7; border-radius:12px; border:1px solid #E5DFD2;">
-              <tr>
-                <td style="padding:20px 24px;">
-                  <p style="margin:0 0 14px; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#C99A32; font-weight:bold; font-family: Arial, Helvetica, sans-serif;">
-                    Your Request
-                  </p>
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family: Arial, Helvetica, sans-serif;">
-                    <tr>
-                      <td style="padding:6px 0; font-size:14px; color:#6B6259; width:150px;">Package</td>
-                      <td style="padding:6px 0; font-size:14px; color:#1E1B18; font-weight:bold;">${pkg}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:6px 0; font-size:14px; color:#6B6259;">Delivery</td>
-                      <td style="padding:6px 0; font-size:14px; color:#1E1B18; font-weight:bold;">${deliveryDate}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:6px 0; font-size:14px; color:#6B6259;">Pickup</td>
-                      <td style="padding:6px 0; font-size:14px; color:#1E1B18; font-weight:bold;">${pickupDate}</td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
+  const html = emailLayout({
+    preheader: "We got your booking request and will confirm your dates shortly. No payment is due yet.",
+    body: `
+            ${heading(`Request received, ${firstName}`, {
+              badge: pill("Request received", "green"),
+              lead: `Thanks for choosing Ready Tote Oklahoma. We'll reach out shortly to confirm your dates and send your invoice. <strong style="color:#1E1B18;">No payment is due yet.</strong>`,
+            })}
+            ${detailsCard({
+              label: "Your request",
+              rows: [["Package", pkg], ["Delivery", deliveryDate], ["Pickup", pickupDate]],
+            })}
 ${militaryBlock}
-
-            <!-- What happens next -->
-            <p style="margin:28px 0 10px; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#C99A32; font-weight:bold;">
-              What Happens Next
-            </p>
-            <table role="presentation" cellpadding="0" cellspacing="0" style="font-family: Arial, Helvetica, sans-serif;">
-              <tr>
-                <td valign="top" style="padding:4px 10px 4px 0; font-size:14px; color:#C99A32; font-weight:bold;">1.</td>
-                <td style="padding:4px 0; font-size:14px; line-height:1.6; color:#1E1B18;">We confirm your dates &amp; availability</td>
-              </tr>
-              <tr>
-                <td valign="top" style="padding:4px 10px 4px 0; font-size:14px; color:#C99A32; font-weight:bold;">2.</td>
-                <td style="padding:4px 0; font-size:14px; line-height:1.6; color:#1E1B18;">You receive an invoice by email</td>
-              </tr>
-              <tr>
-                <td valign="top" style="padding:4px 10px 4px 0; font-size:14px; color:#C99A32; font-weight:bold;">3.</td>
-                <td style="padding:4px 0; font-size:14px; line-height:1.6; color:#1E1B18;">Clean totes arrive at your door &mdash; free delivery</td>
-              </tr>
-            </table>
-
-            <p style="margin:28px 0 0; font-size:14px; line-height:1.6; color:#6B6259;">
-              Questions in the meantime? Just reply to this email or call
-              <a href="tel:${PHONE_TEL}" style="color:#1E1B18; font-weight:bold; text-decoration:none;">${PHONE_DISPLAY}</a>.
-            </p>
-          </td>
-        </tr>
-
-        <!-- Footer -->
-        <tr>
-          <td align="center" style="background-color:#1E1B18; border-radius:0 0 16px 16px; padding:24px 32px; font-family: Arial, Helvetica, sans-serif;">
-            <p style="margin:0 0 6px; font-size:13px; color:#FFFFFF; font-weight:bold;">
-              We Drop Off. You Pack. We Pick Up.
-            </p>
-            <p style="margin:0; font-size:12px; color:#9A938A;">
-              Ready Tote Oklahoma &bull; Serving the OKC Metro &amp; Ada Area<br>
-              <a href="tel:${PHONE_TEL}" style="color:#C99A32; text-decoration:none;">${PHONE_DISPLAY}</a>
-              &nbsp;&bull;&nbsp;
-              <a href="${SITE_URL}" style="color:#C99A32; text-decoration:none;">readytoteokc.com</a>
-            </p>
-          </td>
-        </tr>
-
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+            ${steps([
+              "We confirm your dates and availability",
+              "You receive an invoice by email",
+              "Clean totes arrive at your door, with free delivery",
+            ])}
+            ${contactLine("Questions in the meantime?")}`,
+  });
 
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -229,7 +120,7 @@ ${militaryBlock}
       from,
       to: [customerEmail],
       reply_to: OWNER_EMAIL,
-      subject: "Booking request received — Ready Tote Oklahoma",
+      subject: "Booking request received | Ready Tote Oklahoma",
       html,
     }),
   });
