@@ -3,7 +3,7 @@
 // Admin only (signed-in session, see lib-auth.mjs).
 //
 // Body: { secret, key, action, ...fields }
-// action one of: "review" | "send-confirmation" | "confirm" | "decline" | "reopen" | "invoice"
+// action one of: "review" | "send-confirmation" | "confirm" | "unconfirm" | "decline" | "reopen" | "invoice"
 // Any editable field present in the body is merged onto the stored record
 // regardless of action, so the same call that advances status can also fix
 // a typo'd address or add review notes.
@@ -19,7 +19,7 @@ const EDITABLE_FIELDS = [
   "reviewNotes", "declineReason", "invoiceRentalKey", "isMilitary",
 ];
 
-const VALID_ACTIONS = new Set(["review", "send-confirmation", "confirm", "decline", "reopen", "invoice"]);
+const VALID_ACTIONS = new Set(["review", "send-confirmation", "confirm", "unconfirm", "decline", "reopen", "invoice"]);
 
 export default async (request) => {
   if (request.method !== "POST") {
@@ -59,6 +59,11 @@ export default async (request) => {
       case "confirm":
         updated.status = "confirmed";
         updated.confirmedAt = now;
+        break;
+      case "unconfirm":
+        // Undo of "confirm": back to waiting on the customer
+        updated.status = "awaiting_confirmation";
+        delete updated.confirmedAt;
         break;
       case "decline":
         updated.status = "declined";

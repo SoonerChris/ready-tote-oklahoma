@@ -7,7 +7,7 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<title>Booking Requests — Ready Tote Oklahoma (Internal)</title>
+<title>Requests · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
 <script src="admin-shared.js?v=20261026"></script>
 <script src="admin-availability.js?v=20261024"></script>
@@ -59,6 +59,28 @@
   .edit-block button{margin-top:6px;width:auto;padding:7px 14px;font-size:14px;}
 
   .no-results{padding:24px;text-align:center;color:var(--steel);font-size:15px;}
+
+  /* Status tabs with counts */
+  .tabs{display:flex;gap:2px;padding:2px;background:var(--track);border-radius:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .tabs button{all:unset;box-sizing:border-box;cursor:pointer;height:32px;padding:0 12px;border:1px solid transparent;border-radius:6px;font-size:13px;font-weight:600;color:var(--steel);white-space:nowrap;}
+  .tabs button:hover{color:var(--ink);}
+  .tabs button[aria-pressed="true"]{background:#fff;color:var(--ink);border-color:var(--line);}
+  .tabs button:focus-visible{outline:2px solid var(--ink);outline-offset:1px;}
+  .tabs .n{margin-left:6px;font-variant-numeric:tabular-nums;color:var(--steel);font-weight:500;}
+  .summary{margin:-8px 0 18px;font-size:15px;color:var(--steel);}
+  .summary b{color:var(--ink);}
+
+  /* Things to double-check before confirming */
+  .warns{margin-top:8px;display:flex;flex-direction:column;gap:6px;}
+  .warn{padding:7px 10px;border-radius:6px;background:var(--gold-bg);color:#6B4C0C;font-size:13px;font-weight:600;line-height:1.4;}
+
+  /* "Sent to Hannah?" after tapping Text to confirm */
+  .ask{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;margin-top:12px;padding:10px 12px;background:#FAF8F3;border-radius:8px;font-size:14px;font-weight:600;}
+  .ask[hidden]{display:none;}
+  .undo-line{display:flex;align-items:center;gap:12px;margin-top:12px;padding:9px 12px;border-radius:8px;background:var(--green-bg);color:#14492F;font-size:14px;font-weight:600;}
+  .undo-line button.linklike{all:unset;cursor:pointer;margin-left:auto;color:var(--ink);text-decoration:underline;text-underline-offset:3px;font-weight:600;}
+  .ask button{width:auto;margin:0;padding:7px 14px;font-size:14px;}
+  .ask button.linklike{background:none;border:none;color:var(--ink);text-decoration:underline;text-underline-offset:3px;padding:7px 4px;}
 </style>
 </head>
 <body>
@@ -77,7 +99,7 @@
   </nav>
 
   <h1>Booking requests</h1>
-  <p class="sub">Every request lands here first. Review it, confirm with the customer, then send the invoice — nothing skips straight from request to invoice anymore.</p>
+  <p class="summary" id="summary">Loading requests…</p>
 
   <div class="secret-bar">
   <input type="hidden" id="secret">
@@ -87,17 +109,8 @@
   <input type="file" id="idFileInput" accept="image/*" style="display:none">
 
   <div id="results" style="display:none;">
+    <div class="tabs" id="statusTabs" role="group" aria-label="Show"></div>
     <div class="toolbar">
-      <select id="statusFilter">
-        <option value="active">Active pipeline</option>
-        <option value="new">New</option>
-        <option value="reviewed">Reviewed</option>
-        <option value="awaiting_confirmation">Awaiting confirmation</option>
-        <option value="confirmed">Confirmed — ready to invoice</option>
-        <option value="declined">Declined</option>
-        <option value="invoiced">Invoiced</option>
-        <option value="all">All</option>
-      </select>
       <input type="search" id="search" placeholder="Search name, phone, email…">
       <span class="count-badge" id="countBadge"></span>
     </div>
@@ -115,7 +128,7 @@
   const STATUS_META = {
     new:                    { label: 'New',                     pill: 'pending' },
     reviewed:               { label: 'Reviewed',                 pill: 'pending' },
-    awaiting_confirmation:  { label: 'Awaiting confirmation',    pill: 'pending' },
+    awaiting_confirmation:  { label: 'Awaiting customer',        pill: 'pending' },
     confirmed:              { label: 'Confirmed',                pill: 'ok' },
     declined:               { label: 'Declined',                 pill: 'err' },
     invoiced:               { label: 'Invoiced',                 pill: 'ok' },
@@ -123,7 +136,15 @@
   const ACTIVE_STATUSES = ['new', 'reviewed', 'awaiting_confirmation', 'confirmed'];
 
   $('loadBtn').addEventListener('click', load);
-  $('statusFilter').addEventListener('change', render);
+  let FILTER = 'active';
+  const TABS = [
+    ['active', 'Active'], ['new', 'New'], ['reviewed', 'Reviewed'], ['awaiting_confirmation', 'Awaiting customer'],
+    ['confirmed', 'Ready to invoice'], ['invoiced', 'Invoiced'], ['declined', 'Declined'], ['all', 'All'],
+  ];
+  $('statusTabs').addEventListener('click', e => {
+    const b = e.target.closest('[data-filter]');
+    if (b) { FILTER = b.dataset.filter; render(); }
+  });
   $('search').addEventListener('input', render);
   if ($('secret').value) load();
 
@@ -150,18 +171,43 @@
       render();
     } catch (e) {
       console.error('Load requests failed:', e);
-      showErr('Load failed — check the console for details.');
+      showErr('Load failed. Try Refresh.');
     } finally {
       btn.disabled = false; btn.textContent = 'Refresh';
     }
   }
 
+  const inTab = (r, f) => f === 'all' || (f === 'active' ? ACTIVE_STATUSES.includes(r.status) : r.status === f);
+
+  // Waiting on you first, then waiting on the customer, soonest delivery
+  // first within each; finished requests newest first.
+  function sortRank(r) { return WAITING_ON_YOU.includes(r.status) ? 0 : r.status === 'awaiting_confirmation' ? 1 : 2; }
+  function byUrgency(a, b) {
+    const ra = sortRank(a), rb = sortRank(b);
+    if (ra !== rb) return ra - rb;
+    if (ra < 2) return (a.deliveryDate || '9999').localeCompare(b.deliveryDate || '9999');
+    return (b.submittedAt || '').localeCompare(a.submittedAt || '');
+  }
+
   function render() {
-    const filter = $('statusFilter').value;
+    // Tabs with live counts; Reviewed only shows while something is in it
+    $('statusTabs').innerHTML = TABS
+      .filter(([f]) => f !== 'reviewed' || ALL.some(r => r.status === 'reviewed') || FILTER === 'reviewed')
+      .map(([f, label]) => {
+        const n = f === 'all' || f === 'declined' || f === 'invoiced' ? '' : ALL.filter(r => inTab(r, f)).length;
+        return `<button type="button" data-filter="${f}" aria-pressed="${FILTER === f}">${label}${n !== '' ? `<span class="n">${n}</span>` : ''}</button>`;
+      }).join('');
+
+    // One line: what's waiting on you, and how long the oldest has waited
+    const waiting = ALL.filter(r => WAITING_ON_YOU.includes(r.status));
+    const oldest = waiting.reduce((m, r) => !m || (r.submittedAt || '') < (m.submittedAt || '') ? r : m, null);
+    const withCustomer = ALL.filter(r => r.status === 'awaiting_confirmation').length;
+    $('summary').innerHTML = waiting.length
+      ? `<b>${waiting.length} waiting on you</b>${oldest && oldest.submittedAt ? `, oldest ${esc(ago(oldest.submittedAt).replace(' ago', ''))}` : ''}${withCustomer ? ` · ${withCustomer} waiting on the customer` : ''}.`
+      : `Nothing waiting on you${withCustomer ? ` · ${withCustomer} waiting on the customer` : ''}.`;
+
     const q = $('search').value.trim().toLowerCase();
-    let rows = ALL;
-    if (filter === 'active') rows = rows.filter(r => ACTIVE_STATUSES.includes(r.status));
-    else if (filter !== 'all') rows = rows.filter(r => r.status === filter);
+    let rows = ALL.filter(r => inTab(r, FILTER)).sort(byUrgency);
     if (q) {
       rows = rows.filter(r => [r.name, r.phone, r.email].filter(Boolean).join(' ').toLowerCase().includes(q));
     }
@@ -201,15 +247,43 @@
     return d + (d === 1 ? ' day' : ' days') + ' ago';
   }
   function ageLine(r) {
-    if (!r.submittedAt) return 'Submitted —';
+    if (!r.submittedAt) return 'Submitted date unknown';
     const when = new Date(r.submittedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
     const late = WAITING_ON_YOU.includes(r.status) && Date.now() - new Date(r.submittedAt).getTime() > 86400000;
     const who = WAITING_ON_YOU.includes(r.status) ? ' · waiting on you' : r.status === 'awaiting_confirmation' ? ' · waiting on the customer' : '';
     return `Submitted <span class="${late ? 'late' : ''}">${esc(ago(r.submittedAt))}</span> · ${esc(when)}${esc(who)}`;
   }
 
+  const daysBetween = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 864e5);
+  const todayCT = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+  const phoneKey = p => String(p || '').replace(/\D/g, '').slice(-10);
+
+  // Things worth a second look before confirming: odd rental length, a
+  // delivery date already gone, or the same customer with another open request.
+  function warnings(r) {
+    if (!ACTIVE_STATUSES.includes(r.status)) return [];
+    const out = [];
+    if (r.deliveryDate && r.pickupDate) {
+      const len = daysBetween(r.deliveryDate, r.pickupDate);
+      if (len !== 14) out.push(len <= 0 ? 'Pickup is not after delivery. Fix the dates before confirming.'
+        : `Pickup is ${len} days after delivery. Packages are 2 weeks.`);
+    }
+    if (r.deliveryDate && r.deliveryDate < todayCT()) out.push('The delivery date has already passed.');
+    const other = ALL.find(o => o.key !== r.key && ACTIVE_STATUSES.includes(o.status) && (
+      (r.email && o.email && o.email.toLowerCase() === r.email.toLowerCase()) ||
+      (phoneKey(r.phone).length === 10 && phoneKey(o.phone) === phoneKey(r.phone))));
+    if (other) out.push(`Same customer has another open request (delivery ${fmtReqDate(other.deliveryDate)}, ${(STATUS_META[other.status] || STATUS_META.new).label.toLowerCase()}).`);
+    return out;
+  }
+
+  // Delivery today or tomorrow: the $25 expedite fee applies
+  const isRush = r => ACTIVE_STATUSES.includes(r.status) && r.deliveryDate && r.deliveryDate >= todayCT() && isRushRequest(r);
+
   function cardHtml(r) {
     const meta = STATUS_META[r.status] || STATUS_META.new;
+    const warns = warnings(r);
+    const addr = deliveryAddressOf(r);
+    const pref = w => w && !/no preference/i.test(w) ? ' · prefers ' + esc(w.replace(/\s*\(.*\)\s*$/, '').toLowerCase()) : '';
     const phoneDigits = (r.phone || '').replace(/[^0-9+]/g, '');
     return `
     <div class="req" data-key="${escAttr(r.key)}">
@@ -218,21 +292,28 @@
           <div class="req-name">${esc(r.name || 'Unnamed request')}</div>
           <div class="req-sub">${ageLine(r)}</div>
         </div>
-        <div class="req-tags"><span class="pill ${meta.pill}">${meta.label}</span>${r.isMilitary ? '<span class="pill ok">Military</span>' : ''}</div>
+        <div class="req-tags">${isRush(r) ? '<span class="pill err">Rush</span>' : ''}<span class="pill ${meta.pill}">${meta.label}</span>${r.isMilitary ? '<span class="pill ok">Military</span>' : ''}</div>
       </div>
       <div class="req-body">
-        <div><span class="lbl">Package</span>${r.package ? `<span class="tag">${esc(r.package)}</span>` : '—'}</div>
-        <div><span class="lbl">Delivery</span>${esc(fmtReqDate(r.deliveryDate))}${r.deliveryWindow && !/no preference/i.test(r.deliveryWindow) ? ' — pref: ' + esc(r.deliveryWindow) : ''}</div>
-        <div><span class="lbl">Pickup</span>${esc(fmtReqDate(r.pickupDate))}${r.pickupWindow && !/no preference/i.test(r.pickupWindow) ? ' — pref: ' + esc(r.pickupWindow) : ''}</div>
-        <div><span class="lbl">Address</span>${esc(deliveryAddressOf(r) || '—')}</div>
+        <div><span class="lbl">Package</span>${r.package ? `<span class="tag">${esc(r.package)}</span>` : 'Not given'}</div>
+        <div><span class="lbl">Delivery</span>${esc(fmtReqDate(r.deliveryDate))}${pref(r.deliveryWindow)}</div>
+        <div><span class="lbl">Pickup</span>${esc(fmtReqDate(r.pickupDate))}${pref(r.pickupWindow)}</div>
+        <div><span class="lbl">Address</span>${addr ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${esc(addr)}</a>` : 'Not given'}</div>
         ${OPEN_STATUSES.includes(r.status) ? `<div class="avail-row"><span class="lbl">Stock</span><span class="avail-list">${requestAvailability(r)}</span></div>` : ''}
-        <div><span class="lbl">Phone</span>${r.phone ? `<a href="tel:${escAttr(phoneDigits)}">${esc(r.phone)}</a>` : '—'}</div>
-        <div><span class="lbl">Email</span>${r.email ? `<a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : '—'}</div>
+        <div><span class="lbl">Phone</span>${r.phone ? `<a href="tel:${escAttr(phoneDigits)}">${esc(r.phone)}</a>` : 'Not given'}</div>
+        <div><span class="lbl">Email</span>${r.email ? `<a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : 'Not given'}</div>
         ${r.reviewNotes ? `<div><span class="lbl">Notes</span>${esc(r.reviewNotes)}</div>` : ''}
         ${r.status === 'declined' && r.declineReason ? `<div><span class="lbl">Declined</span>${esc(r.declineReason)}</div>` : ''}
       </div>
+      ${warns.length ? `<div class="warns">${warns.map(w => `<div class="warn">${esc(w)}</div>`).join('')}</div>` : ''}
 
       <div class="req-actions" data-actions></div>
+      ${LAST_MOVE && LAST_MOVE.key === r.key ? `<div class="undo-line"><span>${esc(LAST_MOVE.label)}</span><button type="button" class="linklike" data-undo>Undo</button></div>` : ''}
+      <div class="ask" data-ask${OPEN_ASKS.has(r.key) ? '' : ' hidden'}>
+        <span>Sent the confirm text to ${esc((r.name || 'them').split(' ')[0])}?</span>
+        <button type="button" data-ask-yes>Yes, sent</button>
+        <button type="button" class="linklike" data-ask-no>Not yet</button>
+      </div>
       <div class="decline-box" data-decline>
         <p>Why decline ${esc((r.name || 'this request').split(' ')[0])}?</p>
         <div class="reasons">
@@ -273,18 +354,82 @@
           <div></div>
         </div>
         <div class="grid2">
+          <div><label>Package</label><select data-f="package">${packageOptions(r.package)}</select></div>
+          <div></div>
+        </div>
+        <div class="grid2">
           <div><label>Delivery date</label><input type="date" data-f="deliveryDate" value="${escAttr(r.deliveryDate || '')}"></div>
           <div><label>Pickup date</label><input type="date" data-f="pickupDate" value="${escAttr(r.pickupDate || '')}"></div>
+        </div>
+        <div class="grid2">
+          <div><label>Delivery time</label><select data-f="deliveryWindow">${windowOptions(r.deliveryWindow)}</select></div>
+          <div><label>Pickup time</label><select data-f="pickupWindow">${windowOptions(r.pickupWindow)}</select></div>
         </div>
         <button type="button" data-save-edit>Save changes</button>
       </div>
 
+      ${STEP_BACK[r.status] ? `<button type="button" class="toggle-note" data-move-back>${STEP_BACK[r.status](r)[1]}</button>` : ''}
       <button type="button" class="toggle-note" data-toggle="note">${r.reviewNotes ? 'Edit note' : '+ Add note'}</button>
       <div class="note-block" data-note>
         <textarea rows="2" data-note-text placeholder="e.g. gate code, dog on property, availability check…">${esc(r.reviewNotes || '')}</textarea>
         <button type="button" data-save-note>Save note</button>
       </div>
     </div>`;
+  }
+
+  // Package choices for Edit details: the four packages from packages.json,
+  // plus whatever the request says now if it's not one of them, so saving
+  // without touching it never changes it.
+  let PACKAGES = [];
+  fetch('packages.json').then(r => r.json()).then(d => { PACKAGES = (d.packages || []).map(p => p.name); if (ALL.length) render(); }).catch(() => {});
+  function packageOptions(current) {
+    const names = [...PACKAGES];
+    const cur = String(current || '');
+    const list = cur && !names.includes(cur) ? [cur, ...names] : names;
+    if (!list.length) return `<option value="">No package</option>`;
+    return list.map(n => `<option value="${escAttr(n)}"${n === cur ? ' selected' : ''}>${esc(n)}</option>`).join('');
+  }
+  const WINDOWS = ['No preference', 'Morning (8 AM – 12 PM)', 'Afternoon (12 – 5 PM)', 'Evening (5 – 8 PM)'];
+  function windowOptions(current) {
+    const cur = current || 'No preference';
+    const list = WINDOWS.includes(cur) ? WINDOWS : [cur, ...WINDOWS];
+    return list.map(w => `<option value="${escAttr(w)}"${w === cur ? ' selected' : ''}>${esc(w)}</option>`).join('');
+  }
+
+  const OPEN_ASKS = new Set();   // requests showing "Sent the confirm text?"; kept across re-renders
+
+  // Undo for status changes. The latest change shows an Undo right in its
+  // card; every open request also has a "Move back" link for later.
+  let LAST_MOVE = null;   // { key, prev, label }
+  const STEP_BACK = {
+    awaiting_confirmation: (r) => r.reviewedAt ? ['review', 'Move back to reviewed'] : ['reopen', 'Move back to new'],
+    confirmed: () => ['unconfirm', 'Move back to awaiting customer'],
+  };
+  const UNDO_ACTION = { new: 'reopen', reviewed: 'review', awaiting_confirmation: 'unconfirm', confirmed: 'confirm' };
+  function moveBack(r, action) {
+    LAST_MOVE = null;
+    act(r.key, action, 'Moved back to ' + (action === 'unconfirm' ? 'awaiting customer' : action === 'review' ? 'reviewed' : 'new') + '.');
+  }
+
+  // Text to confirm: check stock first, open Messages, then ask whether it
+  // went out before moving the request to "Awaiting customer".
+  function textToConfirm(r, card) {
+    const need = totesInPackageText(r.package);
+    const needDollies = dolliesInPackageText(r.package);
+    const held = ['awaiting_confirmation', 'confirmed'].includes(r.status) && need
+      ? { start: r.deliveryDate, end: r.pickupDate, totes: need, dollies: needDollies } : null;
+    const res = checkAvailability(r.deliveryDate, r.pickupDate, need, held, needDollies);
+    if (res && !res.ok) {
+      const short = !res.totesOk ? `Only ${res.free} totes free on the tightest day, this needs ${res.need}.`
+        : `Only ${res.dolly.free} dollies free on the tightest day, this needs ${res.dolly.need}.`;
+      if (!confirm(`Not enough stock for these dates. ${short}\n\nThe text tells the customer their dates work. Text anyway?`)) return;
+    } else if (AVAIL_FAILED && !confirm('Couldn’t check stock right now. The text tells the customer their dates work. Text anyway?')) {
+      return;
+    }
+    window.open(smsLink(r.phone, confirmMessage(r)), '_blank');
+    if (r.status === 'awaiting_confirmation') return;   // a re-send; status is already right
+    OPEN_ASKS.add(r.key);
+    setTimeout(() => { const a = card.querySelector('[data-ask]'); if (a) a.hidden = false; }, 400);
   }
 
   function wireCard(r) {
@@ -303,6 +448,37 @@
     card.querySelector('[data-save-note]')?.addEventListener('click', () => {
       const notes = card.querySelector('[data-note-text]').value.trim();
       patch(r.key, { reviewNotes: notes }, 'Note saved.');
+    });
+
+    // Packages are 2 weeks: a new delivery date moves the pickup with it,
+    // unless the pickup was changed by hand in this edit
+    const dIn = card.querySelector('[data-f=deliveryDate]'), pIn = card.querySelector('[data-f=pickupDate]');
+    let pickupTouched = false;
+    pIn.addEventListener('input', () => { pickupTouched = true; });
+    dIn.addEventListener('change', () => {
+      if (!pickupTouched && /^\d{4}-\d{2}-\d{2}$/.test(dIn.value)) {
+        const d = new Date(dIn.value + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + 14);
+        pIn.value = d.toISOString().slice(0, 10);
+      }
+    });
+
+    card.querySelector('[data-undo]')?.addEventListener('click', () => {
+      const m = LAST_MOVE; if (!m) return;
+      LAST_MOVE = null;
+      act(r.key, UNDO_ACTION[m.prev], 'Undone. Back to ' + (STATUS_META[m.prev] || STATUS_META.new).label.toLowerCase() + '.');
+    });
+    card.querySelector('[data-move-back]')?.addEventListener('click', () => {
+      const [action, label] = STEP_BACK[r.status](r);
+      if (confirm(label + ' for ' + (r.name || 'this request') + '?')) moveBack(r, action);
+    });
+
+    card.querySelector('[data-ask-yes]').addEventListener('click', () => {
+      OPEN_ASKS.delete(r.key);
+      act(r.key, 'send-confirmation', 'Marked awaiting the customer.');
+    });
+    card.querySelector('[data-ask-no]').addEventListener('click', () => {
+      OPEN_ASKS.delete(r.key);
+      card.querySelector('[data-ask]').hidden = true;
     });
 
     card.querySelector('[data-save-edit]')?.addEventListener('click', () => {
@@ -327,21 +503,16 @@
       actions.appendChild(b);
     };
 
-    if (r.status === 'new') {
-      addBtn('Mark Reviewed', '', () => act(r.key, 'review', 'Marked reviewed.'));
-      addBtn('Decline', 'secondary', () => declineFlow(r.key));
-    } else if (r.status === 'reviewed') {
-      addBtn('Text to Confirm →', '', () => {
-        window.open(smsLink(r.phone, confirmMessage(r)), '_blank');
-        act(r.key, 'send-confirmation', 'Marked awaiting confirmation.');
-      });
+    if (r.status === 'new' || r.status === 'reviewed') {
+      if (r.phone) addBtn('Text to confirm', '', () => textToConfirm(r, card));
+      if (r.status === 'new') addBtn('Mark reviewed', 'linklike', () => act(r.key, 'review', 'Marked reviewed.'));
       addBtn('Decline', 'secondary', () => declineFlow(r.key));
     } else if (r.status === 'awaiting_confirmation') {
-      addBtn('Mark Confirmed', '', () => act(r.key, 'confirm', 'Marked confirmed.'));
-      addBtn('Re-send Text', 'linklike', () => window.open(smsLink(r.phone, confirmMessage(r)), '_blank'));
+      addBtn('Mark confirmed', '', () => act(r.key, 'confirm', 'Marked confirmed.'));
+      if (r.phone) addBtn('Re-send text', 'linklike', () => textToConfirm(r, card));
       addBtn('Decline', 'secondary', () => declineFlow(r.key));
     } else if (r.status === 'confirmed') {
-      addBtn('Create Invoice →', '', () => goToInvoice(r));
+      addBtn('Create invoice', '', () => goToInvoice(r));
       addBtn('Decline', 'secondary', () => declineFlow(r.key));
     } else if (r.status === 'declined') {
       addBtn('Reopen', 'linklike', () => act(r.key, 'reopen', 'Reopened as new.'));
@@ -457,6 +628,8 @@
 
   async function act(key, action, okMsg, extra) {
     const secret = $('secret').value.trim();
+    const before = ALL.find(x => x.key === key);
+    const prev = before && before.status;
     try {
       const resp = await fetch('/.netlify/functions/update-request', {
         method: 'POST',
@@ -467,11 +640,14 @@
       const data = await resp.json();
       const idx = ALL.findIndex(x => x.key === key);
       if (idx >= 0) ALL[idx] = data.request;
+      // Forward moves can be undone from the card; undoing doesn't offer another undo
+      LAST_MOVE = ['send-confirmation', 'confirm', 'decline'].includes(action) && UNDO_ACTION[prev]
+        ? { key, prev, label: okMsg.replace(/\.$/, '') } : null;
       showOk(okMsg);
       render();
     } catch (e) {
       console.error('Update request failed:', e);
-      showErr('Update failed — check the console for details.');
+      showErr('Update failed. Nothing was changed.');
     }
   }
 
@@ -491,7 +667,7 @@
       render();
     } catch (e) {
       console.error('Save failed:', e);
-      showErr('Save failed — check the console for details.');
+      showErr('Save failed. Nothing was changed.');
     }
   }
 
