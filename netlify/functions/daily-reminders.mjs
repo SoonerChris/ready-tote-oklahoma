@@ -3,10 +3,15 @@
 
 import { getStore } from "@netlify/blobs";
 import { computeReminders, rentalToICSAttachments } from "./lib-reminders.mjs";
+import { emailLayout, heading, sectionLabel, pill, button, escapeHtml, emailColors as C, SITE_URL } from "./lib-email.mjs";
 
 const OWNER_EMAIL = "readytoteok@gmail.com";
-const REMINDER_RECIPIENTS = (process.env.REMINDER_EMAILS || OWNER_EMAIL)
-  .split(",").map(e => e.trim()).filter(Boolean);
+// Always get the digest, on top of REMINDER_EMAILS (or the owner if unset).
+const ALWAYS_CC = ["shonanderson856@gmail.com"];
+const REMINDER_RECIPIENTS = [...new Set(
+  [...(process.env.REMINDER_EMAILS || OWNER_EMAIL).split(","), ...ALWAYS_CC]
+    .map(e => e.trim().toLowerCase()).filter(Boolean)
+)];
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 
 export default async () => {
@@ -32,54 +37,59 @@ export default async () => {
     return new Response("No reminders today", { status: 200 });
   }
 
+  // One bordered list per kind of reminder; each item shows who, where,
+  // and the exact text that will go out from the dashboard.
+  const card = (rows) => `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${C.line}; border-radius:12px;">${rows}
+      </table>`;
+  const itemRow = (i, top, sub, extra = "") => `
+        <tr><td style="padding:14px 16px; ${i ? `border-top:1px solid ${C.line};` : ""} font-size:14px; line-height:1.5; color:${C.ink};">
+          <strong>${top}</strong><br>
+          <span style="font-size:13px; color:${C.steel};">${sub}</span>${extra}
+        </td></tr>`;
+  const dueBadge = (r) => r.overdue ? `&nbsp;${pill("Overdue", "red")}` : "";
+
   const section = (title, items) => {
     if (!items.length) return "";
-    const rows = items.map(r => `
-      <tr>
-        <td style="padding:10px 14px; border:1px solid #E5DFD2; font-family:Arial,sans-serif; font-size:14px;">
-          <strong>${r.name}</strong> — ${r.phone}<br>
-          <span style="color:#6B6259; font-size:12px;">${r.package} · ${r.address}</span><br>
-          <div style="margin-top:8px; background:#F5F1E7; border-radius:8px; padding:10px 12px; font-size:12px; color:#1E1B18;">${r.message}</div>
-        </td>
-      </tr>`).join("");
-    return `
-      <h2 style="font-family:Arial,sans-serif; font-size:16px; color:#1E1B18; margin:24px 0 8px;">${title} (${items.length})</h2>
-      <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">${rows}</table>`;
+    const rows = items.map((r, i) => itemRow(i,
+      `${escapeHtml(r.name)}${r.phone ? ` &middot; ${escapeHtml(r.phone)}` : ""}${dueBadge(r)}`,
+      [r.package, r.address].filter(Boolean).map(escapeHtml).join(" &middot; "),
+      r.message ? `<div style="margin-top:10px; background-color:${C.frame}; border-radius:8px; padding:10px 12px; font-size:13px; color:${C.ink};">${escapeHtml(r.message)}</div>` : ""
+    )).join("");
+    return `${sectionLabel(`${title} (${items.length})`, { top: 26 })}${card(rows)}`;
   };
 
-  // Email reminders aren't tap-to-send links like texts — they're sent by
+  // Email reminders aren't tap-to-send links like texts; they're sent by
   // the dashboard itself, so this section just flags who's due.
   const emailSection = (items) => {
     if (!items.length) return "";
-    const rows = items.map(r => `
-      <tr>
-        <td style="padding:10px 14px; border:1px solid #E5DFD2; font-family:Arial,sans-serif; font-size:14px;">
-          <strong>${r.name}</strong> — ${r.email || ""}<br>
-          <span style="color:#6B6259; font-size:12px;">${r.package} · ${r.price || ""}</span>
-        </td>
-      </tr>`).join("");
-    return `
-      <h2 style="font-family:Arial,sans-serif; font-size:16px; color:#1E1B18; margin:24px 0 8px;">📧 Email payment reminders due (${items.length}) — send from the dashboard</h2>
-      <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">${rows}</table>`;
+    const rows = items.map((r, i) => itemRow(i,
+      `${escapeHtml(r.name)}${dueBadge(r)}`,
+      [r.email, r.package, r.price && (String(r.price).startsWith("$") ? r.price : "$" + r.price)].filter(Boolean).map(escapeHtml).join(" &middot; ")
+    )).join("");
+    return `${sectionLabel(`Payment reminder emails (${items.length}), send from the dashboard`, { top: 26 })}${card(rows)}`;
   };
 
-  const dashboardUrl = "https://www.readytoteokc.com/admin-reminders.html";
+  const dashboardUrl = `${SITE_URL}/admin-reminders.html`;
+  const today = new Date().toLocaleDateString("en-US", { timeZone: "America/Chicago", weekday: "long", month: "long", day: "numeric" });
 
-  const html = `
-  <div style="max-width:600px; margin:0 auto; font-family:Arial,sans-serif; color:#1E1B18;">
-    <h1 style="font-size:20px;">Today's reminders — ${total} item${total > 1 ? "s" : ""} to handle</h1>
-    <p style="color:#6B6259; font-size:14px;">Tap the button below to open the dashboard and send each one with one tap.</p>
-    <div style="text-align:center; margin:20px 0;">
-      <a href="${dashboardUrl}" style="display:inline-block; background:#C99A32; color:#1E1B18; font-weight:bold; text-decoration:none; padding:14px 32px; border-radius:10px; font-size:15px;">Open Dashboard →</a>
-    </div>
-    ${section("📍 Confirm pickup address", rem.addressCheck)}
-    ${section("🚚 Delivery tomorrow", rem.delivery)}
-    ${section("📦 Pickup tomorrow", rem.pickupTomorrow)}
-    ${section("📦 Pickup in 2 days", rem.pickup)}
-    ${section("⭐ Review requests", rem.review)}
-    ${section("💬 Invoice follow-ups", rem.followup)}
-    ${emailSection(rem.emailReminder)}
-  </div>`;
+  const html = emailLayout({
+    footer: false,
+    preheader: `${total} reminder${total > 1 ? "s" : ""} to handle today.`,
+    body: `
+            ${heading(`${total} reminder${total > 1 ? "s" : ""} to handle today`, {
+              badge: pill(today, "gold"),
+              lead: "Open the reminders page to send each one. Sending from there marks it done.",
+            })}
+            ${button(dashboardUrl, "Open reminders")}
+            ${section("Confirm pickup address", rem.addressCheck)}
+            ${section("Delivery tomorrow", rem.delivery)}
+            ${section("Pickup tomorrow", rem.pickupTomorrow)}
+            ${section("Pickup in 2 days", rem.pickup)}
+            ${section("Review requests", rem.review)}
+            ${section("Invoice follow-ups", rem.followup)}
+            ${emailSection(rem.emailReminder)}`,
+  });
 
   // Collect ICS calendar attachments for delivery + pickup reminders
   const attachments = [];
@@ -100,7 +110,7 @@ export default async () => {
     body: JSON.stringify({
       from: process.env.RESEND_FROM || FROM_FALLBACK,
       to: REMINDER_RECIPIENTS,
-      subject: `${total} reminder${total > 1 ? "s" : ""} to handle today — Ready Tote`,
+      subject: `${total} reminder${total > 1 ? "s" : ""} to handle today | Ready Tote Oklahoma`,
       html,
       attachments: attachments.length ? attachments : undefined,
     }),

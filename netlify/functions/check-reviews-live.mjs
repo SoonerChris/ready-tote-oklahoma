@@ -7,6 +7,7 @@
 //   RESEND_API_KEY, RESEND_FROM, REMINDER_EMAILS (or falls back to owner email)
 
 import { getStore } from "@netlify/blobs";
+import { emailLayout, heading, pill, detailsCard } from "./lib-email.mjs";
 
 const OWNER_EMAIL = "readytoteok@gmail.com";
 const NOTIFY_RECIPIENTS = (process.env.REMINDER_EMAILS || OWNER_EMAIL)
@@ -52,16 +53,17 @@ export default async () => {
     month: "2-digit", day: "2-digit", year: "2-digit",
   });
 
-  const html = `
-  <div style="max-width:600px; margin:0 auto; font-family:Arial,sans-serif; color:#1E1B18;">
-    <h1 style="font-size:20px;">🎉 Google reviews are live!</h1>
-    <p style="font-size:14px; color:#6B6259;">Checked ${checkedDate}. The Places API is now returning your reviews, so the live reviews feature on your site is unblocked.</p>
-    <div style="background:#F5F1E7; border-radius:10px; padding:16px; margin:20px 0;">
-      <p style="margin:0 0 8px; font-size:14px;"><strong>Rating:</strong> ${data.overallRating ?? "n/a"} (${data.totalReviews ?? 0} reviews)</p>
-      <p style="margin:0; font-size:13px; color:#6B6259;">No code changes needed, this was already built and waiting.</p>
-    </div>
-    <p style="font-size:13px; color:#6B6259;">This is a one-time notification. Daily checks have now stopped.</p>
-  </div>`;
+  const html = emailLayout({
+    footer: false,
+    preheader: "The live reviews feature on your site is now unblocked.",
+    body: `
+            ${heading("Google reviews are live", {
+              badge: pill("Live", "green"),
+              lead: `Checked ${checkedDate}. The Places API is now returning your reviews, so the live reviews feature on your site is unblocked. No code changes needed.`,
+            })}
+            ${detailsCard({ rows: [["Rating", String(data.overallRating ?? "n/a")], ["Reviews", String(data.totalReviews ?? 0)]] })}
+            <p style="margin:20px 0 0; font-size:13px; color:#6B6259;">This is a one-time notification. Daily checks have now stopped.</p>`,
+  });
 
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -72,7 +74,7 @@ export default async () => {
     body: JSON.stringify({
       from: process.env.RESEND_FROM || FROM_FALLBACK,
       to: NOTIFY_RECIPIENTS,
-      subject: "🎉 Your Google reviews are now live on the site",
+      subject: "Your Google reviews are now live on the site",
       html,
     }),
   });
