@@ -76,6 +76,11 @@ export default async (request) => {
     }
     if (!changed) return new Response("No editable fields provided", { status: 400 });
 
+    // A new price makes the saved breakdown (package, rush, discount) stale;
+    // drop it so emails show just the new total rather than lines that
+    // don't add up to it.
+    if (updated.price !== existing.price && updated.lineItems) delete updated.lineItems;
+
     await store.setJSON(body.key, updated);
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (e) {

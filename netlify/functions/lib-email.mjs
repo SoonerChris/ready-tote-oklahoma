@@ -171,8 +171,14 @@ export function cleanLineItems(raw) {
   return items.length === raw.length ? items : null;
 }
 
-// Line items as detailsCard rows: the first plain, the rest signed.
-export function lineItemRows(items) {
+// Line items as detailsCard rows: the first plain, the rest signed. Pass
+// the price to show them only when they add up to it.
+export function lineItemRows(items, price) {
+  if (price !== undefined) {
+    const p = parseFloat(String(price ?? "").replace(/[^0-9.]/g, ""));
+    const sum = (items || []).reduce((t, i) => t + i.amount, 0);
+    if (!Number.isFinite(p) || Math.abs(sum - p) >= 0.01) return [];
+  }
   return (items || []).map((i, n) => [
     escapeHtml(i.label),
     `${n === 0 ? "" : i.amount < 0 ? "&minus;" : "+"}$${Math.abs(i.amount).toFixed(2)}`,
