@@ -57,6 +57,16 @@ export default async (request) => {
     r.hasMilitaryIdPhoto = photoKeys.has(`${r.militaryIdKey}:military_id`);
   }
 
+  // Stock lost or damaged by a customer, logged on Inventory against the rental
+  try {
+    const inv = getStore("inventory");
+    const { blobs } = await inv.list();
+    const events = (await Promise.all(blobs.map((b) => inv.get(b.key, { type: "json" })))).filter((e) => e && e.rentalKey);
+    const byKey = {};
+    for (const e of events) (byKey[e.rentalKey] ||= []).push({ date: e.date, item: e.item || "tote", type: e.type, quantity: e.quantity });
+    for (const r of rentals) if (byKey[r.key]) r.stockLosses = byKey[r.key];
+  } catch {}
+
   // On-demand text links for every rental (All Rentals list)
   for (const r of rentals) {
     const rv = reviewMessageFor(r, reviewLink);

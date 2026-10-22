@@ -54,8 +54,11 @@ export default async (request) => {
           type: body.type,
           quantity,
           note: body.note || "",
+          // Lost or damaged by a customer: which rental it was
+          ...(REMOVE_TYPES.includes(body.type) && body.rentalKey
+            ? { rentalKey: String(body.rentalKey).slice(0, 200), rentalName: String(body.rentalName || "").slice(0, 80) } : {}),
         });
-        return json({ ok: true });
+        return json({ ok: true, key });
       }
 
       case "delete": {

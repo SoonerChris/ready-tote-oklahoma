@@ -103,6 +103,19 @@
   .exp-day.today{outline:2px solid var(--ink); outline-offset:-2px;}
   .exp-day.past{opacity:0.82;}
   .exp-scroll{max-height:520px; overflow-y:auto; padding-right:4px;}
+  .ev-row{padding:10px 14px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  .ev-main{flex:1; min-width:200px;}
+  .ev-what{font-weight:600; font-size:15px;}
+  .ev-what .up{color:var(--green);} .ev-what .down{color:var(--red);}
+  .ev-meta{font-size:13px; color:var(--steel);}
+  .ev-after{text-align:right; font-weight:600; font-size:14px; min-width:84px;}
+  .ev-after span{display:block; font-size:12px; font-weight:400; color:var(--steel);}
+  .ev-act{display:flex; align-items:center; gap:6px;}
+  .ev-act button{width:auto; margin:0; padding:6px 12px; font-size:13px; background:#fff; border:1px solid var(--control); border-radius:6px; color:var(--ink);}
+  .ev-act .ev-del,.ev-act .ev-yes{color:var(--red);}
+  .ev-act [hidden]{display:none;}
+  .ev-confirm{font-size:13px; font-weight:600;}
+  .undo-link{all:unset; cursor:pointer; margin-left:8px; text-decoration:underline; text-underline-offset:3px; font-weight:600;}
 </style>
 </head>
 <body>
@@ -165,6 +178,10 @@
           <option value="retired">Retired (worn out)</option>
         </select>
       </div>
+      <div id="evRentalRow" hidden style="margin-top:10px;">
+        <label for="evRental" style="font-size:13px; margin:0 0 4px;">Whose rental? (optional)</label>
+        <select id="evRental"></select>
+      </div>
       <div class="grid2" style="gap:10px; margin-top:10px;">
         <input type="number" id="evQty" placeholder="Quantity" min="1" step="1">
         <input type="text" id="evNote" placeholder="Note (optional)">
@@ -194,6 +211,7 @@
       <div class="rem">
         <p class="note" style="margin:0 0 10px;"><span id="cleanupCount"></span> Sets tote and dolly counts on older rentals by reading the package text. Anything it can't read confidently (like "Custom package") is listed for you to fix by hand, never guessed.</p>
         <button type="button" id="backfillBtn" style="width:auto; padding:10px 18px;">Fill in counts from package text</button>
+        <a href="admin-rentals.html?filter=info" class="sms-btn" style="margin-left:8px; padding:10px 18px; background:#fff; color:var(--ink); border:1px solid var(--control);">Open the ones that need info</a>
         <div id="backfillResult" style="margin-top:10px;"></div>
       </div>
     </div>
@@ -253,8 +271,9 @@
       $('results').style.display = 'block';   // shown first so the chart can measure its width
       render();
       renderExpected();
+      fillRentalPicker();
       $('status').style.display = 'none';
-    } catch (e) { console.error('Load inventory failed:', e); showErr('Load failed — check the console for details.'); }
+    } catch (e) { console.error('Load inventory failed:', e); showErr('Load failed. Try Refresh.'); }
     btn.disabled = false; btn.textContent = 'Refresh';
   }
 
@@ -262,7 +281,11 @@
   // live in admin-shared.js, shared with the Dashboard.
 
   function render() {
-    const totalOwned = ownedAsOf('9999-12-31');
+    // Owned today; stock changes dated later show as "arriving" instead
+    const totalOwned = ownedAsOf(TODAY);
+    const future = EVENTS.filter(e => !isDollyEvent(e) && e.date > TODAY).sort((a, b) => a.date.localeCompare(b.date));
+    const futureNote = future.length
+      ? future.slice(0, 2).map(e => `${ADD_TYPES.includes(e.type) ? '+' : '\u2212'}${e.quantity} ${ADD_TYPES.includes(e.type) ? 'arriving' : 'leaving'} ${shortDay(e.date)}`).join(', ') : '';
     const deployed = ACTIVE_RENTALS.reduce((t, r) => t + toteQty(r), 0);
     const dolliesOut = ACTIVE_RENTALS.reduce((t, r) => t + dollyQty(r), 0);
     // Only the estimable ones (parsed package text > 0) affect the numbers —
@@ -278,9 +301,14 @@
     $('statCards').innerHTML = `
       <div class="stat clickable" role="button" tabindex="0" onclick="showDay(TODAY)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDay(TODAY);}" title="See who has totes out today"><div class="lbl">Free today</div><div class="num" style="${freeToday < 0 ? 'color:var(--red)' : ''}">${freeToday}</div><div class="cap">${pendingTotes ? `${pendingTotes} more held for bookings not yet invoiced` : 'ready to rent'}</div></div>
       <div class="stat"><div class="lbl">Out with customers</div><div class="num">${deployed}</div><div class="cap">${ACTIVE_RENTALS.length} ${ACTIVE_RENTALS.length === 1 ? 'rental' : 'rentals'}</div></div>
-      <div class="stat"><div class="lbl">Owned</div><div class="num">${totalOwned}</div><div class="cap">${lifetimeTotes.toLocaleString('en-US')} totes rented, all time</div></div>
+      <div class="stat"><div class="lbl">Owned</div><div class="num">${totalOwned}</div><div class="cap">${futureNote ? esc(futureNote) : lifetimeTotes.toLocaleString('en-US') + ' totes rented, all time'}</div></div>
       ${DOLLIES_TRACKED()
-        ? (() => { const d = computeDays(0, 1)[0]; return `<div class="stat"><div class="lbl">Dollies free today</div><div class="num" style="${d.dolliesFree < 0 ? 'color:var(--red)' : ''}">${d.dolliesFree}</div><div class="cap">${dolliesOut} out · ${dolliesOwnedAsOf('9999-12-31')} owned</div></div>`; })()
+        ? (() => {
+            const d = computeDays(0, 1)[0];
+            // Dollies held today for bookings not invoiced yet, so the caption adds up
+            const held = PENDING_CONFIRMED.filter(p => p.estTotes > 0 && p.deliveryDate <= TODAY && p.pickupDate >= TODAY).reduce((t, p) => t + (p.estDollies || 0), 0);
+            return `<div class="stat"><div class="lbl">Dollies free today</div><div class="num" style="${d.dolliesFree < 0 ? 'color:var(--red)' : ''}">${d.dolliesFree}</div><div class="cap">${dolliesOut} out${held ? ` · ${held} held` : ''} · ${dolliesOwnedAsOf(TODAY)} owned</div></div>`;
+          })()
         : `<div class="stat"><div class="lbl">Dollies out</div><div class="num">${dolliesOut}</div><div class="cap">Log dollies owned below to track free ones</div></div>`}
     `;
 
@@ -290,20 +318,31 @@
     $('cleanupSection').hidden = !missingCounts;
     $('cleanupCount').textContent = missingCounts ? `${missingCounts} ${missingCounts === 1 ? 'rental is' : 'rentals are'} missing tote or dolly counts.` : '';
 
+    // Running count after each change, per item, oldest first
+    const after = {}, run = { tote: 0, dolly: 0 };
+    for (const e of [...EVENTS].sort((a, b) => (a.date + a.key).localeCompare(b.date + b.key))) {
+      const it = isDollyEvent(e) ? 'dolly' : 'tote';
+      run[it] += ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity;
+      after[e.key] = run[it];
+    }
     const sorted = [...EVENTS].sort((a, b) => (b.date + b.key).localeCompare(a.date + a.key));
     $('evList').innerHTML = sorted.length ? sorted.map(e => {
-      const sign = ADD_TYPES.includes(e.type) ? '+' : '−';
-      const color = ADD_TYPES.includes(e.type) ? 'var(--green)' : 'var(--red)';
+      const add = ADD_TYPES.includes(e.type);
+      const dolly = isDollyEvent(e);
+      const unit = n => dolly ? (n === 1 ? 'dolly' : 'dollies') : (n === 1 ? 'tote' : 'totes');
       return `
-      <div class="rem" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
-        <div>
-          <div style="font-weight:bold; font-size:15px;"><span style="color:${color};">${sign}${e.quantity} ${isDollyEvent(e) ? (e.quantity === 1 ? 'dolly' : 'dollies') : (e.quantity === 1 ? 'tote' : 'totes')}</span> · ${esc(labelFor(e.type))}</div>
-          <div style="font-size:13px; color:var(--steel); margin:0;">${esc(fmtDate(e.date))}${e.note ? ' · ' + esc(e.note) : ''}</div>
+      <div class="rem ev-row" data-ev="${escAttr(e.key)}">
+        <div class="ev-main">
+          <div class="ev-what"><span class="${add ? 'up' : 'down'}">${add ? '+' : '\u2212'}${e.quantity} ${unit(e.quantity)}</span> · ${esc(labelFor(e.type))}${e.rentalName ? ` · ${esc(e.rentalName)}` : ''}</div>
+          <div class="ev-meta">${esc(fmtDate(e.date))}${e.date > TODAY ? ' (upcoming)' : ''}${e.note ? ' · ' + esc(e.note) : ''}</div>
         </div>
-        <button type="button" style="width:auto; margin:0; padding:6px 12px; font-size:13px; background:var(--white); color:var(--red); border:1px solid var(--control); border-radius:6px;"
-          onclick="invDelete('${esc(e.key)}')">Delete</button>
+        <div class="ev-after num">${after[e.key]} ${dolly ? 'dollies' : 'totes'}<span>after</span></div>
+        <div class="ev-act">
+          <button type="button" class="ev-del" data-ev-del>Delete</button>
+          <span class="ev-confirm" hidden>Delete this change? <button type="button" class="ev-yes" data-ev-yes>Delete</button> <button type="button" class="ev-keep" data-ev-keep>Keep</button></span>
+        </div>
       </div>`;
-    }).join('') : '<p class="empty">No inventory events logged yet.</p>';
+    }).join('') : '<p class="empty">No stock changes logged yet.</p>';
   }
 
   // The actionable list behind the "Confirmed, not invoiced" stat — each
@@ -313,7 +352,7 @@
     const el = $('pendingConfirmed');
     if (!el) return;
     if (!PENDING_CONFIRMED.length) {
-      el.innerHTML = '<p class="empty">None right now — every confirmed booking has been invoiced.</p>';
+      el.innerHTML = '<p class="empty">None right now. Every confirmed booking has been invoiced.</p>';
       return;
     }
     el.innerHTML = PENDING_CONFIRMED.map(p => `
@@ -321,11 +360,13 @@
         <div>
           <div style="font-weight:bold; font-size:15px;">
             ${esc(p.name || 'Unnamed')} <span class="pill ${p.status === 'confirmed' ? 'ok' : 'pending'}" style="vertical-align:2px;">${p.status === 'confirmed' ? 'Confirmed' : 'Awaiting customer'}</span>
-            ${p.estTotes > 0 ? ` — ~${p.estTotes} tote${p.estTotes === 1 ? '' : 's'}` : ' — <span style="color:var(--crate-red);">couldn\'t estimate count</span>'}
+            ${p.estTotes > 0 ? ` · about ${p.estTotes} tote${p.estTotes === 1 ? '' : 's'}` : ' · <span style="color:var(--crate-red);">couldn\'t estimate count</span>'}
           </div>
-          <div style="font-size:13px; color:var(--steel); margin:0;">${esc(p.package || '—')} · ${esc(fmtDate(p.deliveryDate))} → ${esc(fmtDate(p.pickupDate))}</div>
+          <div style="font-size:13px; color:var(--steel); margin:0;">${esc(p.package || 'No package')} · ${esc(fmtDate(p.deliveryDate))} to ${esc(fmtDate(p.pickupDate))}</div>
         </div>
-        <a href="admin-requests.html" class="sms-btn" style="padding:7px 12px; font-size:13px;">Invoice it →</a>
+        ${p.status === 'confirmed'
+          ? `<button type="button" class="sms-btn" data-invoice="${escAttr(p.key)}" style="padding:7px 12px; font-size:13px; width:auto; margin:0;">Create invoice</button>`
+          : `<a href="admin-requests.html" class="sms-btn" style="padding:7px 12px; font-size:13px; background:#fff; color:var(--ink); border:1px solid var(--control);">Open Requests</a>`}
       </div>`).join('');
   }
 
@@ -657,14 +698,67 @@
     $('dollySetup').hidden = !(EV_ITEM === 'dolly' && !DOLLIES_TRACKED());
   }));
 
+  // Lost or damaged: offer the rentals the stock could have gone out with,
+  // most recent first (out now, or back within the last 60 days)
+  function fillRentalPicker() {
+    const show = ['damaged', 'lost'].includes($('evType').value);
+    $('evRentalRow').hidden = !show;
+    if (!show) return;
+    const since = shiftDate(TODAY || new Date().toISOString().slice(0, 10), -60);
+    const list = ALL_RENTALS.filter(r => r.dropoffDate && r.dropoffDate <= TODAY && (r.pickupDate || '') >= since)
+      .sort((a, b) => (b.pickupDate || '').localeCompare(a.pickupDate || ''));
+    $('evRental').innerHTML = '<option value="">Not from a customer</option>' + list.map(r =>
+      `<option value="${escAttr(r.key)}">${esc(r.name)} · ${esc(fmtDate(r.dropoffDate))} to ${esc(fmtDate(r.pickupDate))}</option>`).join('');
+  }
+  $('evType').addEventListener('change', fillRentalPicker);
+
   $('evAddBtn').addEventListener('click', async () => {
     const date = $('evDate').value, type = $('evType').value,
           quantity = $('evQty').value, note = $('evNote').value.trim();
     if (!date || !quantity) return showErr('A stock change needs a date and a quantity.');
-    const resp = await invCall({ action: 'add', date, type, quantity, note, item: EV_ITEM });
-    if (resp.ok) { $('evQty').value = ''; $('evNote').value = ''; $('status').style.display = 'none'; reload(); }
-    else showErr('Add event failed.');
+    const rKey = !$('evRentalRow').hidden ? $('evRental').value : '';
+    const rental = rKey && ALL_RENTALS.find(r => r.key === rKey);
+    const resp = await invCall({ action: 'add', date, type, quantity, note, item: EV_ITEM,
+      ...(rental ? { rentalKey: rental.key, rentalName: rental.name } : {}) });
+    if (resp.ok) { $('evQty').value = ''; $('evNote').value = ''; $('evRental').value = ''; $('status').style.display = 'none'; reload(); }
+    else showErr('Couldn’t add that stock change.');
   });
+
+  // Create invoice for a confirmed booking: same handoff as Requests
+  $('pendingConfirmed').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-invoice]');
+    if (!b) return;
+    const p = PENDING_CONFIRMED.find(x => x.key === b.dataset.invoice);
+    if (!p) return;
+    sessionStorage.setItem('rto-prefill-request', JSON.stringify(p));
+    location.href = 'admin-invoice.html';
+  });
+
+  // Delete a stock change: confirm in the row, then offer Undo (re-adds it)
+  $('evList').addEventListener('click', async (e) => {
+    const row = e.target.closest('[data-ev]');
+    if (!row) return;
+    const ask = row.querySelector('.ev-confirm'), del = row.querySelector('.ev-del');
+    if (e.target.closest('[data-ev-del]')) { del.hidden = true; ask.hidden = false; return; }
+    if (e.target.closest('[data-ev-keep]')) { del.hidden = false; ask.hidden = true; return; }
+    if (!e.target.closest('[data-ev-yes]')) return;
+    const ev = EVENTS.find(x => x.key === row.dataset.ev);
+    const resp = await invCall({ action: 'delete', key: row.dataset.ev });
+    if (!resp.ok) return showErr('Couldn’t delete that stock change.');
+    LAST_DELETED = ev;
+    const add = ADD_TYPES.includes(ev.type);
+    showOk(`Deleted ${add ? '+' : '\u2212'}${ev.quantity} ${isDollyEvent(ev) ? 'dollies' : 'totes'} (${labelFor(ev.type).toLowerCase()}, ${fmtDate(ev.date)}). <button type="button" class="undo-link" id="undoDelete">Undo</button>`);
+    $('undoDelete').addEventListener('click', undoDelete);
+    reload();
+  });
+  let LAST_DELETED = null;
+  async function undoDelete() {
+    const ev = LAST_DELETED; if (!ev) return;
+    LAST_DELETED = null;
+    const resp = await invCall({ action: 'add', date: ev.date, type: ev.type, quantity: ev.quantity, note: ev.note || '', item: isDollyEvent(ev) ? 'dolly' : 'tote',
+      ...(ev.rentalKey ? { rentalKey: ev.rentalKey, rentalName: ev.rentalName } : {}) });
+    if (resp.ok) { showOk('Put back.'); reload(); } else showErr('Couldn’t undo. Add the stock change again by hand.');
+  }
 
   $('backfillBtn').addEventListener('click', async () => {
     const secret = $('secret').value.trim();
@@ -705,29 +799,26 @@
     }
 
     btn.disabled = false;
-    btn.textContent = 'Backfill counts from package text';
+    btn.textContent = 'Fill in counts from package text';
 
     const reviewList = needsReview.length
       ? '<ul style="margin:8px 0 0; padding-left:18px; font-size:14px;">' +
-          needsReview.map(r => `<li>${esc(r.name)} — "${esc(r.package)}"</li>`).join('') +
+          needsReview.map(r => `<li><a href="admin-rentals.html?q=${encodeURIComponent(r.name || '')}">${esc(r.name)}</a>: "${esc(r.package)}"</li>`).join('') +
         '</ul>'
       : '';
     resultEl.innerHTML = `
       <p class="note" style="color:${needsReview.length ? 'var(--red)' : 'var(--green)'};">
         Updated ${updated} rental${updated === 1 ? '' : 's'} from package text.
-        ${needsReview.length ? `${needsReview.length} need${needsReview.length === 1 ? 's' : ''} a manual count, use "Edit tote/dolly count" for these on Reminders → All Rentals:` : 'All caught up!'}
+        ${needsReview.length ? `${needsReview.length} need${needsReview.length === 1 ? 's' : ''} a count set by hand. Tap a name to open it on All rentals, then Edit rental:` : 'All caught up!'}
       </p>${reviewList}`;
 
     // Reload rental data + inventory stats so badges/counts reflect the update
     await load();
   });
 
-  window.invDelete = async (key) => {
-    if (!confirm('Delete this event?')) return;
-    const resp = await invCall({ action: 'delete', key });
-    if (resp.ok) reload(); else showErr('Delete failed.');
-  };
-  function showErr(m) { const s = $('status'); s.className = 'status err'; s.textContent = m; }
+  function showErr(m) { const s = $('status'); s.style.display = 'block'; s.className = 'status err'; s.textContent = m; }
+  function showOk(html) { const s = $('status'); s.style.display = 'block'; s.className = 'status ok'; s.innerHTML = html; }
+  const shortDay = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 </script>
 </body>
 </html>
