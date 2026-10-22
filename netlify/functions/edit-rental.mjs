@@ -2,9 +2,10 @@
 // Updates one or more fields on an existing rental record in place. Unlike
 // delete + add-rental, this preserves the record's key, so any paidFlags,
 // sentFlags, or tosAccepted state tied to that key stays intact.
-// Protected by INVOICE_SECRET.
+// Admin only (signed-in session, see lib-auth.mjs).
 
 import { getStore } from "@netlify/blobs";
+import { isAdmin } from "./lib-auth.mjs";
 
 const EDITABLE_FIELDS = [
   "name", "email", "phone", "package", "price", "duration",
@@ -36,7 +37,7 @@ export default async (request) => {
   }
   let body;
   try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  if (!process.env.INVOICE_SECRET || body.secret !== process.env.INVOICE_SECRET) {
+  if (!isAdmin(request, body)) {
     return new Response("Unauthorized", { status: 401 });
   }
   if (!body.key) return new Response("Missing key", { status: 400 });

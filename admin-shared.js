@@ -83,15 +83,53 @@ function pickupAddressOf(r) {
 // see a flash of a protected page's content before being redirected.
 //
 // admin-login.html is exempt (it's what everyone gets sent to). Every
-// other admin-*.html page requires a saved username + password.
+// other admin-*.html page needs a session that hasn't expired.
+//
+// The real session is an HttpOnly cookie the server checks (see
+// netlify/functions/lib-auth.mjs); page scripts can't read it, by design.
+// This browser only remembers *that* it's signed in and until when
+// ("rto-admin-session"), so it can send you to sign in without a wasted
+// round trip. The password itself is never stored.
+const SESSION_KEY = 'rto-admin-session';
+
+function adminSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+    return s && typeof s.exp === 'number' && s.exp > Date.now() ? s : null;
+  } catch { return null; }
+}
+
+// Pages put this in their hidden #secret field and check it's non-empty
+// before loading. It's only a "signed in" marker; the server ignores it and
+// checks the session cookie.
+function adminSessionMarker() { return adminSession() ? 'session' : ''; }
+
+function goToLogin() {
+  const page = location.pathname.split('/').pop() || 'admin.html';
+  try { localStorage.removeItem(SESSION_KEY); } catch {}
+  location.replace('admin-login.html?redirect=' + encodeURIComponent(page));
+}
+
 (function authGuard() {
+  // Older versions of these pages saved the admin password in this browser.
+  // Wipe it on every load so no device keeps a plain-text copy.
+  try { localStorage.removeItem('rto-admin-password'); } catch {}
   const page = location.pathname.split('/').pop();
   if (page === 'admin-login.html') return;
-  const username = localStorage.getItem('rto-admin-username');
-  const password = localStorage.getItem('rto-admin-password');
-  if (!username || !password) {
-    location.replace('admin-login.html?redirect=' + encodeURIComponent(page || 'admin.html'));
-  }
+  if (!adminSession()) goToLogin();
+})();
+
+// If the server says the session is over (expired, signed out elsewhere, or
+// the password changed), go to sign in instead of showing "load failed".
+(function signInOnExpiredSession() {
+  if (location.pathname.split('/').pop() === 'admin-login.html') return;
+  const realFetch = window.fetch.bind(window);
+  window.fetch = async (input, init) => {
+    const resp = await realFetch(input, init);
+    const url = typeof input === 'string' ? input : (input && input.url) || '';
+    if (resp.status === 401 && url.includes('/.netlify/functions/') && !url.includes('/login')) goToLogin();
+    return resp;
+  };
 })();
 
 // ---- Log out ----
@@ -125,10 +163,11 @@ document.addEventListener('DOMContentLoaded', () => {
   logout.href = '#';
   logout.className = 'logout-link';
   logout.textContent = 'Log out';
-  logout.addEventListener('click', (e) => {
+  logout.addEventListener('click', async (e) => {
     e.preventDefault();
-    localStorage.removeItem('rto-admin-username');
-    localStorage.removeItem('rto-admin-password');
+    // Ends the session on the server (clears the cookie), then here
+    try { await fetch('/.netlify/functions/logout', { method: 'POST' }); } catch {}
+    try { localStorage.removeItem(SESSION_KEY); localStorage.removeItem('rto-admin-username'); } catch {}
     location.href = 'admin-login.html';
   });
   nav.appendChild(logout);

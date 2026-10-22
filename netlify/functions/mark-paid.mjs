@@ -1,9 +1,10 @@
 // POST /.netlify/functions/mark-paid
 // Records or clears a rental's "paid" status. Used by admin-reminders.html
 // to denote invoices that have been sent but not yet paid.
-// Protected by INVOICE_SECRET.
+// Admin only (signed-in session, see lib-auth.mjs).
 
 import { getStore } from "@netlify/blobs";
+import { isAdmin } from "./lib-auth.mjs";
 
 export default async (request) => {
   if (request.method !== "POST") {
@@ -11,7 +12,7 @@ export default async (request) => {
   }
   let body;
   try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  if (!process.env.INVOICE_SECRET || body.secret !== process.env.INVOICE_SECRET) {
+  if (!isAdmin(request, body)) {
     return new Response("Unauthorized", { status: 401 });
   }
   if (!body.key) return new Response("Missing key", { status: 400 });

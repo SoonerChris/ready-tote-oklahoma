@@ -18,12 +18,23 @@
 //   5. Copy that refresh token into a new GOOGLE_OAUTH_REFRESH_TOKEN
 //      variable in Netlify. That's the one backup-to-drive.mjs actually
 //      uses going forward — this file's job is done at that point.
+import { readSession } from "./lib-auth.mjs";
 
 const REDIRECT_URI = "https://readytoteokc.com/.netlify/functions/oauth-setup";
 
 export default async (request) => {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
+
+  // Starting the setup needs a signed-in admin. Google's return trip (?code=)
+  // can't carry the session cookie (browsers don't send SameSite=Strict
+  // cookies on a redirect from another site), and doesn't need to: a code is
+  // only good for the Google account that approved it.
+  if (!code && !readSession(request)) {
+    return new Response("Sign in to the admin tools first, then open this page again.", {
+      status: 401, headers: { "Content-Type": "text/plain" },
+    });
+  }
 
   if (!process.env.GOOGLE_OAUTH_CLIENT_ID || !process.env.GOOGLE_OAUTH_CLIENT_SECRET) {
     return new Response(

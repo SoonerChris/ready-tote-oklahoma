@@ -2,9 +2,10 @@
 // Stock ledger for totes and dollies. Actions: list, add, delete.
 // Each event has item "tote" or "dolly"; events saved before dollies were
 // tracked have no item and are totes.
-// Protected by INVOICE_SECRET.
+// Admin only (signed-in session, see lib-auth.mjs).
 
 import { getStore } from "@netlify/blobs";
+import { isAdmin } from "./lib-auth.mjs";
 
 const ADD_TYPES = ["purchased", "returned-to-service"];
 const REMOVE_TYPES = ["damaged", "lost", "retired"];
@@ -15,7 +16,7 @@ export default async (request) => {
   }
   let body;
   try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  if (!process.env.INVOICE_SECRET || body.secret !== process.env.INVOICE_SECRET) {
+  if (!isAdmin(request, body)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

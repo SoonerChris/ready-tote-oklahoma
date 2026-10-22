@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Reminders · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261022"></script>
+<script src="admin-shared.js?v=20261025"></script>
 <script src="admin-rentals-shared.js?v=20261022"></script>
 <style>
   /* Reminders answers one question: what do I need to send right now?
@@ -87,7 +87,7 @@
 <script>
   const $ = (id) => document.getElementById(id);
   // Restore shared secret
-  $('secret').value = localStorage.getItem('rto-admin-password') || '';
+  $('secret').value = adminSessionMarker();   // signed-in marker; the session cookie is what the server checks
 
   let ALL_RENTALS = [], REM = {};
   const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });

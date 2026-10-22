@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Tote Inventory — Ready Tote Oklahoma (Internal)</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261022"></script>
+<script src="admin-shared.js?v=20261025"></script>
 <style>
   :root{--col:960px;}
   .finding{margin:4px 0 20px; font-size:17px; max-width:760px; line-height:1.45;}
@@ -202,7 +202,7 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
-  $('secret').value = localStorage.getItem('rto-admin-password') || '';
+  $('secret').value = adminSessionMarker();   // signed-in marker; the session cookie is what the server checks
   $('evDate').value = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
 
   const ADD_TYPES = ['purchased', 'returned-to-service'];

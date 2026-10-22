@@ -9,7 +9,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Send Invoice — Ready Tote Oklahoma (Internal)</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261022"></script>
+<script src="admin-shared.js?v=20261025"></script>
 <script src="admin-availability.js?v=20261024"></script>
 <style>
   :root{--col:720px;}
@@ -214,7 +214,7 @@
 <script>
   const $ = (id) => document.getElementById(id);
   let PACKAGES = []; // declared early: matchPrefillPackage() can run before the fetch below finishes
-  $('secret').value = localStorage.getItem('rto-admin-password') || '';
+  $('secret').value = adminSessionMarker();   // signed-in marker; the session cookie is what the server checks
 
   // ---- Prefill from a confirmed Booking Request (admin-requests.html handoff) ----
   let PREFILL_REQUEST_KEY = null;

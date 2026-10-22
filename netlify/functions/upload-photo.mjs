@@ -5,12 +5,13 @@
 // Images should be compressed client-side before upload — admin-rentals.html
 // and admin-requests.html do this via canvas before sending base64 here.
 // Stored as raw bytes in a dedicated "photos" Blob store, keyed by
-// `${key}:${type}`. Protected by INVOICE_SECRET — this is the admin/staff
+// `${key}:${type}`. Admin only (signed-in session, see lib-auth.mjs) — this is the admin/staff
 // upload path. Customers self-uploading a military ID from the public
 // booking form use the separate, unauthenticated upload-military-id.mjs
 // instead, which is hardcoded to the military_id type only.
 
 import { getStore } from "@netlify/blobs";
+import { isAdmin } from "./lib-auth.mjs";
 
 const MAX_BYTES = 6 * 1024 * 1024; // stay well under Netlify Functions' body limit
 const ALLOWED_TYPES = ["delivery", "pickup", "military_id"];
@@ -21,7 +22,7 @@ export default async (request) => {
   }
   let body;
   try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  if (!process.env.INVOICE_SECRET || body.secret !== process.env.INVOICE_SECRET) {
+  if (!isAdmin(request, body)) {
     return new Response("Unauthorized", { status: 401 });
   }
   if (!body.key) return new Response("Missing key", { status: 400 });

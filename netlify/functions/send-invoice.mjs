@@ -1,6 +1,6 @@
 // POST /.netlify/functions/send-invoice
 // Sends a branded invoice email to a customer with a Stripe payment button.
-// Protected by INVOICE_SECRET env var — requests must include the matching secret.
+// Admin only (signed-in session, see lib-auth.mjs) env var — requests must include the matching secret.
 //
 // Env vars required:
 //   RESEND_API_KEY - Resend API key
@@ -9,6 +9,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { rentalToICSAttachments } from "./lib-reminders.mjs";
+import { isAdmin } from "./lib-auth.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
@@ -40,7 +41,7 @@ export default async (request) => {
   }
 
   // Auth check
-  if (!process.env.INVOICE_SECRET || body.secret !== process.env.INVOICE_SECRET) {
+  if (!isAdmin(request, body)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

@@ -5,6 +5,7 @@
 // INVOICE_SECRET.
 
 import { getStore } from "@netlify/blobs";
+import { isAdmin } from "./lib-auth.mjs";
 
 export default async (request) => {
   if (request.method !== "POST") {
@@ -12,7 +13,7 @@ export default async (request) => {
   }
   let body;
   try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  if (!process.env.INVOICE_SECRET || body.secret !== process.env.INVOICE_SECRET) {
+  if (!isAdmin(request, body)) {
     return new Response("Unauthorized", { status: 401 });
   }
   if (!body.flagId) return new Response("Missing flagId", { status: 400 });

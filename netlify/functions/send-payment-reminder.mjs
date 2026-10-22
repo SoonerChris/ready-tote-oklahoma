@@ -1,7 +1,7 @@
 // POST /.netlify/functions/send-payment-reminder
 // Sends a follow-up payment reminder email for an invoice that's still
 // unpaid, reusing the Stripe payment link saved when the invoice was sent.
-// Protected by INVOICE_SECRET. Body: { secret, key } where key is the
+// Admin only (signed-in session, see lib-auth.mjs). Body: { secret, key } where key is the
 // rental's blob store key.
 //
 // Env vars required:
@@ -10,6 +10,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { friendlyTime } from "./lib-reminders.mjs";
+import { isAdmin } from "./lib-auth.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
@@ -30,7 +31,7 @@ export default async (request) => {
     return new Response("Invalid JSON", { status: 400 });
   }
 
-  if (!process.env.INVOICE_SECRET || body.secret !== process.env.INVOICE_SECRET) {
+  if (!isAdmin(request, body)) {
     return new Response("Unauthorized", { status: 401 });
   }
   if (!body.key) return new Response("Missing key", { status: 400 });

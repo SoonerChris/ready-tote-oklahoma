@@ -1,7 +1,8 @@
 // POST /.netlify/functions/delete-rental
-// Deletes a rental record by its key. Protected by INVOICE_SECRET.
+// Deletes a rental record by its key. Admin only (signed-in session, see lib-auth.mjs).
 
 import { getStore } from "@netlify/blobs";
+import { isAdmin } from "./lib-auth.mjs";
 
 export default async (request) => {
   if (request.method !== "POST") {
@@ -9,7 +10,7 @@ export default async (request) => {
   }
   let body;
   try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  if (!process.env.INVOICE_SECRET || body.secret !== process.env.INVOICE_SECRET) {
+  if (!isAdmin(request, body)) {
     return new Response("Unauthorized", { status: 401 });
   }
   if (!body.key) return new Response("Missing key", { status: 400 });
