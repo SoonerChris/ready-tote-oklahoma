@@ -69,6 +69,7 @@ export default async (request) => {
       notes: body.notes || "",
       isMilitary: !!body.isMilitary,
       isRush: !!body.isRush,
+      ...(body.promoCode ? { promoCode: String(body.promoCode).trim().slice(0, 40) } : {}),
       ...(body.militaryIdKey ? { militaryIdKey: body.militaryIdKey } : {}),
       invoicedAt: new Date().toISOString(),
       backfilled: true,

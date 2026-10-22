@@ -39,6 +39,7 @@
   .linkish{all:unset; cursor:pointer; margin-top:6px; font-size:13px; font-weight:600; color:var(--ink); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
   .linkish[hidden]{display:none;}
   .note.bad{color:#831C1E; font-weight:600;}
+  .disc-row{margin-top:6px;}
   .after-send{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:14px;}
   .after-send .sms-btn[aria-disabled="true"]{background:var(--track); color:var(--steel); pointer-events:none;}
 </style>
@@ -110,6 +111,23 @@
   <label class="check" style="margin-top:10px;">
     <input type="checkbox" id="isMilitary"> Military discount (15%)
   </label>
+  <div class="grid2 disc-row">
+    <div>
+      <label for="discName">Other discount (optional)</label>
+      <input type="text" id="discName" maxlength="60" placeholder="e.g. Partner code SMITH10">
+    </div>
+    <div class="grid2">
+      <div>
+        <label for="discValue">Amount</label>
+        <input type="text" id="discValue" inputmode="decimal" placeholder="10">
+      </div>
+      <div>
+        <label for="discType">Type</label>
+        <select id="discType"><option value="pct">% off</option><option value="usd">$ off</option></select>
+      </div>
+    </div>
+  </div>
+  <p class="note" id="discNote" hidden></p>
 
   <div class="grid2">
     <div>
@@ -232,6 +250,7 @@
   let PREFILL_REQUEST_KEY = null;
   let PREFILL_MILITARY_ID_KEY = null;
   let PREFILL_SUBMITTED_AT = null;
+  var PREFILL_PROMO = '';   // var: applyPrefill runs before later lets are initialized
   let PENDING_PREFILL = null;
   (function loadPrefill() {
     const raw = sessionStorage.getItem('rto-prefill-request');
@@ -246,6 +265,12 @@
     PREFILL_MILITARY_ID_KEY = r.militaryIdKey || null;
     PREFILL_SUBMITTED_AT = r.submittedAt || null;
     $('isMilitary').checked = !!r.isMilitary;
+    PREFILL_PROMO = r.promoCode || '';
+    if (PREFILL_PROMO) {
+      $('discName').value = 'Promo code ' + PREFILL_PROMO;
+      $('discNote').textContent = `The customer entered promo code ${PREFILL_PROMO}. If it's valid, set the amount.`;
+      $('discNote').hidden = false;
+    }
     if (r.name) $('name').value = r.name;
     if (r.email) $('email').value = r.email;
     if (r.phone) $('phone').value = r.phone;
@@ -308,9 +333,10 @@
     }
   }
 
-  // Estimates an invoice total: package price, plus the $25 rush fee when
-  // ticked, less 15% military (taken off the whole total, rush included).
-  // It fills the price field, which stays editable.
+  // Estimates an invoice total: package price, less one discount (military
+  // 15% or the other discount, whichever is bigger; package price only),
+  // plus the $25 rush fee when ticked. It fills the price field, which
+  // stays editable.
   // Price follows the package, rush and military automatically until you
   // type a price yourself; then it's left alone and "Recalculate" appears.
   let PRICE_BY_HAND = false;
@@ -348,21 +374,40 @@
     const base = Number(String(p.price).replace(/[^0-9.]/g, ''));
     if (!Number.isFinite(base)) return;
 
+    // One discount at a time (the bigger one), taken off the package price
+    // only. The rush fee is never discounted.
+    const round2 = n => Math.round(n * 100) / 100;
+    const military = $('isMilitary').checked ? round2(base * 0.15) : 0;
+    const v = money($('discValue').value);
+    const pct = $('discType').value === 'pct';
+    const other = v > 0 ? round2(pct ? base * Math.min(v, 100) / 100 : Math.min(v, base)) : 0;
+    const name = $('discName').value.trim() || 'Discount';
+    const otherLabel = pct && v > 0 ? `${name} (${trimZeros(Math.min(v, 100))}%)` : name;
+    const useOther = other > military;
+    const discount = useOther ? other : military;
+    const discLabel = useOther ? otherLabel : 'Military discount (15%)';
+
     let total = base;
     const notes = [`$${trimZeros(base)} package`];
     const items = [{ label: 'Package price', amount: base }];
-
+    if (discount > 0) {
+      total = round2(total - discount);
+      notes.push(`\u2212$${discount.toFixed(2)} ${useOther ? name : 'military (15%)'}`);
+      items.push({ label: discLabel, amount: -discount });
+    }
     if ($('isRush').checked) {
-      total += RUSH_FEE;
+      total = round2(total + RUSH_FEE);
       notes.push(`+$${RUSH_FEE} rush`);
       items.push({ label: 'Rush fee', amount: RUSH_FEE });
     }
 
-    if ($('isMilitary').checked) {
-      const discount = Math.round(total * 0.15 * 100) / 100;
-      total = Math.round((total - discount) * 100) / 100;
-      notes.push(`\u2212$${discount.toFixed(2)} military (15%)`);
-      items.push({ label: 'Military discount (15%)', amount: -discount });
+    // Say which discount won when both apply
+    const dn = $('discNote');
+    if (military > 0 && other > 0) {
+      dn.textContent = `Discounts don't stack, so only the bigger one applies: ${useOther ? name + ' ($' + other.toFixed(2) + ')' : 'military ($' + military.toFixed(2) + ')'}.`;
+      dn.hidden = false;
+    } else if (!PREFILL_PROMO || v > 0) {
+      dn.hidden = true;
     }
 
     LINE_ITEMS = items.length > 1 ? items : null;
@@ -417,6 +462,9 @@
     stripeCheck();
   });
   $('isMilitary').addEventListener('change', autoPrice);
+  $('discValue').addEventListener('input', autoPrice);
+  $('discName').addEventListener('input', autoPrice);
+  $('discType').addEventListener('change', autoPrice);
   $('dropoffDate').addEventListener('change', autoPrice);
   $('dropoffTime').addEventListener('change', autoPrice);
 
@@ -620,6 +668,7 @@
     payload.notes = $('notes').value.trim();
     payload.isMilitary = $('isMilitary').checked;
     payload.isRush = $('isRush').checked;
+    if (PREFILL_PROMO) payload.promoCode = PREFILL_PROMO;
     // Line items only when they add up to the price being sent
     const sum = LINE_ITEMS ? LINE_ITEMS.reduce((t, i) => t + i.amount, 0) : null;
     if (LINE_ITEMS && Math.abs(sum - (money(payload.price) ?? -1)) < 0.01) payload.lineItems = LINE_ITEMS;

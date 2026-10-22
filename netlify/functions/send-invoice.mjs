@@ -156,6 +156,7 @@ export default async (request) => {
       stripeUrl,
       isMilitary: !!body.isMilitary,
       isRush: !!body.isRush,
+      ...(body.promoCode ? { promoCode: String(body.promoCode).trim().slice(0, 40) } : {}),
       ...(lineItems ? { lineItems } : {}),
       militaryIdKey: body.militaryIdKey || "",
     });

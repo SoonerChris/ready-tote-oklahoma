@@ -72,6 +72,7 @@
 
   /* Things to double-check before confirming */
   .warns{margin-top:8px;display:flex;flex-direction:column;gap:6px;}
+  .req-body .muted{color:var(--steel);font-size:13px;}
   .warn{padding:7px 10px;border-radius:6px;background:var(--gold-bg);color:#6B4C0C;font-size:13px;font-weight:600;line-height:1.4;}
 
   /* "Sent to Hannah?" after tapping Text to confirm */
@@ -302,6 +303,7 @@
         ${OPEN_STATUSES.includes(r.status) ? `<div class="avail-row"><span class="lbl">Stock</span><span class="avail-list">${requestAvailability(r)}</span></div>` : ''}
         <div><span class="lbl">Phone</span>${r.phone ? `<a href="tel:${escAttr(phoneDigits)}">${esc(r.phone)}</a>` : 'Not given'}</div>
         <div><span class="lbl">Email</span>${r.email ? `<a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : 'Not given'}</div>
+        ${r.promoCode ? `<div><span class="lbl">Promo</span><b>${esc(r.promoCode)}</b> <span class="muted">check it's valid before invoicing</span></div>` : ''}
         ${r.reviewNotes ? `<div><span class="lbl">Notes</span>${esc(r.reviewNotes)}</div>` : ''}
         ${r.status === 'declined' && r.declineReason ? `<div><span class="lbl">Declined</span>${esc(r.declineReason)}</div>` : ''}
       </div>
@@ -355,7 +357,7 @@
         </div>
         <div class="grid2">
           <div><label>Package</label><select data-f="package">${packageOptions(r.package)}</select></div>
-          <div></div>
+          <div><label>Promo code</label><input type="text" data-f="promoCode" maxlength="40" value="${escAttr(r.promoCode || '')}"></div>
         </div>
         <div class="grid2">
           <div><label>Delivery date</label><input type="date" data-f="deliveryDate" value="${escAttr(r.deliveryDate || '')}"></div>
