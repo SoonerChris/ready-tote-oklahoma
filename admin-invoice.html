@@ -127,6 +127,7 @@
     <div>
       <label>Pickup date</label>
       <input type="date" id="pickupDate">
+      <p class="note" id="pickupNote" hidden></p>
     </div>
     <div>
       <label>Pickup time</label>
@@ -237,7 +238,7 @@
     if (r.email) $('email').value = r.email;
     if (r.phone) $('phone').value = r.phone;
     if (r.deliveryDate) $('dropoffDate').value = r.deliveryDate;
-    if (r.pickupDate) $('pickupDate').value = r.pickupDate;
+    if (r.pickupDate) { $('pickupDate').value = r.pickupDate; PICKUP_BY_HAND = true; }
 
     if (r.deliveryAddressStreet || r.deliveryAddressCity || r.deliveryAddressZip) {
       $('street').value = r.deliveryAddressStreet || '';
@@ -380,6 +381,7 @@
     if (!p) return;
     $('price').value = p.price || '$';
     $('duration').value = p.duration || '2 Weeks';
+    autoPickup();
     $('stripeUrl').value = (p.stripeUrl && !p.stripeUrl.startsWith('PASTE')) ? p.stripeUrl : '';
     $('toteCount').value = (p.toteCount ?? '');
     $('dollyCount').value = (p.dollyCount ?? '');
@@ -468,6 +470,37 @@
       showStatus('err', 'Could not find booking fields in that text — fill the form manually.');
     }
   });
+
+  // ---- Pickup date follows drop-off ----
+  // Same idea as the public booking form: picking a drop-off date fills the
+  // pickup date one rental length later (from Duration, "2 Weeks" = 14 days).
+  // Once pickup is set by hand, or came with the customer's request, it's left
+  // alone, unless it would land before drop-off.
+  var PICKUP_BY_HAND = PICKUP_BY_HAND || false;   // var: the request prefill above can set it first
+  function rentalDays() {
+    const m = String($('duration').value || '').match(/(\d+(?:\.\d+)?)\s*(day|week|month)/i);
+    if (!m) return 14;
+    const n = parseFloat(m[1]), unit = m[2].toLowerCase();
+    return Math.round(unit === 'day' ? n : unit === 'week' ? n * 7 : n * 30);
+  }
+  function autoPickup() {
+    const d = $('dropoffDate').value;
+    if (!d) return;
+    $('pickupDate').min = d;
+    const cur = $('pickupDate').value;
+    if (PICKUP_BY_HAND && cur && cur >= d) return;
+    const p = new Date(d + 'T12:00:00Z');
+    p.setUTCDate(p.getUTCDate() + rentalDays());
+    $('pickupDate').value = p.toISOString().slice(0, 10);
+    PICKUP_BY_HAND = false;
+    const days = rentalDays();
+    $('pickupNote').textContent = `Set to ${days % 7 === 0 ? (days / 7) + ' week' + (days === 7 ? '' : 's') : days + ' days'} after drop-off. Change it if this rental is different.`;
+    $('pickupNote').hidden = false;
+    $('pickupDate').dispatchEvent(new Event('input', { bubbles: true }));   // updates the availability line
+  }
+  $('dropoffDate').addEventListener('change', autoPickup);
+  $('duration').addEventListener('change', () => { PICKUP_BY_HAND = false; autoPickup(); });
+  $('pickupDate').addEventListener('change', () => { PICKUP_BY_HAND = true; $('pickupNote').hidden = true; });
 
   // ---- Mode: send the invoice email, or log the rental only (was admin-add-rental.html) ----
   let LOG_MODE = new URLSearchParams(location.search).get('mode') === 'log';
