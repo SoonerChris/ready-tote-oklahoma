@@ -285,6 +285,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   nav.prepend(brand, menuBtn);
 
+  // Home Screen app setup and notifications, just above Log out.
+  const appLink = document.createElement('a');
+  appLink.href = 'admin-app.html';
+  appLink.textContent = 'App & alerts';
+  if (location.pathname.endsWith('admin-app.html')) appLink.setAttribute('aria-current', 'page');
+  nav.appendChild(appLink);
+
   const logout = document.createElement('a');
   logout.href = '#';
   logout.className = 'logout-link';
@@ -298,3 +305,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   nav.appendChild(logout);
 });
+
+// ---- Home Screen app ----
+// The service worker (sw.js) shows push notifications and an offline page
+// when the admin is opened from the iPhone Home Screen. Live data is never
+// cached, so registering it changes nothing else about the pages.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/admin' }).catch(() => {});
+  });
+}

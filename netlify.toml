@@ -21,3 +21,17 @@
   for = "/*.ico"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# Home Screen app: the service worker must never be cached, or phones keep
+# running an old copy.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+    Service-Worker-Allowed = "/"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "no-cache"

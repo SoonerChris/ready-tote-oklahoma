@@ -12,6 +12,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { emailLayout, heading, pill, steps, contactLine } from "./lib-email.mjs";
+import { notify } from "./lib-push.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
@@ -72,6 +73,13 @@ export default async (request) => {
   } catch (e) {
     console.error("stripe-webhook: auto mark-paid failed:", e.message);
   }
+
+  await notify("payments", {
+    title: "Payment received",
+    body: `${amount || "A payment"} from ${rawName || email}`,
+    url: "/admin-rentals.html?q=" + encodeURIComponent(rawName || email),
+    tag: "paid-" + (session.id || Date.now()),
+  });
 
   const from = process.env.RESEND_FROM || FROM_FALLBACK;
 

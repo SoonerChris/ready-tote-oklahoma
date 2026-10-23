@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#F5F1E7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ready Tote">
+<link rel="apple-touch-icon" href="/app-icon-180.png">
+<title>App &amp; alerts · Ready Tote Oklahoma admin</title>
+<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<script src="admin-shared.js?v=20261030"></script>
+<style>
+  :root{--col:640px;}
+  .panel{border:1px solid var(--line); border-radius:10px; padding:16px 20px; margin-top:20px;}
+  .panel h2{margin:0 0 6px; font-size:16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .panel p{margin:0 0 8px; font-size:15px; line-height:1.5;}
+  .steps{margin:8px 0 0; padding-left:22px; font-size:15px; line-height:1.6;}
+  .steps b{font-weight:600;}
+  .kinds{margin-top:10px;}
+  .kind{display:flex; align-items:flex-start; gap:12px; padding:10px 0; border-top:1px solid #EEEAE1; margin:0; font-weight:400; cursor:pointer;}
+  .kind:first-child{border-top:none;}
+  .kind input{width:20px; height:20px; margin:2px 0 0; flex:none;}
+  .kind b{display:block; font-weight:600;}
+  .kind span{font-size:13px; color:var(--steel);}
+  .acts{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .acts button{width:auto; margin:0; padding:10px 16px; font-size:14px;}
+  [hidden]{display:none !important;}
+</style>
+</head>
+<body>
+<nav class="admin-nav" aria-label="Admin tools">
+  <a href="admin.html">Dashboard</a>
+  <a href="admin-requests.html">Requests</a>
+  <a href="admin-invoice.html">Send Invoice</a>
+  <a href="admin-invoice.html?mode=log">Add Rental</a>
+  <a href="admin-reminders.html">Reminders</a>
+  <a href="admin-rentals.html">All Rentals</a>
+  <a href="admin-contacts.html">Contacts</a>
+  <a href="admin-finance.html">Finance</a>
+  <a href="admin-outreach.html">Outreach</a>
+  <a href="admin-inventory.html">Inventory</a>
+</nav>
+<div class="card">
+  <h1>App &amp; alerts</h1>
+  <p class="sub">Put the admin on your Home Screen like an app, and get a buzz when something needs you.</p>
+  <input type="hidden" id="secret">
+
+  <section class="panel" aria-labelledby="installTitle">
+    <h2 id="installTitle">1. Home Screen app <span class="pill" id="installPill"></span></h2>
+    <div id="installDone" hidden><p>You're in the app. Open it from the Ready Tote icon on your Home Screen any time.</p></div>
+    <div id="installSteps">
+      <p>On your iPhone, in <b>Safari</b>:</p>
+      <ol class="steps">
+        <li>Open this page while signed in.</li>
+        <li>Tap the <b>Share</b> button (the square with the arrow).</li>
+        <li>Tap <b>Add to Home Screen</b>, then <b>Add</b>.</li>
+        <li>Open <b>Ready Tote</b> from your Home Screen and come back here for step 2.</li>
+      </ol>
+      <p class="note">On Android, Chrome's menu has <b>Install app</b> or <b>Add to Home screen</b>.</p>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="pushTitle">
+    <h2 id="pushTitle">2. Notifications <span class="pill" id="pushPill"></span></h2>
+    <p id="pushMsg">Checking this device…</p>
+
+    <div class="kinds" id="kinds">
+      <label class="kind"><input type="checkbox" data-kind="requests" checked><div><b>New booking requests</b><span>As soon as someone fills out the booking form.</span></div></label>
+      <label class="kind"><input type="checkbox" data-kind="payments" checked><div><b>Payments</b><span>When a Stripe payment comes in.</span></div></label>
+      <label class="kind"><input type="checkbox" data-kind="reminders" checked><div><b>Morning reminders</b><span>How many deliveries, pickups and texts are due today. Skipped on days with nothing due.</span></div></label>
+    </div>
+
+    <div class="acts">
+      <button id="onBtn" hidden>Turn on notifications</button>
+      <button id="testBtn" class="secondary" hidden>Send a test</button>
+      <button id="offBtn" class="secondary" hidden>Turn off on this device</button>
+    </div>
+    <div class="status" id="status"></div>
+    <p class="note">Each phone or computer is set up on its own. Turning these on here doesn't change Shon's or anyone else's.</p>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const FN = '/.netlify/functions/push-subscribe';
+const standalone = window.navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+let sub = null;   // this device's push subscription, if any
+
+function say(msg, ok) {
+  const s = $('status');
+  s.textContent = msg || '';
+  s.className = 'status' + (msg ? (ok ? ' ok' : ' err') : '');
+}
+function setPill(id, text, cls) { const p = $(id); p.textContent = text; p.className = 'pill ' + cls; }
+
+async function api(action, extra = {}) {
+  const r = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, secret: $('secret').value, ...extra }) });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Something went wrong (' + r.status + ')');
+  return data;
+}
+
+function prefs() {
+  const p = {};
+  document.querySelectorAll('[data-kind]').forEach((c) => { p[c.dataset.kind] = c.checked; });
+  return p;
+}
+
+function deviceName() {
+  const ua = navigator.userAgent;
+  if (/iPhone/.test(ua)) return 'iPhone';
+  if (/iPad/.test(ua) || isIOS) return 'iPad';
+  if (/Android/.test(ua)) return 'Android';
+  if (/Mac/.test(ua)) return 'Mac';
+  if (/Windows/.test(ua)) return 'Windows';
+  return 'browser';
+}
+
+// base64url VAPID key -> bytes, which pushManager.subscribe wants
+function keyBytes(b64) {
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+
+function show(state, msg) {
+  $('onBtn').hidden = state !== 'off';
+  $('testBtn').hidden = $('offBtn').hidden = state !== 'on';
+  $('kinds').hidden = state === 'blocked' || state === 'unsupported';
+  const pills = { on: ['On', 'ok'], off: ['Off', 'pending'], blocked: ['Blocked', 'err'], unsupported: ['Not here', 'pending'] };
+  setPill('pushPill', ...pills[state]);
+  $('pushMsg').textContent = msg;
+}
+
+async function refresh() {
+  setPill('installPill', standalone ? 'Installed' : 'Not yet', standalone ? 'ok' : 'pending');
+  $('installDone').hidden = !standalone;
+  $('installSteps').hidden = standalone;
+
+  if (!supported) {
+    return show('unsupported', isIOS && !standalone
+      ? 'On iPhone, notifications only work from the Home Screen app. Do step 1, open the app from its icon, then come back here.'
+      : "This browser can't show notifications. On iPhone, use the Home Screen app (iOS 16.4 or newer).");
+  }
+  if (Notification.permission === 'denied') {
+    return show('blocked', isIOS
+      ? 'Notifications are blocked for this app. Turn them on in iPhone Settings > Notifications > Ready Tote, then reload.'
+      : "Notifications are blocked for this site. Allow them in the browser's site settings, then reload.");
+  }
+  const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/admin' });
+  await navigator.serviceWorker.ready;
+  sub = await reg.pushManager.getSubscription();
+  if (sub && Notification.permission === 'granted') {
+    const st = await api('status', { endpoint: sub.endpoint });
+    if (st.on) {
+      document.querySelectorAll('[data-kind]').forEach((c) => { c.checked = st.prefs[c.dataset.kind] !== false; });
+      return show('on', 'This ' + deviceName() + ' gets notifications for the boxes checked below.');
+    }
+    // Subscribed in the browser but the server forgot it (or it expired): re-save quietly.
+    await api('subscribe', { subscription: sub.toJSON(), prefs: prefs(), device: deviceName() });
+    return show('on', 'This ' + deviceName() + ' gets notifications for the boxes checked below.');
+  }
+  show('off', 'Pick what you want to hear about, then turn them on. Your phone will ask to allow notifications.');
+}
+
+$('onBtn').addEventListener('click', async () => {
+  const btn = $('onBtn');
+  btn.disabled = true; say('');
+  try {
+    // Must run straight from the tap, or iOS won't show the Allow prompt.
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { await refresh(); return say(perm === 'denied' ? 'Notifications were blocked.' : 'Notifications were not allowed.'); }
+    const reg = await navigator.serviceWorker.ready;
+    const { publicKey } = await api('key');
+    sub = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) });
+    await api('subscribe', { subscription: sub.toJSON(), prefs: prefs(), device: deviceName() });
+    await refresh();
+    say("You're set. Tap Send a test to make sure it comes through.", true);
+  } catch (e) {
+    say(e.message || "Couldn't turn on notifications.");
+  } finally { btn.disabled = false; }
+});
+
+$('testBtn').addEventListener('click', async () => {
+  const btn = $('testBtn');
+  btn.disabled = true; say('');
+  try { await api('test', { endpoint: sub.endpoint }); say('Test sent. It should show up in a few seconds.', true); }
+  catch (e) { say(e.message); await refresh().catch(() => {}); }
+  finally { btn.disabled = false; }
+});
+
+$('offBtn').addEventListener('click', async () => {
+  const btn = $('offBtn');
+  btn.disabled = true; say('');
+  try {
+    if (sub) { await api('unsubscribe', { endpoint: sub.endpoint }); await sub.unsubscribe(); sub = null; }
+    await refresh();
+    say('Notifications are off on this ' + deviceName() + '.', true);
+  } catch (e) { say(e.message); }
+  finally { btn.disabled = false; }
+});
+
+// Checkbox changes save right away once notifications are on.
+document.querySelectorAll('[data-kind]').forEach((c) => c.addEventListener('change', async () => {
+  if (!sub || $('onBtn').hidden === false) return;
+  try { await api('prefs', { endpoint: sub.endpoint, prefs: prefs() }); say('Saved.', true); }
+  catch (e) { c.checked = !c.checked; say(e.message); }
+}));
+
+$('secret').value = adminSessionMarker();
+refresh().catch((e) => show('off', e.message || "Couldn't check this device."));
+</script>
+</body>
+</html>
