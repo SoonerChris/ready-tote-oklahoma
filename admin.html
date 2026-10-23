@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Dashboard · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261102"></script>
+<script src="admin-shared.js?v=20261103"></script>
 <style>
   /* Dashboard layout: the cream body is the frame (sidebar on it, no rule),
      the work sits on one white sheet inset 8px from the window's right,
@@ -116,6 +116,10 @@
   .texts .skip{font-size:12px; color:var(--muted);}
   .otw{display:block; margin-top:6px;}
   .otw .btn{height:30px; padding:0 10px; font-size:13px;}
+  .mark{display:block; margin-top:6px;}
+  .mark .btn{height:30px; padding:0 10px; font-size:13px; width:auto;}
+  .marked{display:block; margin-top:6px; font-size:12px; font-weight:600; color:#14492F;}
+  .marked .linkbtn{font-size:12px; margin-left:4px;}
   .unpaid .pay-acts{display:flex; align-items:center; gap:12px; grid-column:1 / -1; margin-top:4px;}
   .unpaid .pay-acts .btn{width:auto; flex:none;}
   .unpaid .pay-acts .linkbtn{white-space:nowrap;}
@@ -466,12 +470,12 @@
       if (r.dropoffDate >= today && r.dropoffDate <= endDate) {
         events.push({ key: r.key, leg: 'delivery', date: r.dropoffDate, time: r.dropoffTime || '', kind: self ? 'Customer pickup' : 'Deliver',
           cls: self ? 'self' : 'go', name: r.name, phone: r.phone, totes: toteQty(r), unpaid: isUnpaid(r),
-          addr: self ? '' : dropoffAddressOf(r) });
+          addr: self ? '' : dropoffAddressOf(r), self, marked: r.deliveredAt || '' });
       }
       if (r.pickupDate >= today && r.pickupDate <= endDate) {
         events.push({ key: r.key, leg: 'pickup', date: r.pickupDate, time: r.pickupTime || '', kind: self ? 'Customer return' : 'Pick up',
           cls: self ? 'self' : 'back', name: r.name, phone: r.phone, totes: toteQty(r), unpaid: false,
-          addr: self ? '' : pickupAddressOf(r) });
+          addr: self ? '' : pickupAddressOf(r), self, marked: r.pickedUpAt || '' });
       }
     }
     events.sort((a,b) => a.date.localeCompare(b.date) || timeKey(a.time) - timeKey(b.time));
@@ -488,7 +492,7 @@
           <div class="who">${e.phone ? `<a href="tel:${escAttr(normalizePhone(e.phone))}" title="Call ${escAttr(e.name)}">${esc(e.name)}</a>` : esc(e.name)}${e.unpaid ? ' <span class="kind due">Unpaid</span>' : ''}</div>
           <div class="meta">${e.addr ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.addr)}" target="_blank" rel="noopener" title="Open in Maps">${esc(e.addr)}</a>` : 'At our place'}</div>
         </div>
-        <div class="totes num">${e.totes || '—'} totes${e.date === today && e.addr && e.phone ? `<span class="otw" data-otw="${escAttr(e.key)}" data-leg="${e.leg}"><button type="button" class="btn ghost">On the way</button></span>` : ''}</div>
+        <div class="totes num">${e.totes || '—'} totes${e.date === today && e.addr && e.phone && !e.marked ? `<span class="otw" data-otw="${escAttr(e.key)}" data-leg="${e.leg}"><button type="button" class="btn ghost">On the way</button></span>` : ''}${e.date === today ? markHtml(e) : ''}</div>
       </div>`;
     }).join('') : '<p class="empty-line">Nothing scheduled in the next 7 days.</p>';
 
@@ -664,6 +668,34 @@
     } catch { showErr('Couldn’t clear those trips. Try again.'); }
   });
 
+  // ---- Delivered / Picked up: tap when it actually happens ----
+  // Marking overrides the clock (rentalPhase): a delivered rental stays out
+  // until it's marked picked up, and shows as a late pickup after its time.
+  const MARK_LABEL = (leg, self) => leg === 'delivery' ? (self ? 'Handed off' : 'Delivered') : (self ? 'Returned' : 'Picked up');
+  function markHtml(e) {
+    const mark = e.leg === 'delivery' ? 'delivered' : 'pickedUp';
+    return e.marked
+      ? `<span class="marked">${MARK_LABEL(e.leg, e.self)} ${esc(markText(e.marked).split(', ').pop())} <button type="button" class="linkbtn" data-mark="${mark}" data-unmark="1" data-key="${escAttr(e.key)}">Undo</button></span>`
+      : `<span class="mark"><button type="button" class="btn ghost" data-mark="${mark}" data-key="${escAttr(e.key)}">${MARK_LABEL(e.leg, e.self)}</button></span>`;
+  }
+  async function setMark(key, mark, undo) {
+    const resp = await post('edit-rental', { secret: $('secret').value.trim(), key, mark, ...(undo ? { undo: true } : {}) });
+    if (!resp.ok) throw new Error(await resp.text().catch(() => ''));
+    const d = await resp.json();
+    const r = DATA.rentals.find(x => x.key === key);
+    if (r) {
+      if (d.deliveredAt) r.deliveredAt = d.deliveredAt; else delete r.deliveredAt;
+      if (d.pickedUpAt) r.pickedUpAt = d.pickedUpAt; else delete r.pickedUpAt;
+    }
+    render();
+  }
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-mark]'); if (!b) return;
+    b.disabled = true;
+    try { await setMark(b.dataset.key, b.dataset.mark, !!b.dataset.unmark); }
+    catch { b.disabled = false; showErr('Couldn’t save that. Try again.'); }
+  });
+
   // ---- Needs you: one line per kind of waiting work, only when there is some ----
   function renderNeeds(today) {
     const lines = [];
@@ -691,6 +723,13 @@
     }
     UNLOGGED = unlogged;
     if (unlogged.length) lines.push(`<span class="needs-pair"><a href="admin-finance.html#mileage"><b>${plural(unlogged.length, 'trip')}</b> not logged in mileage yet</a><button type="button" class="needs-x" data-clear-trips title="Clear: these don't need a mileage log">Clear</button></span>`);
+    // Marked delivered, pickup time has passed, not marked picked up yet
+    const late = DATA.rentals.filter(r => isLatePickup(r)).sort((a, b) => a.pickupDate.localeCompare(b.pickupDate));
+    for (const r of late.slice(0, 3)) {
+      const due = r.pickupDate === today ? 'today' + (r.pickupTime ? ' ' + fmtTime(r.pickupTime) : '') : shortDate(r.pickupDate);
+      lines.push(`<span class="needs-pair"><a href="admin-rentals.html?q=${encodeURIComponent(r.name || '')}"><b>Late pickup:</b> ${esc(r.name || 'Rental')}, due ${esc(due)}</a><button type="button" class="needs-x" data-mark="pickedUp" data-key="${escAttr(r.key)}">${r.serviceType === 'self' ? 'Returned' : 'Picked up'}</button></span>`);
+    }
+    if (late.length > 3) lines.push(`<a href="admin-rentals.html"><b>${late.length - 3} more</b> late pickups</a>`);
     if (DATA.reviewLinkMissing) lines.push(`<a href="admin-reminders.html"><b>Review texts are off:</b> the Google review link isn't set in Netlify</a>`);
     $('needs').innerHTML = lines.length ? `<span class="needs-h">Needs you</span>${lines.join('')}` : '';
     $('needs').hidden = !lines.length;
