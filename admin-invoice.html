@@ -278,6 +278,7 @@
       $('discNote').hidden = false;
       matchPartnerCode(PREFILL_PROMO);
     }
+    if (r.serviceType === 'self') { $('serviceType').value = 'self'; $('serviceType').dispatchEvent(new Event('change')); }
     if (r.name) $('name').value = r.name;
     if (r.email) $('email').value = r.email;
     if (r.phone) $('phone').value = r.phone;

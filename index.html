@@ -33,7 +33,7 @@
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "MovingCompany",
+  "@type": "LocalBusiness",
   "name": "Ready Tote Oklahoma",
   "image": "https://www.readytoteokc.com/images/totes-hero-studio.jpg",
   "logo": "https://www.readytoteokc.com/images/logo.png",
@@ -211,7 +211,7 @@
   }
   .hero-copy{text-align:center;}
   .hero h1{
-    font-size:clamp(3.1rem, 7.4vw, 5.4rem);
+    font-size:clamp(2.3rem, 9vw, 5.4rem);
     color:var(--white);
     text-transform:uppercase;
   }
@@ -236,6 +236,13 @@
     flex:none;
   }
   .price-tag .num{font-family:'Archivo Black', sans-serif; font-size:1.55rem;}
+  /* Phones: price on top, details underneath, instead of wrapping mid-phrase */
+  @media(max-width:600px){
+    .price-tag{flex-direction:column; gap:2px; padding:14px 22px; text-align:center;}
+    .price-tag .hole{display:none;}
+    .price-tag .num{font-size:2rem; line-height:1.1;}
+    .price-tag .details{font-size:1rem;}
+  }
   .cta-row{display:flex; flex-wrap:wrap; gap:14px; justify-content:center;}
   .trust-band{
     background:var(--yellow); width:100%; overflow-x:auto;
@@ -401,6 +408,10 @@
   .photo-band-caption .eyebrow::before{background:var(--yellow-2);}
   .photo-band-caption h3{font-size:1.4rem; color:var(--white);}
 
+  .how-photo{
+    display:block; width:100%; max-width:380px; height:auto; margin:40px auto 0;
+    border-radius:18px; box-shadow:0 20px 44px -18px rgba(30,27,24,0.4);
+  }
   .about-photo{
     width:100%; max-width:400px; border-radius:18px; height:auto;
     box-shadow:0 20px 44px -18px rgba(30,27,24,0.4); margin-bottom:20px;
@@ -466,6 +477,28 @@
   .hp{position:absolute; left:-9999px;}
   .form-submit{margin-top:8px;}
   .form-note{font-size:0.82rem; color:var(--steel); margin-top:14px;}
+  /* Live availability for the chosen dates (never shows stock numbers) */
+  .avail-note{margin:10px 0 0; padding:10px 14px; border-radius:10px; font-size:0.88rem; font-weight:600; line-height:1.45;}
+  .avail-note.ok{background:#E3F4E9; color:#14492F;}
+  .avail-note.tight{background:#FBF0D6; color:#6B4C0C;}
+
+  /* Phones: a Reserve bar along the bottom once you're past the hero,
+     hidden while the booking form is on screen. Takes over from the
+     floating "Text us" pill, which it includes. */
+  .mobile-bar{display:none;}
+  @media(max-width:700px){
+    a.float-text{display:none;}
+    .mobile-bar{
+      display:flex; gap:10px; position:fixed; left:0; right:0; bottom:0; z-index:95;
+      padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+      background:var(--ink); box-shadow:0 -8px 24px -12px rgba(0,0,0,0.5);
+      transform:translateY(110%); transition:transform 0.2s ease;
+    }
+    .mobile-bar.show{transform:none;}
+    .mobile-bar .btn{flex:1; justify-content:center; padding:13px 10px; font-size:0.95rem;}
+    .mobile-bar .btn-ghost{flex:0 0 auto; padding:13px 18px;}
+    footer{padding-bottom:90px;}
+  }
 
   /* Contact */
   .contact-row{display:flex; flex-wrap:wrap; gap:18px;}
@@ -643,7 +676,7 @@
         <div class="price-tag">
           <span class="hole"></span>
           <span class="num">$99</span>
-          <span>· 20 Totes + Tote Dolly · 2 Weeks · Free Delivery</span>
+          <span class="details">20 Totes + Tote Dolly · 2 Weeks · Free Delivery</span>
         </div>
         <div class="cta-row">
           <a href="#book" class="btn btn-primary">Reserve in 2 Minutes →</a>
@@ -686,9 +719,10 @@
         <div class="step">
           <div class="step-num">03</div>
           <h3>We Pick Them Up</h3>
-          <p>When you're done unpacking, schedule a pickup. We come collect the empty totes, no drop-off needed.</p>
+          <p>On your pickup date, we come collect the empty totes. Nothing to return, no trip to make.</p>
         </div>
       </div>
+      <img class="how-photo" src="images/totes-delivery-door-web.jpg" alt="Three stacked Ready Tote totes on a dolly, rolled through a front door" width="900" height="900" loading="lazy" decoding="async">
     </div>
   </section>
 
@@ -735,8 +769,8 @@
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">The Smarter Choice</span>
-        <h2>Same Price as Boxes. Way Easier.</h2>
-        <p>Here's how we stack up against a store-bought box kit.</p>
+        <h2>About the Price of Boxes. Way Easier.</h2>
+        <p>Here's how we stack up against a typical store-bought box kit.</p>
       </div>
       <div class="compare">
         <div class="compare-col us">
@@ -756,9 +790,9 @@
         </div>
         <div class="compare-col them">
           <h3>Store-Bought Box Kit</h3>
-          <div class="price">$99 — Apartment Kit</div>
+          <div class="price">About $99 — Apartment Kit</div>
           <ul>
-            <li>30 mismatched cardboard boxes</li>
+            <li>Around 30 mismatched cardboard boxes</li>
             <li>No tote dolly</li>
             <li>Requires tape, tape, and more tape</li>
             <li>Different sizes = unstackable mess</li>
@@ -825,7 +859,7 @@
             <li>Delivery and pickup</li>
             <li>Cleaned & sanitized after every use</li>
           </ul>
-          <a href="#book" class="btn btn-primary">Reserve — $99</a>
+          <a href="#book" class="btn btn-primary" data-pkg="1 Bedroom — 20 Totes + Dolly — $99">Reserve — $99</a>
         </div>
         <div class="price-card popular">
           <div class="popular-flag">Most Popular</div>
@@ -838,7 +872,7 @@
             <li>Delivery and pickup</li>
             <li>Cleaned & sanitized after every use</li>
           </ul>
-          <a href="#book" class="btn btn-primary">Reserve — $169</a>
+          <a href="#book" class="btn btn-primary" data-pkg="2–3 Bedrooms — 40 Totes + 2 Dollies — $169">Reserve — $169</a>
         </div>
         <div class="price-card">
           <div class="plan-name">4+ Bedrooms</div>
@@ -850,10 +884,106 @@
             <li>Delivery and pickup</li>
             <li>Cleaned & sanitized after every use</li>
           </ul>
-          <a href="#book" class="btn btn-primary">Reserve — $219</a>
+          <a href="#book" class="btn btn-primary" data-pkg="4+ Bedrooms — 60 Totes + 3 Dollies — $219">Reserve — $219</a>
         </div>
       </div>
       <p class="price-note">Need extra time or extra totes? <a href="#contact" style="text-decoration:underline;">Message us</a> for custom bundles.</p>
+    </div>
+  </section>
+
+  <!-- BOOKING FORM -->
+  <section id="book" class="reveal">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Reserve Your Totes</span>
+        <h2>Book Your Totes</h2>
+        <p>Tell us about your move. We'll text you to confirm your dates, then email your invoice. No commitment yet.</p>
+      </div>
+      <form
+        class="form-wrap"
+        id="bookingForm"
+        name="booking"
+        method="POST"
+        data-netlify="true"
+        netlify-honeypot="hp_field"
+      >
+        <input type="hidden" name="form-name" value="booking">
+        <input class="hp" type="text" name="hp_field" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <div class="form-grid two">
+          <label>Full Name*
+            <input type="text" name="name" autocomplete="name" required>
+          </label>
+          <label>Phone Number*
+            <input type="tel" name="phone" autocomplete="tel" required>
+          </label>
+        </div>
+        <div class="form-grid two" style="margin-top:18px;">
+          <label>Email Address*
+            <input type="email" name="email" autocomplete="email" required>
+          </label>
+          <label>Rental Package*
+            <select name="package" required>
+              <option value="">Choose a package...</option>
+              <option>1 Bedroom — 20 Totes + Dolly — $99</option>
+              <option>2–3 Bedrooms — 40 Totes + 2 Dollies — $169</option>
+              <option>4+ Bedrooms — 60 Totes + 3 Dollies — $219</option>
+              <option>Not sure yet — let's discuss</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-grid two" style="margin-top:18px;">
+          <label>Estimated Delivery Date*
+            <input type="date" name="delivery_date" id="deliveryDate" required>
+          </label>
+          <label>Estimated Pickup Date* <span style="font-weight:400; color:var(--steel);">(auto-set 2 weeks out, editable)</span>
+            <input type="date" name="pickup_date" id="pickupDate" required>
+          </label>
+        </div>
+        <p class="avail-note" id="availNote" role="status" hidden></p>
+        <p style="color:var(--steel); font-size:0.8rem; margin:8px 0 0;">Need delivery in under 24 hours? A $25 expedite fee applies, we'll confirm the total before sending your invoice.</p>
+        <div class="form-grid two" style="margin-top:18px;">
+          <label>Preferred Delivery Window
+            <select name="delivery_window">
+              <option value="No preference">No preference</option>
+              <option>Morning (8 AM – 12 PM)</option>
+              <option>Afternoon (12 – 5 PM)</option>
+              <option>Evening (5 – 8 PM)</option>
+            </select>
+          </label>
+          <label>Preferred Pickup Window
+            <select name="pickup_window">
+              <option value="No preference">No preference</option>
+              <option>Morning (8 AM – 12 PM)</option>
+              <option>Afternoon (12 – 5 PM)</option>
+              <option>Evening (5 – 8 PM)</option>
+            </select>
+          </label>
+        </div>
+        <label style="flex-direction:row; align-items:center; gap:8px; font-weight:400; margin-top:18px; font-size:0.88rem; color:var(--steel);">
+          <input type="checkbox" name="self_pickup" id="selfPickup" value="true" style="width:auto;">
+          <span>I'll pick up and return the totes myself (no delivery needed)</span>
+        </label>
+        <div class="form-grid" style="margin-top:18px;" id="addressRow">
+          <label>Delivery Address*
+            <input type="text" name="delivery_address" id="deliveryAddress" placeholder="Street address, city, state, zip" required>
+          </label>
+        </div>
+        <div class="form-grid" style="margin-top:18px;">
+          <label>Promo code (optional)
+            <input type="text" name="promo_code" maxlength="40" autocomplete="off" placeholder="From a partner, if you have one">
+          </label>
+        </div>
+        <label style="flex-direction:row; align-items:center; gap:8px; font-weight:400; margin-top:18px; font-size:0.88rem; color:var(--steel);">
+          <input type="checkbox" name="is_military" value="true" style="width:auto;">
+          <span>Military? Check here for 15% off (active duty, veteran or immediate family). We'll ask for a photo of your military ID.</span>
+        </label>
+        <button type="submit" class="btn btn-primary form-submit">Request Booking</button>
+        <p class="form-note">No payment due now. Check your email for a copy, then watch for a text from 580.399.3202 to confirm your dates.</p>
+      </form>
+      <div class="form-wrap form-success" id="formSuccess" style="display:none;" role="status" tabindex="-1">
+        <h3 style="margin-bottom:10px;">Thanks, request received!</h3>
+        <p style="color:var(--steel); margin:0;">Check your email for a copy. We'll text you from <strong>580.399.3202</strong> to confirm your dates, then send your invoice.</p>
+      </div>
     </div>
   </section>
 
@@ -866,12 +996,12 @@
       </div>
       <div class="faq-list">
         <div class="faq-item">
-          <button class="faq-q">Are you a moving company? <span class="arrow">+</span></button>
-          <div class="faq-a"><div class="faq-a-inner">No. We're a tote rental service. We deliver clean totes and a dolly to your door and pick them up when you're done. You handle the packing and moving yourself (or hire movers separately).</div></div>
-        </div>
-        <div class="faq-item">
           <button class="faq-q">How many totes do I need? <span class="arrow">+</span></button>
           <div class="faq-a"><div class="faq-a-inner">A rough guide: 20 totes covers a 1-bedroom apartment, 40 covers a 2–3 bedroom home, and 60 covers 4+ bedrooms. When in doubt, go one size up. If you run short mid-move, call us and we'll work something out.</div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">Are you a moving company? <span class="arrow">+</span></button>
+          <div class="faq-a"><div class="faq-a-inner">No. We're a tote rental service. We deliver clean totes and a dolly to your door and pick them up when you're done. You handle the packing and moving yourself (or hire movers separately).</div></div>
         </div>
         <div class="faq-item">
           <button class="faq-q">What if I need the totes longer than 2 weeks? <span class="arrow">+</span></button>
@@ -932,9 +1062,9 @@
       </div>
       <div class="about-grid">
         <div class="about-copy">
-          <img class="about-photo" src="images/totes-stacked-stock.jpg?v=20260820c" alt="Stack of black and yellow heavy-duty moving totes" width="1200" height="1200" loading="lazy" decoding="async">
+          <img class="about-photo" src="images/owner-with-totes-web.jpg" alt="Holding a Ready Tote moving tote on a front porch" width="788" height="1000" loading="lazy" decoding="async">
           <p>We're an Oklahoma family who got tired of the cardboard waste every time we moved. So we built a better way, and now we're sharing it with our neighbors across the metro and the Ada area.</p>
-          <p>Every rental keeps hundreds of cardboard boxes out of landfills. Better for you, better for the state.</p>
+          <p>Every rental keeps dozens of cardboard boxes out of the landfill. Better for you, better for the state.</p>
         </div>
         <div class="stat-grid">
           <div class="stat-card">
@@ -990,104 +1120,13 @@
     </div>
   </section>
 
-  <!-- BOOKING FORM -->
-  <section id="book" class="section-alt reveal">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Reserve Your Totes</span>
-        <h2>Book Your Totes</h2>
-        <p>Tell us a bit about your move, we'll follow up to confirm dates and send your invoice. No commitment yet.</p>
-      </div>
-      <form
-        class="form-wrap"
-        id="bookingForm"
-        name="booking"
-        method="POST"
-        data-netlify="true"
-        netlify-honeypot="hp_field"
-      >
-        <input type="hidden" name="form-name" value="booking">
-        <input class="hp" type="text" name="hp_field" tabindex="-1" autocomplete="off" aria-hidden="true">
-        <div class="form-grid two">
-          <label>Full Name*
-            <input type="text" name="name" autocomplete="name" required>
-          </label>
-          <label>Phone Number*
-            <input type="tel" name="phone" autocomplete="tel" required>
-          </label>
-        </div>
-        <div class="form-grid two" style="margin-top:18px;">
-          <label>Email Address*
-            <input type="email" name="email" autocomplete="email" required>
-          </label>
-          <label>Rental Package*
-            <select name="package" required>
-              <option value="">Choose a package...</option>
-              <option>1 Bedroom — 20 Totes + Dolly — $99</option>
-              <option>2–3 Bedrooms — 40 Totes + 2 Dollies — $169</option>
-              <option>4+ Bedrooms — 60 Totes + 3 Dollies — $219</option>
-              <option>Not sure yet — let's discuss</option>
-            </select>
-          </label>
-        </div>
-        <div class="form-grid two" style="margin-top:18px;">
-          <label>Estimated Delivery Date*
-            <input type="date" name="delivery_date" id="deliveryDate" required>
-          </label>
-          <label>Estimated Pickup Date* <span style="font-weight:400; color:var(--steel);">(auto-set 2 weeks out, editable)</span>
-            <input type="date" name="pickup_date" id="pickupDate" required>
-          </label>
-        </div>
-        <p style="color:var(--steel); font-size:0.8rem; margin:8px 0 0;">Need delivery in under 24 hours? A $25 expedite fee applies, we'll confirm the total before sending your invoice.</p>
-        <div class="form-grid two" style="margin-top:18px;">
-          <label>Preferred Delivery Window
-            <select name="delivery_window">
-              <option value="No preference">No preference</option>
-              <option>Morning (8 AM – 12 PM)</option>
-              <option>Afternoon (12 – 5 PM)</option>
-              <option>Evening (5 – 8 PM)</option>
-            </select>
-          </label>
-          <label>Preferred Pickup Window
-            <select name="pickup_window">
-              <option value="No preference">No preference</option>
-              <option>Morning (8 AM – 12 PM)</option>
-              <option>Afternoon (12 – 5 PM)</option>
-              <option>Evening (5 – 8 PM)</option>
-            </select>
-          </label>
-        </div>
-        <div class="form-grid" style="margin-top:18px;">
-          <label>Delivery Address*
-            <input type="text" name="delivery_address" placeholder="Street address, city, state, zip" required>
-          </label>
-        </div>
-        <div class="form-grid" style="margin-top:18px;">
-          <label>Promo code (optional)
-            <input type="text" name="promo_code" maxlength="40" autocomplete="off" placeholder="From a partner, if you have one">
-          </label>
-        </div>
-        <label style="flex-direction:row; align-items:center; gap:8px; font-weight:400; margin-top:18px; font-size:0.88rem; color:var(--steel);">
-          <input type="checkbox" name="is_military" value="true" style="width:auto;">
-          <span>Military? Check here (optional) and mention it when we call to confirm your 15% discount.</span>
-        </label>
-        <button type="submit" class="btn btn-primary form-submit">Request Booking</button>
-        <p class="form-note">We'll follow up to confirm your dates and send your invoice. No payment due now.</p>
-      </form>
-      <div class="form-wrap form-success" id="formSuccess" style="display:none;" role="status" tabindex="-1">
-        <h3 style="margin-bottom:10px;">Thanks, request received!</h3>
-        <p style="color:var(--steel); margin:0;">We'll reach out shortly to confirm your dates and send your invoice.</p>
-      </div>
-    </div>
-  </section>
-
   <!-- CONTACT -->
   <section id="contact" class="reveal">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Got Questions?</span>
         <h2>Get in Touch</h2>
-        <p>Already know what you need? Use the booking form above. Have a question first? Call or email and we'll get right back to you.</p>
+        <p>Already know what you need? <a href="#book" style="text-decoration:underline;">Book your totes</a>. Have a question first? Call, text or email and we'll get right back to you.</p>
       </div>
       <div class="contact-row">
         <a class="contact-pill" href="tel:+15803993202">
@@ -1298,6 +1337,7 @@
   <input type="text" name="delivery_address">
   <input type="checkbox" name="is_military" value="true">
   <input type="text" name="promo_code">
+  <input type="checkbox" name="self_pickup" value="true">
   <input type="text" name="hp_field">
 </form>
 
@@ -1305,7 +1345,85 @@
   <span class="bubble"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4A8.6 8.6 0 0 1 8 19l-4 1 1-3.8A8.4 8.4 0 1 1 21 11.5z"/></svg></span> Questions? Text Us
 </a>
 
+<div class="mobile-bar" id="mobileBar">
+  <a href="#book" class="btn btn-primary" tabindex="-1">Reserve your totes</a>
+  <a href="sms:+15803993202" class="btn btn-ghost" tabindex="-1">Text us</a>
+</div>
 <script>
+  // ---- Phone Reserve bar: show after the hero, hide over the booking form ----
+  (function () {
+    const bar = document.getElementById('mobileBar');
+    const hero = document.querySelector('.hero');
+    const book = document.getElementById('book');
+    if (!bar || !hero || !book || !('IntersectionObserver' in window)) return;
+    let pastHero = false, onForm = false;
+    const update = () => {
+      const show = pastHero && !onForm;
+      bar.classList.toggle('show', show);
+      bar.querySelectorAll('a').forEach(a => a.tabIndex = show ? 0 : -1);
+    };
+    new IntersectionObserver(([e]) => { pastHero = !e.isIntersecting; update(); }).observe(hero);
+    new IntersectionObserver(([e]) => { onForm = e.isIntersecting; update(); }, { threshold: 0.05 }).observe(book);
+  })();
+
+  // ---- Pricing buttons pick that package in the form ----
+  document.querySelectorAll('[data-pkg]').forEach(a => a.addEventListener('click', () => {
+    const sel = document.querySelector('#bookingForm select[name="package"]');
+    if (sel) { sel.value = a.dataset.pkg; sel.dispatchEvent(new Event('change')); }
+  }));
+
+  // ---- Self pickup: no delivery address needed ----
+  (function () {
+    const box = document.getElementById('selfPickup');
+    const row = document.getElementById('addressRow');
+    const addr = document.getElementById('deliveryAddress');
+    if (!box || !row || !addr) return;
+    box.addEventListener('change', () => {
+      row.style.display = box.checked ? "none" : "";
+      addr.required = !box.checked;
+      if (box.checked) addr.value = '';
+    });
+  })();
+
+  // ---- Are the chosen dates open? ----
+  // Uses the same public availability numbers as the admin (totes and
+  // dollies free per day), and only ever says "open" or "filling up".
+  (function () {
+    const form = document.getElementById('bookingForm');
+    const note = document.getElementById('availNote');
+    if (!form || !note) return;
+    const d = form.querySelector('[name="delivery_date"]');
+    const p = form.querySelector('[name="pickup_date"]');
+    const pkg = form.querySelector('[name="package"]');
+    let data = null, loading = null;
+    const load = () => loading || (loading = fetch('/.netlify/functions/availability')
+      .then(r => r.ok ? r.json() : null).then(j => (data = j)).catch(() => null));
+    const need = () => {
+      const t = String(pkg.value || '');
+      const totes = (t.match(/(\d+)\s*Totes/i) || [])[1];
+      const dol = (t.match(/(\d+)\s*Dollies/i) || [])[1] || (/Dolly/i.test(t) ? 1 : 0);
+      return { totes: totes ? +totes : 20, dollies: +dol };
+    };
+    async function check() {
+      note.hidden = true;
+      if (!d.value || !p.value || p.value < d.value) return;
+      await load();
+      if (!data || !Array.isArray(data.days)) return;
+      const range = data.days.filter(x => x.date >= d.value && x.date <= p.value);
+      const days = Math.round((Date.parse(p.value) - Date.parse(d.value)) / 864e5) + 1;
+      if (range.length < days) return;   // too far out to know yet
+      const n = need();
+      const short = range.some(x => x.available < n.totes || (data.dolliesTracked && x.dolliesAvailable < n.dollies));
+      note.className = 'avail-note ' + (short ? 'tight' : 'ok');
+      note.textContent = short
+        ? 'Those dates are filling up. Send your request and we\'ll confirm when we text you.'
+        : 'Good news: your dates are open.';
+      note.hidden = false;
+    }
+    [d, p, pkg].forEach(el => el.addEventListener('change', check));
+    d.addEventListener('focus', load, { once: true });
+  })();
+
   // Leaflet (map CSS/JS + tile requests) is loaded lazily: the #area section is
   // far below the fold and most visitors never scroll to it, so we defer the
   // ~150KB+ of map assets until it actually comes into view.
