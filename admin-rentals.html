@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>All rentals · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261101"></script>
+<script src="admin-shared.js?v=20261102"></script>
 <script src="admin-rentals-shared.js?v=20261029"></script>
 <style>
   .rem .who{font-weight:600;font-size:16px;}
@@ -254,9 +254,23 @@
 
   // ---- Find: groups, filters, search ----
   // Cancelled rentals only show under their own filter
-  const isOut = r => !r.cancelled && r.dropoffDate && r.pickupDate && r.dropoffDate <= TODAY && r.pickupDate >= TODAY;
-  const isUpcoming = r => !r.cancelled && !!r.dropoffDate && r.dropoffDate > TODAY;
-  const isDone = r => !r.cancelled && !!r.pickupDate && r.pickupDate < TODAY;
+  // Out / upcoming / done go by the drop-off and pickup times on the day
+  // itself (rentalPhase in admin-shared.js), not just the dates
+  const isOut = r => rentalPhase(r) === 'out';
+  const isUpcoming = r => rentalPhase(r) === 'upcoming';
+  const isDone = r => rentalPhase(r) === 'done';
+  // On the day: "Delivery today, 2:00 PM" until it's out, "Pickup today, 1:00 PM" until it's back
+  function todayPill(r) {
+    const ph = rentalPhase(r);
+    if (ph === 'upcoming' && r.dropoffDate === TODAY) return pill('pending', 'Delivery today' + (r.dropoffTime ? ', ' + clockText(r.dropoffTime) : ''));
+    if (ph === 'out' && r.pickupDate === TODAY) return pill('pending', 'Pickup today' + (r.pickupTime ? ', ' + clockText(r.pickupTime) : ''));
+    return '';
+  }
+  function clockText(t) {
+    const m = clockMinutes(t); if (m === null) return t;
+    const h = Math.floor(m / 60), mm = String(m % 60).padStart(2, '0');
+    return (h % 12 || 12) + ':' + mm + ' ' + (h >= 12 ? 'PM' : 'AM');
+  }
   // "Needs info": missing what Inventory or the texts depend on
   function missingInfo(r) {
     const out = [];
@@ -334,7 +348,7 @@
   function card(r) {
     const k = esc(r.key);
     const grouped = FILTER === 'all' && !SEARCH;
-    const status = grouped ? '' : isOut(r) ? pill('ok', 'Out now') : isUpcoming(r) ? pill('pending', 'Upcoming') : '';
+    const status = todayPill(r) || (grouped ? '' : isOut(r) ? pill('ok', 'Out now') : isUpcoming(r) ? pill('pending', 'Upcoming') : '');
     const pay = PAID_FLAGS[r.key] ? pill('ok', 'Paid') : isUnpaid(r) ? pill('err', 'Unpaid') : '';
     const missing = missingInfo(r);
     const totes = typeof r.toteCount === 'number' ? `${r.toteCount} totes` : (String(r.package || '').match(/(\d+)\s*totes?/i) ? String(r.package).match(/(\d+)\s*totes?/i)[1] + ' totes' : 'Totes not set');
