@@ -314,6 +314,12 @@ function adminSession() {
 // checks the session cookie.
 function adminSessionMarker() { return adminSession() ? 'session' : ''; }
 
+// "admin", or "inventory" for an inventory-only login (Inventory is its
+// only page; the server enforces that too, see accessLevel in lib-auth.mjs)
+function adminRole() { const s = adminSession(); return s && s.role === 'inventory' ? 'inventory' : 'admin'; }
+const INVENTORY_ONLY = adminRole() === 'inventory';
+if (INVENTORY_ONLY) document.documentElement.dataset.role = 'inventory';
+
 function goToLogin() {
   const page = location.pathname.split('/').pop() || 'admin.html';
   try { localStorage.removeItem(SESSION_KEY); } catch {}
@@ -326,7 +332,14 @@ function goToLogin() {
   try { localStorage.removeItem('rto-admin-password'); } catch {}
   const page = location.pathname.split('/').pop();
   if (page === 'admin-login.html') return;
-  if (!adminSession()) goToLogin();
+  if (!adminSession()) return goToLogin();
+  if (INVENTORY_ONLY && page !== 'admin-inventory.html' && page !== 'admin-offline.html') {
+    // This page isn't open to an inventory-only login. Its own scripts still
+    // start; LEAVING makes their requests wait quietly instead of being
+    // refused (which would sign out) while the browser moves to Inventory.
+    window.LEAVING = true;
+    location.replace('admin-inventory.html');
+  }
 })();
 
 // If the server says the session is over (expired, signed out elsewhere, or
@@ -335,6 +348,7 @@ function goToLogin() {
   if (location.pathname.split('/').pop() === 'admin-login.html') return;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input, init) => {
+    if (window.LEAVING) return new Promise(() => {});
     const resp = await realFetch(input, init);
     const url = typeof input === 'string' ? input : (input && input.url) || '';
     if (resp.status === 401 && url.includes('/.netlify/functions/') && !url.includes('/login')) goToLogin();
@@ -355,7 +369,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // opens the folded nav on phones (hidden on wider screens by CSS).
   const brand = document.createElement('a');
   brand.className = 'admin-brand';
-  brand.href = 'admin.html';
+  brand.href = INVENTORY_ONLY ? 'admin-inventory.html' : 'admin.html';
+  // Inventory-only login: the menu is just Inventory and Log out
+  if (INVENTORY_ONLY) nav.querySelectorAll('a').forEach(a => { if (!/admin-inventory\.html/.test(a.getAttribute('href') || '')) a.remove(); });
   brand.innerHTML = '<img src="images/logo.png" alt=""><span><b>Ready Tote</b><small>Admin</small></span>';
   const menuBtn = document.createElement('button');
   menuBtn.type = 'button';
@@ -374,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
   appLink.href = 'admin-app.html';
   appLink.textContent = 'App & alerts';
   if (location.pathname.endsWith('admin-app.html')) appLink.setAttribute('aria-current', 'page');
-  nav.appendChild(appLink);
+  if (!INVENTORY_ONLY) nav.appendChild(appLink);
 
   const logout = document.createElement('a');
   logout.href = '#';
@@ -396,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // or comes back on screen, and after the Dashboard or Requests changes
 // something. iPhones only show it when notifications are allowed.
 function refreshBadge() {
-  if (!('setAppBadge' in navigator) || !adminSession()) return Promise.resolve(null);
+  if (!('setAppBadge' in navigator) || !adminSession() || INVENTORY_ONLY) return Promise.resolve(null);
   return fetch('/.netlify/functions/push-subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'badge' }) })
     .then(r => r.ok ? r.json() : null)
     .then(d => {

@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Sign in · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261108"></script>
+<script src="admin-shared.js?v=20261109"></script>
 <style>
   body{display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px 16px;}
   .login-card{max-width:380px; width:100%; padding:28px 28px 24px;}
@@ -115,7 +115,8 @@
       if (resp.ok && data.ok) {
         // The server set the session cookie; this browser only notes until
         // when it's signed in. The password isn't stored anywhere.
-        localStorage.setItem('rto-admin-session', JSON.stringify({ u: username, exp: data.expires || Date.now() + 30 * 864e5 }));
+        // role "inventory" = an inventory-only login: Inventory is the only page
+        localStorage.setItem('rto-admin-session', JSON.stringify({ u: username, exp: data.expires || Date.now() + 30 * 864e5, role: data.role || 'admin' }));
         localStorage.setItem('rto-admin-username', username);
 
         // Chrome/Edge: explicitly ask to save this in Google Password
@@ -129,7 +130,7 @@
           } catch { /* best-effort only */ }
         }
 
-        location.href = target;
+        location.href = data.role === 'inventory' ? 'admin-inventory.html' : target;
       } else if (resp.status === 429) {
         fail(`Too many tries. For your security, sign-in is paused for about ${data.retryMinutes || 15} minutes.`);
       } else if (resp.status === 401) {

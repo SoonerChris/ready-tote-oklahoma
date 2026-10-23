@@ -4,7 +4,7 @@
 // Admin only (signed-in session, see lib-auth.mjs) (same secret as the other admin tools).
 
 import { getStore } from "@netlify/blobs";
-import { isAdmin } from "./lib-auth.mjs";
+import { accessLevel } from "./lib-auth.mjs";
 
 export default async (request) => {
   if (request.method !== "POST") {
@@ -12,7 +12,8 @@ export default async (request) => {
   }
   let body;
   try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  if (!isAdmin(request, body)) {
+  const access = await accessLevel(request, body);
+  if (!access) {
     return new Response("Unauthorized", { status: 401 });
   }
 
@@ -26,6 +27,12 @@ export default async (request) => {
       })
     );
     const requests = fetched.filter(Boolean);
+    // Inventory-only login: just the bookings that hold totes, without contact details
+    if (access === "inventory") {
+      const slim = requests.filter((r) => ["awaiting_confirmation", "confirmed"].includes(r.status))
+        .map(({ key, name, package: pkg, status, deliveryDate, pickupDate }) => ({ key, name, package: pkg, status, deliveryDate, pickupDate }));
+      return new Response(JSON.stringify({ requests: slim }), { status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
+    }
 
     // Flag which requests already have a military ID photo on file. A
     // request's militaryIdKey is only set when the customer self-uploaded

@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Inventory · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261108"></script>
+<script src="admin-shared.js?v=20261109"></script>
 <style>
   :root{--col:960px;}
   .finding{margin:4px 0 20px; font-size:17px; max-width:760px; line-height:1.45;}
@@ -229,7 +229,7 @@
       </div>
     </details>
 
-    <div id="cleanupSection" hidden>
+    <div id="cleanupSection" class="admin-only" hidden>
       <h2>Data cleanup</h2>
       <div class="rem">
         <p class="note" style="margin:0 0 10px;"><span id="cleanupCount"></span> Sets tote and dolly counts on older rentals by reading the package text. Anything it can't read confidently (like "Custom package") is listed for you to fix by hand, never guessed.</p>
@@ -343,7 +343,7 @@
     renderPendingConfirmed();
     $('pendingSection').hidden = !PENDING_CONFIRMED.length;
     const missingCounts = ALL_RENTALS.filter(r => typeof r.toteCount !== 'number' || typeof r.dollyCount !== 'number').length;
-    $('cleanupSection').hidden = !missingCounts;
+    $('cleanupSection').hidden = !missingCounts || INVENTORY_ONLY;
     $('cleanupCount').textContent = missingCounts ? `${missingCounts} ${missingCounts === 1 ? 'rental is' : 'rentals are'} missing tote or dolly counts.` : '';
 
     // Running count after each change, per item, oldest first
@@ -392,7 +392,7 @@
           </div>
           <div style="font-size:13px; color:var(--steel); margin:0;">${esc(p.package || 'No package')} · ${esc(fmtDate(p.deliveryDate))} to ${esc(fmtDate(p.pickupDate))}</div>
         </div>
-        ${p.status === 'confirmed'
+        ${INVENTORY_ONLY ? '' : p.status === 'confirmed'
           ? `<button type="button" class="sms-btn" data-invoice="${escAttr(p.key)}" style="padding:7px 12px; font-size:13px; width:auto; margin:0;">Create invoice</button>`
           : `<a href="admin-requests.html" class="sms-btn" style="padding:7px 12px; font-size:13px; background:#fff; color:var(--ink); border:1px solid var(--control);">Open Requests</a>`}
       </div>`).join('');
@@ -575,7 +575,8 @@
     const short = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const rel = date === TODAY ? 'Today, ' : '';
     const freeColor = b.free < 0 ? 'color:var(--red)' : '';
-    const link = name => `<a href="admin-rentals.html?q=${encodeURIComponent(name || '')}">${esc(name || 'Unnamed')}</a>`;
+    // Inventory-only login: names are plain text (the rental pages aren't open to it)
+    const link = name => INVENTORY_ONLY ? esc(name || 'Unnamed') : `<a href="admin-rentals.html?q=${encodeURIComponent(name || '')}">${esc(name || 'Unnamed')}</a>`;
     const span = x => {
       if (x.from === date && x.to === date) return 'out and back today';
       if (x.from === date) return 'goes out this day · back ' + short(x.to);
@@ -598,7 +599,7 @@
       ${b.out.length ? `<div class="dd-group"><h4>Out with customers · ${b.dollies} ${b.dollies === 1 ? 'dolly' : 'dollies'}</h4>${b.out.map(x => `
         <div class="dd-row"><div class="who">${link(x.name)}${x.guessed ? '<span class="guess" title="No tote count set on this rental; read from the package name">count guessed</span>' : ''}<div class="when">${span(x)}</div></div><span class="q">${x.totes} totes</span></div>`).join('')}</div>` : ''}
       ${b.held.length ? `<div class="dd-group"><h4>Held for bookings not yet invoiced</h4>${b.held.map(x => `
-        <div class="dd-row"><div class="who"><a href="admin-requests.html">${esc(x.name || 'Unnamed')}</a><span class="guess" title="Estimated from the package name until invoiced">estimated</span><div class="when">${short(x.from)} to ${short(x.to)}</div></div><span class="q">${x.totes} totes</span></div>`).join('')}</div>` : ''}
+        <div class="dd-row"><div class="who">${INVENTORY_ONLY ? esc(x.name || 'Unnamed') : `<a href="admin-requests.html">${esc(x.name || 'Unnamed')}</a>`}<span class="guess" title="Estimated from the package name until invoiced">estimated</span><div class="when">${short(x.from)} to ${short(x.to)}</div></div><span class="q">${x.totes} totes</span></div>`).join('')}</div>` : ''}
       ${date < TODAY ? '<p class="note" style="margin:12px 0 0;">Past days are rebuilt from logged rentals and stock changes.</p>' : ''}
 `;
     $('dayDetail').hidden = false;

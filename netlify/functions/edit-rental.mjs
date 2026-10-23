@@ -5,7 +5,7 @@
 // Admin only (signed-in session, see lib-auth.mjs).
 
 import { getStore } from "@netlify/blobs";
-import { isAdmin } from "./lib-auth.mjs";
+import { accessLevel } from "./lib-auth.mjs";
 
 const EDITABLE_FIELDS = [
   "name", "email", "phone", "package", "price", "duration",
@@ -37,8 +37,14 @@ export default async (request) => {
   }
   let body;
   try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  if (!isAdmin(request, body)) {
+  const access = await accessLevel(request, body);
+  if (!access) {
     return new Response("Unauthorized", { status: 401 });
+  }
+  // An inventory-only login can only mark totes clean (or undo it)
+  if (access === "inventory") {
+    const extra = Object.keys(body).filter((k) => !["key", "mark", "undo", "secret"].includes(k));
+    if (body.mark !== "cleaned" || extra.length) return new Response("Not allowed for this login", { status: 403 });
   }
   if (!body.key) return new Response("Missing key", { status: 400 });
 
