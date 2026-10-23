@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Inventory · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261107"></script>
+<script src="admin-shared.js?v=20261108"></script>
 <style>
   :root{--col:960px;}
   .finding{margin:4px 0 20px; font-size:17px; max-width:760px; line-height:1.45;}
@@ -28,6 +28,17 @@
   .panel{border:1px solid var(--line); border-radius:10px; padding:16px 20px 16px; margin-bottom:24px;}
   .panel-head{display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:8px;}
   .panel-head h2{margin:0; font-size:16px;}
+  /* Needs cleaning: one row per rental that came back, with a Clean button */
+  .clean-row{display:flex; align-items:center; gap:12px; padding:8px 0; border-top:1px solid #EEEAE1; font-size:14px;}
+  .clean-row:first-child{border-top:none;}
+  .clean-row .who{flex:1; min-width:0;}
+  .clean-row .who b{font-weight:600;}
+  .clean-row .who span{color:var(--steel);}
+  .clean-row button{width:auto; margin:0; padding:6px 14px; font-size:13px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:999px;}
+  .clean-row button:hover{background:#fff; border-color:var(--ink);}
+  .link-btn{all:unset; cursor:pointer; font-size:13px; font-weight:600; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
+  .link-btn:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
+  .link-btn[hidden]{display:none;}
   .legend{display:flex; gap:14px; font-size:13px; color:var(--steel);}
   .legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px;}
   #freeChart svg{display:block; width:100%; height:auto; overflow:visible;}
@@ -157,6 +168,12 @@
         <label class="lookup-field">Look up a date <input type="date" id="lookupDate"></label>
       </div>
       <div class="day-detail" id="dayDetail" hidden aria-live="polite"></div>
+    </section>
+
+    <section class="panel" id="cleanSection" hidden aria-labelledby="cleanTitle">
+      <div class="panel-head"><h2 id="cleanTitle">Needs cleaning</h2><button type="button" class="link-btn" id="cleanAllBtn">Mark all clean</button></div>
+      <p class="note" id="cleanSummary" style="margin:0 0 6px;"></p>
+      <div id="cleanList"></div>
     </section>
 
     <div id="pendingSection" hidden>
@@ -304,9 +321,12 @@
     const lifetimeTotes = ALL_RENTALS.reduce((t, r) => t + toteQty(r), 0);
     // Same day-by-day number as the headline and chart, so they always agree
     const freeToday = computeDays(0, 1)[0].available;
+    // Back from a rental, not cleaned yet (needsCleaning in admin-shared.js)
+    const dirty = ALL_RENTALS.filter(r => needsCleaning(r)).sort((a, b) => backDate(a).localeCompare(backDate(b)));
+    const dirtyTotes = dirty.reduce((t, r) => t + toteQty(r), 0), dirtyDollies = dirty.reduce((t, r) => t + dollyQty(r), 0);
 
     $('statCards').innerHTML = `
-      <div class="stat clickable" role="button" tabindex="0" onclick="showDay(TODAY)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDay(TODAY);}" title="See who has totes out today"><div class="lbl">Free today</div><div class="num" style="${freeToday < 0 ? 'color:var(--red)' : ''}">${freeToday}</div><div class="cap">${pendingTotes ? `${pendingTotes} more held for bookings not yet invoiced` : 'ready to rent'}</div></div>
+      <div class="stat clickable" role="button" tabindex="0" onclick="showDay(TODAY)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDay(TODAY);}" title="See who has totes out today"><div class="lbl">Free today</div><div class="num" style="${freeToday < 0 ? 'color:var(--red)' : ''}">${freeToday}</div><div class="cap">${[pendingTotes ? `${pendingTotes} more held for bookings not yet invoiced` : '', dirtyTotes ? `${dirtyTotes} back, need cleaning` : ''].filter(Boolean).join(' · ') || 'ready to rent'}</div></div>
       <div class="stat"><div class="lbl">Out with customers</div><div class="num">${deployed}</div><div class="cap">${ACTIVE_RENTALS.length} ${ACTIVE_RENTALS.length === 1 ? 'rental' : 'rentals'}</div></div>
       <div class="stat"><div class="lbl">Owned</div><div class="num">${totalOwned}</div><div class="cap">${futureNote ? esc(futureNote) : lifetimeTotes.toLocaleString('en-US') + ' totes rented, all time'}</div></div>
       ${DOLLIES_TRACKED()
@@ -319,6 +339,7 @@
         : `<div class="stat"><div class="lbl">Dollies out</div><div class="num">${dolliesOut}</div><div class="cap">Log dollies owned below to track free ones</div></div>`}
     `;
 
+    renderCleaning(dirty, dirtyTotes, dirtyDollies);
     renderPendingConfirmed();
     $('pendingSection').hidden = !PENDING_CONFIRMED.length;
     const missingCounts = ALL_RENTALS.filter(r => typeof r.toteCount !== 'number' || typeof r.dollyCount !== 'number').length;
@@ -821,6 +842,47 @@
 
     // Reload rental data + inventory stats so badges/counts reflect the update
     await load();
+  });
+
+  // ---- Needs cleaning ----
+  const units = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  function renderCleaning(dirty, totes, dollies) {
+    $('cleanSection').hidden = !dirty.length;
+    if (!dirty.length) return;
+    $('cleanSummary').textContent = `${units(totes, 'tote', 'totes')}${dollies ? ' and ' + units(dollies, 'dolly', 'dollies') : ''} back from ${units(dirty.length, 'rental', 'rentals')}. Tap Clean once they're washed.`;
+    $('cleanAllBtn').hidden = dirty.length < 2;
+    $('cleanList').innerHTML = dirty.map(r => {
+      const back = backDate(r), days = Math.round((Date.parse(TODAY) - Date.parse(back)) / 864e5);
+      const ago = days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
+      return `<div class="clean-row"><div class="who"><b>${esc(r.name || 'Rental')}</b> <span>· ${units(toteQty(r), 'tote', 'totes')}${dollyQty(r) ? ', ' + units(dollyQty(r), 'dolly', 'dollies') : ''} · back ${esc(ago)}</span></div><button type="button" data-clean="${escAttr(r.key)}">Clean</button></div>`;
+    }).join('');
+  }
+  async function markClean(keys, undo) {
+    const results = await Promise.all(keys.map(key => fetch('/.netlify/functions/edit-rental', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: $('secret').value.trim(), key, mark: 'cleaned', ...(undo ? { undo: true } : {}) }) })
+      .then(async r => r.ok ? [key, (await r.json()).cleanedAt] : null).catch(() => null)));
+    for (const res of results.filter(Boolean)) {
+      const r = ALL_RENTALS.find(x => x.key === res[0]);
+      if (r) { if (res[1]) r.cleanedAt = res[1]; else delete r.cleanedAt; }
+    }
+    render();
+    return results.filter(Boolean).map(r => r[0]);
+  }
+  document.addEventListener('click', async (e) => {
+    const one = e.target.closest('[data-clean]'), all = e.target.closest('#cleanAllBtn'), undo = e.target.closest('#undoClean');
+    if (!one && !all && !undo) return;
+    if (undo) {
+      await markClean(JSON.parse(undo.dataset.keys), true);
+      $('status').style.display = 'none';
+      return;
+    }
+    const keys = one ? [one.dataset.clean] : ALL_RENTALS.filter(r => needsCleaning(r)).map(r => r.key);
+    if (all && !confirm(`Mark ${units(keys.length, 'rental', 'rentals')} clean?`)) return;
+    (one || all).disabled = true;
+    const done = await markClean(keys, false);
+    if (!done.length) return showErr('Couldn’t save that. Try again.');
+    const name = done.length === 1 ? (ALL_RENTALS.find(r => r.key === done[0])?.name || 'That rental') + '’s totes' : units(done.length, 'rental', 'rentals');
+    showOk(`Marked ${esc(name)} clean. <button type="button" class="link-btn" id="undoClean" data-keys="${escAttr(JSON.stringify(done))}">Undo</button>`);
   });
 
   function showErr(m) { const s = $('status'); s.style.display = 'block'; s.className = 'status err'; s.textContent = m; }

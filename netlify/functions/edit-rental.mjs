@@ -86,10 +86,11 @@ export default async (request) => {
       delete updated.cancelled; delete updated.cancelledAt; delete updated.cancelReason;
       changed = true;
     }
-    // Delivered / Picked up buttons: { mark: "delivered" | "pickedUp" }, or
-    // with undo: true to take it back. Picked up implies delivered.
-    if (body.mark === "delivered" || body.mark === "pickedUp") {
-      const field = body.mark === "delivered" ? "deliveredAt" : "pickedUpAt";
+    // Delivered / Picked up / Clean buttons: { mark: "delivered" | "pickedUp"
+    // | "cleaned" }, or with undo: true to take it back. Picked up implies
+    // delivered. "cleaned" is the totes washed after they came back (Inventory).
+    if (body.mark === "delivered" || body.mark === "pickedUp" || body.mark === "cleaned") {
+      const field = { delivered: "deliveredAt", pickedUp: "pickedUpAt", cleaned: "cleanedAt" }[body.mark];
       if (body.undo === true) {
         delete updated[field];
         if (field === "deliveredAt") delete updated.pickedUpAt;
@@ -108,7 +109,7 @@ export default async (request) => {
     if (updated.price !== existing.price && updated.lineItems) delete updated.lineItems;
 
     await store.setJSON(body.key, updated);
-    return new Response(JSON.stringify({ ok: true, deliveredAt: updated.deliveredAt || null, pickedUpAt: updated.pickedUpAt || null }), { status: 200 });
+    return new Response(JSON.stringify({ ok: true, deliveredAt: updated.deliveredAt || null, pickedUpAt: updated.pickedUpAt || null, cleanedAt: updated.cleanedAt || null }), { status: 200 });
   } catch (e) {
     console.error("edit-rental failed:", e.message);
     return new Response("Storage error", { status: 502 });

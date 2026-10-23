@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>All rentals · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261107"></script>
+<script src="admin-shared.js?v=20261108"></script>
 <script src="admin-rentals-shared.js?v=20261029"></script>
 <style>
   .rem .who{font-weight:600;font-size:16px;}
@@ -602,6 +602,9 @@
     else if (r.dropoffDate === TODAY && ph !== 'done') parts.push(btn(dLabel, 'delivered'));
     if (r.pickedUpAt) parts.push(done(pLabel, r.pickedUpAt, 'pickedUp'));
     else if (r.deliveredAt || (ph === 'out' && r.pickupDate === TODAY)) parts.push(btn(pLabel, 'pickedUp'));
+    // Back, so the totes need a wash before the next rental (Inventory)
+    if (r.cleanedAt) parts.push(done('Cleaned', r.cleanedAt, 'cleaned'));
+    else if (needsCleaning(r)) parts.push(btn('Clean', 'cleaned'));
     return parts.length ? `<div class="actions marks">${parts.join('')}</div>` : '';
   }
   async function setMark(key, mark, undo) {
@@ -613,6 +616,7 @@
     if (r) {
       if (d.deliveredAt) r.deliveredAt = d.deliveredAt; else delete r.deliveredAt;
       if (d.pickedUpAt) r.pickedUpAt = d.pickedUpAt; else delete r.pickedUpAt;
+      if (d.cleanedAt) r.cleanedAt = d.cleanedAt; else delete r.cleanedAt;
     }
     renderAll(ALL_RENTALS);
   }
