@@ -9,6 +9,10 @@ https://www.readytoteok.com/*  https://www.readytoteokc.com/:splat   301!
 /book.html  /#book  301!
 /book       /#book  301!
 
+# Short confirm link in the confirm text: readytoteokc.com/c/CODE shows
+# confirm.html (the address bar keeps the short link; the page reads CODE).
+/c/*  /confirm.html  200
+
 # Add Rental is now the "Log only, no email" mode of the Send Invoice form.
 /admin-add-rental.html  /admin-invoice.html?mode=log  301!
 /admin-add-rental       /admin-invoice.html?mode=log  301!

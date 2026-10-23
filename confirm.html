@@ -9,8 +9,11 @@
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Confirm your booking · Ready Tote Oklahoma</title>
-<meta property="og:title" content="Confirm your Ready Tote booking">
-<meta property="og:description" content="Tap to confirm your tote rental dates.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Ready Tote Oklahoma">
+<meta property="og:title" content="Confirm your tote rental">
+<meta property="og:description" content="Tap to confirm your dates with Ready Tote Oklahoma.">
+<meta property="og:image" content="https://www.readytoteokc.com/images/totes-hero-studio.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -38,7 +41,7 @@
 </style>
 </head>
 <body>
-<header><a href="/"><img src="images/logo.png" alt="Ready Tote Oklahoma"></a></header>
+<header><a href="/"><img src="/images/logo.png" alt="Ready Tote Oklahoma"></a></header>
 <main>
   <div class="sheet" id="sheet">
     <p class="muted" id="loading">Loading your booking…</p>
@@ -67,7 +70,8 @@
 </main>
 <script>
   const $ = (id) => document.getElementById(id);
-  const t = new URLSearchParams(location.search).get('t') || '';
+  // The code comes from the short link (/c/CODE) or, for older texts, ?t=CODE
+  const t = (location.pathname.match(/^\/c\/([A-Za-z0-9_-]+)/) || [])[1] || new URLSearchParams(location.search).get('t') || '';
   const fmt = (iso) => iso ? new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' }) : '';
   const text = (s) => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
 

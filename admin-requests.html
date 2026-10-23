@@ -693,17 +693,18 @@
     const rushNote = isRushRequest(r)
       ? ` Since that's a rush request (under 24 hrs out), a $${RUSH_FEE} expedite fee applies, it'll show as its own line on your invoice.`
       : '';
-    return `Hi ${first}, it's ${TEXT_SIGNER}! Got your request for ${pkg}. Your dates, ${fmtReqDate(r.deliveryDate)} to ${fmtReqDate(r.pickupDate)}, work on our end.${rushNote} Tap to confirm and we'll send your invoice shortly: ${confirmLink(r)} (or just reply YES).`;
+    return `Hi ${first}, it's ${TEXT_SIGNER}! Got your request for ${pkg}. Your dates, ${fmtReqDate(r.deliveryDate)} to ${fmtReqDate(r.pickupDate)}, work on our end.${rushNote} Tap here to confirm and we'll send your invoice:\n${confirmLink(r)}\n(or just reply YES)`;
   }
 
-  // One-tap confirm link (confirm.html). The random code is made here, put
-  // in the text right away and saved on the request in the background, so
-  // Messages still opens straight from the tap.
+  // One-tap confirm link: readytoteokc.com/c/CODE shows confirm.html (see
+  // _redirects); phones make it tappable without the https://. The random
+  // code is made here, put in the text right away and saved on the request
+  // in the background, so Messages still opens straight from the tap.
   function confirmLink(r) {
-    return 'https://www.readytoteokc.com/confirm.html?t=' + encodeURIComponent(r.confirmToken || '');
+    return 'readytoteokc.com/c/' + encodeURIComponent(r.confirmToken || '');
   }
   function saveConfirmToken(r) {
-    const bytes = crypto.getRandomValues(new Uint8Array(18));
+    const bytes = crypto.getRandomValues(new Uint8Array(12));
     r.confirmToken = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     fetch('/.netlify/functions/update-request', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

@@ -27,7 +27,7 @@ export default async (request) => {
   let body;
   try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
   const t = String(body.t || "");
-  if (!/^[A-Za-z0-9_-]{20,64}$/.test(t)) return json({ error: "This link isn't valid." }, 404);
+  if (!/^[A-Za-z0-9_-]{16,64}$/.test(t)) return json({ error: "This link isn't valid." }, 404);
 
   try {
     const store = getStore("requests");
