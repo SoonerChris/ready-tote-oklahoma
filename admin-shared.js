@@ -32,6 +32,13 @@ function fmtDate(iso, fallback = '') {
   return m + '/' + d + '/' + y.slice(2);
 }
 
+// Phone for display: "15803993202" or "580.399.3202" -> "(580) 399-3202".
+// Anything that isn't a US number is shown as typed.
+function fmtPhone(raw) {
+  const d = String(raw || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+  return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : String(raw || '');
+}
+
 // Normalize a phone number to E.164 (+1XXXXXXXXXX) for sms: links.
 function normalizePhone(raw) {
   const digits = String(raw || '').replace(/\D/g, '');

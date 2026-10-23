@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>All rentals · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261030"></script>
+<script src="admin-shared.js?v=20261031"></script>
 <script src="admin-rentals-shared.js?v=20261029"></script>
 <style>
   .rem .who{font-weight:600;font-size:16px;}
@@ -368,7 +368,7 @@
             <div><span class="k">Counts</span>${counts}</div>
             <div><span class="k">Times</span>out ${esc(fmtDate(r.dropoffDate))} ${esc(r.dropoffTime || '')}, back ${esc(fmtDate(r.pickupDate))} ${esc(r.pickupTime || '')}</div>
             <div><span class="k">Address</span>${addr}</div>
-            <div><span class="k">Contact</span>${r.phone ? `<a href="tel:${escAttr(r.phone)}">${esc(r.phone)}</a>` : '—'}${r.email ? ` · <a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : ''}</div>
+            <div><span class="k">Contact</span>${r.phone ? `<a href="tel:${escAttr(r.phone)}">${esc(fmtPhone(r.phone))}</a>` : '—'}${r.email ? ` · <a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : ''}</div>
             ${(r.stockLosses || []).length ? `<div><span class="k">Stock</span><span style="color:#831C1E;">${r.stockLosses.map(l => `${l.quantity} ${l.item === 'dolly' ? (l.quantity === 1 ? 'dolly' : 'dollies') : (l.quantity === 1 ? 'tote' : 'totes')} ${l.type === 'lost' ? 'not returned' : 'damaged'} (${esc(shortDate(l.date))})`).join(', ')}</span></div>` : ''}
             ${r.tosAccepted ? `<div><span class="k">Terms</span>Accepted ${esc(fmtDate((r.tosAcceptedAt || '').slice(0, 10)))}</div>` : ''}
             ${missing.length ? `<div><span class="k">Missing</span><span style="color:#831C1E;">${esc(missing.join(', '))}</span></div>` : ''}
@@ -596,7 +596,8 @@
         if (btn) { btn.disabled = false; btn.textContent = 'On the way: ' + label.toLowerCase(); }
         return;
       }
-      wrap.innerHTML = `<a class="sms-btn" href="${data.sms}" style="padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control);">Text ETA (${esc(data.arrivalTime)})</a>`;
+      wrap.innerHTML = `<a class="sms-btn" href="${escAttr(data.sms)}" style="padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control);">${data.arrivalTime ? `Text ETA (${esc(data.arrivalTime)})` : 'Text: on our way'}</a>`;
+      if (data.warning) showErr('No ETA in the text. ' + data.warning);
     } catch {
       showErr('Network error calculating ETA.');
       if (btn) { btn.disabled = false; btn.textContent = 'On the way: ' + label.toLowerCase(); }

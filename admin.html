@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Dashboard · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261030"></script>
+<script src="admin-shared.js?v=20261031"></script>
 <style>
   /* Dashboard layout: the cream body is the frame (sidebar on it, no rule),
      the work sits on one white sheet inset 8px from the window's right,
@@ -436,7 +436,7 @@
       <div class="row" data-flag="${escAttr(r.flagId)}">
         <div class="person">
           <div class="who">${esc(r.name)}</div>
-          <div class="meta"><span class="num">${esc(r.phone)}</span> · ${plural(toteQty(r), 'tote')}</div>
+          <div class="meta"><span class="num">${esc(fmtPhone(r.phone))}</span> · ${plural(toteQty(r), 'tote')}</div>
         </div>
         <div class="why">${r.why}</div>
         <a class="btn ghost" data-text href="${escAttr(r.sms)}">Text ${firstName(r)}</a>
@@ -627,7 +627,8 @@
       const resp = await post('on-my-way', { secret: $('secret').value.trim(), key: wrap.dataset.otw, type: wrap.dataset.leg, origin: sessionStorage.getItem('rto-admin-startfrom') || '' });
       const d = await resp.json().catch(() => ({}));
       if (!resp.ok || d.error) throw new Error(d.error || 'Couldn’t work out the ETA.');
-      wrap.innerHTML = `<a class="btn ghost" href="${escAttr(d.sms)}">Text ETA (${esc(d.arrivalTime)})</a>`;
+      wrap.innerHTML = `<a class="btn ghost" href="${escAttr(d.sms)}">${d.arrivalTime ? `Text ETA (${esc(d.arrivalTime)})` : 'Text: on our way'}</a>`;
+      if (d.warning) showErr('No ETA in the text. ' + d.warning);
     } catch (err) { b.disabled = false; b.textContent = 'On the way'; showErr(err.message); }
   });
 

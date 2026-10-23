@@ -16,7 +16,7 @@
 //   HOME_ADDRESS           - optional; overrides the hardcoded default below
 
 import { getStore } from "@netlify/blobs";
-import { smsLink, dropoffAddressOf, pickupAddressOf } from "./lib-reminders.mjs";
+import { smsLink, dropoffAddressOf, pickupAddressOf, SIGNER } from "./lib-reminders.mjs";
 import { isAdmin } from "./lib-auth.mjs";
 import { routeMatrix } from "./lib-routes.mjs";
 
@@ -55,6 +55,16 @@ export default async (request) => {
   }
 
   const origin = (body.origin || "").trim() || process.env.HOME_ADDRESS || DEFAULT_HOME_ADDRESS;
+  const first = (rental.name || "there").split(" ")[0];
+  const action = type === "delivery" ? "deliver your totes" : "pick up your totes";
+
+  // If Google can't give a drive time (key, billing or address trouble),
+  // still hand back an "on our way" text, just without the arrival time,
+  // so the button always gets a text out. `warning` says why.
+  const withoutEta = (why) => {
+    const message = `Hi ${first}, it's ${SIGNER}! We're on our way now to ${action}. See you soon!`;
+    return json({ message, sms: smsLink(rental.phone, message), arrivalTime: null, warning: why, origin, destination });
+  };
 
   try {
     // Routes API with current traffic (lib-routes.mjs)
@@ -63,10 +73,10 @@ export default async (request) => {
       route = (await routeMatrix(apiKey, [origin], [destination], { traffic: true }))[0][0];
     } catch (e) {
       console.error("Route lookup failed:", e.message);
-      return json({ error: e.message }, 502);
+      return withoutEta(e.message);
     }
     if (!route) {
-      return json({ error: "Could not calculate travel time for that address. Double check it and try again." }, 502);
+      return withoutEta("Couldn't work out the drive time to that address. Double check it.");
     }
 
     const durationSeconds = route.seconds;
@@ -75,14 +85,12 @@ export default async (request) => {
     const rawArrival = new Date(Date.now() + durationSeconds * 1000);
     const arrivalTime = formatArrivalTime(roundToNearest15(rawArrival));
 
-    const first = (rental.name || "there").split(" ")[0];
-    const action = type === "delivery" ? "deliver your totes" : "pick up your totes";
-    const message = `Hi ${first}, it's Chris with Ready Tote Oklahoma! We're on our way to ${action} and should be there around ${arrivalTime}. See you soon!`;
+    const message = `Hi ${first}, it's ${SIGNER}! We're on our way to ${action} and should be there around ${arrivalTime}. See you soon!`;
 
     return json({ message, sms: smsLink(rental.phone, message), arrivalTime, durationText, origin, destination });
   } catch (e) {
-    console.error("Distance Matrix fetch failed:", e.message);
-    return json({ error: "Network error calculating travel time" }, 500);
+    console.error("ETA lookup failed:", e.message);
+    return withoutEta("Network error working out the drive time.");
   }
 };
 
