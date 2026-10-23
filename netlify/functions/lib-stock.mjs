@@ -72,9 +72,13 @@ export async function computeAvailability(daysAhead = DAYS_AHEAD) {
 
   // Normalize both stores into the same {start, end, totes} shape so the
   // per-day loop below doesn't need to know which store anything came from.
+  // Marked delivered but not picked up after its pickup date: the totes are
+  // still out, so the rental keeps holding them through today.
+  const today0 = todayInOklahoma();
+  const endOf = (r) => (r.deliveredAt && !r.pickedUpAt && r.pickupDate < today0 ? today0 : r.pickupDate);
   const rentalWindows = rentals
     .filter((r) => !r.cancelled && r.dropoffDate && r.pickupDate)
-    .map((r) => ({ start: r.dropoffDate, end: r.pickupDate, totes: totesFor(r), dollies: dolliesFor(r) }));
+    .map((r) => ({ start: r.dropoffDate, end: endOf(r), totes: totesFor(r), dollies: dolliesFor(r) }));
 
   const heldRequestWindows = requests
     .filter((r) => HOLD_REQUEST_STATUSES.includes(r.status) && r.deliveryDate && r.pickupDate)

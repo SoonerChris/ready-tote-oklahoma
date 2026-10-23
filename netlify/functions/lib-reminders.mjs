@@ -186,8 +186,10 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
       if (!sentFlags[flagId]) out.pickup.push({ ...r, flagId, ...timing(today), address: self ? "Customer return" : pickAddr, message: msg, sms: smsLink(r.phone, msg) });
     }
 
-    // Review request: from 3 days after pickup, for up to two weeks
-    if (reviewLink && r.pickupDate && open(shiftDate(r.pickupDate, 3), shiftDate(r.pickupDate, 14))) {
+    // Review request: from 3 days after pickup, for up to two weeks. Not
+    // while it's marked delivered but not yet picked up (a late pickup).
+    const stillOut = r.deliveredAt && !r.pickedUpAt;
+    if (reviewLink && r.pickupDate && !stillOut && open(shiftDate(r.pickupDate, 3), shiftDate(r.pickupDate, 14))) {
       const link = reviewLink;
       const msg = `${hi(first)} Thanks for renting with us. If we made your move easier, we'd love a quick Google review: ${link}`;
       const flagId = "review:" + (r.key || r.phone + r.pickupDate);

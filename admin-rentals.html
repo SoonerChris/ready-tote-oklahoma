@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>All rentals · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261102"></script>
+<script src="admin-shared.js?v=20261103"></script>
 <script src="admin-rentals-shared.js?v=20261029"></script>
 <style>
   .rem .who{font-weight:600;font-size:16px;}
@@ -78,6 +78,8 @@
      green tint + left border so they stand out at a glance in the list,
      same green used for the "Active rentals" stat on Dashboard/Inventory. */
   .rem.active-rental{border-left:3px solid var(--green);}
+  .rem .marks .marked{font-size:13px; font-weight:600; color:#14492F;}
+  .rem .marks .link-btn{all:unset; cursor:pointer; font-weight:600; font-size:13px; color:var(--ink); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control); margin-left:4px;}
 
   /* Find: search + filter buttons with counts */
   .list-tools{display:flex; flex-direction:column; gap:10px; margin:8px 0 16px;}
@@ -348,7 +350,7 @@
   function card(r) {
     const k = esc(r.key);
     const grouped = FILTER === 'all' && !SEARCH;
-    const status = todayPill(r) || (grouped ? '' : isOut(r) ? pill('ok', 'Out now') : isUpcoming(r) ? pill('pending', 'Upcoming') : '');
+    const status = isLatePickup(r) ? pill('err', 'Late pickup') : todayPill(r) || (grouped ? '' : isOut(r) ? pill('ok', 'Out now') : isUpcoming(r) ? pill('pending', 'Upcoming') : '');
     const pay = PAID_FLAGS[r.key] ? pill('ok', 'Paid') : isUnpaid(r) ? pill('err', 'Unpaid') : '';
     const missing = missingInfo(r);
     const totes = typeof r.toteCount === 'number' ? `${r.toteCount} totes` : (String(r.package || '').match(/(\d+)\s*totes?/i) ? String(r.package).match(/(\d+)\s*totes?/i)[1] + ' totes' : 'Totes not set');
@@ -391,6 +393,7 @@
           ${r.cancelled ? `<div class="next upcoming"><div class="what"><b>Cancelled ${esc(fmtDate((r.cancelledAt || '').slice(0, 10)))}</b><span>${esc(r.cancelReason || 'No reason given')}. It doesn't count in reminders, inventory, availability or revenue.</span></div><button type="button" class="ghost-btn" onclick="restoreRental('${k}')">Restore rental</button></div>` : nextStep(r)}
           ${askFor(r.key, String(r.name || '').split(' ')[0])}
           ${paymentControls ? `<div class="actions payment-actions">${paymentControls}</div>` : ''}
+          ${marksHtml(r)}
           ${!r.cancelled && r.serviceType !== 'self' && (dOff || pOff) && !isDone(r) ? `<div class="actions">
             ${dOff && !isOut(r) ? onTheWayBtn('delivery', r.key) : ''}
             ${pOff ? onTheWayBtn('pickup', r.key) : ''}
@@ -582,6 +585,43 @@
     const replaceBtn = `<button type="button" class="add-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">Replace ID photo</button>`;
     return viewBtn + replaceBtn;
   }
+
+  // ---- Delivered / Picked up ----
+  // Tap when it actually happens. Marking overrides the clock: delivered
+  // stays "Out now" until picked up, and turns "Late pickup" after its time.
+  function marksHtml(r) {
+    if (r.cancelled) return '';
+    const self = r.serviceType === 'self';
+    const dLabel = self ? 'Handed off' : 'Delivered', pLabel = self ? 'Returned' : 'Picked up';
+    const k = escAttr(r.key);
+    const done = (label, iso, mark) => `<span class="marked">${label} ${esc(markText(iso))} <button type="button" class="link-btn" data-rmark="${mark}" data-unmark="1" data-key="${k}">Undo</button></span>`;
+    const btn = (label, mark) => `<button type="button" class="ghost-btn" data-rmark="${mark}" data-key="${k}">Mark ${label.toLowerCase()}</button>`;
+    const ph = rentalPhase(r);
+    const parts = [];
+    if (r.deliveredAt) parts.push(done(dLabel, r.deliveredAt, 'delivered'));
+    else if (r.dropoffDate === TODAY && ph !== 'done') parts.push(btn(dLabel, 'delivered'));
+    if (r.pickedUpAt) parts.push(done(pLabel, r.pickedUpAt, 'pickedUp'));
+    else if (r.deliveredAt || (ph === 'out' && r.pickupDate === TODAY)) parts.push(btn(pLabel, 'pickedUp'));
+    return parts.length ? `<div class="actions marks">${parts.join('')}</div>` : '';
+  }
+  async function setMark(key, mark, undo) {
+    const resp = await fetch('/.netlify/functions/edit-rental', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: $('secret').value.trim(), key, mark, ...(undo ? { undo: true } : {}) }) });
+    if (!resp.ok) throw new Error();
+    const d = await resp.json();
+    const r = ALL_RENTALS.find(x => x.key === key);
+    if (r) {
+      if (d.deliveredAt) r.deliveredAt = d.deliveredAt; else delete r.deliveredAt;
+      if (d.pickedUpAt) r.pickedUpAt = d.pickedUpAt; else delete r.pickedUpAt;
+    }
+    renderAll(ALL_RENTALS);
+  }
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-rmark]'); if (!b) return;
+    b.disabled = true;
+    try { await setMark(b.dataset.key, b.dataset.rmark, !!b.dataset.unmark); }
+    catch { b.disabled = false; showErr('Couldn’t save that. Try again.'); }
+  });
 
   // "On the Way" button: starts as a plain button, calculates a live ETA via
   // the on-my-way function, then swaps in a ready-to-tap text link.

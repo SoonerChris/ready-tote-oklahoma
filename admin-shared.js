@@ -144,12 +144,34 @@ function clockMinutes(t) {
   if (m[3]) { const pm = m[3].toUpperCase() === 'PM'; if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
   return h < 24 && min < 60 ? h * 60 + min : null;
 }
+// Tapping Delivered / Picked up overrides the clock: marked picked up is
+// done; marked delivered stays out, even past the pickup time, until it's
+// marked picked up (a late pickup).
 function rentalPhase(r, now = okNow()) {
   if (!r || r.cancelled || !r.dropoffDate || !r.pickupDate) return '';
+  if (r.pickedUpAt) return 'done';
+  if (r.deliveredAt) return 'out';
   const passed = (date, time) => date < now.date || (date === now.date && clockMinutes(time) !== null && now.minutes >= clockMinutes(time));
   if (passed(r.pickupDate, r.pickupTime)) return 'done';
   if (r.dropoffDate > now.date || (r.dropoffDate === now.date && clockMinutes(r.dropoffTime) !== null && now.minutes < clockMinutes(r.dropoffTime))) return 'upcoming';
   return 'out';
+}
+
+// Marked delivered, not picked up, and the pickup time has passed
+function isLatePickup(r, now = okNow()) {
+  if (!r || r.cancelled || !r.deliveredAt || r.pickedUpAt || !r.pickupDate) return false;
+  const t = clockMinutes(r.pickupTime);
+  return r.pickupDate < now.date || (r.pickupDate === now.date && t !== null && now.minutes >= t);
+}
+// Last day a rental holds its totes: the pickup date, or today while a
+// late pickup is still out (same rule as lib-stock.mjs on the server)
+function rentalEndDate(r, today) {
+  return isLatePickup(r) && r.pickupDate < today ? today : r.pickupDate;
+}
+// "Oct 23, 2:14 PM" for a deliveredAt / pickedUpAt stamp
+function markText(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? '' : d.toLocaleString('en-US', { timeZone: 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 // ---- Rush fee ----
