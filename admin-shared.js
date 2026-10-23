@@ -124,6 +124,34 @@ function findPendingConfirmed(requests, rentals) {
 // netlify/functions/lib-reminders.mjs).
 const TEXT_SIGNER = 'Chris with Ready Tote Oklahoma';
 
+// ---- Where a rental is right now ----
+// By date, and on the drop-off or pickup day itself by the time on the
+// rental: it's out once the drop-off time has passed, and back once the
+// pickup time has passed. With no time set, the whole day counts (out from
+// the start of the drop-off day, back the day after pickup), as before.
+// Times are Oklahoma time. Returns 'upcoming', 'out', 'done', or '' for a
+// cancelled rental or one missing its dates.
+function okNow(at = new Date()) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit',
+    day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(at).map(x => [x.type, x.value]));
+  return { date: `${p.year}-${p.month}-${p.day}`, minutes: Number(p.hour) * 60 + Number(p.minute) };
+}
+// "2:30 PM", "14:30" or "9 AM" -> minutes after midnight; null if no time
+function clockMinutes(t) {
+  const m = String(t || '').match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
+  if (!m || (!m[2] && !m[3])) return null;
+  let h = Number(m[1]); const min = Number(m[2] || 0);
+  if (m[3]) { const pm = m[3].toUpperCase() === 'PM'; if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
+  return h < 24 && min < 60 ? h * 60 + min : null;
+}
+function rentalPhase(r, now = okNow()) {
+  if (!r || r.cancelled || !r.dropoffDate || !r.pickupDate) return '';
+  const passed = (date, time) => date < now.date || (date === now.date && clockMinutes(time) !== null && now.minutes >= clockMinutes(time));
+  if (passed(r.pickupDate, r.pickupTime)) return 'done';
+  if (r.dropoffDate > now.date || (r.dropoffDate === now.date && clockMinutes(r.dropoffTime) !== null && now.minutes < clockMinutes(r.dropoffTime))) return 'upcoming';
+  return 'out';
+}
+
 // ---- Rush fee ----
 // One rule everywhere, matching the booking form and terms: a request that
 // came in less than 24 hours before delivery pays a $25 expedite fee.

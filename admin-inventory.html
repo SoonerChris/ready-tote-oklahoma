@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Inventory · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261101"></script>
+<script src="admin-shared.js?v=20261102"></script>
 <style>
   :root{--col:960px;}
   .finding{margin:4px 0 20px; font-size:17px; max-width:760px; line-height:1.45;}
@@ -264,7 +264,8 @@
       const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
       TODAY = today;
       ALL_RENTALS = (rd.rentals || []).filter(r => !r.cancelled);   // cancelled rentals hold no totes
-      ACTIVE_RENTALS = ALL_RENTALS.filter(r => r.dropoffDate <= today && r.pickupDate >= today);
+      // Out right now, by the drop-off/pickup time on the day itself (rentalPhase)
+      ACTIVE_RENTALS = ALL_RENTALS.filter(r => rentalPhase(r) === 'out');
 
       // Confirmed bookings only get written to the rentals store once Send
       // Invoice or Add Rental actually runs — until then they're invisible
