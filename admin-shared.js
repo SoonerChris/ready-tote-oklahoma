@@ -369,11 +369,14 @@ document.addEventListener('DOMContentLoaded', () => {
 // or comes back on screen, and after the Dashboard or Requests changes
 // something. iPhones only show it when notifications are allowed.
 function refreshBadge() {
-  if (!('setAppBadge' in navigator) || !adminSession()) return;
-  fetch('/.netlify/functions/push-subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'badge' }) })
+  if (!('setAppBadge' in navigator) || !adminSession()) return Promise.resolve(null);
+  return fetch('/.netlify/functions/push-subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'badge' }) })
     .then(r => r.ok ? r.json() : null)
-    .then(d => { if (d && typeof d.count === 'number') (d.count > 0 ? navigator.setAppBadge(d.count) : navigator.clearAppBadge()).catch(() => {}); })
-    .catch(() => {});
+    .then(d => {
+      if (!d || typeof d.count !== 'number') return null;
+      return (d.count > 0 ? navigator.setAppBadge(d.count) : navigator.clearAppBadge()).then(() => d.count, () => d.count);
+    })
+    .catch(() => null);
 }
 window.addEventListener('load', refreshBadge);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshBadge(); });
@@ -384,6 +387,8 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // cached, so registering it changes nothing else about the pages.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js', { scope: '/admin' }).catch(() => {});
+    // update(): pick up a changed sw.js on every open, not whenever the
+    // phone gets round to it
+    navigator.serviceWorker.register('/sw.js', { scope: '/admin' }).then(reg => reg.update()).catch(() => {});
   });
 }
