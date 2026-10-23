@@ -11,7 +11,8 @@
 //   RESEND_FROM           - verified sender
 
 import { getStore } from "@netlify/blobs";
-import { emailLayout, heading, pill, steps, contactLine } from "./lib-email.mjs";
+import { emailLayout, heading, pill, steps, contactLine, detailsCard, goodToKnow, htmlToText } from "./lib-email.mjs";
+import { friendlyTime, dropoffAddressOf, pickupAddressOf, rentalToICSAttachments } from "./lib-reminders.mjs";
 import { notify } from "./lib-push.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
@@ -68,8 +69,9 @@ export default async (request) => {
   const tosAccepted = session.consent?.terms_of_service === "accepted";
 
   // --- Auto-match this payment to a rental record and mark it paid ---
+  let rental = null;   // the matched rental, so the receipt can show its dates
   try {
-    await autoMarkPaid(email, rawName, session.amount_total, tosAccepted);
+    rental = await autoMarkPaid(email, rawName, session.amount_total, tosAccepted);
   } catch (e) {
     console.error("stripe-webhook: auto mark-paid failed:", e.message);
   }
@@ -90,13 +92,22 @@ export default async (request) => {
               badge: pill("Confirmed", "green"),
               lead: `We received your payment${amount ? ` of <strong style="color:#1E1B18;">${amount}</strong>` : ""} and your reservation is confirmed.`,
             })}
-            ${steps([
+            ${rental ? receiptCard(rental, amount) : steps([
               "We deliver clean totes to your door on your drop-off date",
               "You pack and move at your own pace",
               "We pick up the empty totes on your pickup date",
             ], { top: 0 })}
+            ${goodToKnow([
+              "Each tote holds up to 65 lbs. Pad anything fragile.",
+              "No liquids, chemicals or food in the totes, please.",
+              "Need them longer? Let us know <strong>before</strong> pickup day.",
+              rental && rental.serviceType === "self" ? "Bring the totes back empty on your return date."
+                : "At pickup, have the totes empty and ready to go.",
+              rental && rental.serviceType === "self" ? null : "We'll text you when we're on the way.",
+            ])}
             ${contactLine("Need to adjust your dates or have questions?")}`,
   });
+  const attachments = rental && rental.dropoffDate && rental.pickupDate ? rentalToICSAttachments(rental, { forCustomer: true }) : undefined;
 
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -111,6 +122,8 @@ export default async (request) => {
       reply_to: OWNER_EMAIL,
       subject: "Payment received: your tote rental is confirmed",
       html,
+      text: htmlToText(html),
+      attachments,
     }),
   });
 
@@ -210,7 +223,7 @@ async function autoMarkPaid(email, name, amountCents, tosAccepted) {
   const match = findRentalMatch(rentals, paidFlags, email, name, amountCents);
   if (!match) {
     console.warn("stripe-webhook: no rental match for payment from", email, name || "(no name)");
-    return;
+    return null;
   }
 
   paidFlags[match.key] = new Date().toISOString();
@@ -238,6 +251,26 @@ async function autoMarkPaid(email, name, amountCents, tosAccepted) {
       console.error("stripe-webhook: failed to save ToS acceptance:", e.message);
     }
   }
+  return match;
+}
+
+// Receipt details for a matched rental: dates, times, address, amount.
+function receiptCard(r, amount) {
+  const self = r.serviceType === "self";
+  const when = (d, t) => d ? new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" }) + (t ? ` at ${escapeHtml(friendlyTime(t))}` : "") : "";
+  const dAddr = dropoffAddressOf(r), pAddr = pickupAddressOf(r);
+  return detailsCard({
+    label: "Your rental",
+    rows: [
+      ["Package", escapeHtml(r.package || "")],
+      [self ? "Pick up totes" : "Drop-off", when(r.dropoffDate, r.dropoffTime)],
+      [self ? "Return totes" : "Pickup", when(r.pickupDate, r.pickupTime)],
+      ...(self ? [] : dAddr && dAddr === pAddr ? [["Address", escapeHtml(dAddr)]]
+        : [dAddr ? ["Drop-off address", escapeHtml(dAddr)] : null, pAddr ? ["Pickup address", escapeHtml(pAddr)] : null]),
+    ],
+    total: amount ? ["Paid", amount] : null,
+  }) + `
+            <p style="margin:10px 0 0; font-size:13px; color:#6B6259;">${self ? "Pick-up and return" : "Drop-off and pickup"} are attached. Tap them to add to your calendar.</p>`;
 }
 
 function findRentalMatch(rentals, paidFlags, email, name, amountCents) {

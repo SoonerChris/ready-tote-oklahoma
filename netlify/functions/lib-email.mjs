@@ -161,6 +161,39 @@ export function callout(html, tone = "plain") {
             </table>`;
 }
 
+// "Good to know" box: a short bulleted list in a tinted callout.
+export function goodToKnow(items, { label = "Good to know" } = {}) {
+  const lis = items.filter(Boolean).map((t) => `<li style="margin:0 0 6px;">${t}</li>`).join("");
+  return `
+            ${sectionLabel(label, { top: 28 })}
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${C.frame}; border-radius:12px;">
+              <tr><td style="padding:14px 18px 8px; font-family:${FONT}; font-size:14px; line-height:1.5; color:${C.ink};">
+                <ul style="margin:0; padding-left:18px;">${lis}</ul>
+              </td></tr>
+            </table>`;
+}
+
+// Plain-text copy of an email, sent alongside the HTML. Mail apps that
+// prefer text show it, and spam filters trust mail that has both.
+export function htmlToText(html) {
+  return String(html)
+    .replace(/<head[\s\S]*?<\/head>/i, "")
+    .replace(/<div style="display:none[^>]*>[\s\S]*?<\/div>/i, "")
+    .replace(/<a [^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, (m, href, text) => {
+      const t = text.replace(/<[^>]+>/g, "").trim();
+      return /^(tel|mailto):/.test(href) || href.replace(/^https?:\/\/(www\.)?/, "").startsWith(t) ? t : `${t}: ${href}`;
+    })
+    .replace(/<li[^>]*>/gi, "- ")
+    .replace(/<(br|\/p|\/h1|\/li|\/tr|\/div)[^>]*>/gi, "\n")
+    .replace(/<\/td>/gi, "  ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ").replace(/&middot;/g, "·").replace(/&minus;/g, "-")
+    .replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
+    .split("\n").map((l) => l.replace(/\s+/g, " ").trim()).join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 // Price breakdown saved with a rental: [{ label, amount }], e.g. package,
 // rush fee, military discount. Anything malformed is dropped, so a bad
 // value can never break or pad an invoice.

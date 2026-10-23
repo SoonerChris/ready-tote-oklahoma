@@ -9,9 +9,9 @@
 //   RESEND_FROM    - verified sender
 
 import { getStore } from "@netlify/blobs";
-import { friendlyTime } from "./lib-reminders.mjs";
+import { friendlyTime, dropoffAddressOf, pickupAddressOf } from "./lib-reminders.mjs";
 import { isAdmin } from "./lib-auth.mjs";
-import { emailLayout, heading, pill, detailsCard, button, contactLine, cleanLineItems, lineItemRows } from "./lib-email.mjs";
+import { emailLayout, heading, pill, detailsCard, button, contactLine, cleanLineItems, lineItemRows, htmlToText } from "./lib-email.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
@@ -52,6 +52,11 @@ export default async (request) => {
   const price = escapeHtml(rawPrice ? (rawPrice.startsWith("$") ? rawPrice : "$" + rawPrice) : "");
   const dropoffKnown = !!(rental.dropoffDate && rental.dropoffTime);
   const dropoff = dropoffKnown ? `${formatDate(rental.dropoffDate)} at ${escapeHtml(friendlyTime(rental.dropoffTime))}` : "";
+  const pickup = rental.pickupDate ? formatDate(rental.pickupDate) + (rental.pickupTime ? ` at ${escapeHtml(friendlyTime(rental.pickupTime))}` : "") : "";
+  const self = rental.serviceType === "self";
+  const dAddr = dropoffAddressOf(rental), pAddr = pickupAddressOf(rental);
+  const addrRows = self ? [] : dAddr && dAddr === pAddr ? [["Address", escapeHtml(dAddr)]]
+    : [dAddr ? ["Drop-off address", escapeHtml(dAddr)] : null, pAddr ? ["Pickup address", escapeHtml(pAddr)] : null];
 
   const from = process.env.RESEND_FROM || FROM_FALLBACK;
 
@@ -67,12 +72,15 @@ export default async (request) => {
               label: "Payment reminder",
               rows: [
                 ["Package", pkg],
-                dropoffKnown ? ["Drop-off", dropoff] : null,
+                dropoffKnown ? [self ? "Pick up totes" : "Drop-off", dropoff] : null,
+                pickup ? [self ? "Return totes" : "Pickup", pickup] : null,
+                ...addrRows,
                 ...lineItemRows(cleanLineItems(rental.lineItems), rental.price),
               ],
               total: price ? ["Total due", price] : null,
             })}
             ${button(stripeUrl, "Complete reservation", { note: "Secure payment by Stripe" })}
+            <p style="margin:0; font-size:14px; line-height:1.6; color:#6B6259; text-align:center;"><strong style="color:#1E1B18;">Plans changed?</strong> Just reply and we'll release your dates. No hard feelings.</p>
             ${contactLine("Already paid, or need to change anything?")}`,
   });
 
@@ -87,8 +95,9 @@ export default async (request) => {
       to: [rental.email],
       bcc: [OWNER_EMAIL],
       reply_to: OWNER_EMAIL,
-      subject: `Reminder: your invoice is still open | ${rental.package || "Ready Tote Oklahoma"}`,
+      subject: "Quick reminder: your tote rental invoice | Ready Tote Oklahoma",
       html,
+      text: htmlToText(html),
     }),
   });
 
