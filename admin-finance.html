@@ -151,6 +151,13 @@
   .from-label{display:inline-flex; align-items:center; gap:6px; font-size:13px; margin:0; font-weight:500;}
   .from-label input{width:auto; height:36px; margin:0; padding:4px 8px; font-size:14px;}
   .chips button.later{border-style:dashed;}
+  /* A trip chip plus its small × (clear this trip) */
+  .chips .chip{display:inline-flex; align-items:stretch;}
+  .chips .chip > button:first-child{border-radius:999px 0 0 999px; border-right:none;}
+  .chips .chip > button.x{border-radius:0 999px 999px 0; padding:6px 10px 6px 8px; color:var(--steel); font-size:15px; line-height:1;}
+  .chips .chip > button.x:hover{color:#831C1E;}
+  .trip-clear{all:unset; cursor:pointer; font-weight:600; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control); margin-left:4px;}
+  .trip-clear:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
   .del-ask{font-size:13px; font-weight:600;}
   .row-actions [hidden]{display:none;}
   .fee-line{font-size:14px; color:var(--steel); margin:0 0 12px; display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px;}
@@ -885,6 +892,7 @@
     body: JSON.stringify({ secret: $('secret').value.trim(), ...payload }),
   });
   async function reloadFinance(){
+    LAST_CLEARED = null;
     const resp = await finCall({ action: 'list' });
     if (resp.ok) { FIN = await resp.json(); prepare(); renderPeriod(); renderMonthTable(); renderFinance(); }
   }
@@ -912,7 +920,8 @@
         const addr = leg === 'delivery' ? dropoffAddressOf(r) : pickupAddressOf(r);
         const logged = FIN.mileage.some(m => (m.rentalKey === r.key && m.leg === leg)
           || (!m.rentalKey && m.date === date && String(m.purpose || '').toLowerCase().includes(String(r.name || '').toLowerCase().split(' ')[0] || '\u0000')));
-        out.push({ key: r.key, leg, date, name: r.name, addr, logged,
+        const skipped = !!(FIN.tripSkips || {})[r.key + ':' + leg];
+        out.push({ key: r.key, leg, date, name: r.name, addr, logged, skipped,
           purpose: (leg === 'delivery' ? 'Deliver, ' : 'Pick up, ') + r.name + (addr ? ', ' + addr : '') });
       }
     }
@@ -920,6 +929,7 @@
   }
 
   let TRIP_FOR = null;   // { key, leg } when the form was filled from a chip
+  let LAST_CLEARED = null;   // [{ key, leg }] just cleared, for Undo
   function renderMileage() {
     const yr = TODAY.slice(0, 4);
     const ytd = FIN.mileage.filter(m => (m.date||'').startsWith(yr));
@@ -943,15 +953,22 @@
     const lo = new Date(monthStart + 'T12:00:00Z'); lo.setUTCMonth(lo.getUTCMonth() - 1);
     const hi = new Date(TODAY + 'T12:00:00Z'); hi.setUTCDate(hi.getUTCDate() + 7);
     // Past trips needing a log first (newest first), then the week ahead
-    const cands = tripCandidates(lo.toISOString().slice(0, 10), hi.toISOString().slice(0, 10)).filter(t => !t.logged)
+    const window_ = tripCandidates(lo.toISOString().slice(0, 10), hi.toISOString().slice(0, 10));
+    const clearedHere = window_.filter(t => t.skipped && !t.logged).length;
+    const cands = window_.filter(t => !t.logged && !t.skipped)
       .sort((a, b) => (a.date > TODAY) - (b.date > TODAY) || (a.date > TODAY ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)));
     const pastUnlogged = cands.filter(t => t.date <= TODAY);
     const thisMonth = pastUnlogged.filter(t => t.date >= monthStart).length;
-    $('tripNudge').innerHTML = pastUnlogged.length
-      ? `<b>${plural(pastUnlogged.length, 'trip')}</b> ${pastUnlogged.length === 1 ? 'isn’t' : 'aren’t'} logged yet${thisMonth && thisMonth < pastUnlogged.length ? ` (${thisMonth} this month)` : ''}. Tap one to fill it in, miles included.`
-      : 'Every delivery and pickup so far is logged.';
+    PAST_UNLOGGED = pastUnlogged.map(t => ({ key: t.key, leg: t.leg }));
+    $('tripNudge').innerHTML = (LAST_CLEARED
+        ? `Cleared ${plural(LAST_CLEARED.length, 'trip')}. <button type="button" class="trip-clear" data-trip-undo>Undo</button> `
+        : '')
+      + (pastUnlogged.length
+        ? `<b>${plural(pastUnlogged.length, 'trip')}</b> ${pastUnlogged.length === 1 ? 'isn’t' : 'aren’t'} logged yet${thisMonth && thisMonth < pastUnlogged.length ? ` (${thisMonth} this month)` : ''}. Tap one to fill it in, miles included, or <button type="button" class="trip-clear" data-trip-clear-all>clear ${pastUnlogged.length === 1 ? 'it' : 'them'}</button> if ${pastUnlogged.length === 1 ? 'it doesn’t' : 'they don’t'} need logging.`
+        : 'Every delivery and pickup so far is logged.')
+      + (clearedHere && !LAST_CLEARED ? ` <button type="button" class="trip-clear" data-trip-restore>Bring back ${plural(clearedHere, 'cleared trip')}</button>` : '');
     $('tripChips').innerHTML = cands.slice(0, 10).map(t => `
-      <button type="button" data-trip="${escAttr(t.key)}" data-leg="${t.leg}" data-date="${t.date}" data-purpose="${escAttr(t.purpose)}"${t.date > TODAY ? ' class="later"' : ''}>${esc(fmtDate(t.date).slice(0,5))} · ${esc(t.leg === 'delivery' ? 'Deliver' : 'Pick up')}, ${esc(t.name || '')}</button>`).join('')
+      <span class="chip"><button type="button" data-trip="${escAttr(t.key)}" data-leg="${t.leg}" data-date="${t.date}" data-purpose="${escAttr(t.purpose)}"${t.date > TODAY ? ' class="later"' : ''}>${esc(fmtDate(t.date).slice(0,5))} · ${esc(t.leg === 'delivery' ? 'Deliver' : 'Pick up')}, ${esc(t.name || '')}</button><button type="button" class="x${t.date > TODAY ? ' later' : ''}" data-trip-skip="${escAttr(t.key)}" data-leg="${t.leg}" aria-label="Clear this trip, it doesn't need logging" title="Doesn't need logging">×</button></span>`).join('')
       || '<span class="note">No deliveries or pickups waiting to be logged.</span>';
 
     const mileSorted = [...FIN.mileage].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
@@ -970,8 +987,35 @@
       </table>` : '<p class="empty-line">No trips logged yet.</p>';
   }
 
+  // ---- Clear trips that don't need a mileage log (combined runs, etc.) ----
+  let PAST_UNLOGGED = [];
+  async function setTripSkips(action, extra, okNote) {
+    const resp = await finCall({ action, ...extra });
+    if (!resp.ok) { showErr('Couldn’t update the trip list. Try again.'); return false; }
+    FIN.tripSkips = (await resp.json()).tripSkips || {};
+    return true;
+  }
+  $('tripNudge').addEventListener('click', async (e) => {
+    if (e.target.closest('[data-trip-clear-all]')) {
+      const trips = PAST_UNLOGGED.slice();
+      if (!trips.length || !confirm(`Clear ${plural(trips.length, 'trip')} from "not logged"? Use this for trips that don't need a mileage log. You can bring them back.`)) return;
+      if (await setTripSkips('skipTrips', { trips })) { LAST_CLEARED = trips; renderMileage(); }
+    } else if (e.target.closest('[data-trip-undo]')) {
+      const trips = LAST_CLEARED || [];
+      if (await setTripSkips('unskipTrips', { trips })) { LAST_CLEARED = null; renderMileage(); }
+    } else if (e.target.closest('[data-trip-restore]')) {
+      if (await setTripSkips('unskipTrips', { all: true })) { LAST_CLEARED = null; renderMileage(); }
+    }
+  });
+
   // Chip: fill the form, then work out the round-trip miles
   $('tripChips').addEventListener('click', async (e) => {
+    const x = e.target.closest('[data-trip-skip]');
+    if (x) {
+      const trips = [{ key: x.dataset.tripSkip, leg: x.dataset.leg }];
+      if (await setTripSkips('skipTrips', { trips })) { LAST_CLEARED = trips; renderMileage(); }
+      return;
+    }
     const b = e.target.closest('[data-trip]'); if (!b) return;
     mileEditCancel();
     $('mileDate').value = b.dataset.date; $('milePurpose').value = b.dataset.purpose;

@@ -1,7 +1,12 @@
 // POST /.netlify/functions/finance
 // Expense + mileage tracking. Actions: list, addExpense, editExpense,
 // addMileage, editMileage, delete, restore, setRate, deleteRate,
-// setStripeFees, setTaxPct.
+// setStripeFees, setTaxPct, skipTrips, unskipTrips.
+//
+// Skipped trips: deliveries/pickups you've said don't need a mileage log
+// (combined runs, a ride along, an old trip you'll never log). Kept in the
+// "meta" store under "tripSkips" as { "<rentalKey>:<leg>": skippedAt }, and
+// left out of "trips not logged" on the Dashboard and Finance.
 //
 // Mileage rates are kept by start date ({ from, rate }), since the IRS rate
 // can change during a year; each trip uses the rate in effect on its date.
@@ -33,6 +38,12 @@ function mileageRecord(b) {
     miles: Number(b.miles) || 0,
     ...(b.rentalKey ? { rentalKey: String(b.rentalKey).slice(0, 200), leg: b.leg === "pickup" ? "pickup" : "delivery" } : {}),
   };
+}
+const tripId = (t) => t && typeof t.key === "string" && t.key && (t.leg === "delivery" || t.leg === "pickup")
+  ? `${t.key.slice(0, 200)}:${t.leg}` : null;
+async function getSkips(meta) {
+  const s = await meta.get("tripSkips", { type: "json" }).catch(() => null);
+  return s && typeof s === "object" && !Array.isArray(s) ? s : {};
 }
 const validDate = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
@@ -76,7 +87,8 @@ export default async (request) => {
           const withReceipt = new Set(photos.map((b) => b.key).filter((k) => k.endsWith(":receipt")).map((k) => k.slice(0, -8)));
           for (const e of expenses) if (withReceipt.has(e.key)) e.hasReceipt = true;
         } catch {}
-        return json({ expenses, mileage, mileageRate, mileageRates, stripeFees, taxPct });
+        const tripSkips = await getSkips(meta);
+        return json({ expenses, mileage, mileageRate, mileageRates, stripeFees, taxPct, tripSkips });
       }
 
       case "addExpense": {
@@ -185,6 +197,23 @@ export default async (request) => {
         }
         await meta.setJSON("stripeFees", { pct, fixed });
         return json({ ok: true });
+      }
+      case "skipTrips":
+      case "unskipTrips": {
+        // { trips: [{ key, leg }] }, or { all: true } with unskipTrips
+        const skips = await getSkips(meta);
+        const ids = (Array.isArray(body.trips) ? body.trips : []).slice(0, 500).map(tripId).filter(Boolean);
+        if (body.action === "skipTrips") {
+          if (!ids.length) return new Response("No trips given", { status: 400 });
+          const now = new Date().toISOString();
+          for (const id of ids) skips[id] = now;
+        } else if (body.all === true) {
+          for (const id of Object.keys(skips)) delete skips[id];
+        } else {
+          for (const id of ids) delete skips[id];
+        }
+        await meta.setJSON("tripSkips", skips);
+        return json({ ok: true, tripSkips: skips });
       }
       default:
         return new Response("Unknown action", { status: 400 });

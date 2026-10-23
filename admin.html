@@ -109,6 +109,10 @@
   .needs a:hover{border-color:var(--ink);}
   .needs b{font-weight:700;}
   .needs .rush{color:#831C1E; font-weight:700;}
+  .needs-pair{display:inline-flex; align-items:stretch;}
+  .needs-pair a{border-radius:999px 0 0 999px;}
+  .needs-x{width:auto; margin:0; padding:4px 12px 4px 10px; font-size:13px; font-weight:600; background:#fff; color:var(--steel); border:1px solid var(--border); border-left:none; border-radius:0 999px 999px 0;}
+  .needs-x:hover{background:#fff; color:var(--ink); border-color:var(--ink);}
   .texts .skip{font-size:12px; color:var(--muted);}
   .otw{display:block; margin-top:6px;}
   .otw .btn{height:30px; padding:0 10px; font-size:13px;}
@@ -192,6 +196,8 @@
     .texts .row .btn{grid-column:2;grid-row:1 / span 2;min-height:44px;}
     .texts .row .skip{grid-column:2;grid-row:3;justify-self:center;}
     .needs a{flex:1 1 100%;}
+    .needs-pair{flex:1 1 100%;}
+    .needs-pair a{flex:1 1 auto;}
   }
 </style>
 </head>
@@ -344,6 +350,7 @@
       DATA.expenses = fd.expenses || [];
       DATA.stripeFees = fd.stripeFees || { pct: 2.9, fixed: 0.3 };
       DATA.mileage = fd.mileage || [];
+      DATA.tripSkips = fd.tripSkips || {};
       DATA.invEvents = id.events || [];
       DATA.requests = qd.requests || [];
       DATA.mileageRates = fd.mileageRates || [];
@@ -632,6 +639,30 @@
     } catch (err) { b.disabled = false; b.textContent = 'On the way'; showErr(err.message); }
   });
 
+  // ---- Clear "trips not logged" (they don't need a mileage log) ----
+  let UNLOGGED = [];
+  $('needs').addEventListener('click', async (e) => {
+    if (!e.target.closest('[data-clear-trips]')) return;
+    const trips = UNLOGGED.slice();
+    if (!trips.length || !confirm(`Clear ${plural(trips.length, 'trip')} from "not logged"? Use this for trips that don't need a mileage log. You can bring them back from Finance.`)) return;
+    try {
+      const resp = await post('finance', { secret: $('secret').value.trim(), action: 'skipTrips', trips });
+      if (!resp.ok) throw new Error();
+      DATA.tripSkips = (await resp.json()).tripSkips || {};
+      render();
+      const st = $('status');
+      st.className = 'status ok'; st.style.display = 'block';
+      st.innerHTML = `Cleared ${esc(plural(trips.length, 'trip'))}. <button type="button" class="linkbtn" id="undoTrips">Undo</button>`;
+      $('undoTrips').onclick = async () => {
+        const r2 = await post('finance', { secret: $('secret').value.trim(), action: 'unskipTrips', trips });
+        if (!r2.ok) return showErr('Couldn’t undo. Bring them back from Finance.');
+        DATA.tripSkips = (await r2.json()).tripSkips || {};
+        st.style.display = 'none';
+        render();
+      };
+    } catch { showErr('Couldn’t clear those trips. Try again.'); }
+  });
+
   // ---- Needs you: one line per kind of waiting work, only when there is some ----
   function renderNeeds(today) {
     const lines = [];
@@ -647,17 +678,18 @@
     if (dueOut.length) lines.push(`<a href="admin-outreach.html"><b>${plural(dueOut.length, 'partner follow-up')}</b> due${dueOut.length <= 2 ? ': ' + esc(dueOut.map(o => o.name).join(', ')) : ''}</a>`);
     // Deliveries and pickups in the last 30 days with no mileage logged (same match as Finance)
     const since = shiftDate(today, -30);
-    let unlogged = 0;
+    const unlogged = [];   // [{ key, leg }], cleared ones (tripSkips) left out
     for (const r of DATA.rentals) {
       if (r.serviceType === 'self') continue;
       for (const [leg, date] of [['delivery', r.dropoffDate], ['pickup', r.pickupDate]]) {
         if (!date || date < since || date > today) continue;
         const firstName = String(r.name || '').toLowerCase().split(' ')[0];
         const logged = DATA.mileage.some(m => (m.rentalKey === r.key && m.leg === leg) || (!m.rentalKey && m.date === date && firstName && String(m.purpose || '').toLowerCase().includes(firstName)));
-        if (!logged) unlogged++;
+        if (!logged && !(DATA.tripSkips || {})[r.key + ':' + leg]) unlogged.push({ key: r.key, leg });
       }
     }
-    if (unlogged) lines.push(`<a href="admin-finance.html#mileage"><b>${plural(unlogged, 'trip')}</b> not logged in mileage yet</a>`);
+    UNLOGGED = unlogged;
+    if (unlogged.length) lines.push(`<span class="needs-pair"><a href="admin-finance.html#mileage"><b>${plural(unlogged.length, 'trip')}</b> not logged in mileage yet</a><button type="button" class="needs-x" data-clear-trips title="Clear: these don't need a mileage log">Clear</button></span>`);
     if (DATA.reviewLinkMissing) lines.push(`<a href="admin-reminders.html"><b>Review texts are off:</b> the Google review link isn't set in Netlify</a>`);
     $('needs').innerHTML = lines.length ? `<span class="needs-h">Needs you</span>${lines.join('')}` : '';
     $('needs').hidden = !lines.length;
