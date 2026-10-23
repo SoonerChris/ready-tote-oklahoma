@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Requests · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261030"></script>
+<script src="admin-shared.js?v=20261031"></script>
 <script src="admin-availability.js?v=20261024"></script>
 <style>
   :root{--col:820px;}
@@ -197,6 +197,10 @@
   }
 
   function render() {
+    // An Undo only makes sense while the request is still where that move
+    // put it. If it moved since (the customer tapped the confirm link, or
+    // someone else changed it), drop the Undo instead of offering a wrong one.
+    if (LAST_MOVE && ALL.find(r => r.key === LAST_MOVE.key)?.status !== LAST_MOVE.status) LAST_MOVE = null;
     // Tabs with live counts; Reviewed only shows while something is in it
     $('statusTabs').innerHTML = TABS
       .filter(([f]) => f !== 'reviewed' || ALL.some(r => r.status === 'reviewed') || FILTER === 'reviewed')
@@ -308,7 +312,7 @@
         <div><span class="lbl">Pickup</span>${esc(fmtReqDate(r.pickupDate))}${pref(r.pickupWindow)}</div>
         <div><span class="lbl">Address</span>${addr ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${esc(addr)}</a>` : 'Not given'}</div>
         ${OPEN_STATUSES.includes(r.status) ? `<div class="avail-row"><span class="lbl">Stock</span><span class="avail-list">${requestAvailability(r)}</span></div>` : ''}
-        <div><span class="lbl">Phone</span>${r.phone ? `<a href="tel:${escAttr(phoneDigits)}">${esc(r.phone)}</a>` : 'Not given'}</div>
+        <div><span class="lbl">Phone</span>${r.phone ? `<a href="tel:${escAttr(phoneDigits)}">${esc(fmtPhone(r.phone))}</a>` : 'Not given'}</div>
         <div><span class="lbl">Email</span>${r.email ? `<a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : 'Not given'}</div>
         ${r.promoCode ? `<div><span class="lbl">Promo</span><b>${esc(r.promoCode)}</b> <span class="muted">check it's valid before invoicing</span></div>` : ''}
         ${r.reviewNotes ? `<div><span class="lbl">Notes</span>${esc(r.reviewNotes)}</div>` : ''}
@@ -409,7 +413,7 @@
 
   // Undo for status changes. The latest change shows an Undo right in its
   // card; every open request also has a "Move back" link for later.
-  let LAST_MOVE = null;   // { key, prev, label }
+  let LAST_MOVE = null;   // { key, prev, label, status }
   const STEP_BACK = {
     awaiting_confirmation: (r) => r.reviewedAt ? ['review', 'Move back to reviewed'] : ['reopen', 'Move back to new'],
     confirmed: () => ['unconfirm', 'Move back to awaiting customer'],
@@ -652,7 +656,7 @@
       if (idx >= 0) ALL[idx] = data.request;
       // Forward moves can be undone from the card; undoing doesn't offer another undo
       LAST_MOVE = ['send-confirmation', 'confirm', 'decline'].includes(action) && UNDO_ACTION[prev]
-        ? { key, prev, label: okMsg.replace(/\.$/, '') } : null;
+        ? { key, prev, label: okMsg.replace(/\.$/, ''), status: data.request.status } : null;
       showOk(okMsg);
       render();
     } catch (e) {
