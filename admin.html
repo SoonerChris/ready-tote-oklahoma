@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Dashboard · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261103"></script>
+<script src="admin-shared.js?v=20261104"></script>
 <style>
   /* Dashboard layout: the cream body is the frame (sidebar on it, no rule),
      the work sits on one white sheet inset 8px from the window's right,
@@ -688,6 +688,7 @@
       if (d.pickedUpAt) r.pickedUpAt = d.pickedUpAt; else delete r.pickedUpAt;
     }
     render();
+    refreshBadge();
   }
   document.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-mark]'); if (!b) return;
