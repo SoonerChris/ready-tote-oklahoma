@@ -32,13 +32,6 @@ function fmtDate(iso, fallback = '') {
   return m + '/' + d + '/' + y.slice(2);
 }
 
-// "On the way" text for a delivery or pickup (no ETA; sent from Messages).
-function onTheWayText(name, leg) {
-  const first = String(name || 'there').split(' ')[0];
-  const job = leg === 'pickup' ? 'pick up your totes' : 'deliver your totes';
-  return `Hi ${first}, it's ${TEXT_SIGNER}! We're on our way now to ${job}. See you soon!`;
-}
-
 // Phone for display: "15803993202" or "580.399.3202" -> "(580) 399-3202".
 // Anything that isn't a US number is shown as typed.
 function fmtPhone(raw) {

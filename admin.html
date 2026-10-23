@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Dashboard · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261031"></script>
+<script src="admin-shared.js?v=20261101"></script>
 <style>
   /* Dashboard layout: the cream body is the frame (sidebar on it, no rule),
      the work sits on one white sheet inset 8px from the window's right,
@@ -480,7 +480,7 @@
           <div class="who">${e.phone ? `<a href="tel:${escAttr(normalizePhone(e.phone))}" title="Call ${escAttr(e.name)}">${esc(e.name)}</a>` : esc(e.name)}${e.unpaid ? ' <span class="kind due">Unpaid</span>' : ''}</div>
           <div class="meta">${e.addr ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.addr)}" target="_blank" rel="noopener" title="Open in Maps">${esc(e.addr)}</a>` : 'At our place'}</div>
         </div>
-        <div class="totes num">${e.totes || '—'} totes${e.date === today && e.addr && e.phone ? `<span class="otw"><a class="btn ghost" href="${escAttr(smsLink(e.phone, onTheWayText(e.name, e.leg)))}">On the way</a></span>` : ''}</div>
+        <div class="totes num">${e.totes || '—'} totes${e.date === today && e.addr && e.phone ? `<span class="otw" data-otw="${escAttr(e.key)}" data-leg="${e.leg}"><button type="button" class="btn ghost">On the way</button></span>` : ''}</div>
       </div>`;
     }).join('') : '<p class="empty-line">Nothing scheduled in the next 7 days.</p>';
 
@@ -617,6 +617,19 @@
       $('status').style.display = 'none';
       render();
     } catch { showErr('Couldn’t undo. Mark it unpaid on All rentals.'); }
+  });
+
+  // ---- On the way: live ETA text for today's jobs (same as All rentals) ----
+  $('schedList').addEventListener('click', async (e) => {
+    const wrap = e.target.closest('[data-otw]'); if (!wrap || !e.target.closest('button')) return;
+    const b = wrap.querySelector('button'); b.disabled = true; b.textContent = 'Working out ETA…';
+    try {
+      const resp = await post('on-my-way', { secret: $('secret').value.trim(), key: wrap.dataset.otw, type: wrap.dataset.leg, origin: sessionStorage.getItem('rto-admin-startfrom') || '' });
+      const d = await resp.json().catch(() => ({}));
+      if (!resp.ok || d.error) throw new Error(d.error || 'Couldn’t work out the ETA.');
+      wrap.innerHTML = `<a class="btn ghost" href="${escAttr(d.sms)}">${d.arrivalTime ? `Text ETA (${esc(d.arrivalTime)})` : 'Text: on our way'}</a>`;
+      if (d.warning) showErr('No ETA in the text. ' + d.warning);
+    } catch (err) { b.disabled = false; b.textContent = 'On the way'; showErr(err.message); }
   });
 
   // ---- Needs you: one line per kind of waiting work, only when there is some ----
