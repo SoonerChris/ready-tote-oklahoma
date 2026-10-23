@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Finance · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261030"></script>
+<script src="admin-shared.js?v=20261031"></script>
 <style>
   /* Finance answers one question first: how is the business doing in the
      period picked (a month, a year, or all time), and where is the money
@@ -948,7 +948,7 @@
     const pastUnlogged = cands.filter(t => t.date <= TODAY);
     const thisMonth = pastUnlogged.filter(t => t.date >= monthStart).length;
     $('tripNudge').innerHTML = pastUnlogged.length
-      ? `<b>${plural(pastUnlogged.length, 'trip')}</b> ${pastUnlogged.length === 1 ? 'isn’t' : 'aren’t'} logged yet${thisMonth && thisMonth < pastUnlogged.length ? ` (${thisMonth} this month)` : ''}. Tap one to fill it in, miles included.`
+      ? `<b>${plural(pastUnlogged.length, 'trip')}</b> ${pastUnlogged.length === 1 ? 'isn’t' : 'aren’t'} logged yet${thisMonth && thisMonth < pastUnlogged.length ? ` (${thisMonth} this month)` : ''}. Tap one to fill it in, then add the miles.`
       : 'Every delivery and pickup so far is logged.';
     $('tripChips').innerHTML = cands.slice(0, 10).map(t => `
       <button type="button" data-trip="${escAttr(t.key)}" data-leg="${t.leg}" data-date="${t.date}" data-purpose="${escAttr(t.purpose)}"${t.date > TODAY ? ' class="later"' : ''}>${esc(fmtDate(t.date).slice(0,5))} · ${esc(t.leg === 'delivery' ? 'Deliver' : 'Pick up')}, ${esc(t.name || '')}</button>`).join('')
@@ -970,22 +970,14 @@
       </table>` : '<p class="empty-line">No trips logged yet.</p>';
   }
 
-  // Chip: fill the form, then work out the round-trip miles
-  $('tripChips').addEventListener('click', async (e) => {
+  // Chip: fill the date and trip; you type the round-trip miles
+  $('tripChips').addEventListener('click', (e) => {
     const b = e.target.closest('[data-trip]'); if (!b) return;
     mileEditCancel();
     $('mileDate').value = b.dataset.date; $('milePurpose').value = b.dataset.purpose;
     TRIP_FOR = { key: b.dataset.trip, leg: b.dataset.leg };
-    $('mileMiles').value = ''; $('mileMiles').placeholder = 'Working out miles…';
-    $('mileNote').textContent = '';
-    try {
-      const resp = await fetch('/.netlify/functions/trip-miles', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: $('secret').value.trim(), key: b.dataset.trip, type: b.dataset.leg, origin: sessionStorage.getItem('rto-admin-startfrom') || '' }) });
-      const d = await resp.json().catch(() => ({}));
-      if (resp.ok && d.miles) { $('mileMiles').value = d.miles; $('mileNote').textContent = `Round trip from ${d.origin}. Change it if you made other stops.`; }
-      else $('mileNote').textContent = (d.error || 'Couldn’t work out the miles.') + ' Type them in.';
-    } catch { $('mileNote').textContent = 'Couldn’t work out the miles. Type them in.'; }
-    $('mileMiles').placeholder = '0.0';
+    $('mileMiles').value = '';
+    $('mileNote').textContent = 'Type the round-trip miles.';
     $('mileMiles').focus();
   });
 

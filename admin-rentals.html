@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>All rentals · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261030"></script>
+<script src="admin-shared.js?v=20261031"></script>
 <script src="admin-rentals-shared.js?v=20261029"></script>
 <style>
   .rem .who{font-weight:600;font-size:16px;}
@@ -188,10 +188,6 @@
     </div>
     <div id="unpaidSummary"></div>
     <div id="allRentals"></div>
-    <div style="margin-top:28px; max-width:520px;">
-      <label for="startFrom">Starting point for “On the way” texts</label>
-      <input type="text" id="startFrom" placeholder="Leave blank to use your home address">
-    </div>
   </div>
 </div>
 
@@ -200,8 +196,6 @@
   // Restore shared secret
   $('secret').value = adminSessionMarker();   // signed-in marker; the session cookie is what the server checks
 
-  $('startFrom').value = sessionStorage.getItem('rto-admin-startfrom') || '';
-  $('startFrom').addEventListener('input', () => sessionStorage.setItem('rto-admin-startfrom', $('startFrom').value));
 
   let ALL_RENTALS = [], REM = {};
   // Package Stripe links and what each charges, for the price check on edit
@@ -368,7 +362,7 @@
             <div><span class="k">Counts</span>${counts}</div>
             <div><span class="k">Times</span>out ${esc(fmtDate(r.dropoffDate))} ${esc(r.dropoffTime || '')}, back ${esc(fmtDate(r.pickupDate))} ${esc(r.pickupTime || '')}</div>
             <div><span class="k">Address</span>${addr}</div>
-            <div><span class="k">Contact</span>${r.phone ? `<a href="tel:${escAttr(r.phone)}">${esc(r.phone)}</a>` : '—'}${r.email ? ` · <a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : ''}</div>
+            <div><span class="k">Contact</span>${r.phone ? `<a href="tel:${escAttr(r.phone)}">${esc(fmtPhone(r.phone))}</a>` : '—'}${r.email ? ` · <a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : ''}</div>
             ${(r.stockLosses || []).length ? `<div><span class="k">Stock</span><span style="color:#831C1E;">${r.stockLosses.map(l => `${l.quantity} ${l.item === 'dolly' ? (l.quantity === 1 ? 'dolly' : 'dollies') : (l.quantity === 1 ? 'tote' : 'totes')} ${l.type === 'lost' ? 'not returned' : 'damaged'} (${esc(shortDate(l.date))})`).join(', ')}</span></div>` : ''}
             ${r.tosAccepted ? `<div><span class="k">Terms</span>Accepted ${esc(fmtDate((r.tosAcceptedAt || '').slice(0, 10)))}</div>` : ''}
             ${missing.length ? `<div><span class="k">Missing</span><span style="color:#831C1E;">${esc(missing.join(', '))}</span></div>` : ''}
@@ -378,8 +372,8 @@
           ${askFor(r.key, String(r.name || '').split(' ')[0])}
           ${paymentControls ? `<div class="actions payment-actions">${paymentControls}</div>` : ''}
           ${!r.cancelled && r.serviceType !== 'self' && (dOff || pOff) && !isDone(r) ? `<div class="actions">
-            ${dOff && !isOut(r) ? onTheWayBtn('delivery', r.key) : ''}
-            ${pOff ? onTheWayBtn('pickup', r.key) : ''}
+            ${dOff && !isOut(r) ? onTheWayBtn('delivery', r) : ''}
+            ${pOff ? onTheWayBtn('pickup', r) : ''}
           </div>` : ''}
           <div class="tool-row">
             ${tbtn('edit', 'Edit rental')}${tbtn('texts', 'Other texts')}${tbtn('photos', 'Photos')}${tbtn('more', 'More')}
@@ -509,7 +503,6 @@
   function wireCards(el) {
     el.querySelectorAll('.pay-btn').forEach(btn => btn.addEventListener('click', () => togglePaid(btn.dataset.key, btn.dataset.setpaid === 'true')));
     el.querySelectorAll('.email-reminder-btn').forEach(btn => btn.addEventListener('click', () => sendEmailReminder(btn.dataset.key)));
-    el.querySelectorAll('.otw-btn').forEach(btn => btn.addEventListener('click', () => onTheWay(btn.dataset.key, btn.dataset.type)));
     el.querySelectorAll('.edit-military-btn').forEach(btn => btn.addEventListener('click', () => toggleMilitary(btn.dataset.key, btn.dataset.military === 'true')));
     el.querySelectorAll('.add-photo-btn').forEach(btn => btn.addEventListener('click', () => triggerPhotoCapture(btn.dataset.key, btn.dataset.type)));
     el.querySelectorAll('.view-photo-btn').forEach(btn => btn.addEventListener('click', () => viewPhoto(btn.dataset.key, btn.dataset.type)));
@@ -569,39 +562,11 @@
     return viewBtn + replaceBtn;
   }
 
-  // "On the Way" button: starts as a plain button, calculates a live ETA via
-  // the on-my-way function, then swaps in a ready-to-tap text link.
-  function onTheWayBtn(type, key) {
-    const label = type === 'delivery' ? 'Delivery' : 'Pickup';
-    return `<span id="otw-wrap-${type}-${key}"><button type="button" id="otw-${type}-${key}" class="otw-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">On the way: ${label.toLowerCase()}</button></span>`;
+  // "On the way" button: opens Messages with the text ready to send.
+  function onTheWayBtn(type, r) {
+    if (!r.phone) return '';
+    return `<a class="sms-btn" href="${escAttr(smsLink(r.phone, onTheWayText(r.name, type)))}" style="padding:8px 16px; font-size:14px;">On the way: ${type}</a>`;
   }
-
-  window.onTheWay = async (key, type) => {
-    const secret = $('secret').value.trim();
-    if (!secret) return showErr('Enter the admin secret first.');
-    const origin = $('startFrom').value.trim();
-    const label = type === 'delivery' ? 'Delivery' : 'Pickup';
-    const btn = $('otw-' + type + '-' + key);
-    const wrap = $('otw-wrap-' + type + '-' + key);
-    if (btn) { btn.disabled = true; btn.textContent = 'Calculating ETA…'; }
-    try {
-      const resp = await fetch('/.netlify/functions/on-my-way', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret, key, type, origin }),
-      });
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok || data.error) {
-        showErr(data.error || ('On the Way calculation failed (' + resp.status + ').'));
-        if (btn) { btn.disabled = false; btn.textContent = 'On the way: ' + label.toLowerCase(); }
-        return;
-      }
-      wrap.innerHTML = `<a class="sms-btn" href="${data.sms}" style="padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control);">Text ETA (${esc(data.arrivalTime)})</a>`;
-    } catch {
-      showErr('Network error calculating ETA.');
-      if (btn) { btn.disabled = false; btn.textContent = 'On the way: ' + label.toLowerCase(); }
-    }
-  };
 
   // An invoice counts as "unpaid" once it's actually been emailed (invoicedAt,
   // not a backfilled record) and no paid flag has been set for it.
