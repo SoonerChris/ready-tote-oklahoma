@@ -13,8 +13,25 @@
 <style>
   :root{--col:960px;}
 
-  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:24px;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
-  @media(max-width:700px){.summary{grid-template-columns:repeat(2,1fr);}}
+  .summary-line{margin:-6px 0 18px; font-size:15px; color:var(--steel);}
+  .summary-line b{color:var(--ink); font-variant-numeric:tabular-nums;}
+  .toolbar{margin:0 0 16px;}
+  .toolbar input{margin:0;}
+  .entry-main{flex:1; min-width:220px;}
+  .entry-name .status-pill{margin-left:6px; vertical-align:2px;}
+  .code-line{font-size:13px; margin-top:4px; color:var(--steel);}
+  .code-line b{color:var(--ink);}
+  .entry-tools{display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:10px;}
+  .entry-tools a.small-btn{display:inline-flex; align-items:center; text-decoration:none; border-radius:6px; font-weight:600;}
+  .entry-tools [hidden]{display:none;}
+  .del-ask{font-size:13px; font-weight:600; display:inline-flex; gap:6px; align-items:center;}
+  .history{margin-top:10px; padding:10px 12px; background:#FAF8F3; border-radius:8px;}
+  .history[hidden]{display:none;}
+  .log-add{display:flex; gap:6px; margin-bottom:8px;}
+  .log-add input{flex:1; margin:0; height:34px; padding:4px 10px; font-size:14px;}
+  .log-row{display:flex; gap:10px; font-size:14px; padding:5px 0; border-top:1px solid #EEE8DC;}
+  .log-row span{color:var(--steel); min-width:52px; font-variant-numeric:tabular-nums;}
+  .undo-link{all:unset; cursor:pointer; margin-left:8px; text-decoration:underline; text-underline-offset:3px; font-weight:600;}
   .scard{background:var(--white);padding:14px 16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 -1px -1px 0;}
   .scard .num{font-weight:600;font-size:24px;line-height:1.15;font-variant-numeric:tabular-nums;}
   .scard .lbl{font-size:14px;color:var(--steel);margin-top:2px;}
@@ -81,65 +98,24 @@
   </nav>
 
   <h1>Partner outreach</h1>
-  <p class="sub">Apartment communities, realtor, remodeler &amp; moving company partnerships — tracks status so nothing falls through the cracks.</p>
+  <p class="summary-line" id="summaryLine">Loading partners…</p>
 
   <div class="secret-bar">
   <input type="hidden" id="secret">
     <button id="loadBtn">Refresh</button>
   </div>
-
   <div class="status" id="status"></div>
 
   <div id="dueBox"></div>
 
-  <div class="summary" id="summary">
-    <div class="scard"><div class="num" id="s-apt-total">–</div><div class="lbl">Apartments contacted</div></div>
-    <div class="scard green"><div class="num" id="s-apt-active">–</div><div class="lbl">Apartment partners</div></div>
-    <div class="scard"><div class="num" id="s-realtor-total">–</div><div class="lbl">Realtors contacted</div></div>
-    <div class="scard green"><div class="num" id="s-realtor-active">–</div><div class="lbl">Realtor partners</div></div>
-    <div class="scard"><div class="num" id="s-remodeler-total">–</div><div class="lbl">Remodelers contacted</div></div>
-    <div class="scard green"><div class="num" id="s-remodeler-active">–</div><div class="lbl">Remodeler partners</div></div>
-    <div class="scard"><div class="num" id="s-mover-total">–</div><div class="lbl">Movers contacted</div></div>
-    <div class="scard green"><div class="num" id="s-mover-active">–</div><div class="lbl">Mover partners</div></div>
+  <div class="toolbar">
+    <input type="search" id="search" placeholder="Search partners, people, notes or codes" aria-label="Search partners">
   </div>
-
-  <div class="section">
-    <h2>Apartment Communities <span class="count-badge" id="apt-count">0</span></h2>
-    <button class="toggle-add" onclick="toggleForm('apartment')">+ Add apartment contact</button>
-    <div class="addform" id="form-apartment" style="display:none;"></div>
-    <div id="list-apartment"><div class="empty">Loading…</div></div>
-  </div>
-
-  <div class="section">
-    <h2>Realtors &amp; Brokerages <span class="count-badge" id="realtor-count">0</span></h2>
-    <button class="toggle-add" onclick="toggleForm('realtor')">+ Add realtor contact</button>
-    <div class="addform" id="form-realtor" style="display:none;"></div>
-    <div id="list-realtor"><div class="empty">Loading…</div></div>
-  </div>
-
-  <div class="section">
-    <h2>Remodeling Companies <span class="count-badge" id="remodeler-count">0</span></h2>
-    <button class="toggle-add" onclick="toggleForm('remodeler')">+ Add remodeler contact</button>
-    <button class="toggle-add" onclick="importTopRemodelers()">+ Import top 9 remodelers</button>
-    <div class="addform" id="form-remodeler" style="display:none;"></div>
-    <div id="list-remodeler"><div class="empty">Loading…</div></div>
-  </div>
-
-  <div class="section">
-    <h2>Moving Companies <span class="count-badge" id="mover-count">0</span></h2>
-    <button class="toggle-add" onclick="toggleForm('mover')">+ Add mover contact</button>
-    <button class="toggle-add" onclick="importTopMovers()">+ Import top 5 verified movers</button>
-    <div class="addform" id="form-mover" style="display:none;"></div>
-    <div id="list-mover"><div class="empty">Loading…</div></div>
-  </div>
-
-  </div>
+  <div id="sections"></div>
+</div>
 
 <script>
   const $ = (id) => document.getElementById(id);
-  const STATUSES = ["Not Contacted","Contacted","Follow-Up Scheduled","Active Partner","Not Interested"];
-  let ENTRIES = [];
-
   const TOP_MOVERS = [
     { name: "Thunder Moving", contactName: "", phone: "(405) 757-5354", email: "", notes: "BBB A+, family-owned since 2019, explicitly services Moore/Edmond/Norman. Top pick, largest fleet (13 trucks)." },
     { name: "Boxed Out Moving", contactName: "Jonathan", phone: "(405) 820-4552", email: "jonathan@boxedoutmoving.com", notes: "Also does apartment relocations, good overlap with our apartment partners. Explicitly covers Moore." },
@@ -147,6 +123,7 @@
     { name: "The 2 Move Crew", contactName: "", phone: "(405) 430-3529", email: "the2movecrew@gmail.com", notes: "Based in Norman, serves within 100-mile radius, easily reaches Moore/OKC." },
     { name: "High Quality Moving OKC", contactName: "", phone: "(580) 595-1262", email: "", notes: "Claims 2,000+ OKC moves. Verify current reviews before investing heavily, contact info less established." },
   ];
+
 
   const TOP_REMODELERS = [
     { name: "Guss Construction and Remodeling", contactName: "", phone: "(405) 550-7799", email: "", notes: "4.8★ (78 reviews). Moore, OK, closest to home base. Kitchen/bath remodels." },
@@ -160,59 +137,88 @@
     { name: "TR Contracting", contactName: "", phone: "(580) 217-9342", email: "", notes: "5.0★ (40 reviews). Ada, OK. Mostly roofing/exterior/storm restoration but covers Ada." },
   ];
 
-  async function importTopMovers() {
-    if (!secret()) return showStatus('err', 'Enter your admin secret first.');
-    if (!confirm('Import the 5 verified mover contacts? Skip this if you already added them.')) return;
-    let added = 0;
-    for (const m of TOP_MOVERS) {
-      if (ENTRIES.some(e => e.category === 'mover' && e.name === m.name)) continue;
-      try {
-        const payload = { category: 'mover', name: m.name, contactName: m.contactName, email: m.email, phone: m.phone, notes: m.notes };
-        const result = await api('save-outreach', payload);
-        ENTRIES.push({ key: result.key, ...payload, status: 'Not Contacted' });
-        added++;
-      } catch (err) {
-        showStatus('err', 'Failed on ' + m.name + ': ' + err.message);
-        return;
-      }
-    }
-    render();
-    showStatus('ok', added ? `Imported ${added} mover contact(s).` : 'All 5 movers already in your list.');
-  }
 
-  async function importTopRemodelers() {
-    if (!secret()) return showStatus('err', 'Enter your admin secret first.');
-    if (!confirm('Import the 9 verified remodeler contacts? Skip this if you already added them.')) return;
-    let added = 0;
-    for (const m of TOP_REMODELERS) {
-      if (ENTRIES.some(e => e.category === 'remodeler' && e.name === m.name)) continue;
-      try {
-        const payload = { category: 'remodeler', name: m.name, contactName: m.contactName, email: m.email, phone: m.phone, notes: m.notes };
-        const result = await api('save-outreach', payload);
-        ENTRIES.push({ key: result.key, ...payload, status: 'Not Contacted' });
-        added++;
-      } catch (err) {
-        showStatus('err', 'Failed on ' + m.name + ': ' + err.message);
-        return;
-      }
-    }
-    render();
-    showStatus('ok', added ? `Imported ${added} remodeler contact(s).` : 'All 9 remodelers already in your list.');
-  }
+  // Partner types, in page order. "Other" covers storage facilities,
+  // property managers, churches and anyone else who sends movers our way.
+  const CATS = [
+    { id: 'apartment', title: 'Apartment communities', one: 'apartment', placeholder: 'Property or management company' },
+    { id: 'realtor',   title: 'Realtors and brokerages', one: 'realtor', placeholder: 'Agent or brokerage' },
+    { id: 'remodeler', title: 'Remodeling companies', one: 'remodeler', placeholder: 'Remodeling or contracting company', seed: TOP_REMODELERS },
+    { id: 'mover',     title: 'Moving companies', one: 'mover', placeholder: 'Moving company', seed: TOP_MOVERS },
+    { id: 'other',     title: 'Other partners', one: 'partner', placeholder: 'Storage facility, property manager…' },
+  ];
+  const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+
+  // Pipeline. Older entries used longer names; they're read as these.
+  const STATUSES = ['Not contacted', 'Contacted', 'Interested', 'Partner', 'Not interested'];
+  const LEGACY = { 'Not Contacted': 'Not contacted', 'Follow-Up Scheduled': 'Contacted', 'Active Partner': 'Partner', 'Not Interested': 'Not interested' };
+  const statusOf = e => LEGACY[e.status] || (STATUSES.includes(e.status) ? e.status : 'Not contacted');
+  const STATUS_CLASS = { Partner: 'active', Interested: 'followup', Contacted: 'contacted', 'Not interested': 'notinterested' };
+
+  let ENTRIES = [], RENTALS = [], REQUESTS = [];
+  const OPEN = new Set();   // cards with their history open
 
   $('secret').value = adminSessionMarker();   // signed-in marker; the session cookie is what the server checks
   $('loadBtn').addEventListener('click', loadAll);
-  // Auto-load if a secret is already saved (matches admin.html/admin-finance.html behavior)
+  $('search').addEventListener('input', render);
   if ($('secret').value) loadAll();
-
   function secret() { return $('secret').value.trim(); }
 
   const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
   const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   const shortDay = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  const CAT_LABEL = { apartment: 'Apartment', realtor: 'Realtor', remodeler: 'Remodeler', mover: 'Mover' };
-  // Partners that said no don't get follow-ups
-  const wantsFollowUp = e => e.nextFollowUp && e.status !== 'Not Interested';
+  const money = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const priceNum = p => { const m = String(p || '').replace(/[^0-9.]/g, ''); return m ? parseFloat(m) : 0; };
+  const wantsFollowUp = e => e.nextFollowUp && statusOf(e) !== 'Not interested';
+
+  async function api(fn, payload) {
+    const resp = await fetch('/.netlify/functions/' + fn, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: secret(), ...payload }),
+    });
+    if (resp.status === 401) throw new Error('You’re signed out. Log in again.');
+    if (!resp.ok) throw new Error(await resp.text().catch(() => '') || 'Request failed (' + resp.status + ')');
+    return resp.json();
+  }
+
+  async function loadAll() {
+    $('loadBtn').disabled = true;
+    try {
+      // Rentals and requests are only for counting what each partner's code brought in
+      const [o, r, q] = await Promise.all([api('get-outreach', {}), api('get-rentals', {}).catch(() => ({})), api('get-requests', {}).catch(() => ({}))]);
+      ENTRIES = o.entries || [];
+      RENTALS = (r.rentals || []).filter(x => !x.cancelled);
+      REQUESTS = q.requests || [];
+      render();
+      $('status').className = 'status';
+    } catch (e) { showStatus('err', e.message); }
+    $('loadBtn').disabled = false;
+  }
+
+  // What a partner's code brought in: bookings (rentals) and open requests
+  function referrals(e) {
+    const code = String(e.promoCode || '').toUpperCase();
+    if (!code) return null;
+    const hit = x => String(x.promoCode || '').toUpperCase() === code;
+    const rentals = RENTALS.filter(hit);
+    const open = REQUESTS.filter(x => hit(x) && !['invoiced', 'declined'].includes(x.status));
+    return { rentals: rentals.length, revenue: rentals.reduce((t, x) => t + priceNum(x.price), 0), open: open.length };
+  }
+
+  // ---- Ready-made messages ----
+  function intro(e) {
+    const who = e.contactName ? e.contactName.split(' ')[0] : 'there';
+    const code = e.promoCode ? ` If it helps, your clients can use code ${e.promoCode}${e.promoPct ? ` for ${e.promoPct}% off` : ''} when they book at readytoteokc.com.` : '';
+    const pitch = {
+      apartment: 'We rent clean, sturdy moving totes, delivered to the door and picked up after. They\'re a nice perk to offer new and moving-out residents, and they keep cardboard out of your dumpsters.',
+      realtor: 'We rent clean, sturdy moving totes, delivered and picked up. They make a great closing gift or a simple recommendation for clients who are packing up.',
+      remodeler: 'We rent clean, sturdy moving totes, delivered and picked up. When a homeowner has to clear out a kitchen or bathroom for a remodel, totes make it fast and keep their things safe.',
+      mover: 'We rent clean, sturdy moving totes, delivered and picked up. They stack better than boxes, so loading is faster for your crews, and customers skip buying cardboard.',
+      other: 'We rent clean, sturdy moving totes, delivered to the door and picked up after, across the OKC metro and Ada area.',
+    }[e.category] || '';
+    const body = `Hi ${who}, this is Chris with Ready Tote Oklahoma. ${pitch} Would you be open to recommending us?${code} Happy to drop off a few flyers. Thanks!`;
+    return { subject: 'Moving totes for your ' + ({ apartment: 'residents', realtor: 'clients', remodeler: 'clients', mover: 'customers' }[e.category] || 'customers'), body };
+  }
 
   function datesLine(e) {
     const parts = [];
@@ -225,34 +231,165 @@
     return parts.length ? `<div class="dates">${parts.join(' · ')}</div>` : '';
   }
 
-  // Every save sends the whole entry; the server keeps any field left out
-  const entryPayload = e => ({ key: e.key, category: e.category, name: e.name, contactName: e.contactName, email: e.email, phone: e.phone, notes: e.notes, status: e.status, dateContacted: e.dateContacted || '', nextFollowUp: e.nextFollowUp || '' });
+  // Every save sends the whole entry
+  const entryPayload = e => ({ key: e.key, category: e.category, name: e.name, contactName: e.contactName || '', email: e.email || '', phone: e.phone || '',
+    notes: e.notes || '', status: statusOf(e), dateContacted: e.dateContacted || '', nextFollowUp: e.nextFollowUp || '',
+    promoCode: e.promoCode || '', promoPct: e.promoPct ?? '', log: e.log || [] });
+  async function saveEntry(e, next, okMsg) {
+    try {
+      const res = await api('save-outreach', entryPayload(next));
+      Object.assign(e, next, { key: res.key || next.key });
+      render();
+      if (okMsg) showStatus('ok', okMsg);
+      return true;
+    } catch (err) { showStatus('err', err.message); return false; }
+  }
 
-  // "Contacted today": stamps today, schedules the next touch two weeks out
+  // "Contacted today": stamps today, logs it, next touch in two weeks
   async function contactedToday(key) {
-    const e = ENTRIES.find(x => x.key === key);
-    if (!e) return;
-    const next = { ...e, dateContacted: TODAY, nextFollowUp: e.status === 'Not Interested' ? '' : addDays(TODAY, 14),
-      status: !e.status || e.status === 'Not Contacted' ? 'Contacted' : e.status };
-    try {
-      await api('save-outreach', entryPayload(next));
-      Object.assign(e, next);
-      render();
-      showStatus('ok', `${e.name}: contacted today${next.nextFollowUp ? ', follow up ' + shortDay(next.nextFollowUp) : ''}.`);
-    } catch (err) { showStatus('err', err.message); }
+    const e = ENTRIES.find(x => x.key === key); if (!e) return;
+    const st = statusOf(e);
+    const next = { ...e, dateContacted: TODAY, nextFollowUp: st === 'Not interested' ? '' : addDays(TODAY, 14),
+      status: st === 'Not contacted' ? 'Contacted' : st, log: [{ date: TODAY, note: 'Contacted' }, ...(e.log || [])] };
+    saveEntry(e, next, `${e.name}: contacted today${next.nextFollowUp ? ', follow up ' + shortDay(next.nextFollowUp) : ''}.`);
   }
-  // Push a follow-up back a week without logging a contact
   async function snooze(key) {
-    const e = ENTRIES.find(x => x.key === key);
-    if (!e) return;
+    const e = ENTRIES.find(x => x.key === key); if (!e) return;
     const next = { ...e, nextFollowUp: addDays(e.nextFollowUp > TODAY ? e.nextFollowUp : TODAY, 7) };
+    saveEntry(e, next, `${e.name}: follow up moved to ${shortDay(next.nextFollowUp)}.`);
+  }
+  async function addLog(key) {
+    const e = ENTRIES.find(x => x.key === key); if (!e) return;
+    const input = document.querySelector(`[data-log-input="${CSS.escape(key)}"]`);
+    const note = input.value.trim(); if (!note) return;
+    if (await saveEntry(e, { ...e, log: [{ date: TODAY, note }, ...(e.log || [])] }, 'Added to the history.')) OPEN.add(key), render();
+  }
+  async function quickStatus(key, status) {
+    const e = ENTRIES.find(x => x.key === key); if (!e) return;
+    const next = { ...e, status, log: [{ date: TODAY, note: 'Status: ' + status }, ...(e.log || [])] };
+    if (status === 'Interested' && !e.nextFollowUp) next.nextFollowUp = addDays(TODAY, 7);
+    if (status === 'Not interested') next.nextFollowUp = '';
+    saveEntry(e, next, 'Updated ' + e.name + '.');
+  }
+
+  // ---- Delete: confirm in the card, then Undo puts it back under the same key ----
+  let LAST_DELETED = null;
+  async function deleteEntry(key) {
+    const e = ENTRIES.find(x => x.key === key); if (!e) return;
     try {
-      await api('save-outreach', entryPayload(next));
-      Object.assign(e, next);
+      await api('delete-outreach', { key });
+      ENTRIES = ENTRIES.filter(x => x.key !== key);
+      LAST_DELETED = e;
       render();
-      showStatus('ok', `${e.name}: follow up moved to ${shortDay(next.nextFollowUp)}.`);
+      showStatus('ok', `Deleted ${escapeHtml(e.name)}. <button type="button" class="undo-link" onclick="undoDelete()">Undo</button>`, true);
     } catch (err) { showStatus('err', err.message); }
   }
+  async function undoDelete() {
+    const e = LAST_DELETED; if (!e) return; LAST_DELETED = null;
+    try { await api('save-outreach', entryPayload(e)); ENTRIES.push(e); render(); showStatus('ok', 'Put back.'); }
+    catch (err) { showStatus('err', 'Couldn’t undo: ' + err.message); }
+  }
+
+  // ---- Import the researched lists (buttons hide once everything's in) ----
+  async function importSeed(cat) {
+    const c = CAT[cat]; let added = 0;
+    for (const m of c.seed) {
+      if (ENTRIES.some(e => e.category === cat && e.name === m.name)) continue;
+      try {
+        const payload = { category: cat, name: m.name, contactName: m.contactName, email: m.email, phone: m.phone, notes: m.notes, status: 'Not contacted' };
+        const result = await api('save-outreach', payload);
+        ENTRIES.push({ key: result.key, ...payload }); added++;
+      } catch (err) { showStatus('err', 'Failed on ' + m.name + ': ' + err.message); return; }
+    }
+    render();
+    showStatus('ok', `Imported ${added} ${c.one}${added === 1 ? '' : 's'}.`);
+  }
+
+  // ---- Render ----
+  const ORDER = { Partner: 1, Interested: 2, Contacted: 3, 'Not contacted': 4, 'Not interested': 5 };
+  function sortKey(e) {
+    const due = wantsFollowUp(e) && e.nextFollowUp <= TODAY ? 0 : 1;
+    return [due, ORDER[statusOf(e)] || 9, (e.name || '').toLowerCase()];
+  }
+  const byKey = (a, b) => { const x = sortKey(a), y = sortKey(b); return x[0] - y[0] || x[1] - y[1] || x[2].localeCompare(y[2]); };
+  function matches(e, q) {
+    if (!q) return true;
+    const hay = [e.name, e.contactName, e.email, e.phone, e.notes, e.promoCode, ...(e.log || []).map(l => l.note)].join(' ').toLowerCase();
+    return q.split(/\s+/).every(w => hay.includes(w));
+  }
+
+  function render() {
+    const q = $('search').value.trim().toLowerCase();
+    const partners = ENTRIES.filter(e => statusOf(e) === 'Partner').length;
+    const contacted = ENTRIES.filter(e => statusOf(e) !== 'Not contacted').length;
+    const due = ENTRIES.filter(e => wantsFollowUp(e) && e.nextFollowUp <= TODAY).length;
+    const codes = ENTRIES.map(referrals).filter(Boolean);
+    const booked = codes.reduce((t, r) => t + r.rentals, 0);
+    $('summaryLine').innerHTML = ENTRIES.length
+      ? `<b>${partners}</b> ${partners === 1 ? 'partner' : 'partners'} · <b>${contacted}</b> of ${ENTRIES.length} contacted · <b>${due}</b> follow-up${due === 1 ? '' : 's'} due${booked ? ` · <b>${booked}</b> booking${booked === 1 ? '' : 's'} from partner codes` : ''}`
+      : 'No partners yet. Add one below.';
+
+    $('sections').innerHTML = CATS.map(c => {
+      const all = ENTRIES.filter(e => e.category === c.id);
+      const items = all.filter(e => matches(e, q)).sort(byKey);
+      if (q && !items.length) return '';
+      const seedLeft = c.seed ? c.seed.filter(m => !all.some(e => e.name === m.name)).length : 0;
+      const pc = all.filter(e => statusOf(e) === 'Partner').length;
+      return `<div class="section">
+        <h2>${c.title} <span class="count-badge">${all.length}${pc ? ` · ${pc} partner${pc === 1 ? '' : 's'}` : ''}</span></h2>
+        <button class="toggle-add" onclick="toggleForm('${c.id}')">Add ${c.one}</button>
+        ${seedLeft ? `<button class="toggle-add" onclick="importSeed('${c.id}')">Import ${seedLeft} researched ${c.one}${seedLeft === 1 ? '' : 's'}</button>` : ''}
+        <div class="addform" id="form-${c.id}" style="display:none;"></div>
+        <div>${items.length ? items.map(entryHtml).join('') : '<div class="empty">None yet.</div>'}</div>
+      </div>`;
+    }).join('') || '<p class="empty">No partners match that search.</p>';
+    renderDue();
+  }
+
+  function entryHtml(e) {
+    const st = statusOf(e);
+    const opts = STATUSES.map(s => `<option${s === st ? ' selected' : ''}>${s}</option>`).join('');
+    const contactLine = [e.contactName, e.email, e.phone].filter(Boolean).join(' · ');
+    const ref = referrals(e);
+    const m = intro(e);
+    const digits = String(e.phone || '').replace(/[^0-9+]/g, '');
+    const open = OPEN.has(e.key);
+    return `
+      <div class="entry" data-key="${escapeHtml(e.key)}">
+        <div class="entry-top">
+          <div class="entry-main">
+            <div class="entry-name">${escapeHtml(e.name)} <span class="status-pill ${STATUS_CLASS[st] || ''}">${st}</span></div>
+            ${contactLine ? `<div class="entry-meta">${escapeHtml(contactLine)}</div>` : ''}
+            ${e.promoCode ? `<div class="code-line">Code <b>${escapeHtml(e.promoCode)}</b>${e.promoPct ? ` · ${e.promoPct}% off` : ' · tracking only'}${ref ? ` · ${ref.rentals ? `<b>${ref.rentals}</b> booking${ref.rentals === 1 ? '' : 's'}, ${money(ref.revenue)}` : 'no bookings yet'}${ref.open ? ` · ${ref.open} open request${ref.open === 1 ? '' : 's'}` : ''}` : ''}</div>` : ''}
+            ${e.notes ? `<div class="entry-notes">${escapeHtml(e.notes)}</div>` : ''}
+            ${datesLine(e)}
+          </div>
+          <div class="entry-actions">
+            <select class="inline-status" aria-label="Status" onchange="quickStatus('${escapeHtml(e.key)}', this.value)">${opts}</select>
+            <button class="small-btn" onclick="contactedToday('${escapeHtml(e.key)}')">Contacted today</button>
+          </div>
+        </div>
+        <div class="entry-tools">
+          ${e.email ? `<a class="small-btn" href="mailto:${escapeHtml(e.email)}?subject=${encodeURIComponent(m.subject)}&body=${encodeURIComponent(m.body)}">Email intro</a>` : ''}
+          ${digits ? `<a class="small-btn" href="${escapeHtml(smsLink(e.phone, m.body))}">Text intro</a><a class="small-btn" href="tel:${escapeHtml(digits)}">Call</a>` : ''}
+          <button class="small-btn" onclick="toggleHistory('${escapeHtml(e.key)}')" aria-expanded="${open}">History${(e.log || []).length ? ' (' + e.log.length + ')' : ''}</button>
+          <button class="small-btn" onclick="editEntry('${escapeHtml(e.key)}')">Edit</button>
+          <button class="small-btn danger" data-del>Delete</button>
+          <span class="del-ask" hidden>Delete ${escapeHtml(e.name)}? <button class="small-btn danger" onclick="deleteEntry('${escapeHtml(e.key)}')">Delete</button> <button class="small-btn" data-keep>Keep</button></span>
+        </div>
+        <div class="history"${open ? '' : ' hidden'}>
+          <div class="log-add"><input type="text" data-log-input="${escapeHtml(e.key)}" maxlength="300" placeholder="What happened? e.g. dropped off flyers, talked to Jen" onkeydown="if(event.key==='Enter')addLog('${escapeHtml(e.key)}')"><button class="small-btn" onclick="addLog('${escapeHtml(e.key)}')">Add</button></div>
+          ${(e.log || []).length ? (e.log || []).map(l => `<div class="log-row"><span>${escapeHtml(l.date ? shortDay(l.date) : '')}</span>${escapeHtml(l.note)}</div>`).join('') : '<div class="empty">Nothing logged yet.</div>'}
+        </div>
+      </div>`;
+  }
+  function toggleHistory(key) { OPEN.has(key) ? OPEN.delete(key) : OPEN.add(key); render(); }
+  // Delete asks inside the card
+  document.addEventListener('click', (ev) => {
+    const card = ev.target.closest('.entry'); if (!card) return;
+    if (ev.target.matches('[data-del]')) { ev.target.hidden = true; card.querySelector('.del-ask').hidden = false; }
+    if (ev.target.matches('[data-keep]')) { card.querySelector('[data-del]').hidden = false; card.querySelector('.del-ask').hidden = true; }
+  });
 
   function renderDue() {
     const withDates = ENTRIES.filter(wantsFollowUp);
@@ -260,222 +397,82 @@
     const week = withDates.filter(e => e.nextFollowUp > TODAY && e.nextFollowUp <= addDays(TODAY, 7)).length;
     const box = $('dueBox');
     if (!ENTRIES.length) { box.innerHTML = ''; return; }
-    if (!due.length) {
-      box.innerHTML = `<div class="due-box clear">No follow-ups due.${week ? ` ${week} coming up this week.` : ''}</div>`;
-      return;
-    }
+    if (!due.length) { box.innerHTML = `<div class="due-box clear">No follow-ups due.${week ? ` ${week} coming up this week.` : ''}</div>`; return; }
     box.innerHTML = `<div class="due-box"><h2>Follow-ups due<span class="n">${due.length}</span></h2>
-      ${due.map(e => `
-        <div class="due-row">
-          <div class="who"><b>${escapeHtml(e.name)}</b> <span class="cat">· ${CAT_LABEL[e.category] || ''}${e.contactName ? ' · ' + escapeHtml(e.contactName) : ''}</span>
-            ${datesLine(e)}</div>
+      ${due.map(e => {
+        const m = intro(e), digits = String(e.phone || '').replace(/[^0-9+]/g, '');
+        return `<div class="due-row">
+          <div class="who"><b>${escapeHtml(e.name)}</b> <span class="cat">· ${escapeHtml((CAT[e.category] || {}).one || '')}${e.contactName ? ' · ' + escapeHtml(e.contactName) : ''}</span>${datesLine(e)}</div>
           <div class="acts">
-            ${e.phone ? `<a class="sms-btn" href="tel:${escapeHtml(String(e.phone).replace(/[^0-9+]/g, ''))}" style="padding:7px 12px;">Call</a>` : ''}
-            ${e.email ? `<a class="sms-btn" href="mailto:${escapeHtml(e.email)}" style="padding:7px 12px;">Email</a>` : ''}
-            <button class="small-btn" onclick="contactedToday('${e.key}')">Contacted today</button>
-            <button class="small-btn" onclick="snooze('${e.key}')">Snooze a week</button>
-          </div>
-        </div>`).join('')}
+            ${digits ? `<a class="sms-btn" href="tel:${escapeHtml(digits)}" style="padding:7px 12px;">Call</a>` : ''}
+            ${e.email ? `<a class="sms-btn" href="mailto:${escapeHtml(e.email)}?subject=${encodeURIComponent(m.subject)}&body=${encodeURIComponent(m.body)}" style="padding:7px 12px;">Email</a>` : ''}
+            <button class="small-btn" onclick="contactedToday('${escapeHtml(e.key)}')">Contacted today</button>
+            <button class="small-btn" onclick="snooze('${escapeHtml(e.key)}')">Snooze a week</button>
+          </div></div>`; }).join('')}
       ${week ? `<p class="due-later">${week} more coming up this week.</p>` : ''}</div>`;
   }
 
-  function showStatus(kind, msg) {
+  function showStatus(kind, msg, html) {
     const s = $('status');
     s.className = 'status ' + kind;
-    s.textContent = msg;
-    if (kind === 'ok') setTimeout(() => { s.className = 'status'; }, 2500);
+    if (html) s.innerHTML = msg; else s.textContent = msg;
   }
-
-  async function api(fn, payload) {
-    const resp = await fetch('/.netlify/functions/' + fn, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ secret: secret(), ...payload }),
-    });
-    if (resp.status === 401) throw new Error('Wrong admin secret.');
-    if (!resp.ok) throw new Error('Request failed (' + resp.status + ')');
-    return resp.json();
-  }
-
-  async function loadAll() {
-    if (!secret()) return showStatus('err', 'Enter your admin secret first.');
-    $('loadBtn').disabled = true; $('loadBtn').textContent = 'Refresh';
-    try {
-      const data = await api('get-outreach', {});
-      ENTRIES = data.entries || [];
-      render();
-      showStatus('ok', 'Loaded ' + ENTRIES.length + ' contacts.');
-    } catch (e) {
-      showStatus('err', e.message);
-    }
-    $('loadBtn').disabled = false; $('loadBtn').textContent = 'Refresh';
-  }
-
-  function statusClass(status) {
-    if (status === 'Active Partner') return 'active';
-    if (status === 'Not Interested') return 'notinterested';
-    if (status === 'Follow-Up Scheduled') return 'followup';
-    if (status === 'Contacted') return 'contacted';
-    return '';
-  }
-
-  function render() {
-    const countIds = { apartment: 'apt-count', realtor: 'realtor-count', remodeler: 'remodeler-count', mover: 'mover-count' };
-    for (const cat of ['apartment', 'realtor', 'remodeler', 'mover']) {
-      const list = $('list-' + cat);
-      const items = ENTRIES.filter(e => e.category === cat);
-      $(countIds[cat]).textContent = items.length;
-
-      if (!items.length) {
-        list.innerHTML = '<div class="empty">No contacts yet. Add one above.</div>';
-      } else {
-        list.innerHTML = items.map(entryHtml).join('');
-      }
-    }
-
-    const aptTotal = ENTRIES.filter(e => e.category === 'apartment').length;
-    const aptActive = ENTRIES.filter(e => e.category === 'apartment' && e.status === 'Active Partner').length;
-    const realTotal = ENTRIES.filter(e => e.category === 'realtor').length;
-    const realActive = ENTRIES.filter(e => e.category === 'realtor' && e.status === 'Active Partner').length;
-    const remodTotal = ENTRIES.filter(e => e.category === 'remodeler').length;
-    const remodActive = ENTRIES.filter(e => e.category === 'remodeler' && e.status === 'Active Partner').length;
-    const moverTotal = ENTRIES.filter(e => e.category === 'mover').length;
-    const moverActive = ENTRIES.filter(e => e.category === 'mover' && e.status === 'Active Partner').length;
-    $('s-apt-total').textContent = aptTotal;
-    $('s-apt-active').textContent = aptActive;
-    $('s-realtor-total').textContent = realTotal;
-    $('s-realtor-active').textContent = realActive;
-    $('s-remodeler-total').textContent = remodTotal;
-    $('s-remodeler-active').textContent = remodActive;
-    $('s-mover-total').textContent = moverTotal;
-    $('s-mover-active').textContent = moverActive;
-    renderDue();
-  }
-
-  function entryHtml(e) {
-    const opts = STATUSES.map(s => `<option value="${s}" ${s === e.status ? 'selected' : ''}>${s}</option>`).join('');
-    const contactLine = [e.contactName, e.email, e.phone].filter(Boolean).join(' · ');
-    return `
-      <div class="entry" data-key="${e.key}">
-        <div class="entry-top">
-          <div>
-            <div class="entry-name">${escapeHtml(e.name)}</div>
-            ${contactLine ? `<div class="entry-meta">${escapeHtml(contactLine)}</div>` : ''}
-            ${e.notes ? `<div class="entry-notes">${escapeHtml(e.notes)}</div>` : ''}
-            ${datesLine(e)}
-          </div>
-          <div class="entry-actions">
-            <span class="status-pill ${statusClass(e.status)}">${e.status}</span>
-            <select class="inline-status" onchange="quickStatus('${e.key}', this.value)">${opts}</select>
-            <button class="small-btn" onclick="contactedToday('${e.key}')">Contacted today</button>
-            <button class="small-btn" onclick="editEntry('${e.key}')">Edit</button>
-            <button class="small-btn danger" onclick="deleteEntry('${e.key}')">Delete</button>
-          </div>
-        </div>
-      </div>`;
-  }
-
   function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  async function quickStatus(key, status) {
-    const e = ENTRIES.find(x => x.key === key);
-    if (!e) return;
-    try {
-      const next = { ...e, status };
-      if (status === 'Follow-Up Scheduled' && !e.nextFollowUp) next.nextFollowUp = addDays(TODAY, 7);
-      if (status === 'Not Interested') next.nextFollowUp = '';
-      await api('save-outreach', entryPayload(next));
-      Object.assign(e, next);
-      render();
-      showStatus('ok', 'Updated ' + e.name + '.');
-    } catch (err) {
-      showStatus('err', err.message);
-    }
-  }
-
-  async function deleteEntry(key) {
-    const e = ENTRIES.find(x => x.key === key);
-    if (!e || !confirm('Delete "' + e.name + '"? This can\'t be undone.')) return;
-    try {
-      await api('delete-outreach', { key });
-      ENTRIES = ENTRIES.filter(x => x.key !== key);
-      render();
-      showStatus('ok', 'Deleted.');
-    } catch (err) {
-      showStatus('err', err.message);
-    }
-  }
-
+  // ---- Add / edit form ----
   function toggleForm(cat) {
     const el = $('form-' + cat);
-    if (el.style.display === 'none') {
-      el.style.display = 'block';
-      el.innerHTML = formHtml(cat);
-    } else {
-      el.style.display = 'none';
-    }
+    if (el.style.display === 'none') { el.style.display = 'block'; el.innerHTML = formHtml(cat); }
+    else el.style.display = 'none';
   }
-
   function formHtml(cat, existing) {
-    const e = existing || {};
+    const e = existing || {}, v = x => x == null ? '' : escapeHtml(x);
     return `
       <div class="grid2">
-        <div><label>Name</label><input type="text" id="f-name-${cat}" value="${e.name ? escapeHtml(e.name) : ''}" placeholder="${cat === 'apartment' ? 'Property or management company' : cat === 'realtor' ? 'Agent or brokerage' : cat === 'remodeler' ? 'Remodeling or contracting company' : 'Moving company name'}"></div>
-        <div><label>Contact person</label><input type="text" id="f-contactName-${cat}" value="${e.contactName ? escapeHtml(e.contactName) : ''}" placeholder="Optional"></div>
+        <div><label>Name</label><input type="text" id="f-name-${cat}" value="${v(e.name)}" placeholder="${CAT[cat].placeholder}"></div>
+        <div><label>Contact person</label><input type="text" id="f-contactName-${cat}" value="${v(e.contactName)}" placeholder="Optional"></div>
       </div>
       <div class="grid2">
-        <div><label>Email</label><input type="email" id="f-email-${cat}" value="${e.email ? escapeHtml(e.email) : ''}"></div>
-        <div><label>Phone</label><input type="text" id="f-phone-${cat}" value="${e.phone ? escapeHtml(e.phone) : ''}"></div>
+        <div><label>Email</label><input type="email" id="f-email-${cat}" value="${v(e.email)}"></div>
+        <div><label>Phone</label><input type="text" id="f-phone-${cat}" value="${v(e.phone)}"></div>
       </div>
       <div class="grid2">
-        <div><label>Last contacted</label><input type="date" id="f-dateContacted-${cat}" value="${e.dateContacted ? escapeHtml(e.dateContacted) : ''}"></div>
-        <div><label>Follow up on</label><input type="date" id="f-nextFollowUp-${cat}" value="${e.nextFollowUp ? escapeHtml(e.nextFollowUp) : ''}"></div>
+        <div><label>Last contacted</label><input type="date" id="f-dateContacted-${cat}" value="${v(e.dateContacted)}"></div>
+        <div><label>Follow up on</label><input type="date" id="f-nextFollowUp-${cat}" value="${v(e.nextFollowUp)}"></div>
+      </div>
+      <div class="grid2">
+        <div><label>Promo code (optional)</label><input type="text" id="f-promoCode-${cat}" value="${v(e.promoCode)}" placeholder="e.g. GUSS10" maxlength="20" style="text-transform:uppercase;"></div>
+        <div><label>Discount for their customers</label><input type="number" id="f-promoPct-${cat}" value="${v(e.promoPct)}" min="0" max="50" step="1" placeholder="Blank = tracking only"></div>
       </div>
       <label>Notes</label>
-      <input type="text" id="f-notes-${cat}" value="${e.notes ? escapeHtml(e.notes) : ''}" placeholder="Any context worth remembering">
-      <button onclick="submitForm('${cat}'${existing ? `, '${existing.key}'` : ''})">${existing ? 'Save Changes' : 'Add Contact'}</button>
-    `;
+      <input type="text" id="f-notes-${cat}" value="${v(e.notes)}" placeholder="Any context worth remembering">
+      <button onclick="submitForm('${cat}'${existing ? `, '${escapeHtml(existing.key)}'` : ''})">${existing ? 'Save changes' : 'Add'}</button>`;
   }
-
   async function submitForm(cat, key) {
     const name = $('f-name-' + cat).value.trim();
     if (!name) return showStatus('err', 'Name is required.');
-    const payload = {
-      category: cat,
-      name,
-      contactName: $('f-contactName-' + cat).value.trim(),
-      email: $('f-email-' + cat).value.trim(),
-      phone: $('f-phone-' + cat).value.trim(),
-      notes: $('f-notes-' + cat).value.trim(),
-      dateContacted: $('f-dateContacted-' + cat).value,
-      nextFollowUp: $('f-nextFollowUp-' + cat).value,
-    };
-    if (key) payload.key = key;
+    const code = $('f-promoCode-' + cat).value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const clash = code && ENTRIES.find(x => x.key !== key && String(x.promoCode || '').toUpperCase() === code);
+    if (clash) return showStatus('err', `Code ${code} already belongs to ${clash.name}. Pick another.`);
+    const base = key ? ENTRIES.find(x => x.key === key) : { category: cat, status: 'Not contacted', log: [] };
+    const next = { ...base, category: cat, name,
+      contactName: $('f-contactName-' + cat).value.trim(), email: $('f-email-' + cat).value.trim(), phone: $('f-phone-' + cat).value.trim(),
+      notes: $('f-notes-' + cat).value.trim(), dateContacted: $('f-dateContacted-' + cat).value, nextFollowUp: $('f-nextFollowUp-' + cat).value,
+      promoCode: code, promoPct: $('f-promoPct-' + cat).value === '' ? null : Number($('f-promoPct-' + cat).value) };
     try {
-      const result = await api('save-outreach', payload);
-      if (key) {
-        const idx = ENTRIES.findIndex(x => x.key === key);
-        ENTRIES[idx] = { ...ENTRIES[idx], ...payload };
-      } else {
-        ENTRIES.push({ key: result.key, ...payload, status: 'Not Contacted' });
-      }
+      const result = await api('save-outreach', entryPayload(next));
+      if (key) Object.assign(base, next); else ENTRIES.push({ ...next, key: result.key });
       $('form-' + cat).style.display = 'none';
       render();
       showStatus('ok', 'Saved ' + name + '.');
-    } catch (err) {
-      showStatus('err', err.message);
-    }
+    } catch (err) { showStatus('err', err.message); }
   }
-
   function editEntry(key) {
-    const e = ENTRIES.find(x => x.key === key);
-    if (!e) return;
-    const cat = e.category;
-    const el = $('form-' + cat);
-    el.style.display = 'block';
-    el.innerHTML = formHtml(cat, e);
+    const e = ENTRIES.find(x => x.key === key); if (!e) return;
+    const el = $('form-' + e.category);
+    el.style.display = 'block'; el.innerHTML = formHtml(e.category, e);
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 </script>

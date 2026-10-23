@@ -10,6 +10,7 @@
 <title>Contacts · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
 <script src="admin-shared.js?v=20261029"></script>
+<script src="admin-rentals-shared.js?v=20261029"></script>
 <style>
   /* One row per person, built from every rental and booking request:
      customers (with what they've rented and spent) and leads (people who
@@ -38,7 +39,24 @@
   .acts{display:flex; gap:6px; justify-content:flex-end;}
   .acts a{display:inline-flex; align-items:center; height:32px; padding:0 10px; border:1px solid var(--control); border-radius:6px; font-size:13px; font-weight:600; text-decoration:none !important; white-space:nowrap;}
   .acts a:hover{border-color:var(--ink);}
+  .link-btn{font-size:13px; font-weight:600; color:var(--ink);}
   .pill.neutral{background:var(--track); color:#4A433B;}
+  .who-btn{all:unset; cursor:pointer; font-weight:700; font-size:15px; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
+  .who-btn:hover{text-decoration-color:var(--ink);}
+  .owes{color:#831C1E; font-weight:600;}
+  tr.detail td{background:#FAF8F3; padding:14px 16px;}
+  tr.detail[hidden]{display:none;}
+  .det{display:grid; grid-template-columns:1fr 1fr; gap:14px 24px; font-size:14px;}
+  .det h4{margin:0 0 6px; font-size:13px; color:var(--steel); font-weight:600;}
+  .det .line{padding:4px 0; border-top:1px solid #EEE8DC; display:flex; justify-content:space-between; gap:10px;}
+  .det .line:first-of-type{border-top:none;}
+  .det-acts{grid-column:1 / -1; display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+  .det-acts .sms-btn{padding:7px 12px; font-size:13px;}
+  .card-ask{display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; padding:9px 12px; background:#fff; border-radius:8px; font-size:14px; font-weight:600; grid-column:1 / -1;}
+  .card-ask[hidden]{display:none;}
+  .card-ask button{width:auto; margin:0; padding:7px 14px; font-size:14px;}
+  .card-ask .linklike{all:unset; cursor:pointer; text-decoration:underline; text-underline-offset:3px; font-weight:600;}
+  @media(max-width:960px){ tr.detail{display:block !important;} tr.detail[hidden]{display:none !important;} .det{grid-template-columns:1fr;} }
   .no-results{padding:14px; border:1px dashed var(--control); border-radius:8px; color:var(--steel); font-size:14px;}
   @media(max-width:960px){
     table.people thead{display:none;}
@@ -70,7 +88,7 @@
   </nav>
 
   <h1>Contacts</h1>
-  <p class="sub">Everyone who has rented or asked about renting, one row per person. Customers show what they've rented and spent; leads asked but haven't booked yet.</p>
+  <p class="sub">Everyone who has rented or asked about renting, one row per person. Tap a name for their history.</p>
 
   <input type="hidden" id="secret">
   <button id="loadBtn">Refresh</button>
@@ -94,7 +112,9 @@
   const $ = (id) => document.getElementById(id);
   $('secret').value = adminSessionMarker();   // signed-in marker; the session cookie is what the server checks
 
-  let PEOPLE = [], FILTER = 'all';
+  let PEOPLE = [], FILTER = 'all', PARTNERS = [];
+  const OPEN = new Set();   // people whose history is open
+  wireTextAsks(document.getElementById('peopleList'));
   $('loadBtn').addEventListener('click', load);
   $('search').addEventListener('input', render);
   if ($('secret').value) load();
@@ -106,12 +126,16 @@
     btn.disabled = true; btn.textContent = 'Refreshing…';
     try {
       const post = fn => fetch('/.netlify/functions/' + fn, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret }) });
-      const [rResp, qResp] = await Promise.all([post('get-rentals'), post('get-requests')]);
+      const [rResp, qResp, oResp] = await Promise.all([post('get-rentals'), post('get-requests'), post('get-outreach')]);
       if (rResp.status === 401 || qResp.status === 401) { showErr('Wrong admin secret.'); return; }
       if (!rResp.ok) { showErr('Load failed (' + rResp.status + ').'); return; }
-      const rentals = ((await rResp.json()).rentals || []).filter(r => !r.cancelled);
-      // Requests are only for finding leads; the page still works without them
+      const rd = await rResp.json();
+      const rentals = (rd.rentals || []).filter(r => !r.cancelled);
+      SENT_FLAGS = rd.sentFlags || {};
+      PAID_FLAGS = rd.paidFlags || {};
+      // Requests find leads and partners name referrals; the page still works without them
       const requests = qResp.ok ? ((await qResp.json()).requests || []) : [];
+      PARTNERS = oResp.ok ? ((await oResp.json()).entries || []).filter(e => e.promoCode) : [];
       PEOPLE = buildPeople(rentals, requests);
       render();
       $('results').style.display = 'block';
@@ -155,9 +179,15 @@
       p.name ||= q.name || ''; p.phone ||= q.phone || ''; p.email ||= q.email || '';
       if (!p.address) { p.address = deliveryAddressOf(q) || ''; p.city = q.deliveryAddressCity || ''; }
     }
+    const isPaid = r => paidOutsideInvoice(r) || !!PAID_FLAGS[r.key];
+    const partnerFor = code => code && PARTNERS.find(e => String(e.promoCode).toUpperCase() === String(code).toUpperCase());
     return [...map.values()].map(p => ({
       ...p,
       spent: p.rentals.reduce((t, r) => t + priceNum(r.price), 0),
+      paid: p.rentals.filter(isPaid).reduce((t, r) => t + priceNum(r.price), 0),
+      owes: p.rentals.filter(r => !isPaid(r)).reduce((t, r) => t + priceNum(r.price), 0),
+      partner: [...p.rentals, ...p.leads].map(x => partnerFor(x.promoCode)).find(Boolean) || null,
+      code: [...p.rentals, ...p.leads].map(x => x.promoCode).find(Boolean) || '',
       kind: p.rentals.length > 1 ? 'repeat' : p.rentals.length ? 'customer' : 'lead',
       leadDate: p.leads.length ? (p.leads[0].submittedAt || '').slice(0, 10) : '',
     })).sort((a, b) => (b.latest || b.leadDate).localeCompare(a.latest || a.leadDate));
@@ -168,6 +198,8 @@
     ['customers', 'Customers', p => p.rentals.length > 0],
     ['repeat', 'Repeat', p => p.rentals.length > 1],
     ['leads', 'Leads', p => p.kind === 'lead'],
+    ['owes', 'Owes money', p => p.owes > 0],
+    ['referred', 'Referred', p => !!p.partner],
   ];
   window.setFilter = f => { FILTER = f; render(); };
   function matches(p, q) {
@@ -203,21 +235,62 @@
           const digits = String(p.phone || '').replace(/[^0-9+]/g, '');
           const tag = p.kind === 'repeat' ? '<span class="pill ok">Repeat</span>' : p.kind === 'lead' ? '<span class="pill pending">Lead</span>' : '';
           const last = p.rentals.length ? day(p.latest) + `<span class="minor">${esc(p.rentals[0].package ? p.rentals[0].package.split(/\s+—\s+/)[0] : '')}</span>`
-            : `Asked ${day(p.leadDate)}<span class="minor">${esc(p.leads[0].status === 'declined' ? 'Declined' : 'Not booked yet')}</span>`;
+            : `Asked ${day(p.leadDate)}<span class="minor">${esc(p.leads[0].status === 'declined' ? 'Declined' : 'Not booked yet')}${SENT_FLAGS['leadFollowup:' + p.key] ? ' · followed up ' + esc(day(String(SENT_FLAGS['leadFollowup:' + p.key]).slice(0, 10))) : ''}</span>`;
           return `<tr>
-            <td class="c-who who"><b>${esc(p.name || 'No name')}</b> ${tag}</td>
+            <td class="c-who who"><button type="button" class="who-btn" data-open="${escAttr(p.key)}" aria-expanded="${OPEN.has(p.key)}">${esc(p.name || 'No name')}</button> ${tag}${p.partner ? `<span class="minor">Referred by ${esc(p.partner.name)}</span>` : ''}</td>
             <td class="c-contact">${p.phone ? `<a href="tel:${escAttr(digits)}">${esc(p.phone)}</a>` : '—'}${p.email ? `<span class="minor"><a href="mailto:${escAttr(p.email)}">${esc(p.email)}</a></span>` : ''}</td>
-            <td class="c-money r">${p.rentals.length ? `${p.rentals.length} ${p.rentals.length === 1 ? 'rental' : 'rentals'}<span class="minor">${money(p.spent)}</span>` : '<span style="color:var(--steel)">—</span>'}</td>
+            <td class="c-money r">${p.rentals.length ? `${p.rentals.length} ${p.rentals.length === 1 ? 'rental' : 'rentals'}<span class="minor">${money(p.paid)} paid</span>${p.owes ? `<span class="minor owes">Owes ${money(p.owes)}</span>` : ''}` : '<span style="color:var(--steel)">—</span>'}</td>
             <td class="c-last">${last}</td>
             <td class="c-hide" style="color:var(--steel);">${esc(p.city || (p.address.split(',').slice(-2, -1)[0] || '').trim() || '—')}</td>
             <td class="c-act"><div class="acts">
               ${digits ? `<a href="sms:${escAttr(normalizePhone(p.phone))}">Text</a>` : ''}
               ${p.email ? `<a href="mailto:${escAttr(p.email)}">Email</a>` : ''}
             </div></td>
-          </tr>`; }).join('')}
+          </tr>
+          <tr class="detail"${OPEN.has(p.key) ? '' : ' hidden'}><td colspan="6">${detailHtml(p)}</td></tr>`; }).join('')}
         </tbody>
       </table>`;
   }
+
+  // ---- A person's history: rentals, requests, referral, and what to send next ----
+  function detailHtml(p) {
+    const first = String(p.name || '').split(' ')[0] || 'there';
+    const day = iso => iso ? new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const rentalLines = p.rentals.map(r => {
+      const paid = paidOutsideInvoice(r) || PAID_FLAGS[r.key];
+      return `<div class="line"><span>${esc(day(r.dropoffDate))} · ${esc((r.package || '').split(/\s+—\s+/)[0] || 'Rental')}${r.notes ? `<span class="minor">${esc(r.notes)}</span>` : ''}</span><span>${esc(fmtPrice(r.price))} ${paid ? '<span class="pill ok">Paid</span>' : '<span class="pill err">Owes</span>'}</span></div>`;
+    }).join('');
+    const leadLines = p.leads.map(q => `<div class="line"><span>Asked ${esc(day((q.submittedAt || '').slice(0, 10)))} for ${esc(day(q.deliveryDate))}</span><span>${esc({ new: 'New', reviewed: 'Reviewed', awaiting_confirmation: 'Awaiting them', confirmed: 'Confirmed', declined: 'Declined' }[q.status] || q.status || '')}</span></div>`).join('');
+    // Review: ask after their latest finished rental, once
+    const done = p.rentals.filter(r => r.pickupDate && r.pickupDate < new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }));
+    const last = done[0];
+    let review = '';
+    if (last) review = SENT_FLAGS['review:' + last.key]
+      ? `<span class="minor">Review asked ${esc(day(String(SENT_FLAGS['review:' + last.key]).slice(0, 10)))}</span>`
+      : last.reviewSms ? textBtn('review', last.key, last.reviewSms, '', 'Review request') : '';
+    // Lead follow-up: people who asked and haven't booked
+    let follow = '';
+    if (p.kind === 'lead' && p.phone && p.leads[0] && p.leads[0].status !== 'declined') {
+      const msg = `Hi ${first}, it's ${TEXT_SIGNER}! You asked about moving totes a little while back. Still need some for your move? Glad to help, just reply here.`;
+      follow = textBtn('leadFollowup', p.key, smsLink(p.phone, msg), '', 'Text follow-up');
+    }
+    return `<div class="det" data-key="${escAttr(p.key)}" data-first="${escAttr(first)}">
+      <div><h4>Rentals</h4>${rentalLines || '<span class="minor">None yet</span>'}</div>
+      <div><h4>Requests</h4>${leadLines || '<span class="minor">None open</span>'}
+        ${p.code ? `<h4 style="margin-top:12px;">Promo code</h4><div>${esc(p.code)}${p.partner ? ` · ${esc(p.partner.name)}` : ''}</div>` : ''}</div>
+      <div class="det-acts">${review}${follow}
+        ${p.rentals.length ? `<a class="link-btn" href="admin-rentals.html?q=${encodeURIComponent(p.name || '')}">Open in All rentals</a>` : ''}
+        ${p.leads.length ? `<a class="link-btn" href="admin-requests.html">Open Requests</a>` : ''}</div>
+      ${askFor(p.key, first)}
+    </div>`;
+  }
+  document.getElementById('peopleList').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-open]'); if (!b) return;
+    OPEN.has(b.dataset.open) ? OPEN.delete(b.dataset.open) : OPEN.add(b.dataset.open);
+    const row = b.closest('tr').nextElementSibling;
+    row.hidden = !OPEN.has(b.dataset.open);
+    b.setAttribute('aria-expanded', String(!row.hidden));
+  });
 
   // ---- Export: what's on screen (search and filter applied) ----
   $('copyEmailsBtn').addEventListener('click', async () => {
@@ -231,9 +304,9 @@
   $('csvBtn').addEventListener('click', () => {
     const rows = visible();
     if (!rows.length) return showErr('Nothing to export.');
-    const cols = ['name', 'type', 'phone', 'email', 'address', 'rentals', 'totalSpent', 'lastRental', 'requested'];
+    const cols = ['name', 'type', 'phone', 'email', 'address', 'rentals', 'totalSpent', 'paid', 'owes', 'referredBy', 'lastRental', 'requested'];
     const cell = v => '"' + String(v ?? '').replaceAll('"', '""') + '"';
-    const lines = [cols.join(',')].concat(rows.map(p => [p.name, p.kind, p.phone, p.email, p.address, p.rentals.length, p.spent.toFixed(2), p.latest, p.leadDate].map(cell).join(',')));
+    const lines = [cols.join(',')].concat(rows.map(p => [p.name, p.kind, p.phone, p.email, p.address, p.rentals.length, p.spent.toFixed(2), p.paid.toFixed(2), p.owes.toFixed(2), p.partner ? p.partner.name : '', p.latest, p.leadDate].map(cell).join(',')));
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([lines.join('\r\n')], { type: 'text/csv' }));
     a.download = 'ready-tote-contacts-' + new Date().toISOString().slice(0, 10) + '.csv';
