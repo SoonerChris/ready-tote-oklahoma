@@ -36,6 +36,21 @@ function totesFor(record) {
   return totesInPackage(record.package);
 }
 
+// Oklahoma date and minutes after midnight, right now
+function okNow() {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit",
+    day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date()).map((x) => [x.type, x.value]));
+  return { date: `${p.year}-${p.month}-${p.day}`, minutes: Number(p.hour) * 60 + Number(p.minute) };
+}
+// "2:30 PM", "14:30" or "9 AM" -> minutes after midnight; null if no time
+function clockMinutes(t) {
+  const m = String(t || "").match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
+  if (!m || (!m[2] && !m[3])) return null;
+  let h = Number(m[1]); const min = Number(m[2] || 0);
+  if (m[3]) { const pm = m[3].toUpperCase() === "PM"; if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
+  return h < 24 && min < 60 ? h * 60 + min : null;
+}
+
 export function todayInOklahoma() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" }); // YYYY-MM-DD
 }
@@ -72,10 +87,29 @@ export async function computeAvailability(daysAhead = DAYS_AHEAD) {
 
   // Normalize both stores into the same {start, end, totes} shape so the
   // per-day loop below doesn't need to know which store anything came from.
-  // Marked delivered but not picked up after its pickup date: the totes are
-  // still out, so the rental keeps holding them through today.
-  const today0 = todayInOklahoma();
-  const endOf = (r) => (r.deliveredAt && !r.pickedUpAt && r.pickupDate < today0 ? today0 : r.pickupDate);
+  // Last day each rental holds its totes (same rule as rentalEndDate in
+  // admin-shared.js): a late pickup (delivered, not picked up) holds them
+  // through today; marked picked up frees them from the day it came back;
+  // an unmarked pickup today frees them once its pickup time has passed.
+  const now = okNow();
+  const today0 = now.date;
+  const dayBefore = (d) => shiftDate(d, -1);
+  const endOf = (r) => {
+    if (r.deliveredAt && !r.pickedUpAt) {
+      const t = clockMinutes(r.pickupTime);
+      const late = r.pickupDate < today0 || (r.pickupDate === today0 && t !== null && now.minutes >= t);
+      return late && r.pickupDate < today0 ? today0 : r.pickupDate;
+    }
+    if (r.pickedUpAt) {
+      const back = new Date(r.pickedUpAt).toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+      return back <= r.pickupDate ? dayBefore(back) : r.pickupDate;
+    }
+    if (r.pickupDate === today0) {
+      const t = clockMinutes(r.pickupTime);
+      if (t !== null && now.minutes >= t) return dayBefore(today0);
+    }
+    return r.pickupDate;
+  };
   const rentalWindows = rentals
     .filter((r) => !r.cancelled && r.dropoffDate && r.pickupDate)
     .map((r) => ({ start: r.dropoffDate, end: endOf(r), totes: totesFor(r), dollies: dolliesFor(r) }));
