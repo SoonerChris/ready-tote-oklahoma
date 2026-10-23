@@ -5,6 +5,9 @@
 //   requests  - a new booking request came in   (submission-created.mjs)
 //   payments  - a customer paid through Stripe   (stripe-webhook.mjs)
 //   reminders - the morning reminders are ready  (daily-reminders.mjs)
+//   confirmed - a customer tapped the confirm link (confirm-booking.mjs)
+//   soon      - a delivery or pickup within the hour (push-alerts.mjs)
+//   stock     - totes running low or overbooked    (push-alerts.mjs)
 //
 // The VAPID keys that sign pushes are made on first use and kept in the
 // "meta" store, so there's nothing to set up in Netlify. A device that has
@@ -15,7 +18,7 @@ import { createHash } from "node:crypto";
 import { getStore } from "@netlify/blobs";
 
 const CONTACT = "mailto:readytoteok@gmail.com";
-export const KINDS = ["requests", "payments", "reminders"];
+export const KINDS = ["requests", "payments", "reminders", "confirmed", "soon", "stock"];
 
 export const deviceKey = (endpoint) => "dev_" + createHash("sha256").update(String(endpoint)).digest("hex").slice(0, 32);
 

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Confirm your booking · Ready Tote Oklahoma</title>
+<meta property="og:title" content="Confirm your Ready Tote booking">
+<meta property="og:description" content="Tap to confirm your tote rental dates.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#1E1B18;--gold:#C99A32;--cream:#F5F1E7;--steel:#6B6259;--line:#E5DFD2;--green-bg:#E3F4E9;--green:#14492F;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Barlow',sans-serif;background:var(--cream);color:var(--ink);line-height:1.6;min-height:100vh;display:flex;flex-direction:column;}
+  header{background:var(--ink);padding:14px 24px;}
+  header img{height:56px;width:auto;display:block;}
+  main{flex:1;width:100%;max-width:520px;margin:0 auto;padding:40px 16px 64px;}
+  .sheet{background:#fff;border:1px solid var(--line);border-radius:14px;padding:28px 24px;}
+  h1{font-family:'Archivo Black',sans-serif;font-size:1.6rem;line-height:1.2;margin:0 0 10px;}
+  p{margin:0 0 14px;font-size:1.05rem;}
+  .muted{color:var(--steel);font-size:0.95rem;}
+  .details{border:1px solid var(--line);border-radius:10px;padding:4px 16px;margin:18px 0 22px;}
+  .row{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-top:1px solid var(--line);font-size:1rem;}
+  .row:first-child{border-top:none;}
+  .row span{color:var(--steel);}
+  .row b{text-align:right;font-weight:600;}
+  button{width:100%;padding:16px;font:700 1.1rem 'Barlow',sans-serif;background:var(--ink);color:#fff;border:0;border-radius:10px;cursor:pointer;}
+  button:disabled{opacity:0.6;cursor:wait;}
+  .done{display:inline-block;background:var(--green-bg);color:var(--green);font-weight:700;font-size:0.85rem;padding:5px 10px;border-radius:999px;margin-bottom:12px;}
+  a{color:var(--ink);font-weight:600;}
+  [hidden]{display:none !important;}
+</style>
+</head>
+<body>
+<header><a href="/"><img src="images/logo.png" alt="Ready Tote Oklahoma"></a></header>
+<main>
+  <div class="sheet" id="sheet">
+    <p class="muted" id="loading">Loading your booking…</p>
+
+    <div id="ask" hidden>
+      <h1 id="askTitle">Confirm your booking</h1>
+      <p>Tap below to confirm these dates. We'll send your invoice shortly after.</p>
+      <div class="details" id="details"></div>
+      <button id="confirmBtn">Confirm my booking</button>
+    </div>
+
+    <div id="done" hidden>
+      <span class="done">Confirmed</span>
+      <h1 id="doneTitle">You're all set</h1>
+      <p>Thanks! Your dates are confirmed. Watch your email for the invoice, and pay it to lock in your rental.</p>
+      <div class="details" id="doneDetails"></div>
+    </div>
+
+    <div id="msg" hidden>
+      <h1 id="msgTitle">We couldn't open this booking</h1>
+      <p id="msgText"></p>
+    </div>
+
+    <p class="muted" style="margin:18px 0 0;">Questions? Call or text <a href="tel:+15803993202">580.399.3202</a>.</p>
+  </div>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const t = new URLSearchParams(location.search).get('t') || '';
+  const fmt = (iso) => iso ? new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' }) : '';
+  const text = (s) => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+
+  function details(b) {
+    return [['Package', b.package], ['Delivery', fmt(b.deliveryDate)], ['Pickup', fmt(b.pickupDate)]]
+      .filter(([, v]) => v).map(([k, v]) => `<div class="row"><span>${k}</span><b>${text(v)}</b></div>`).join('');
+  }
+
+  function show(b) {
+    $('loading').hidden = true;
+    $('ask').hidden = $('done').hidden = $('msg').hidden = true;
+    if (b.error) {
+      $('msgText').textContent = b.error + ' If you meant to confirm, just reply YES to our text.';
+      $('msg').hidden = false;
+    } else if (b.state === 'open') {
+      if (b.first) $('askTitle').textContent = b.first + ', confirm your booking';
+      $('details').innerHTML = details(b);
+      $('ask').hidden = false;
+    } else if (b.state === 'done') {
+      if (b.first) $('doneTitle').textContent = "You're all set, " + b.first;
+      $('doneDetails').innerHTML = details(b);
+      $('done').hidden = false;
+    } else {
+      $('msgTitle').textContent = 'This booking is closed';
+      $('msgText').textContent = "These dates can't be confirmed online anymore. Give us a call or text and we'll sort it out.";
+      $('msg').hidden = false;
+    }
+  }
+
+  async function call(action) {
+    try {
+      const r = await fetch('/.netlify/functions/confirm-booking', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t, action }) });
+      return await r.json();
+    } catch { return { error: "We couldn't reach our server." }; }
+  }
+
+  $('confirmBtn').addEventListener('click', async () => {
+    $('confirmBtn').disabled = true;
+    $('confirmBtn').textContent = 'Confirming…';
+    show(await call('confirm'));
+  });
+
+  if (!t) show({ error: 'This link is missing its code.' });
+  else call('look').then(show);
+</script>
+</body>
+</html>
