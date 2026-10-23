@@ -26,6 +26,10 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = { body: event.data && event.data.text() }; }
+  // Icon badge: things waiting on you (see badgeCount in lib-push.mjs)
+  if (typeof data.badge === 'number' && self.navigator && 'setAppBadge' in self.navigator) {
+    (data.badge > 0 ? self.navigator.setAppBadge(data.badge) : self.navigator.clearAppBadge()).catch(() => {});
+  }
   event.waitUntil(self.registration.showNotification(data.title || 'Ready Tote', {
     body: data.body || '',
     icon: '/app-icon-192.png',

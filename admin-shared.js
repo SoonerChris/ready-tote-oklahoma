@@ -363,6 +363,21 @@ document.addEventListener('DOMContentLoaded', () => {
   nav.appendChild(logout);
 });
 
+// ---- App icon badge ----
+// The number on the Home Screen icon (requests waiting on you plus late
+// pickups, counted on the server). Refreshed whenever an admin page opens
+// or comes back on screen, and after the Dashboard or Requests changes
+// something. iPhones only show it when notifications are allowed.
+function refreshBadge() {
+  if (!('setAppBadge' in navigator) || !adminSession()) return;
+  fetch('/.netlify/functions/push-subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'badge' }) })
+    .then(r => r.ok ? r.json() : null)
+    .then(d => { if (d && typeof d.count === 'number') (d.count > 0 ? navigator.setAppBadge(d.count) : navigator.clearAppBadge()).catch(() => {}); })
+    .catch(() => {});
+}
+window.addEventListener('load', refreshBadge);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshBadge(); });
+
 // ---- Home Screen app ----
 // The service worker (sw.js) shows push notifications and an offline page
 // when the admin is opened from the iPhone Home Screen. Live data is never

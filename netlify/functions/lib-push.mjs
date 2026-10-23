@@ -46,10 +46,48 @@ export async function sendTo(device, message) {
   }
 }
 
+// ---- App icon badge ----
+// The number on the Home Screen icon: booking requests waiting on you (new,
+// reviewed, confirmed) plus late pickups (marked delivered, pickup time
+// passed, not marked picked up). Sent with every notification and read by
+// the app when it opens (push-subscribe "badge").
+const WAITING = ["new", "reviewed", "confirmed"];
+function okNow() {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit",
+    day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date()).map((x) => [x.type, x.value]));
+  return { date: `${p.year}-${p.month}-${p.day}`, minutes: Number(p.hour) * 60 + Number(p.minute) };
+}
+function clockMinutes(t) {
+  const m = String(t || "").match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
+  if (!m || (!m[2] && !m[3])) return null;
+  let h = Number(m[1]); const min = Number(m[2] || 0);
+  if (m[3]) { const pm = m[3].toUpperCase() === "PM"; if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
+  return h < 24 && min < 60 ? h * 60 + min : null;
+}
+async function readAll(name) {
+  const store = getStore(name);
+  const { blobs } = await store.list();
+  return (await Promise.all(blobs.map((b) => store.get(b.key, { type: "json" }).catch(() => null)))).filter(Boolean);
+}
+export async function badgeCount() {
+  try {
+    const [requests, rentals] = await Promise.all([readAll("requests"), readAll("rentals")]);
+    const now = okNow();
+    const late = rentals.filter((r) => !r.cancelled && r.deliveredAt && !r.pickedUpAt && r.pickupDate &&
+      (r.pickupDate < now.date || (r.pickupDate === now.date && clockMinutes(r.pickupTime) !== null && now.minutes >= clockMinutes(r.pickupTime))));
+    return requests.filter((r) => WAITING.includes(r.status)).length + late.length;
+  } catch (e) {
+    console.error("badgeCount failed:", e.message);
+    return null;
+  }
+}
+
 // Tell every device that wants this kind. Never throws: a notification
 // problem must not break a booking, a payment or the morning email.
 export async function notify(kind, message) {
   try {
+    const badge = await badgeCount();
+    if (badge !== null) message = { ...message, badge };
     const store = getStore("push");
     const { blobs } = await store.list();
     let sent = 0;

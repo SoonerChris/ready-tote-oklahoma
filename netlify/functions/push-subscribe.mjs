@@ -9,10 +9,11 @@
 //   status      { endpoint }             -> { on, prefs } for this device
 //   unsubscribe { endpoint }             -> forgets this device
 //   test        { endpoint }             -> sends a test notification
+//   badge                                -> { count } for the app icon badge
 
 import { getStore } from "@netlify/blobs";
 import { isAdmin } from "./lib-auth.mjs";
-import { vapidKeys, deviceKey, sendTo, KINDS } from "./lib-push.mjs";
+import { vapidKeys, deviceKey, sendTo, KINDS, badgeCount } from "./lib-push.mjs";
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
 const cleanPrefs = (p) => Object.fromEntries(KINDS.map((k) => [k, !(p && p[k] === false)]));
@@ -27,6 +28,8 @@ export default async (request) => {
   const endpoint = body.endpoint || body.subscription?.endpoint;
   try {
     switch (body.action) {
+      case "badge":
+        return json({ count: await badgeCount() });
       case "key":
         return json({ publicKey: (await vapidKeys()).publicKey });
       case "subscribe": {
