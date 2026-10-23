@@ -10,7 +10,7 @@
 import { getStore } from "@netlify/blobs";
 import { rentalToICSAttachments } from "./lib-reminders.mjs";
 import { isAdmin } from "./lib-auth.mjs";
-import { emailLayout, heading, pill, detailsCard, button, contactLine, cleanLineItems, lineItemRows } from "./lib-email.mjs";
+import { emailLayout, heading, pill, detailsCard, button, contactLine, cleanLineItems, lineItemRows, callout, htmlToText } from "./lib-email.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
@@ -100,11 +100,12 @@ export default async (request) => {
               total: ["Total due", price],
             })}
             ${button(stripeUrl, "Complete reservation", { note: "Secure payment by Stripe" })}
+            ${callout(`<strong>${selfService ? "Pick-up and return" : "Drop-off and pickup"} are attached.</strong> Tap them to add to your calendar.<br>Free to cancel or reschedule up to 48 hours before ${selfService ? "your pick-up" : "delivery"}.`, "plain")}
             ${contactLine("Need to change anything?")}`,
   });
 
   // Generate calendar event attachments
-  const icsAttachments = rentalToICSAttachments(body);
+  const icsAttachments = rentalToICSAttachments(body, { forCustomer: true });
 
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -117,8 +118,9 @@ export default async (request) => {
       to: [body.email],
       bcc: [OWNER_EMAIL],
       reply_to: OWNER_EMAIL,
-      subject: `Your invoice for ${body.package} | Ready Tote Oklahoma`,
+      subject: `Your Ready Tote invoice, ${String(body.name).split(" ")[0]} (${rawPrice.startsWith("$") ? rawPrice : "$" + rawPrice})`,
       html,
+      text: htmlToText(html),
       attachments: icsAttachments,
     }),
   });

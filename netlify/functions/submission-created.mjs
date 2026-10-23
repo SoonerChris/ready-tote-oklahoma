@@ -7,7 +7,7 @@
 //   RESEND_FROM    - verified sender, e.g. "Ready Tote Oklahoma <booking@readytoteokc.com>"
 
 import { getStore } from "@netlify/blobs";
-import { emailLayout, heading, pill, detailsCard, steps, callout, contactLine } from "./lib-email.mjs";
+import { emailLayout, heading, pill, detailsCard, steps, callout, contactLine, htmlToText, PHONE_DISPLAY } from "./lib-email.mjs";
 import { notify } from "./lib-push.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
@@ -53,6 +53,9 @@ export default async (request) => {
       };
 
   const from = process.env.RESEND_FROM || FROM_FALLBACK;
+  const addressLine = rawAddress || [addr.street, addr.city, [addr.state, addr.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  // "No preference" isn't worth showing back to them
+  const windowOf = (w) => (w && !/no preference/i.test(w) ? escapeHtml(w) : "");
 
   // Persist the request itself so it shows up in the Booking Requests admin
   // page, instead of only existing as a Netlify notification email. Never
@@ -107,17 +110,22 @@ export default async (request) => {
     body: `
             ${heading(`Request received, ${firstName}`, {
               badge: pill("Request received", "green"),
-              lead: `Thanks for choosing Ready Tote Oklahoma. We'll reach out shortly to confirm your dates and send your invoice. <strong style="color:#1E1B18;">No payment is due yet.</strong>`,
+              lead: `Thanks for choosing Ready Tote Oklahoma. We'll text you from <strong style="color:#1E1B18;">${PHONE_DISPLAY}</strong> to confirm your dates. <strong style="color:#1E1B18;">No payment is due yet.</strong>`,
             })}
             ${detailsCard({
               label: "Your request",
-              rows: [["Package", pkg], ["Delivery", deliveryDate], ["Pickup", pickupDate],
+              rows: [["Package", pkg],
+                ["Delivery", deliveryDate + (windowOf(data.delivery_window) ? `<br><span style="font-weight:400; color:#6B6259;">${windowOf(data.delivery_window)}</span>` : "")],
+                ["Pickup", pickupDate + (windowOf(data.pickup_window) ? `<br><span style="font-weight:400; color:#6B6259;">${windowOf(data.pickup_window)}</span>` : "")],
+                addressLine ? ["Address", escapeHtml(addressLine)] : null,
                 promoCode ? ["Promo code", `${escapeHtml(promoCode)} (we'll apply it on your invoice)`] : null],
             })}
+            <p style="margin:10px 0 0; font-size:13px; color:#6B6259;">Something look wrong? Just reply and we'll fix it.</p>
 ${militaryBlock}
             ${steps([
-              "We confirm your dates and availability",
-              "You receive an invoice by email",
+              "We check availability and text you to confirm",
+              "Tap the link in that text (or reply YES)",
+              "Your invoice arrives by email",
               "Clean totes arrive at your door, with free delivery",
             ])}
             ${contactLine("Questions in the meantime?")}`,
@@ -133,8 +141,9 @@ ${militaryBlock}
       from,
       to: [customerEmail],
       reply_to: OWNER_EMAIL,
-      subject: "Booking request received | Ready Tote Oklahoma",
+      subject: `We got your request, ${data.name ? String(data.name).split(" ")[0] : "thanks"}! | Ready Tote Oklahoma`,
       html,
+      text: htmlToText(html),
     }),
   });
 

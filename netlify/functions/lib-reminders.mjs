@@ -5,6 +5,7 @@
 // Who customer texts are from. Change it here (and TEXT_SIGNER in
 // admin-shared.js for the texts built in the browser) if someone else sends.
 export const SIGNER = "Chris with Ready Tote Oklahoma";
+const PHONE = "580.399.3202";
 const hi = (first) => `Hi ${first}, it's ${SIGNER}!`;
 
 export function friendlyTime(t) {
@@ -335,38 +336,35 @@ function icsEscape(s) {
   return String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
 }
 
-export function rentalToICSAttachments(rental) {
+// Calendar files for a rental's drop-off and pickup. The default wording is
+// for us (daily digest); { forCustomer: true } words it for the customer's
+// own calendar (invoice and receipt emails).
+export function rentalToICSAttachments(rental, { forCustomer = false } = {}) {
   const first = (rental.name || 'Customer').split(' ')[0];
   const self = rental.serviceType === 'self';
-  const attachments = [];
-
-  // Delivery/pickup event
-  const deliverICS = generateICS({
-    title: self ? `Tote Pickup — ${rental.name}` : `Tote Delivery — ${rental.name}`,
-    date: rental.dropoffDate,
-    time: rental.dropoffTime || '10:00 AM',
-    durationMinutes: 30,
-    location: self ? '' : dropoffAddressOf(rental),
-    description: `${rental.package}\\n${self ? 'Customer picks up totes' : 'Deliver totes to customer'}\\nPhone: ${rental.phone || ''}`,
-  });
-  attachments.push({
-    filename: `delivery-${first}-${rental.dropoffDate}.ics`,
-    content: Buffer.from(deliverICS).toString('base64'),
-  });
-
-  // Pickup/return event
-  const pickupICS = generateICS({
-    title: self ? `Tote Return — ${rental.name}` : `Tote Pickup — ${rental.name}`,
-    date: rental.pickupDate,
-    time: rental.pickupTime || '10:00 AM',
-    durationMinutes: 30,
-    location: self ? '' : pickupAddressOf(rental),
-    description: `${rental.package}\\n${self ? 'Customer returns totes' : 'Pick up totes from customer'}\\nPhone: ${rental.phone || ''}`,
-  });
-  attachments.push({
-    filename: `pickup-${first}-${rental.pickupDate}.ics`,
-    content: Buffer.from(pickupICS).toString('base64'),
-  });
-
-  return attachments;
+  const ours = `Ready Tote Oklahoma: ${PHONE}`;
+  const legs = [
+    {
+      date: rental.dropoffDate, time: rental.dropoffTime, file: 'delivery',
+      location: self ? '' : dropoffAddressOf(rental),
+      title: forCustomer ? (self ? 'Pick up your totes (Ready Tote Oklahoma)' : 'Totes delivered (Ready Tote Oklahoma)')
+        : (self ? `Tote Pickup — ${rental.name}` : `Tote Delivery — ${rental.name}`),
+      description: forCustomer
+        ? `${rental.package}\n${self ? 'Pick up your totes from us.' : 'We drop off your totes. We\'ll text when we\'re on the way.'}\n${ours}`
+        : `${rental.package}\n${self ? 'Customer picks up totes' : 'Deliver totes to customer'}\nPhone: ${rental.phone || ''}`,
+    },
+    {
+      date: rental.pickupDate, time: rental.pickupTime, file: 'pickup',
+      location: self ? '' : pickupAddressOf(rental),
+      title: forCustomer ? (self ? 'Return your totes (Ready Tote Oklahoma)' : 'Tote pickup (Ready Tote Oklahoma)')
+        : (self ? `Tote Return — ${rental.name}` : `Tote Pickup — ${rental.name}`),
+      description: forCustomer
+        ? `${rental.package}\n${self ? 'Bring the totes back, empty.' : 'Have the totes empty and ready.'} Need them longer? Let us know before today.\n${ours}`
+        : `${rental.package}\n${self ? 'Customer returns totes' : 'Pick up totes from customer'}\nPhone: ${rental.phone || ''}`,
+    },
+  ];
+  return legs.map((l) => ({
+    filename: forCustomer ? `ready-tote-${l.file}-${l.date}.ics` : `${l.file}-${first}-${l.date}.ics`,
+    content: Buffer.from(generateICS({ title: l.title, date: l.date, time: l.time || '10:00 AM', durationMinutes: 30, location: l.location, description: l.description })).toString('base64'),
+  }));
 }
