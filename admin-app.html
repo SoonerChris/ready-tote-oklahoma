@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>App &amp; alerts · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261104"></script>
+<script src="admin-shared.js?v=20261105"></script>
 <style>
   :root{--col:640px;}
   .panel{border:1px solid var(--line); border-radius:10px; padding:16px 20px; margin-top:20px;}
@@ -30,6 +30,8 @@
   .kind b{display:block; font-weight:600;}
   .kind span{font-size:13px; color:var(--steel);}
   .acts{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .badge-check{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:16px; padding:10px 12px; border-radius:10px; background:#FAF8F3; font-size:14px;}
+  .badge-check button{width:auto; margin:0; padding:8px 14px; font-size:14px;}
   .acts button{width:auto; margin:0; padding:10px 16px; font-size:14px;}
   [hidden]{display:none !important;}
 </style>
@@ -86,6 +88,10 @@
       <button id="offBtn" class="secondary" hidden>Turn off on this device</button>
     </div>
     <div class="status" id="status"></div>
+    <div class="badge-check">
+      <span id="badgeInfo">Icon badge: checking…</span>
+      <button type="button" class="secondary" id="badgeBtn">Update badge now</button>
+    </div>
     <p class="note"><b>Icon badge:</b> the Ready Tote icon shows how many things are waiting on you: booking requests to handle plus late pickups. It updates when a notification comes in and when you open the app. To hide it, go to iPhone Settings, Notifications, Ready Tote, Badges.</p>
     <p class="note">Each phone or computer is set up on its own. Turning these on here doesn't change Shon's or anyone else's.</p>
   </section>
@@ -221,8 +227,26 @@ document.querySelectorAll('[data-kind]').forEach((c) => c.addEventListener('chan
   catch (e) { c.checked = !c.checked; say(e.message); }
 }));
 
+// ---- Icon badge check ----
+async function checkBadge() {
+  const info = $('badgeInfo');
+  if (!('setAppBadge' in navigator)) {
+    info.textContent = standalone ? "Icon badge: this iPhone doesn't support badges (needs iOS 16.4 or newer)."
+      : 'Icon badge: only works in the Home Screen app.';
+    $('badgeBtn').hidden = true;
+    return;
+  }
+  info.textContent = 'Icon badge: updating…';
+  const n = await refreshBadge();
+  info.textContent = n === null ? "Icon badge: couldn't get the count. Try again."
+    : n === 0 ? 'Icon badge: nothing waiting on you, so no number shows.'
+    : `Icon badge: set to ${n}. Go to your Home Screen to see it.`;
+}
+$('badgeBtn').addEventListener('click', checkBadge);
+
 $('secret').value = adminSessionMarker();
 refresh().catch((e) => show('off', e.message || "Couldn't check this device."));
+checkBadge();
 </script>
 </body>
 </html>
