@@ -163,10 +163,22 @@ function isLatePickup(r, now = okNow()) {
   const t = clockMinutes(r.pickupTime);
   return r.pickupDate < now.date || (r.pickupDate === now.date && t !== null && now.minutes >= t);
 }
-// Last day a rental holds its totes: the pickup date, or today while a
-// late pickup is still out (same rule as lib-stock.mjs on the server)
+// Last day a rental holds its totes (same rule as lib-stock.mjs on the
+// server):
+//  - still out after its pickup date (late pickup): through today
+//  - picked up early (marked): the day before it came back
+//  - back already today (marked picked up, or pickup time passed): yesterday,
+//    so today's returns count as free today
+//  - otherwise: the pickup date (a future pickup day stays busy all day)
 function rentalEndDate(r, today) {
-  return isLatePickup(r) && r.pickupDate < today ? today : r.pickupDate;
+  const dayBefore = (d) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() - 1); return x.toISOString().slice(0, 10); };
+  if (isLatePickup(r)) return r.pickupDate < today ? today : r.pickupDate;
+  if (r.pickedUpAt) {
+    const back = new Date(r.pickedUpAt).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+    return back <= r.pickupDate ? dayBefore(back) : r.pickupDate;
+  }
+  if (r.pickupDate === today && rentalPhase(r) === 'done') return dayBefore(today);
+  return r.pickupDate;
 }
 // "Oct 23, 2:14 PM" for a deliveredAt / pickedUpAt stamp
 function markText(iso) {

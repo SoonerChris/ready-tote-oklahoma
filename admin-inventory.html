@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Inventory · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261105"></script>
+<script src="admin-shared.js?v=20261107"></script>
 <style>
   :root{--col:960px;}
   .finding{margin:4px 0 20px; font-size:17px; max-width:760px; line-height:1.45;}
@@ -439,7 +439,7 @@
       }
       const day = { date, available: owned - deployed, isToday: date === TODAY, isPast: date < TODAY };
       if (DOLLIES_TRACKED()) {
-        let dOut = ALL_RENTALS.reduce((t, r) => r.dropoffDate && r.pickupDate && r.dropoffDate <= date && r.pickupDate >= date ? t + dollyQty(r) : t, 0);
+        let dOut = ALL_RENTALS.reduce((t, r) => r.dropoffDate && r.pickupDate && r.dropoffDate <= date && rentalEndDate(r, TODAY) >= date ? t + dollyQty(r) : t, 0);
         if (date >= TODAY) dOut += pendingEstimable.reduce((t, p) => p.deliveryDate <= date && p.pickupDate >= date ? t + (p.estDollies || 0) : t, 0);
         day.dolliesFree = dolliesOwnedAsOf(date) - dOut;
       }
@@ -529,7 +529,7 @@
   let SELECTED = '';
   function dayBreakdown(date) {
     const owned = ownedAsOf(date);
-    const out = ALL_RENTALS.filter(r => r.dropoffDate && r.pickupDate && r.dropoffDate <= date && r.pickupDate >= date)
+    const out = ALL_RENTALS.filter(r => r.dropoffDate && r.pickupDate && r.dropoffDate <= date && rentalEndDate(r, TODAY) >= date)
       .map(r => ({ name: r.name, totes: toteQty(r), dollies: dollyQty(r), guessed: typeof r.toteCount !== 'number', from: r.dropoffDate, to: r.pickupDate }))
       .sort((a, b) => a.to.localeCompare(b.to));
     const held = date >= TODAY
