@@ -8,6 +8,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { emailLayout, heading, pill, detailsCard, steps, callout, contactLine } from "./lib-email.mjs";
+import { notify } from "./lib-push.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
@@ -84,6 +85,14 @@ export default async (request) => {
   } catch (e) {
     console.error("Booking request log failed (auto-reply still sent):", e.message);
   }
+
+  // Buzz the admin app (never blocks the customer's auto-reply)
+  await notify("requests", {
+    title: "New booking request",
+    body: [data.name || "Someone", data.package || "", data.delivery_date ? "delivery " + (formatDate(data.delivery_date) || data.delivery_date) : ""].filter(Boolean).join(" · "),
+    url: "/admin-requests.html",
+    tag: "request-" + Date.now(),
+  });
 
   // Only shown when the "military discount" checkbox was checked. If they
   // already uploaded a photo on the booking form (militaryIdKey set), just

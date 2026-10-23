@@ -4,6 +4,7 @@
 import { getStore } from "@netlify/blobs";
 import { computeReminders, rentalToICSAttachments } from "./lib-reminders.mjs";
 import { emailLayout, heading, sectionLabel, pill, button, escapeHtml, emailColors as C, SITE_URL } from "./lib-email.mjs";
+import { notify } from "./lib-push.mjs";
 
 const OWNER_EMAIL = "readytoteok@gmail.com";
 // Always get the digest, on top of REMINDER_EMAILS (or the owner if unset).
@@ -36,6 +37,17 @@ export default async () => {
     console.log("No reminders due today.");
     return new Response("No reminders today", { status: 200 });
   }
+
+  // The same news on the phone, with the biggest groups named
+  const parts = [["delivery", rem.delivery], ["pickup", [...rem.pickupTomorrow, ...rem.pickup]], ["address check", rem.addressCheck],
+    ["payment nudge", [...rem.followup, ...rem.emailReminder]], ["review ask", rem.review]]
+    .filter(([, l]) => l.length).map(([w, l]) => `${l.length} ${w}${l.length === 1 ? "" : "s"}`);
+  await notify("reminders", {
+    title: `${total} reminder${total === 1 ? "" : "s"} today`,
+    body: parts.join(", "),
+    url: "/admin-reminders.html",
+    tag: "reminders-" + new Date().toISOString().slice(0, 10),
+  });
 
   // One bordered list per kind of reminder; each item shows who, where,
   // and the exact text that will go out from the dashboard.
