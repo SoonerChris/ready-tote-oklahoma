@@ -477,6 +477,7 @@
   .hp{position:absolute; left:-9999px;}
   .form-submit{margin-top:8px;}
   .form-note{font-size:0.82rem; color:var(--steel); margin-top:14px;}
+  .form-error{margin:12px 0 0; padding:10px 14px; border-radius:10px; background:#FFEDEA; color:#831C1E; font-size:0.9rem; font-weight:600;}
   /* Live availability for the chosen dates (never shows stock numbers) */
   .avail-note{margin:10px 0 0; padding:10px 14px; border-radius:10px; font-size:0.88rem; font-weight:600; line-height:1.45;}
   .avail-note.ok{background:#E3F4E9; color:#14492F;}
@@ -908,7 +909,7 @@
         netlify-honeypot="hp_field"
       >
         <input type="hidden" name="form-name" value="booking">
-        <input class="hp" type="text" name="hp_field" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <input class="hp" type="text" name="hp_field" tabindex="-1" autocomplete="new-password" aria-hidden="true">
         <div class="form-grid two">
           <label>Full Name*
             <input type="text" name="name" autocomplete="name" required>
@@ -1284,9 +1285,30 @@
     return new URLSearchParams(data).toString();
   }
 
+  // A short message under the button when the form can't send yet, instead
+  // of relying on the browser's bubble (easy to miss on a laptop)
+  const formMsgEl = document.createElement('p');
+  formMsgEl.className = 'form-error'; formMsgEl.setAttribute('role', 'alert'); formMsgEl.hidden = true;
+  form.querySelector('.form-submit').after(formMsgEl);
+  function formMsg(text) { formMsgEl.textContent = text; formMsgEl.hidden = !text; }
+  form.addEventListener('invalid', (e) => {
+    if (!formMsgEl.hidden && formMsgEl.dataset.first) return;
+    const label = (e.target.closest('label')?.childNodes[0]?.textContent || e.target.name || 'a field').replace('*', '').trim();
+    formMsg('Please check ' + label + ': ' + e.target.validationMessage);
+    formMsgEl.dataset.first = '1';
+    setTimeout(() => { delete formMsgEl.dataset.first; }, 0);
+  }, true);
+  form.addEventListener('input', () => { if (!formMsgEl.hidden) formMsg(''); });
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (form.hp_field.value) return; // honeypot triggered, silently ignore
+    // The hidden anti-spam box (hp_field) is for bots that post the form
+    // without running this page. Browser autofill can drop a saved name or
+    // address into it, which used to make the button silently do nothing.
+    // Anyone here clicked the real button, so clear it; Netlify still
+    // rejects bots that fill it in and post directly.
+    form.hp_field.value = '';
+    formMsg('');
 
     const submitBtn = form.querySelector('.form-submit');
     submitBtn.disabled = true;
@@ -1315,7 +1337,7 @@
       .catch(() => {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Request Booking';
-        alert('Something went wrong sending your request. Please call or email us directly, or try again.');
+        formMsg('Something went wrong sending your request. Please try again, or call or text 580.399.3202.');
       });
   });
 </script>
