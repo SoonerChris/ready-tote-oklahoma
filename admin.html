@@ -69,7 +69,7 @@
   .row:first-child{border-top:none;}
   .who{font-weight:600;color:var(--ink);}
   .meta{color:var(--muted);font-size:13px;}
-  .texts .row{grid-template-columns:minmax(0,1fr) auto auto;}
+  .texts .row{grid-template-columns:minmax(0,1fr) auto auto auto;}
   .texts .why{font-size:13px;color:var(--muted);white-space:nowrap;text-align:right;}
   .texts .btn{height:34px;}
   /* After tapping Text: "Sent to Hannah?" in the row, so it can be marked done */
@@ -95,11 +95,28 @@
   .sched .who a,.sched .meta a{color:inherit;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--control);}
   .sched .who a:hover,.sched .meta a:hover{text-decoration-color:currentColor;}
 
+  /* Needs you */
+  .needs{display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin:0 0 20px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:#FAF8F3; font-size:14px;}
+  .needs[hidden]{display:none;}
+  .needs-h{font-weight:700; margin-right:4px;}
+  .needs a{color:var(--ink); text-decoration:none; padding:4px 10px; background:#fff; border:1px solid var(--border); border-radius:999px;}
+  .needs a:hover{border-color:var(--ink);}
+  .needs b{font-weight:700;}
+  .needs .rush{color:#831C1E; font-weight:700;}
+  .texts .skip{font-size:12px; color:var(--muted);}
+  .otw{display:block; margin-top:6px;}
+  .otw .btn{height:30px; padding:0 10px; font-size:13px;}
+  .unpaid .pay-acts{display:flex; align-items:center; gap:12px; grid-column:1 / -1; margin-top:4px;}
+  .unpaid .pay-acts .btn{width:auto; flex:none;}
+  .unpaid .pay-acts .linkbtn{white-space:nowrap;}
+  .unpaid .ask{grid-column:1 / -1; display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; margin-top:6px; padding:8px 10px; background:#FAF8F3; border-radius:8px; font-size:14px; font-weight:600;}
+  .unpaid .ask[hidden]{display:none;}
+
   /* Unpaid invoices */
   .unpaid .owed{display:flex;justify-content:space-between;align-items:baseline;padding:0 0 10px;}
   .unpaid .owed .lbl{font-size:14px;color:var(--muted);}
   .unpaid .owed .big{font-size:22px;font-weight:600;}
-  .unpaid .row{grid-template-columns:minmax(0,1fr) auto auto;}
+  .unpaid .row{grid-template-columns:minmax(0,1fr) auto;}
   .unpaid .amt{font-size:14px;font-weight:600;text-align:right;}
   .unpaid .btn{height:32px;padding:0 12px;font-size:13px;}
 
@@ -167,6 +184,8 @@
     .unpaid .row .btn{grid-column:1 / -1;justify-self:start;height:40px;}
     .texts .why{grid-column:1;grid-row:2;text-align:left;}
     .texts .row .btn{grid-column:2;grid-row:1 / span 2;min-height:44px;}
+    .texts .row .skip{grid-column:2;grid-row:3;justify-self:center;}
+    .needs a{flex:1 1 100%;}
   }
 </style>
 </head>
@@ -200,6 +219,7 @@
   </div>
 
   <div class="status" id="status"></div>
+  <div class="needs" id="needs" hidden></div>
 
   <div class="grid">
     <div class="col">
@@ -320,6 +340,11 @@
       DATA.mileage = fd.mileage || [];
       DATA.invEvents = id.events || [];
       DATA.requests = qd.requests || [];
+      DATA.mileageRates = fd.mileageRates || [];
+      DATA.taxPct = fd.taxPct ?? 25;
+      DATA.reviewLinkMissing = !!rd.reviewLinkMissing;
+      // Partner follow-ups are a nice-to-have; the page works without them
+      DATA.outreach = await post('get-outreach', { secret }).then(r => r.ok ? r.json() : {}).then(d => d.entries || []).catch(() => []);
       TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
 
       render();
@@ -369,7 +394,9 @@
     const today = TODAY;
 
     const activeRentals = rentals.filter(r => r.dropoffDate <= today && r.pickupDate >= today);
-    const pendingRequests = requests.filter(r => r.status === 'new' || r.status === 'reviewed' || r.status === 'awaiting_confirmation').length;
+    // Same as "waiting on you" on Requests: new, reviewed, and confirmed (ready to invoice)
+    const waitingReqs = requests.filter(r => ['new', 'reviewed', 'confirmed'].includes(r.status));
+    const pendingRequests = waitingReqs.length;
 
     const ADD_TYPES = ['purchased', 'returned-to-service'];
     // Same math as the Inventory page: real tote counts on each rental, and
@@ -393,7 +420,7 @@
       ...reminders.delivery.map(r => ({ ...r, why: r.dropoffDate === today ? 'Delivery today' : 'Delivery tomorrow' })),
       ...(reminders.pickupTomorrow || []).map(r => ({ ...r, why: r.pickupDate === today ? 'Pickup today' : 'Pickup tomorrow' })),
       ...reminders.pickup.map(r => ({ ...r, why: 'Pickup in 2 days' })),
-      ...(reminders.addressCheck || []).map(r => ({ ...r, why: 'Confirm address' })),
+      ...(reminders.addressCheck || []).map(r => ({ ...r, why: r.pickupDate === shiftDate(today, 2) ? 'Pickup and address check' : 'Confirm address' })),
       ...(reminders.followup || []).map(r => ({ ...r, why: 'Invoice follow-up' })),
       ...reminders.review.map(r => ({ ...r, why: 'Ask for a review' })),
     ].map(r => ({ ...r, why: r.why + (r.overdue ? ' · overdue' : '') }));
@@ -412,9 +439,10 @@
           <button type="button" class="btn primary" data-yes data-why="${escAttr(r.why)}" data-name="${escAttr(r.name)}">Yes, sent</button>
           <button type="button" class="linkbtn" data-no>Not yet</button>
         </div>
+        <button type="button" class="linkbtn skip" data-skip data-why="${escAttr(r.why)}" data-name="${escAttr(r.name)}">Skip</button>
       </div>`).join('') : '<p class="empty-line">No texts due today.</p>')
       + JUST_SENT.map(x => `
-      <div class="sent"><span><b>Sent</b> to ${esc(x.name)} · ${esc(x.why)}</span><button type="button" class="linkbtn" data-undo="${escAttr(x.flagId)}">Undo</button></div>`).join('');
+      <div class="sent"><span><b>${x.skipped ? 'Skipped' : 'Sent'}</b> ${x.skipped ? '' : 'to '}${esc(x.name)} · ${esc(x.why)}</span><button type="button" class="linkbtn" data-undo="${escAttr(x.flagId)}">Undo</button></div>`).join('');
 
     // ---- Next 7 days ----
     const endDate = shiftDate(today, 7);
@@ -422,12 +450,12 @@
     for (const r of rentals) {
       const self = r.serviceType === 'self';
       if (r.dropoffDate >= today && r.dropoffDate <= endDate) {
-        events.push({ date: r.dropoffDate, time: r.dropoffTime || '', kind: self ? 'Customer pickup' : 'Deliver',
+        events.push({ key: r.key, leg: 'delivery', date: r.dropoffDate, time: r.dropoffTime || '', kind: self ? 'Customer pickup' : 'Deliver',
           cls: self ? 'self' : 'go', name: r.name, phone: r.phone, totes: toteQty(r), unpaid: isUnpaid(r),
           addr: self ? '' : dropoffAddressOf(r) });
       }
       if (r.pickupDate >= today && r.pickupDate <= endDate) {
-        events.push({ date: r.pickupDate, time: r.pickupTime || '', kind: self ? 'Customer return' : 'Pick up',
+        events.push({ key: r.key, leg: 'pickup', date: r.pickupDate, time: r.pickupTime || '', kind: self ? 'Customer return' : 'Pick up',
           cls: self ? 'self' : 'back', name: r.name, phone: r.phone, totes: toteQty(r), unpaid: false,
           addr: self ? '' : pickupAddressOf(r) });
       }
@@ -446,7 +474,7 @@
           <div class="who">${e.phone ? `<a href="tel:${escAttr(normalizePhone(e.phone))}" title="Call ${escAttr(e.name)}">${esc(e.name)}</a>` : esc(e.name)}${e.unpaid ? ' <span class="kind due">Unpaid</span>' : ''}</div>
           <div class="meta">${e.addr ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.addr)}" target="_blank" rel="noopener" title="Open in Maps">${esc(e.addr)}</a>` : 'At our place'}</div>
         </div>
-        <div class="totes num">${e.totes || '—'} totes</div>
+        <div class="totes num">${e.totes || '—'} totes${e.date === today && e.addr && e.phone ? `<span class="otw" data-otw="${escAttr(e.key)}" data-leg="${e.leg}"><button type="button" class="btn ghost">On the way</button></span>` : ''}</div>
       </div>`;
     }).join('') : '<p class="empty-line">Nothing scheduled in the next 7 days.</p>';
 
@@ -502,6 +530,7 @@
       ${segs.length ? `<div class="meta" style="margin-top:12px">Coming back, soonest first</div><div class="back-list">${backRows}</div>` : '<p class="empty-line">No totes out right now.</p>'}`;
 
     renderUnpaid(isUnpaid);
+    renderNeeds(today);
     renderMoney();
   }
 
@@ -530,16 +559,37 @@
           <div class="meta">Invoiced ${ago(r.invoicedAt)}${r.dropoffDate ? ' · drop-off ' + dayName(r.dropoffDate).replace(/^(Today|Tomorrow)$/, d => d.toLowerCase()) : ''}${reminded ? ' · emailed ' + shortDate(String(reminded).slice(0,10)) : ''}${canEmail ? '' : ' · no payment link on file'}</div>
         </div>
         <div class="amt num">${moneyDec(priceNum(r.price))}</div>
-        ${canEmail ? `<button type="button" class="btn ghost" data-remind>${reminded ? 'Email again' : 'Email reminder'}</button>` : ''}
+        <div class="pay-acts">
+          ${canEmail ? `<button type="button" class="btn ghost" data-remind>${reminded ? 'Email again' : 'Email reminder'}</button>` : ''}
+          <button type="button" class="linkbtn" data-paid>Mark paid</button>
+        </div>
+        <div class="ask" data-remind-ask hidden>
+          <span>Email ${esc(String(r.name || '').split(' ')[0])} a reminder with the payment link?</span>
+          <button type="button" class="btn primary" data-remind-yes>Send</button>
+          <button type="button" class="linkbtn" data-remind-no>Cancel</button>
+        </div>
       </div>`;
     }).join('');
   }
   $('unpaidList').addEventListener('click', async (e) => {
-    const btn = e.target.closest('[data-remind]');
+    const row = e.target.closest('.row'); if (!row) return;
+    const ask = row.querySelector('[data-remind-ask]');
+    if (e.target.closest('[data-remind]')) { ask.hidden = false; return; }
+    if (e.target.closest('[data-remind-no]')) { ask.hidden = true; return; }
+    if (e.target.closest('[data-paid]')) {
+      const name = row.querySelector('.who').firstChild.textContent;
+      try {
+        const resp = await post('mark-paid', { secret: $('secret').value.trim(), key: row.dataset.key });
+        if (!resp.ok) throw new Error();
+        DATA.paidFlags[row.dataset.key] = new Date().toISOString();
+        render();
+        const st = $('status'); st.className = 'status ok'; st.style.display = 'block';
+        st.innerHTML = `Marked ${esc(name)} paid. <button type="button" class="linkbtn" id="undoPaid" data-key="${escAttr(row.dataset.key)}">Undo</button>`;
+      } catch { showErr('Couldn’t mark that paid. Try again.'); }
+      return;
+    }
+    const btn = e.target.closest('[data-remind-yes]');
     if (!btn) return;
-    const row = btn.closest('.row');
-    const name = row.querySelector('.who').firstChild.textContent;
-    if (!confirm(`Email ${name} a payment reminder with their payment link?`)) return;
     btn.disabled = true; btn.textContent = 'Sending…';
     try {
       const resp = await post('send-payment-reminder', { secret: $('secret').value.trim(), key: row.dataset.key });
@@ -548,10 +598,63 @@
       for (const k of Object.keys(DATA.reminders)) DATA.reminders[k] = (DATA.reminders[k] || []).filter(x => x.flagId !== 'emailReminder:' + row.dataset.key);
       render();
     } catch (err) {
-      btn.disabled = false; btn.textContent = 'Email reminder';
+      btn.disabled = false; btn.textContent = 'Send';
       showErr('Couldn’t send the reminder. ' + (err.message || 'Network error.'));
     }
   });
+  $('status').addEventListener('click', async (e) => {
+    const u = e.target.closest('#undoPaid'); if (!u) return;
+    try {
+      const resp = await post('mark-paid', { secret: $('secret').value.trim(), key: u.dataset.key, paid: false });
+      if (!resp.ok) throw new Error();
+      delete DATA.paidFlags[u.dataset.key];
+      $('status').style.display = 'none';
+      render();
+    } catch { showErr('Couldn’t undo. Mark it unpaid on All rentals.'); }
+  });
+
+  // ---- On the way: live ETA text for today's jobs (same as All rentals) ----
+  $('schedList').addEventListener('click', async (e) => {
+    const wrap = e.target.closest('[data-otw]'); if (!wrap || !e.target.closest('button')) return;
+    const b = wrap.querySelector('button'); b.disabled = true; b.textContent = 'Working out ETA…';
+    try {
+      const resp = await post('on-my-way', { secret: $('secret').value.trim(), key: wrap.dataset.otw, type: wrap.dataset.leg, origin: sessionStorage.getItem('rto-admin-startfrom') || '' });
+      const d = await resp.json().catch(() => ({}));
+      if (!resp.ok || d.error) throw new Error(d.error || 'Couldn’t work out the ETA.');
+      wrap.innerHTML = `<a class="btn ghost" href="${escAttr(d.sms)}">Text ETA (${esc(d.arrivalTime)})</a>`;
+    } catch (err) { b.disabled = false; b.textContent = 'On the way'; showErr(err.message); }
+  });
+
+  // ---- Needs you: one line per kind of waiting work, only when there is some ----
+  function renderNeeds(today) {
+    const lines = [];
+    const waiting = DATA.requests.filter(r => ['new', 'reviewed', 'confirmed'].includes(r.status));
+    if (waiting.length) {
+      const oldest = waiting.reduce((m, r) => !m || (r.submittedAt || '') < (m.submittedAt || '') ? r : m, null);
+      const days = oldest && oldest.submittedAt ? Math.floor((Date.now() - new Date(oldest.submittedAt)) / 864e5) : 0;
+      const rush = waiting.filter(r => r.deliveryDate >= today && isRushBooking(r.submittedAt, r.deliveryDate, windowStart(r.deliveryWindow))).length;
+      lines.push(`<a href="admin-requests.html"><b>${plural(waiting.length, 'request')}</b> waiting on you${days ? `, oldest ${plural(days, 'day')}` : ''}${rush ? ` · <span class="rush">${rush} rush</span>` : ''}</a>`);
+    }
+    const LEGACY_NO = s => /^not interested$/i.test(s || '');
+    const dueOut = (DATA.outreach || []).filter(o => o.nextFollowUp && o.nextFollowUp <= today && !LEGACY_NO(o.status));
+    if (dueOut.length) lines.push(`<a href="admin-outreach.html"><b>${plural(dueOut.length, 'partner follow-up')}</b> due${dueOut.length <= 2 ? ': ' + esc(dueOut.map(o => o.name).join(', ')) : ''}</a>`);
+    // Deliveries and pickups in the last 30 days with no mileage logged (same match as Finance)
+    const since = shiftDate(today, -30);
+    let unlogged = 0;
+    for (const r of DATA.rentals) {
+      if (r.serviceType === 'self') continue;
+      for (const [leg, date] of [['delivery', r.dropoffDate], ['pickup', r.pickupDate]]) {
+        if (!date || date < since || date > today) continue;
+        const firstName = String(r.name || '').toLowerCase().split(' ')[0];
+        const logged = DATA.mileage.some(m => (m.rentalKey === r.key && m.leg === leg) || (!m.rentalKey && m.date === date && firstName && String(m.purpose || '').toLowerCase().includes(firstName)));
+        if (!logged) unlogged++;
+      }
+    }
+    if (unlogged) lines.push(`<a href="admin-finance.html#mileage"><b>${plural(unlogged, 'trip')}</b> not logged in mileage yet</a>`);
+    if (DATA.reviewLinkMissing) lines.push(`<a href="admin-reminders.html"><b>Review texts are off:</b> the Google review link isn't set in Netlify</a>`);
+    $('needs').innerHTML = lines.length ? `<span class="needs-h">Needs you</span>${lines.join('')}` : '';
+    $('needs').hidden = !lines.length;
+  }
 
   // Turns a period key into a [start, end] date range for "current" plus the
   // matching prior range, so we can show a trend against it. Mirrors
@@ -597,6 +700,12 @@
   function renderMoney() {
     if (!TODAY) return;
     const k = computeKPIs(PERIOD);
+    const owed = owedRentals(DATA.rentals, DATA.paidFlags);
+    const owedAmt = owed.reduce((t, r) => t + priceAmount(r.price), 0);
+    // Same set-aside as Finance: profit less the mileage deduction, times your percent
+    const rateOn = d => { let r = 0; for (const x of DATA.mileageRates || []) if (x.from <= d) r = x.rate; return r; };
+    const deduction = DATA.mileage.filter(m => m.date >= k.range.start && m.date <= k.range.end).reduce((t, m) => t + Number(m.miles || 0) * rateOn(m.date), 0);
+    const aside = Math.max(0, k.net - deduction) * Number(DATA.taxPct ?? 25) / 100;
 
     let monthlyOverhead = 0;
     for (const e of DATA.expenses.filter(x => !x.endDate || x.endDate >= TODAY)) {
@@ -622,6 +731,8 @@
       <div class="kv">
         <div class="row"><span>${k.basis === 'paid' ? 'Collected' : 'Revenue'} <span class="sub">${plural(k.count, 'rental')}</span></span><span class="num">${moneyDec(k.revenue)}</span></div>
         <div class="row"><span>Expenses <span class="sub num">${moneyDec(monthlyOverhead)}/mo recurring</span></span><span class="num">−${moneyDec(k.expTotal)}</span></div>
+        ${owedAmt ? `<div class="row"><span><a href="admin-rentals.html?filter=unpaid">Still owed</a> <span class="sub">${plural(owed.length, 'invoice')}, all time</span></span><span class="num">${moneyDec(owedAmt)}</span></div>` : ''}
+        ${aside > 0 ? `<div class="row"><span>Set aside for taxes <span class="sub">about ${DATA.taxPct}% of profit after mileage</span></span><span class="num">${moneyDec(aside)}</span></div>` : ''}
       </div>`;
   }
 
@@ -639,6 +750,17 @@
       return;
     }
     if (e.target.closest('[data-no]') && row) { OPEN_ASKS.delete(row.dataset.flag); row.querySelector('.ask').hidden = true; return; }
+    const skip = e.target.closest('[data-skip]');
+    if (skip && row) {
+      skip.disabled = true;
+      const ok = await setSent(row.dataset.flag, true, true);
+      if (!ok) { skip.disabled = false; return; }
+      OPEN_ASKS.delete(row.dataset.flag);
+      JUST_SENT.push({ flagId: row.dataset.flag, name: skip.dataset.name, why: skip.dataset.why.replace(' · overdue', ''), skipped: true });
+      for (const k of Object.keys(DATA.reminders)) DATA.reminders[k] = (DATA.reminders[k] || []).filter(x => x.flagId !== row.dataset.flag);
+      render();
+      return;
+    }
     const yes = e.target.closest('[data-yes]');
     if (yes && row) {
       yes.disabled = true; yes.textContent = 'Saving…';
@@ -657,9 +779,9 @@
       else undo.disabled = false;
     }
   });
-  async function setSent(flagId, sent) {
+  async function setSent(flagId, sent, skip) {
     try {
-      const resp = await post('mark-sent', { secret: $('secret').value.trim(), flagId, ...(sent ? {} : { unsent: true }) });
+      const resp = await post('mark-sent', { secret: $('secret').value.trim(), flagId, ...(sent ? (skip ? { skip: true } : {}) : { unsent: true }) });
       if (resp.ok) return true;
       showErr(sent ? 'Couldn’t mark that text as sent. Try again.' : 'Couldn’t undo that. Try again.');
     } catch { showErr('Network error. Nothing was changed.'); }
