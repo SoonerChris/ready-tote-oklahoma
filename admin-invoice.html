@@ -270,6 +270,7 @@
       $('discName').value = 'Promo code ' + PREFILL_PROMO;
       $('discNote').textContent = `The customer entered promo code ${PREFILL_PROMO}. If it's valid, set the amount.`;
       $('discNote').hidden = false;
+      matchPartnerCode(PREFILL_PROMO);
     }
     if (r.name) $('name').value = r.name;
     if (r.email) $('email').value = r.email;
@@ -321,6 +322,28 @@
     matchPrefillPackage(r);
     showStatus('ok', 'Filled in from the booking request. Check the address, times and price before sending.');
   }
+
+  // A code that belongs to an Outreach partner fills in that partner's
+  // discount (or notes it's tracking only); anything else is left for you.
+  async function matchPartnerCode(code) {
+    try {
+      const resp = await fetch('/.netlify/functions/get-outreach', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: $('secret').value }) });
+      if (!resp.ok) return;
+      const p = ((await resp.json()).entries || []).find(e => String(e.promoCode || '').toUpperCase() === String(code).toUpperCase());
+      if (!p) return;
+      $('discName').value = `Partner code ${p.promoCode} (${p.name})`;
+      if (p.promoPct) {
+        $('discValue').value = p.promoPct; $('discType').value = 'pct';
+        $('discNote').textContent = `Code ${p.promoCode} belongs to ${p.name}: ${p.promoPct}% off applied.`;
+        PREFILL_PROMO_MATCHED = true;
+      } else {
+        $('discNote').textContent = `Code ${p.promoCode} belongs to ${p.name}. It's for tracking only, so there's no discount.`;
+      }
+      $('discNote').hidden = false;
+      if (typeof autoPrice === 'function' && PACKAGES.length) autoPrice();
+    } catch {}
+  }
+  var PREFILL_PROMO_MATCHED = false;
 
   function matchPrefillPackage(r) {
     if (!r.package || !PACKAGES.length) return;
@@ -406,7 +429,7 @@
     if (military > 0 && other > 0) {
       dn.textContent = `Discounts don't stack, so only the bigger one applies: ${useOther ? name + ' ($' + other.toFixed(2) + ')' : 'military ($' + military.toFixed(2) + ')'}.`;
       dn.hidden = false;
-    } else if (!PREFILL_PROMO || v > 0) {
+    } else if (!PREFILL_PROMO || (v > 0 && !PREFILL_PROMO_MATCHED)) {
       dn.hidden = true;
     }
 
