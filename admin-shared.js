@@ -180,6 +180,21 @@ function rentalEndDate(r, today) {
   if (r.pickupDate === today && rentalPhase(r) === 'done') return dayBefore(today);
   return r.pickupDate;
 }
+// ---- Needs cleaning ----
+// A rental's totes need cleaning once they're back (marked picked up, or
+// past the pickup time) until someone taps Clean (cleanedAt). Rentals that
+// came back more than CLEAN_LOOKBACK_DAYS ago without a mark count as
+// clean, so history from before this existed doesn't pile up.
+const CLEAN_LOOKBACK_DAYS = 30;
+function backDate(r) {
+  return r.pickedUpAt ? new Date(r.pickedUpAt).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }) : r.pickupDate;
+}
+function needsCleaning(r, now = okNow()) {
+  if (!r || r.cancelled || r.cleanedAt || rentalPhase(r, now) !== 'done') return false;
+  const cutoff = new Date(now.date + 'T12:00:00Z'); cutoff.setUTCDate(cutoff.getUTCDate() - CLEAN_LOOKBACK_DAYS);
+  return (backDate(r) || '') >= cutoff.toISOString().slice(0, 10);
+}
+
 // "Oct 23, 2:14 PM" for a deliveredAt / pickedUpAt stamp
 function markText(iso) {
   const d = new Date(iso);

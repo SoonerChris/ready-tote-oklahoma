@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Dashboard · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261107"></script>
+<script src="admin-shared.js?v=20261108"></script>
 <style>
   /* Dashboard layout: the cream body is the frame (sidebar on it, no rule),
      the work sits on one white sheet inset 8px from the window's right,
@@ -731,6 +731,12 @@
       lines.push(`<span class="needs-pair"><a href="admin-rentals.html?q=${encodeURIComponent(r.name || '')}"><b>Late pickup:</b> ${esc(r.name || 'Rental')}, due ${esc(due)}</a><button type="button" class="needs-x" data-mark="pickedUp" data-key="${escAttr(r.key)}">${r.serviceType === 'self' ? 'Returned' : 'Picked up'}</button></span>`);
     }
     if (late.length > 3) lines.push(`<a href="admin-rentals.html"><b>${late.length - 3} more</b> late pickups</a>`);
+    // Back from a rental, not cleaned yet (Inventory has the Clean buttons)
+    const dirty = DATA.rentals.filter(r => needsCleaning(r));
+    if (dirty.length) {
+      const n = dirty.reduce((t, r) => t + toteQty(r), 0);
+      lines.push(`<a href="admin-inventory.html"><b>${plural(n, 'tote')}</b> need cleaning</a>`);
+    }
     if (DATA.reviewLinkMissing) lines.push(`<a href="admin-reminders.html"><b>Review texts are off:</b> the Google review link isn't set in Netlify</a>`);
     $('needs').innerHTML = lines.length ? `<span class="needs-h">Needs you</span>${lines.join('')}` : '';
     $('needs').hidden = !lines.length;
