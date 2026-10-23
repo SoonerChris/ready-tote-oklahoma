@@ -33,6 +33,8 @@ export default async (request) => {
   const deliveryDate = formatDate(data.delivery_date) || "your requested date";
   const pickupDate = formatDate(data.pickup_date) || "your requested date";
   const isMilitary = data.is_military === "true";
+  // "I'll pick up and return the totes myself" on the booking form
+  const selfPickup = data.self_pickup === "true";
   const militaryIdKey = data.military_id_key || "";
   // Optional partner promo code; checked by hand before invoicing
   const promoCode = String(data.promo_code || "").trim().slice(0, 40);
@@ -80,6 +82,7 @@ export default async (request) => {
       deliveryAddressState: addr.state,
       deliveryAddressZip: addr.zip,
       isMilitary,
+      serviceType: selfPickup ? "self" : "delivery",
       militaryIdKey,
       promoCode,
       status: "new",
@@ -92,7 +95,7 @@ export default async (request) => {
   // Buzz the admin app (never blocks the customer's auto-reply)
   await notify("requests", {
     title: "New booking request",
-    body: [data.name || "Someone", data.package || "", data.delivery_date ? "delivery " + (formatDate(data.delivery_date) || data.delivery_date) : ""].filter(Boolean).join(" · "),
+    body: [data.name || "Someone", data.package || "", selfPickup ? "self pickup" : "", data.delivery_date ? "delivery " + (formatDate(data.delivery_date) || data.delivery_date) : ""].filter(Boolean).join(" · "),
     url: "/admin-requests.html",
     tag: "request-" + Date.now(),
   });
@@ -117,7 +120,7 @@ export default async (request) => {
               rows: [["Package", pkg],
                 ["Delivery", deliveryDate + (windowOf(data.delivery_window) ? `<br><span style="font-weight:400; color:#6B6259;">${windowOf(data.delivery_window)}</span>` : "")],
                 ["Pickup", pickupDate + (windowOf(data.pickup_window) ? `<br><span style="font-weight:400; color:#6B6259;">${windowOf(data.pickup_window)}</span>` : "")],
-                addressLine ? ["Address", escapeHtml(addressLine)] : null,
+                selfPickup ? ["Service", "You pick up and return the totes"] : addressLine ? ["Address", escapeHtml(addressLine)] : null,
                 promoCode ? ["Promo code", `${escapeHtml(promoCode)} (we'll apply it on your invoice)`] : null],
             })}
             <p style="margin:10px 0 0; font-size:13px; color:#6B6259;">Something look wrong? Just reply and we'll fix it.</p>
@@ -126,7 +129,7 @@ ${militaryBlock}
               "We check availability and text you to confirm",
               "Tap the link in that text (or reply YES)",
               "Your invoice arrives by email",
-              "Clean totes arrive at your door, with free delivery",
+              selfPickup ? "You pick up clean totes on your date" : "Clean totes arrive at your door, with free delivery",
             ])}
             ${contactLine("Questions in the meantime?")}`,
   });
