@@ -1,0 +1,155 @@
+// Scheduled function: runs every 15 minutes. Sends two kinds of phone
+// notifications to the admin Home Screen app (see lib-push.mjs):
+//
+//   soon  - a delivery or pickup starts within the hour. Uses the rental's
+//           drop-off/pickup time; rentals with no time set are skipped.
+//   stock - totes (or dollies) run low in the next 30 days. Checked once a
+//           day from 7 AM, and only sent when the picture has changed since
+//           the last alert, so the same shortage doesn't buzz every morning.
+//
+// What's already been sent is kept in the "meta" store under "pushAlerts".
+
+import { getStore } from "@netlify/blobs";
+import { notify } from "./lib-push.mjs";
+import { friendlyTime, dropoffAddressOf, pickupAddressOf } from "./lib-reminders.mjs";
+import { computeAvailability } from "./lib-stock.mjs";
+
+const LEAD_MINUTES = 75;     // alert when a stop is this close or closer
+const LOW_TOTES = 20;        // matches "Under 20" on the Inventory page
+const STOCK_DAYS = 30;
+const STOCK_FROM_HOUR = 7;
+
+// Oklahoma date and minutes since midnight, right now.
+export function nowInOklahoma(at = new Date()) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).formatToParts(at).map((x) => [x.type, x.value]));
+  return { date: `${p.year}-${p.month}-${p.day}`, minutes: Number(p.hour) * 60 + Number(p.minute) };
+}
+
+// "2:30 PM", "14:30" or "9 AM" -> minutes since midnight; null if no time.
+export function timeToMinutes(t) {
+  const m = String(t || "").match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
+  if (!m || (!m[2] && !m[3])) return null;
+  let h = Number(m[1]);
+  const min = Number(m[2] || 0);
+  if (m[3]) {
+    const pm = m[3].toUpperCase() === "PM";
+    if (pm && h < 12) h += 12;
+    if (!pm && h === 12) h = 0;
+  }
+  return h < 24 && min < 60 ? h * 60 + min : null;
+}
+
+const totes = (n) => (n ? `${n} ${n === 1 ? "tote" : "totes"}` : "");
+const dollies = (n) => (n ? `${n} ${n === 1 ? "dolly" : "dollies"}` : "");
+
+// Stops starting within the next LEAD_MINUTES that haven't been alerted yet.
+export function dueSoon(rentals, now, sent = {}) {
+  const out = [];
+  for (const r of rentals) {
+    if (r.cancelled) continue;
+    for (const [kind, date, time, addr] of [
+      ["Delivery", r.dropoffDate, r.dropoffTime, dropoffAddressOf(r)],
+      ["Pickup", r.pickupDate, r.pickupTime, pickupAddressOf(r)],
+    ]) {
+      if (date !== now.date) continue;
+      const at = timeToMinutes(time);
+      if (at === null) continue;
+      const until = at - now.minutes;
+      const id = `${kind.toLowerCase()}:${r.key}:${date}`;
+      if (until < 0 || until > LEAD_MINUTES || sent[id]) continue;
+      const what = kind === "Delivery" ? [totes(r.toteCount), dollies(r.dollyCount)].filter(Boolean).join(", ") : "";
+      out.push({
+        id,
+        message: {
+          title: `${kind} at ${friendlyTime(time)}: ${r.name || "customer"}`,
+          body: [what, addr || "No address yet"].filter(Boolean).join(" · "),
+          url: "/admin.html",
+          tag: id,
+        },
+      });
+    }
+  }
+  return out;
+}
+
+// The low-stock message for the next STOCK_DAYS, or null if stock is fine.
+export function stockAlert(avail) {
+  const days = avail.days.slice(0, STOCK_DAYS);
+  const low = days.filter((d) => d.available < LOW_TOTES);
+  const dollyShort = avail.dolliesTracked ? days.filter((d) => d.dolliesAvailable < 0) : [];
+  if (!low.length && !dollyShort.length) return null;
+
+  const fmt = (iso) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+  const parts = [];
+  if (low.length) {
+    const worst = low.reduce((a, b) => (b.available < a.available ? b : a));
+    parts.push(worst.available < 0
+      ? `Overbooked by ${-worst.available} totes on ${fmt(worst.date)}.`
+      : `Only ${worst.available} totes free on ${fmt(worst.date)}.`);
+    if (low.length > 1) parts.push(`${low.length} days under ${LOW_TOTES} in the next ${STOCK_DAYS}.`);
+  }
+  if (dollyShort.length) {
+    const worst = dollyShort.reduce((a, b) => (b.dolliesAvailable < a.dolliesAvailable ? b : a));
+    parts.push(`Short ${-worst.dolliesAvailable} ${-worst.dolliesAvailable === 1 ? "dolly" : "dollies"} on ${fmt(worst.date)}.`);
+  }
+  const overbooked = low.some((d) => d.available < 0) || dollyShort.length > 0;
+  return {
+    // Same days at the same levels = same alert; don't send it twice.
+    signature: JSON.stringify([low.map((d) => [d.date, d.available]), dollyShort.map((d) => [d.date, d.dolliesAvailable])]),
+    message: {
+      title: overbooked ? "Overbooked" : "Totes running low",
+      body: parts.join(" "),
+      url: "/admin-inventory.html",
+      tag: "stock",
+    },
+  };
+}
+
+export default async () => {
+  const meta = getStore("meta");
+  let state = {};
+  try { state = (await meta.get("pushAlerts", { type: "json" })) || {}; } catch {}
+  const now = nowInOklahoma();
+  // Only today's "soon" flags matter; older ones are dropped.
+  const soonSent = Object.fromEntries(Object.entries(state.soonSent || {}).filter(([id]) => id.endsWith(":" + now.date)));
+  let changed = Object.keys(soonSent).length !== Object.keys(state.soonSent || {}).length;
+
+  try {
+    const store = getStore("rentals");
+    const { blobs } = await store.list();
+    const rentals = [];
+    for (const b of blobs) {
+      const r = await store.get(b.key, { type: "json" }).catch(() => null);
+      if (r) rentals.push({ key: b.key, ...r });
+    }
+    for (const stop of dueSoon(rentals, now, soonSent)) {
+      await notify("soon", stop.message);
+      soonSent[stop.id] = new Date().toISOString();
+      changed = true;
+    }
+  } catch (e) {
+    console.error("push-alerts soon check failed:", e.message);
+  }
+
+  if (now.minutes >= STOCK_FROM_HOUR * 60 && state.stockCheckedOn !== now.date) {
+    try {
+      const alert = stockAlert(await computeAvailability(STOCK_DAYS));
+      if (alert && alert.signature !== state.stockSignature) await notify("stock", alert.message);
+      state.stockSignature = alert ? alert.signature : null;
+      state.stockCheckedOn = now.date;
+      changed = true;
+    } catch (e) {
+      console.error("push-alerts stock check failed:", e.message);
+    }
+  }
+
+  if (changed) await meta.setJSON("pushAlerts", { ...state, soonSent });
+  return new Response("ok");
+};
+
+export const config = {
+  schedule: "*/15 * * * *",
+};

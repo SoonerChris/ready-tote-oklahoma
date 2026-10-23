@@ -17,6 +17,7 @@ const EDITABLE_FIELDS = [
   "deliveryAddress", "deliveryAddressStreet", "deliveryAddressCity",
   "deliveryAddressState", "deliveryAddressZip",
   "reviewNotes", "declineReason", "invoiceRentalKey", "isMilitary", "promoCode",
+  "confirmToken",   // one-tap confirm link in the confirm text (confirm-booking.mjs)
 ];
 
 const VALID_ACTIONS = new Set(["review", "send-confirmation", "confirm", "unconfirm", "decline", "reopen", "invoice"]);
@@ -59,11 +60,13 @@ export default async (request) => {
       case "confirm":
         updated.status = "confirmed";
         updated.confirmedAt = now;
+        delete updated.confirmedBy;   // set to "customer" only by the confirm link
         break;
       case "unconfirm":
         // Undo of "confirm": back to waiting on the customer
         updated.status = "awaiting_confirmation";
         delete updated.confirmedAt;
+        delete updated.confirmedBy;
         break;
       case "decline":
         updated.status = "declined";
