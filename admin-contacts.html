@@ -268,7 +268,7 @@
     }).join('');
     const leadLines = p.leads.map(q => `<div class="line"><span>Asked ${esc(day((q.submittedAt || '').slice(0, 10)))} for ${esc(day(q.deliveryDate))}</span><span>${esc({ new: 'New', reviewed: 'Reviewed', awaiting_confirmation: 'Awaiting them', confirmed: 'Confirmed', declined: 'Declined' }[q.status] || q.status || '')}</span></div>`).join('');
     // Review: ask after their latest finished rental, once
-    const done = p.rentals.filter(r => r.pickupDate && r.pickupDate < new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }));
+    const done = p.rentals.filter(r => rentalPhase(r) === 'done');
     const last = done[0];
     let review = '';
     if (last) review = SENT_FLAGS['review:' + last.key]

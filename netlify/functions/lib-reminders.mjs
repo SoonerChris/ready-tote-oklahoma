@@ -118,7 +118,7 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
     // Confirm pickup address: delivery-service rentals only (self-service has
     // no real pickup address to confirm). Catches cases where the address on
     // file was a placeholder or has since changed.
-    if (!self && r.pickupDate && open(shiftDate(r.pickupDate, -5), shiftDate(r.pickupDate, -2))) {
+    if (!self && !r.pickedUpAt && r.pickupDate && open(shiftDate(r.pickupDate, -5), shiftDate(r.pickupDate, -2))) {
       const flagId = "addressCheck:" + (r.key || r.phone + r.pickupDate);
       if (!sentFlags[flagId]) {
         const { message, sms } = pickupAddressRequestMessageFor(r, { withPickup: today === shiftDate(r.pickupDate, -2) });
@@ -154,8 +154,9 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
       }
     }
 
-    // Delivery reminder: the day before drop-off, or on the day if missed
-    if (r.dropoffDate && open(shiftDate(r.dropoffDate, -1), r.dropoffDate)) {
+    // Delivery reminder: the day before drop-off, or on the day if missed.
+    // Not once it's marked delivered (or picked up) on the Dashboard.
+    if (r.dropoffDate && !r.deliveredAt && !r.pickedUpAt && open(shiftDate(r.dropoffDate, -1), r.dropoffDate)) {
       const when = r.dropoffDate === today ? "today" : "tomorrow";
       const msg = self
         ? `${hi(first)} Reminder: your totes are ready for pickup ${when} (${friendlyDate(r.dropoffDate)}) around ${friendlyTime(r.dropoffTime)}. See you then!`
@@ -164,8 +165,9 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
       if (!sentFlags[flagId]) out.delivery.push({ ...r, flagId, ...timing(shiftDate(r.dropoffDate, -1)), address: self ? "Customer pickup" : dropAddr, message: msg, sms: smsLink(r.phone, msg) });
     }
 
-    // Pickup reminder: the day before pickup, or on the day if missed
-    if (r.pickupDate && open(shiftDate(r.pickupDate, -1), r.pickupDate)) {
+    // Pickup reminder: the day before pickup, or on the day if missed.
+    // Not once it's marked picked up (totes came back early).
+    if (r.pickupDate && !r.pickedUpAt && open(shiftDate(r.pickupDate, -1), r.pickupDate)) {
       const when = r.pickupDate === today ? "today" : "tomorrow";
       const msg = self
         ? `${hi(first)} Reminder: please have your totes ready for return ${when} (${friendlyDate(r.pickupDate)}) around ${friendlyTime(r.pickupTime)}. Thanks!`
@@ -178,7 +180,7 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
     // Skipped when the address check (still due, or sent today) carries it
     const addrId = "addressCheck:" + (r.key || r.phone + r.pickupDate);
     const carriedByAddressCheck = !self && (!sentFlags[addrId] || sentOn(addrId) === today);
-    if (r.pickupDate === shiftDate(today, 2) && !carriedByAddressCheck) {
+    if (r.pickupDate === shiftDate(today, 2) && !r.pickedUpAt && !carriedByAddressCheck) {
       const msg = self
         ? `${hi(first)} Friendly reminder to return your totes on ${friendlyDate(r.pickupDate)} around ${friendlyTime(r.pickupTime)}. Thanks!`
         : `${hi(first)} We'll pick up your totes on ${friendlyDate(r.pickupDate)} around ${friendlyTime(r.pickupTime)}. Please have them empty and accessible. Thanks!`;
