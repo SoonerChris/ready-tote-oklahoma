@@ -262,6 +262,13 @@
   const isUpcoming = r => rentalPhase(r) === 'upcoming';
   const isDone = r => rentalPhase(r) === 'done';
   // On the day: "Delivery today, 2:00 PM" until it's out, "Pickup today, 1:00 PM" until it's back
+  // "Sun, Oct 25, 10:00 AM" (time left off when there isn't one)
+  function whenText(date, time) {
+    if (!date) return '—';
+    const day = new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', ...(date.slice(0, 4) === TODAY.slice(0, 4) ? {} : { year: 'numeric' }), timeZone: 'UTC' });
+    const m = clockMinutes(time);
+    return m === null ? day : `${day}, ${(Math.floor(m / 60) % 12) || 12}:${String(m % 60).padStart(2, '0')} ${m >= 720 ? 'PM' : 'AM'}`;
+  }
   function todayPill(r) {
     const ph = rentalPhase(r);
     if (ph === 'upcoming' && r.dropoffDate === TODAY) return pill('pending', 'Delivery today' + (r.dropoffTime ? ', ' + clockText(r.dropoffTime) : ''));
@@ -357,6 +364,10 @@
     const city = r.serviceType === 'self' ? 'Customer pickup' : cityOf(r);
     const facts = [totes, `${shortDate(r.dropoffDate)} to ${shortDate(r.pickupDate)}`, city].filter(Boolean).join(' · ');
     const dOff = dropoffAddressOf(r), pOff = pickupAddressOf(r);
+    // On the way texts only on the day of the stop (or a late pickup), like the Dashboard
+    const otwDelivery = !r.cancelled && r.serviceType !== 'self' && dOff && r.dropoffDate === TODAY && !r.deliveredAt;
+    const otwPickup = !r.cancelled && r.serviceType !== 'self' && pOff && !r.pickedUpAt && (r.pickupDate === TODAY || isLatePickup(r));
+    const otwToday = otwDelivery || otwPickup;
     const addr = r.serviceType === 'self' ? 'Customer picks up and returns' : dOff && dOff === pOff ? esc(dOff) : [dOff ? 'Drop-off: ' + esc(dOff) : '', pOff ? 'Pickup: ' + esc(pOff) : ''].filter(Boolean).join('<br>') || '—';
     const counts = typeof r.toteCount === 'number' || typeof r.dollyCount === 'number'
       ? `${typeof r.toteCount === 'number' ? r.toteCount : '—'} totes · ${typeof r.dollyCount === 'number' ? r.dollyCount : '—'} ${r.dollyCount === 1 ? 'dolly' : 'dollies'}` : '<span style="color:#831C1E;">Not set. Inventory can’t count this rental</span>';
@@ -382,7 +393,7 @@
           <div class="facts">
             <div><span class="k">Package</span>${esc(r.package || '—')}</div>
             <div><span class="k">Counts</span>${counts}</div>
-            <div><span class="k">Times</span>out ${esc(fmtDate(r.dropoffDate))} ${esc(r.dropoffTime || '')}, back ${esc(fmtDate(r.pickupDate))} ${esc(r.pickupTime || '')}</div>
+            <div><span class="k">Times</span>out ${esc(whenText(r.dropoffDate, r.dropoffTime))}, back ${esc(whenText(r.pickupDate, r.pickupTime))}</div>
             <div><span class="k">Address</span>${addr}</div>
             <div><span class="k">Contact</span>${r.phone ? `<a href="tel:${escAttr(r.phone)}">${esc(fmtPhone(r.phone))}</a>` : '—'}${r.email ? ` · <a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : ''}</div>
             ${(r.stockLosses || []).length ? `<div><span class="k">Stock</span><span style="color:#831C1E;">${r.stockLosses.map(l => `${l.quantity} ${l.item === 'dolly' ? (l.quantity === 1 ? 'dolly' : 'dollies') : (l.quantity === 1 ? 'tote' : 'totes')} ${l.type === 'lost' ? 'not returned' : 'damaged'} (${esc(shortDate(l.date))})`).join(', ')}</span></div>` : ''}
@@ -394,9 +405,9 @@
           ${askFor(r.key, String(r.name || '').split(' ')[0])}
           ${paymentControls ? `<div class="actions payment-actions">${paymentControls}</div>` : ''}
           ${marksHtml(r)}
-          ${!r.cancelled && r.serviceType !== 'self' && (dOff || pOff) && !isDone(r) ? `<div class="actions">
-            ${dOff && !isOut(r) ? onTheWayBtn('delivery', r.key) : ''}
-            ${pOff ? onTheWayBtn('pickup', r.key) : ''}
+          ${otwToday ? `<div class="actions">
+            ${otwDelivery ? onTheWayBtn('delivery', r.key) : ''}
+            ${otwPickup ? onTheWayBtn('pickup', r.key) : ''}
           </div>` : ''}
           <div class="tool-row">
             ${tbtn('edit', 'Edit rental')}${tbtn('texts', 'Other texts')}${tbtn('photos', 'Photos')}${tbtn('more', 'More')}

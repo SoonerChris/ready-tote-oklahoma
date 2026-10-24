@@ -159,7 +159,7 @@
     { id: 'pickupTomorrow', title: 'Pickup tomorrow',        short: 'pickup tomorrow',    note: 'the day before pickup' },
     { id: 'pickup',         title: 'Pickup in 2 days',       short: 'pickup in 2 days',   note: '' },
     { id: 'addressCheck',   title: 'Confirm pickup address', short: 'address check',      note: 'from 5 days before pickup; 2 days out it also reminds them of the pickup' },
-    { id: 'emailReminder',  title: 'Unpaid invoices',        short: 'payment reminder',   note: 'from 5 days after invoicing' },
+    { id: 'emailReminder',  title: 'Payment reminders',        short: 'payment reminder',   note: 'from 5 days after invoicing' },
     { id: 'followup',       title: 'Invoice follow-ups',     short: 'invoice follow-up',  note: '3 to 4 days after invoicing' },
     { id: 'review',         title: 'Review requests',        short: 'review request',     note: 'from 3 days after pickup' },
   ];
@@ -222,7 +222,7 @@
   function textCard(type, r) {
     // r.flagId is "<type>:<key>" as computed by the server. Reuse its key
     // part so the sent flag set here matches the one the server checks.
-    const facts = [r.phone, totesOf(r) ? totesOf(r) + ' totes' : '', r.address].filter(Boolean).map(esc).join(' · ');
+    const facts = [fmtPhone(r.phone), totesOf(r) ? totesOf(r) + ' totes' : '', r.address].filter(Boolean).map(esc).join(' · ');
     return `
       <div class="rem rcard">
         <div class="rtop">
@@ -240,7 +240,7 @@
 
   // Payment nudges: an email the site sends, a text you send, or both
   function paymentCard(r) {
-    const facts = [r.email, 'invoiced ' + fmtDate((r.invoicedAt || '').slice(0, 10)), fmtPrice(r.price)].filter(Boolean).join(' · ');
+    const facts = [r.email, r.invoicedAt ? 'invoiced ' + shortDate(r.invoicedAt.slice(0, 10)) : '', fmtPrice(r.price)].filter(Boolean).join(' · ');
     return `
       <div class="rem rcard">
         <div class="rtop">
