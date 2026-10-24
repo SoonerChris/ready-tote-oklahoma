@@ -251,6 +251,7 @@
             <td class="c-act"><div class="acts">
               ${digits ? `<a href="sms:${escAttr(normalizePhone(p.phone))}">Text</a>` : ''}
               ${p.email ? `<a href="mailto:${escAttr(p.email)}">Email</a>` : ''}
+              ${p.rentals.length ? `<a href="admin-invoice.html" data-invoice="${escAttr(p.key)}">Invoice</a>` : ''}
             </div></td>
           </tr>
           <tr class="detail"${OPEN.has(p.key) ? '' : ' hidden'}><td colspan="6">${detailHtml(p)}</td></tr>`; }).join('')}
@@ -290,6 +291,23 @@
       ${askFor(p.key, first)}
     </div>`;
   }
+  // Repeat customer: hand Send Invoice who they are and their latest drop-off
+  // address, the same way Requests does. Package and dates are left for the
+  // new rental, and there's no request key, so nothing gets marked invoiced.
+  document.getElementById('peopleList').addEventListener('click', (e) => {
+    const a = e.target.closest('[data-invoice]'); if (!a) return;
+    const p = PEOPLE.find(x => x.key === a.dataset.invoice); if (!p) return;
+    e.preventDefault();
+    const r = p.rentals[0];
+    sessionStorage.setItem('rto-prefill-request', JSON.stringify({
+      source: 'contact',
+      name: p.name, email: p.email, phone: p.phone,
+      deliveryAddressStreet: r.dropoffAddressStreet, deliveryAddressCity: r.dropoffAddressCity,
+      deliveryAddressState: r.dropoffAddressState, deliveryAddressZip: r.dropoffAddressZip,
+      deliveryAddress: r.dropoffAddress || r.address || '',
+    }));
+    location.href = a.href;
+  });
   document.getElementById('peopleList').addEventListener('click', (e) => {
     const b = e.target.closest('[data-open]'); if (!b) return;
     OPEN.has(b.dataset.open) ? OPEN.delete(b.dataset.open) : OPEN.add(b.dataset.open);

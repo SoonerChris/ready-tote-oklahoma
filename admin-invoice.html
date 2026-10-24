@@ -329,7 +329,9 @@
     if (noteParts.length) $('notes').value = noteParts.join(' ');
 
     matchPrefillPackage(r);
-    showStatus('ok', 'Filled in from the booking request. Check the address, times and price before sending.');
+    showStatus('ok', r.source === 'contact'
+      ? 'Filled in from Contacts. Pick the package and new dates, and check the address.'
+      : 'Filled in from the booking request. Check the address, times and price before sending.');
   }
 
   // A code that belongs to an Outreach partner fills in that partner's
