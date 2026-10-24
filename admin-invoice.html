@@ -44,6 +44,7 @@
   label.check input{width:auto; margin:0;}
   .linkish{all:unset; cursor:pointer; margin-top:6px; font-size:13px; font-weight:600; color:var(--ink); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
   .linkish[hidden]{display:none;}
+  #discAmtRow[hidden]{display:none;}
   .note.bad{color:#831C1E; font-weight:600;}
   .disc-row{margin-top:6px;}
   .after-send{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:14px;}
@@ -122,7 +123,7 @@
       <label for="discName">Other discount (optional)</label>
       <input type="text" id="discName" maxlength="60" placeholder="e.g. Partner code SMITH10">
     </div>
-    <div class="grid2">
+    <div class="grid2" id="discAmtRow">
       <div>
         <label for="discValue">Amount</label>
         <input type="text" id="discValue" inputmode="decimal" placeholder="10">
@@ -137,7 +138,7 @@
 
   <div class="grid2">
     <div>
-      <label for="price">Price</label>
+      <label for="price">Total price</label>
       <input type="text" id="price" placeholder="$99" value="$">
       <p class="note" id="estimateNote" style="display:none;"></p>
       <button type="button" id="recalcBtn" class="linkish" hidden>Recalculate from package</button>
@@ -277,6 +278,7 @@
       $('discNote').textContent = `The customer entered promo code ${PREFILL_PROMO}. If it's valid, set the amount.`;
       $('discNote').hidden = false;
       matchPartnerCode(PREFILL_PROMO);
+      syncDiscRow();
     }
     if (r.serviceType === 'self') { $('serviceType').value = 'self'; $('serviceType').dispatchEvent(new Event('change')); }
     if (r.name) $('name').value = r.name;
@@ -347,6 +349,7 @@
         $('discNote').textContent = `Code ${p.promoCode} belongs to ${p.name}. It's for tracking only, so there's no discount.`;
       }
       $('discNote').hidden = false;
+      syncDiscRow();
       if (typeof autoPrice === 'function' && PACKAGES.length) autoPrice();
     } catch {}
   }
@@ -370,7 +373,12 @@
   // Price follows the package, rush and military automatically until you
   // type a price yourself; then it's left alone and "Recalculate" appears.
   let PRICE_BY_HAND = false;
+  // Amount and type only show once there's a discount to describe
+  function syncDiscRow() {
+    $('discAmtRow').hidden = !$('discName').value.trim() && !$('discValue').value.trim();
+  }
   function autoPrice() {
+    syncDiscRow();
     autoRush();
     if (!PRICE_BY_HAND) recalcEstimate();
     stripeCheck();
@@ -494,6 +502,7 @@
   $('isMilitary').addEventListener('change', autoPrice);
   $('discValue').addEventListener('input', autoPrice);
   $('discName').addEventListener('input', autoPrice);
+  syncDiscRow();
   $('discType').addEventListener('change', autoPrice);
   $('dropoffDate').addEventListener('change', autoPrice);
   $('dropoffTime').addEventListener('change', autoPrice);

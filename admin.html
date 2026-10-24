@@ -98,6 +98,7 @@
   .kind.back{background:var(--pill-back-bg);color:var(--pill-back-ink);}
   .kind.self{background:var(--pill-self-bg);color:var(--pill-self-ink);}
   .kind.due{background:#FFEDEA;color:#831C1E;height:20px;font-size:11px;margin-left:6px;vertical-align:1px;}
+  .kind.due.quiet{background:var(--pill-self-bg);color:var(--pill-self-ink);}
   .sched .who a,.sched .meta a{color:inherit;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--control);}
   .sched .who a:hover,.sched .meta a:hover{text-decoration-color:currentColor;}
 
@@ -114,11 +115,11 @@
   .needs-x{width:auto; margin:0; padding:4px 12px 4px 10px; font-size:13px; font-weight:600; background:#fff; color:var(--steel); border:1px solid var(--border); border-left:none; border-radius:0 999px 999px 0;}
   .needs-x:hover{background:#fff; color:var(--ink); border-color:var(--ink);}
   .texts .skip{font-size:12px; color:var(--muted);}
-  .otw{display:block; margin-top:6px;}
-  .otw .btn{height:30px; padding:0 10px; font-size:13px;}
-  .mark{display:block; margin-top:6px;}
-  .mark .btn{height:30px; padding:0 10px; font-size:13px; width:auto;}
-  .marked{display:block; margin-top:6px; font-size:12px; font-weight:600; color:#14492F;}
+  /* Today's stops: On the way / Delivered in one row under the name */
+  .sched .acts{grid-column:3 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:4px;}
+  .otw .btn{height:34px; padding:0 12px; font-size:13px; width:auto;}
+  .mark .btn{height:34px; padding:0 12px; font-size:13px; width:auto;}
+  .marked{font-size:12px; font-weight:600; color:#14492F;}
   .marked .linkbtn{font-size:12px; margin-left:4px;}
   .unpaid .pay-acts{display:flex; align-items:center; gap:12px; grid-column:1 / -1; margin-top:4px;}
   .unpaid .pay-acts .btn{width:auto; flex:none;}
@@ -193,6 +194,7 @@
     .sched .row .person{grid-column:2 / -1;grid-row:2;}
     .sched .row .time{grid-row:1 / span 2;align-self:start;padding-top:2px;}
     .sched .row .totes{grid-column:3;grid-row:1;}
+    .sched .row .acts{grid-column:2 / -1;grid-row:3;}
     .texts .row{grid-template-columns:minmax(0,1fr) auto;}
     .unpaid .row{grid-template-columns:minmax(0,1fr) auto;}
     .unpaid .row .btn{grid-column:1 / -1;justify-self:start;height:40px;}
@@ -496,7 +498,8 @@
           <div class="who">${e.phone ? `<a href="tel:${escAttr(normalizePhone(e.phone))}" title="Call ${escAttr(e.name)}">${esc(e.name)}</a>` : esc(e.name)}${e.unpaid ? ' <span class="kind due">Unpaid</span>' : ''}</div>
           <div class="meta">${e.addr ? `<a href="${escAttr(mapsLink(e.addr))}" target="_blank" rel="noopener" title="Open in Maps">${esc(e.addr)}</a>` : 'At our place'}</div>
         </div>
-        <div class="totes num">${e.totes || '—'} totes${e.date === today && e.addr && e.phone && !e.marked ? `<span class="otw" data-otw="${escAttr(e.key)}" data-leg="${e.leg}"><button type="button" class="btn ghost">On the way</button></span>` : ''}${e.date === today ? markHtml(e) : ''}</div>
+        <div class="totes num">${e.totes || '—'} totes</div>
+        ${e.date === today ? `<div class="acts">${e.addr && e.phone && !e.marked ? `<span class="otw" data-otw="${escAttr(e.key)}" data-leg="${e.leg}"><button type="button" class="btn ghost">On the way</button></span>` : ''}${markHtml(e)}</div>` : ''}
       </div>`;
     }).join('') : '<p class="empty-line">Nothing scheduled in the next 7 days.</p>';
 
@@ -581,7 +584,7 @@
       return `
       <div class="row" data-key="${escAttr(r.key)}">
         <div class="person">
-          <div class="who">${esc(r.name)}${tag ? ' <span class="kind due">' + tag + '</span>' : ''}</div>
+          <div class="who">${esc(r.name)}${tag ? ` <span class="kind ${tag === 'Late pickup' ? 'due' : 'due quiet'}">${tag}</span>` : ''}</div>
           <div class="meta">Invoiced ${ago(r.invoicedAt)}${r.dropoffDate ? ' · drop-off ' + dayName(r.dropoffDate).replace(/^(Today|Tomorrow)$/, d => d.toLowerCase()) : ''}${reminded ? ' · emailed ' + shortDate(String(reminded).slice(0,10)) : ''}${canEmail ? '' : ' · no payment link on file'}</div>
         </div>
         <div class="amt num">${moneyDec(priceNum(r.price))}</div>
