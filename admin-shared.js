@@ -32,6 +32,15 @@ function fmtDate(iso, fallback = '') {
   return m + '/' + d + '/' + y.slice(2);
 }
 
+// On-screen date: "Oct 14" this year, "Oct 14, 2025" otherwise. (fmtDate's
+// 10/14/26 stays for CSV downloads and tight table cells.)
+function fmtDay(iso, fallback = '') {
+  const s = String(iso || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return iso ? String(iso) : fallback;
+  const thisYear = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }).slice(0, 4);
+  return new Date(s + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(s.slice(0, 4) === thisYear ? {} : { year: 'numeric' }), timeZone: 'UTC' });
+}
+
 // Phone for display: "15803993202" or "580.399.3202" -> "(580) 399-3202".
 // Anything that isn't a US number is shown as typed.
 function fmtPhone(raw) {

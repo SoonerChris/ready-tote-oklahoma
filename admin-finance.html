@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Finance · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261110"></script>
+<script src="admin-shared.js?v=20261111"></script>
 <style>
   /* Finance answers one question first: how is the business doing in the
      period picked (a month, a year, or all time), and where is the money
@@ -859,13 +859,13 @@
     const status = r => r.cancelled ? '<span class="pill neutral">Cancelled</span>'
       : isLatePickup(r) ? '<span class="pill err">Late pickup</span>'
       : ({ out: '<span class="pill ok">Out now</span>', done: '<span class="pill neutral">Done</span>' })[rentalPhase(r)] || '<span class="pill pending">Upcoming</span>';
-    const pay = r => { const p = payState(r); return p.paid ? `<span class="pill ok">Paid</span><span class="minor">${esc(fmtDate(p.date))} · ${esc(p.via)}</span>` : '<span class="pill err">Not paid</span>'; };
+    const pay = r => { const p = payState(r); return p.paid ? `<span class="pill ok">Paid</span><span class="minor">${esc(fmtDay(p.date))} · ${esc(p.via)}</span>` : '<span class="pill err">Not paid</span>'; };
     $('rentList').innerHTML = rows.length ? `
       <table class="data">
         <thead><tr><th>Drop-off</th><th>Customer</th><th>Package</th><th>Status</th><th>Payment</th><th class="r">Price</th></tr></thead>
         <tbody>${rows.map(r => `
           <tr>
-            <td style="white-space:nowrap;">${esc(fmtDate(r.dropoffDate))}<span class="minor">back ${esc(fmtDate(r.pickupDate))}</span></td>
+            <td style="white-space:nowrap;">${esc(fmtDay(r.dropoffDate))}<span class="minor">back ${esc(fmtDay(r.pickupDate))}</span></td>
             <td>${esc(r.name)}</td>
             <td>${esc(shortPkg(r.package))}</td>
             <td>${status(r)}</td>
@@ -942,7 +942,7 @@
       <div class="kpi"><div class="lbl">Business miles, ${yr}</div><div class="val num">${ytdMiles.toLocaleString('en-US',{maximumFractionDigits:1})} mi</div><div class="cap">${plural(ytd.length, 'trip')}</div></div>
       <div class="kpi"><div class="lbl">Estimated deduction, ${yr}</div><div class="val num">${rates.length ? money(deductionOf(ytd)) : '—'}</div><div class="cap">${cur ? 'Now ' + fmtRate(cur) + ' a mile' : 'Set your rate to see this'}</div></div>
       <div class="kpi"><div class="lbl">Rate per mile</div>
-        <div class="rates">${rates.length ? [...rates].reverse().map(r => `<div class="rate-row"><b class="num">${fmtRate(r.rate)}</b> <span>${r.from === '0000-01-01' ? 'from the start' : 'from ' + esc(fmtDate(r.from))}</span> <button type="button" class="link danger" onclick="deleteRate('${r.from}')">Remove</button></div>`).join('') : '<p class="note" style="margin:4px 0;">No rate set yet.</p>'}</div>
+        <div class="rates">${rates.length ? [...rates].reverse().map(r => `<div class="rate-row"><b class="num">${fmtRate(r.rate)}</b> <span>${r.from === '0000-01-01' ? 'from the start' : 'from ' + esc(fmtDay(r.from))}</span> <button type="button" class="link danger" onclick="deleteRate('${r.from}')">Remove</button></div>`).join('') : '<p class="note" style="margin:4px 0;">No rate set yet.</p>'}</div>
         <div class="rate" style="margin-top:6px;">
           <div class="money-field compact"><input type="number" id="rateInput" step="0.005" min="0" placeholder="0.725" aria-label="Rate per mile"></div>
           <label class="from-label">from <input type="date" id="rateFrom" value="${yr}-01-01" aria-label="Starting"></label>
@@ -979,7 +979,7 @@
         <thead><tr><th>Date</th><th>Trip</th><th class="r">Miles</th><th class="r">Deduction</th><th></th></tr></thead>
         <tbody>${mileSorted.map(m => `
           <tr data-row="${escAttr(m.key)}">
-            <td class="c-meta" style="white-space:nowrap;">${esc(fmtDate(m.date))}</td>
+            <td class="c-meta" style="white-space:nowrap;">${esc(fmtDay(m.date))}</td>
             <td class="c-main">${esc(m.purpose)}</td>
             <td class="r c-amt">${Number(m.miles).toLocaleString('en-US',{maximumFractionDigits:1})} mi</td>
             <td class="r c-hide" style="color:var(--steel);">${rateOn(m.date) ? money(m.miles * rateOn(m.date)) : '—'}</td>
@@ -1087,7 +1087,7 @@
         <thead><tr><th>Date</th><th>Vendor</th><th>Category</th><th>Paid with</th><th class="r">Amount</th><th></th></tr></thead>
         <tbody>${filtered.map(e => `
           <tr>
-            <td class="c-meta" style="white-space:nowrap;">${esc(fmtDate(e.date))}</td>
+            <td class="c-meta" style="white-space:nowrap;">${esc(fmtDay(e.date))}</td>
             <td class="c-main">${esc(e.vendor || e.category || '—')}${e.description ? `<span class="minor">${esc(e.description)}</span>` : ''}${often(e) ? `<span class="minor">${often(e)}</span>` : ''}<span class="minor"><button type="button" class="link" data-receipt="${escAttr(e.key)}" data-has="${e.hasReceipt ? '1' : ''}">${e.hasReceipt ? 'View receipt' : 'Add receipt'}</button></span></td>
             <td class="c-hide">${esc(e.category || '—')}</td>
             <td class="c-hide" style="color:var(--steel);">${esc(e.paymentMethod || '—')}</td>
@@ -1231,7 +1231,7 @@
     const resp = await finCall({ action: 'delete', key });
     if (!resp.ok) return showErr('Couldn’t delete that.');
     LAST_DELETED = rec;
-    const what = key.startsWith('mile_') ? `the ${Number(rec.miles)} mi trip on ${fmtDate(rec.date)}` : `${rec.vendor || rec.category} (${money(rec.amount)})`;
+    const what = key.startsWith('mile_') ? `the ${Number(rec.miles)} mi trip on ${fmtDay(rec.date)}` : `${rec.vendor || rec.category} (${money(rec.amount)})`;
     showOk(`Deleted ${esc(what)}. <button type="button" class="link" id="undoDel">Undo</button>`, true);
     reloadFinance();
   });

@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Outreach · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261110"></script>
+<script src="admin-shared.js?v=20261111"></script>
 <style>
   :root{--col:960px;}
 
@@ -84,7 +84,8 @@
   .due-row .who .dates{margin-top:2px;}
   .due-row .acts{display:flex; gap:8px; flex-wrap:wrap;}
   .due-later{font-size:13px; color:var(--steel); margin:8px 0 0;}
-  .toggle-add{width:auto;padding:8px 14px;font-size:14px;margin:0 8px 0 0;background:var(--white);color:var(--ink);border:1px solid var(--control);}
+  .add-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .toggle-add{width:auto;padding:8px 14px;font-size:14px;margin:0;background:var(--white);color:var(--ink);border:1px solid var(--control);}
   .toggle-add:hover{background:var(--white);border-color:var(--ink);}
 </style>
 </head>
@@ -343,8 +344,8 @@
       const pc = all.filter(e => statusOf(e) === 'Partner').length;
       return `<div class="section">
         <h2>${c.title} <span class="count-badge">${all.length}${pc ? ` · ${pc} partner${pc === 1 ? '' : 's'}` : ''}</span></h2>
-        <button class="toggle-add" onclick="toggleForm('${c.id}')">Add ${c.one}</button>
-        ${seedLeft ? `<button class="toggle-add" onclick="importSeed('${c.id}')">Import ${seedLeft} researched ${c.one}${seedLeft === 1 ? '' : 's'}</button>` : ''}
+        <div class="add-row"><button class="toggle-add" onclick="toggleForm('${c.id}')">Add ${c.one}</button>
+        ${seedLeft ? `<button class="toggle-add" onclick="importSeed('${c.id}')">Import ${seedLeft} researched ${c.one}${seedLeft === 1 ? '' : 's'}</button>` : ''}</div>
         <div class="addform" id="form-${c.id}" style="display:none;"></div>
         <div>${items.length ? items.map(entryHtml).join('') : '<div class="empty">None yet.</div>'}</div>
       </div>`;
