@@ -4,7 +4,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { computeReminders, reviewMessageFor, deliveryMessageFor, pickupMessageFor, followupMessageFor, paymentReminderMessageFor, pickupAddressRequestMessageFor, invoiceSentMessageFor } from "./lib-reminders.mjs";
-import { isAdmin } from "./lib-auth.mjs";
+import { accessLevel } from "./lib-auth.mjs";
 
 export default async (request) => {
   if (request.method !== "POST") {
@@ -12,7 +12,8 @@ export default async (request) => {
   }
   let body;
   try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  if (!isAdmin(request, body)) {
+  const access = await accessLevel(request, body);
+  if (!access) {
     return new Response("Unauthorized", { status: 401 });
   }
 
@@ -25,6 +26,15 @@ export default async (request) => {
     })
   );
   const rentals = fetched.filter(Boolean);
+
+  // Inventory-only login: just what the Inventory page needs. No prices,
+  // phones, emails, addresses, payments or texts.
+  if (access === "inventory") {
+    const KEEP = ["key", "name", "package", "toteCount", "dollyCount", "serviceType", "cancelled", "dropoffDate", "dropoffTime",
+      "pickupDate", "pickupTime", "deliveredAt", "pickedUpAt", "cleanedAt"];
+    const slim = rentals.map((r) => Object.fromEntries(KEEP.filter((k) => r[k] !== undefined).map((k) => [k, r[k]])));
+    return new Response(JSON.stringify({ rentals: slim }), { status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
+  }
 
   const metaStore = getStore("meta");
   let sentFlags = {};

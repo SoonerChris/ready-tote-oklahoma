@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>App &amp; alerts · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261108"></script>
+<script src="admin-shared.js?v=20261109"></script>
 <style>
   :root{--col:640px;}
   .panel{border:1px solid var(--line); border-radius:10px; padding:16px 20px; margin-top:20px;}
@@ -30,6 +30,11 @@
   .kind b{display:block; font-weight:600;}
   .kind span{font-size:13px; color:var(--steel);}
   .acts{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .team-form label{font-size:13px; margin:10px 0 4px;}
+  .team-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid #EEEAE1; font-size:15px;}
+  .team-row:first-child{border-top:none;}
+  .team-row span{font-size:13px; color:var(--steel);}
+  .team-row button{width:auto; margin:0; padding:6px 12px; font-size:13px;}
   .badge-check{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:16px; padding:10px 12px; border-radius:10px; background:#FAF8F3; font-size:14px;}
   .badge-check button{width:auto; margin:0; padding:8px 14px; font-size:14px;}
   .acts button{width:auto; margin:0; padding:10px 16px; font-size:14px;}
@@ -94,6 +99,20 @@
     </div>
     <p class="note"><b>Icon badge:</b> the Ready Tote icon shows how many things are waiting on you: booking requests to handle plus late pickups. It updates when a notification comes in and when you open the app. To hide it, go to iPhone Settings, Notifications, Ready Tote, Badges.</p>
     <p class="note">Each phone or computer is set up on its own. Turning these on here doesn't change Shon's or anyone else's.</p>
+  </section>
+  <section class="panel" aria-labelledby="teamTitle">
+    <h2 id="teamTitle">3. Inventory-only login</h2>
+    <p>For a helper like Shon: they sign in with their own username and password and see <b>only Inventory</b>. They can log stock changes and mark totes clean. No customer phones, emails, addresses, prices or payments.</p>
+    <div id="teamList"></div>
+    <div class="team-form">
+      <label for="teamUser">Username</label>
+      <input type="text" id="teamUser" autocomplete="off" autocapitalize="none" placeholder="shon">
+      <label for="teamPass">Password</label>
+      <input type="text" id="teamPass" autocomplete="new-password" placeholder="At least 8 characters">
+      <div class="acts"><button type="button" id="teamSave">Save login</button></div>
+    </div>
+    <div class="status" id="teamStatus"></div>
+    <p class="note">They sign in at the usual admin sign-in page. To change their password, save the same username with a new one. That signs them out everywhere until they use it.</p>
   </section>
 </div>
 
@@ -243,6 +262,38 @@ async function checkBadge() {
     : `Icon badge: set to ${n}. Go to your Home Screen to see it.`;
 }
 $('badgeBtn').addEventListener('click', checkBadge);
+
+// ---- Inventory-only logins ----
+const TEAM_FN = '/.netlify/functions/staff-accounts';
+async function teamCall(body) {
+  const r = await fetch(TEAM_FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || 'Something went wrong (' + r.status + ')');
+  return d;
+}
+function teamSay(msg, ok) { const s = $('teamStatus'); s.textContent = msg || ''; s.className = 'status' + (msg ? (ok ? ' ok' : ' err') : ''); }
+function renderTeam(accounts) {
+  $('teamList').innerHTML = accounts.length ? accounts.map(a => `<div class="team-row"><div><b>${esc(a.username)}</b> <span>· Inventory only · since ${esc(fmtDate((a.createdAt || '').slice(0, 10)))}</span></div><button type="button" class="secondary" data-team-remove="${escAttr(a.username)}">Remove</button></div>`).join('')
+    : '<p class="note" style="margin:6px 0;">No inventory-only logins yet.</p>';
+}
+async function loadTeam() { try { renderTeam((await teamCall({ action: 'list' })).accounts || []); } catch (e) { teamSay(e.message); } }
+$('teamSave').addEventListener('click', async () => {
+  const username = $('teamUser').value.trim(), password = $('teamPass').value;
+  $('teamSave').disabled = true; teamSay('');
+  try {
+    renderTeam((await teamCall({ action: 'set', username, password })).accounts || []);
+    $('teamPass').value = '';
+    teamSay(`Saved. ${username} can sign in now and will only see Inventory.`, true);
+  } catch (e) { teamSay(e.message); }
+  $('teamSave').disabled = false;
+});
+$('teamList').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-team-remove]'); if (!b) return;
+  if (!confirm(`Remove ${b.dataset.teamRemove}'s login? They'll be signed out.`)) return;
+  try { renderTeam((await teamCall({ action: 'remove', username: b.dataset.teamRemove })).accounts || []); teamSay('Removed.', true); }
+  catch (err) { teamSay(err.message); }
+});
+loadTeam();
 
 $('secret').value = adminSessionMarker();
 refresh().catch((e) => show('off', e.message || "Couldn't check this device."));

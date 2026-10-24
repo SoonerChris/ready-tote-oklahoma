@@ -5,7 +5,7 @@
 // Admin only (signed-in session, see lib-auth.mjs).
 
 import { getStore } from "@netlify/blobs";
-import { isAdmin } from "./lib-auth.mjs";
+import { accessLevel } from "./lib-auth.mjs";
 
 const ADD_TYPES = ["purchased", "returned-to-service"];
 const REMOVE_TYPES = ["damaged", "lost", "retired"];
@@ -16,7 +16,7 @@ export default async (request) => {
   }
   let body;
   try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  if (!isAdmin(request, body)) {
+  if (!(await accessLevel(request, body))) {   // admin or inventory-only login
     return new Response("Unauthorized", { status: 401 });
   }
 

@@ -11,7 +11,7 @@
 // for the rest of that window, so the password can't be guessed by brute force.
 
 import { getStore } from "@netlify/blobs";
-import { passwordMatches, usernameMatches, createSession, sessionCookie } from "./lib-auth.mjs";
+import { passwordMatches, usernameMatches, createSession, sessionCookie, checkStaffLogin, normUser } from "./lib-auth.mjs";
 
 const MAX_FAILURES = 10;
 const WINDOW_MS = 15 * 60 * 1000;
@@ -42,13 +42,17 @@ export default async (request, context) => {
     return json({ ok: false, error: "too_many_attempts", retryMinutes: wait }, 429, { "Retry-After": String(wait * 60) });
   }
 
-  const ok = passwordMatches(body.password) && usernameMatches(body.username);
+  // An inventory-only login (staff-accounts.mjs) is checked first, then admin
+  const staff = await checkStaffLogin(body.username, body.password).catch(() => null);
+  const ok = !!staff || (passwordMatches(body.password) && usernameMatches(body.username));
   if (!ok) {
     try { await store.setJSON(key, { first: record ? record.first : now, count: (record ? record.count : 0) + 1 }); } catch {}
     return json({ ok: false }, 401);
   }
 
   try { if (record) await store.delete(key); } catch {}
-  const { token, expires } = createSession(body.username);
-  return json({ ok: true, expires }, 200, { "Set-Cookie": sessionCookie(token) });
+  const { token, expires } = staff
+    ? createSession(normUser(body.username), { role: "inventory", v: staff.v })
+    : createSession(body.username);
+  return json({ ok: true, expires, role: staff ? "inventory" : "admin" }, 200, { "Set-Cookie": sessionCookie(token) });
 };
