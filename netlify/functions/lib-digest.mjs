@@ -4,7 +4,7 @@
 // scheduler misses the 7 AM run.
 
 import { getStore } from "@netlify/blobs";
-import { computeReminders, rentalToICSAttachments, todayInOklahoma } from "./lib-reminders.mjs";
+import { computeReminders, rentalToICSAttachments, todayInOklahoma, friendlyTime, dropoffAddressOf, pickupAddressOf } from "./lib-reminders.mjs";
 import { emailLayout, heading, sectionLabel, pill, button, escapeHtml, emailColors as C, SITE_URL } from "./lib-email.mjs";
 import { notify } from "./lib-push.mjs";
 
@@ -38,9 +38,13 @@ export async function sendDigest({ notifyPhone = true } = {}) {
   const rem = computeReminders(rentals, process.env.GOOGLE_REVIEW_LINK || "", sentFlags, paidFlags);
   const total = rem.delivery.length + rem.pickupTomorrow.length + rem.pickup.length + rem.review.length + rem.followup.length + rem.emailReminder.length + rem.addressCheck.length;
 
+  // Nothing due: still a short email (no phone buzz), so a quiet morning
+  // never looks the same as a broken one
   if (total === 0) {
-    console.log("No reminders due today.");
-    return { total, ok: true };
+    const quiet = quietDayEmail(rentals, todayInOklahoma());
+    const ok = await sendEmail(quiet.subject, quiet.html);
+    console.log(`No reminders due today; quiet-day email ${ok ? "sent" : "failed"}.`);
+    return { total, ok };
   }
 
   // The same news on the phone, with the biggest groups named
@@ -118,6 +122,13 @@ export async function sendDigest({ notifyPhone = true } = {}) {
     attachments.push(...rentalToICSAttachments(r));
   }
 
+  const ok = await sendEmail(`${total} reminder${total > 1 ? "s" : ""} to handle today | Ready Tote Oklahoma`, html, attachments);
+  if (ok) console.log(`Digest sent: ${total} reminders.`);
+  return { total, ok };
+}
+
+// Emails the digest recipients through Resend; false if Resend refused it.
+async function sendEmail(subject, html, attachments = []) {
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -127,18 +138,54 @@ export async function sendDigest({ notifyPhone = true } = {}) {
     body: JSON.stringify({
       from: process.env.RESEND_FROM || FROM_FALLBACK,
       to: REMINDER_RECIPIENTS,
-      subject: `${total} reminder${total > 1 ? "s" : ""} to handle today | Ready Tote Oklahoma`,
+      subject,
       html,
       attachments: attachments.length ? attachments : undefined,
     }),
   });
+  if (!resp.ok) console.error("Resend error:", resp.status, await resp.text());
+  return resp.ok;
+}
 
-  if (!resp.ok) {
-    console.error("Resend error:", resp.status, await resp.text());
-    return { total, ok: false };
+// The "nothing due today" email: no texts to send, plus the stops coming up
+// today and the next QUIET_DAYS days so the morning still has a plan.
+const QUIET_DAYS = 3;
+export function quietDayEmail(rentals, today) {
+  const shift = (d, n) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+  const last = shift(today, QUIET_DAYS);
+  const mins = (t) => { const m = String(t || "").match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i); if (!m) return 9999; let h = +m[1]; if (m[3]) { const pm = /pm/i.test(m[3]); if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; } return h * 60 + +(m[2] || 0); };
+  const stops = [];
+  for (const r of rentals) {
+    if (r.cancelled) continue;
+    const self = r.serviceType === "self";
+    if (r.dropoffDate >= today && r.dropoffDate <= last && !r.deliveredAt)
+      stops.push({ date: r.dropoffDate, time: r.dropoffTime, what: self ? "Customer pickup" : "Deliver", r, addr: self ? "At our place" : dropoffAddressOf(r) });
+    if (r.pickupDate >= today && r.pickupDate <= last && !r.pickedUpAt)
+      stops.push({ date: r.pickupDate, time: r.pickupTime, what: self ? "Customer return" : "Pick up", r, addr: self ? "At our place" : pickupAddressOf(r) });
   }
-  console.log(`Digest sent: ${total} reminders.`);
-  return { total, ok: true };
+  stops.sort((a, b) => a.date.localeCompare(b.date) || mins(a.time) - mins(b.time));
+  const dayName = (d) => d === today ? "Today" : d === shift(today, 1) ? "Tomorrow"
+    : new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" });
+  const rows = stops.map((x, i) => `
+        <tr><td style="padding:12px 16px; ${i ? `border-top:1px solid ${C.line};` : ""} font-size:14px; line-height:1.5; color:${C.ink};">
+          <strong>${escapeHtml(dayName(x.date))}${x.time ? ` &middot; ${escapeHtml(friendlyTime(x.time))}` : ""}</strong> &middot; ${escapeHtml(x.what)}, ${escapeHtml(x.r.name || "customer")}<br>
+          <span style="font-size:13px; color:${C.steel};">${[x.r.toteCount ? `${x.r.toteCount} totes` : "", x.addr].filter(Boolean).map(escapeHtml).join(" &middot; ")}</span>
+        </td></tr>`).join("");
+  const longToday = new Date(today + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
+  const html = emailLayout({
+    footer: false,
+    preheader: stops.length ? `No texts due. ${stops.length} stop${stops.length === 1 ? "" : "s"} in the next few days.` : "No texts due and no stops in the next few days.",
+    body: `
+            ${heading("Nothing to send today", {
+              badge: pill(longToday, "gold"),
+              lead: "No reminder texts, payment nudges or review asks are due. This email is just so you know the morning check ran.",
+            })}
+            ${sectionLabel(stops.length ? "Coming up" : "Coming up: nothing scheduled", { top: 22 })}
+            ${stops.length ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${C.line}; border-radius:12px;">${rows}
+      </table>` : `<p style="margin:0; font-size:14px; color:${C.steel};">No deliveries or pickups today or in the next ${QUIET_DAYS} days.</p>`}
+            ${button(`${SITE_URL}/admin.html`, "Open the dashboard")}`,
+  });
+  return { subject: "Nothing due today | Ready Tote Oklahoma", html };
 }
 
 // Once a day, whoever gets there first: the 7 AM scheduled run
