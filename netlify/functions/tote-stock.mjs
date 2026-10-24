@@ -5,7 +5,7 @@
 // Admin only (signed-in session, see lib-auth.mjs).
 
 import { getStore } from "@netlify/blobs";
-import { accessLevel } from "./lib-auth.mjs";
+import { accessLevel, readSession } from "./lib-auth.mjs";
 
 const ADD_TYPES = ["purchased", "returned-to-service"];
 const REMOVE_TYPES = ["damaged", "lost", "retired"];
@@ -16,9 +16,13 @@ export default async (request) => {
   }
   let body;
   try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  if (!(await accessLevel(request, body))) {   // admin or inventory-only login
+  const access = await accessLevel(request, body);   // admin or inventory-only login
+  if (!access) {
     return new Response("Unauthorized", { status: 401 });
   }
+  // An inventory-only login's changes are stamped with its username, and it
+  // can only delete those (to fix a mistake), never the rest of the history.
+  const staffUser = access === "inventory" ? readSession(request).u : null;
 
   const store = getStore("inventory");
 
@@ -43,6 +47,7 @@ export default async (request) => {
         if (![...ADD_TYPES, ...REMOVE_TYPES].includes(body.type)) {
           return new Response("Unknown event type", { status: 400 });
         }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(body.date))) return new Response("Date must look like 2026-10-24", { status: 400 });
         const quantity = Number(body.quantity);
         if (!Number.isFinite(quantity) || quantity <= 0) {
           return new Response("Quantity must be a positive number", { status: 400 });
@@ -53,7 +58,8 @@ export default async (request) => {
           item: body.item === "dolly" ? "dolly" : "tote",
           type: body.type,
           quantity,
-          note: body.note || "",
+          note: String(body.note || "").slice(0, 200),
+          ...(staffUser ? { by: staffUser } : {}),
           // Lost or damaged by a customer: which rental it was
           ...(REMOVE_TYPES.includes(body.type) && body.rentalKey
             ? { rentalKey: String(body.rentalKey).slice(0, 200), rentalName: String(body.rentalName || "").slice(0, 80) } : {}),
@@ -63,6 +69,10 @@ export default async (request) => {
 
       case "delete": {
         if (!body.key) return new Response("Missing key", { status: 400 });
+        if (staffUser) {
+          const ev = await store.get(body.key, { type: "json" }).catch(() => null);
+          if (!ev || ev.by !== staffUser) return new Response("You can only delete changes you logged", { status: 403 });
+        }
         await store.delete(body.key);
         return json({ ok: true });
       }

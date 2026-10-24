@@ -362,11 +362,11 @@
       <div class="rem ev-row" data-ev="${escAttr(e.key)}">
         <div class="ev-main">
           <div class="ev-what"><span class="${add ? 'up' : 'down'}">${add ? '+' : '\u2212'}${e.quantity} ${unit(e.quantity)}</span> · ${esc(labelFor(e.type))}${e.rentalName ? ` · ${esc(e.rentalName)}` : ''}</div>
-          <div class="ev-meta">${esc(fmtDate(e.date))}${e.date > TODAY ? ' (upcoming)' : ''}${e.note ? ' · ' + esc(e.note) : ''}</div>
+          <div class="ev-meta">${esc(fmtDate(e.date))}${e.date > TODAY ? ' (upcoming)' : ''}${e.note ? ' · ' + esc(e.note) : ''}${e.by ? ' · logged by ' + esc(e.by) : ''}</div>
         </div>
         <div class="ev-after num">${after[e.key]} ${dolly ? 'dollies' : 'totes'}<span>after</span></div>
-        <div class="ev-act">
-          <button type="button" class="ev-del" data-ev-del>Delete</button>
+        <div class="ev-act">${!INVENTORY_ONLY || e.by === (adminSession() || {}).u ? `
+          <button type="button" class="ev-del" data-ev-del>Delete</button>` : ''}
           <span class="ev-confirm" hidden>Delete this change? <button type="button" class="ev-yes" data-ev-yes>Delete</button> <button type="button" class="ev-keep" data-ev-keep>Keep</button></span>
         </div>
       </div>`;
