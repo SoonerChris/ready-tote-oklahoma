@@ -309,6 +309,8 @@
   /* Who we serve */
   .cards-4{display:grid; gap:16px; grid-template-columns:repeat(2,1fr);}
   @media(min-width:900px){.cards-4{grid-template-columns:repeat(5,1fr);}}
+  /* Two across on phones: an odd last card spans the row instead of sitting alone */
+  @media(max-width:899px){.cards-4 > :last-child:nth-child(odd){grid-column:1 / -1;}}
   .card-audience{
     background:var(--white); color:var(--ink); border:2px solid var(--ink);
     padding:20px 16px; border-radius:var(--radius-lg);
@@ -349,8 +351,11 @@
   .compare-col.them .price{color:var(--steel);}
   .compare-col ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:14px;}
   .compare-col li{display:flex; gap:12px; font-size:0.95rem; color:var(--ink);}
-  .compare-col.us li::before{content:"✅"; font-size:0.9rem;}
-  .compare-col.them li::before{content:"❌"; font-size:0.9rem;}
+  /* Line icons (same style as the rest of the site) instead of emoji,
+     which look different on every phone */
+  .compare-col li::before{content:""; flex:none; width:18px; height:18px; margin-top:2px; background:no-repeat center/contain;}
+  .compare-col.us li::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231E8E52' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M7.5 12.5l3 3 6-6.5'/%3E%3C/svg%3E");}
+  .compare-col.them li::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C0392B' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M9 9l6 6M15 9l-6 6'/%3E%3C/svg%3E");}
 
   /* Pricing */
   .price-grid{display:grid; gap:24px;}
