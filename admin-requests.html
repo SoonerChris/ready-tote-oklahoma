@@ -342,12 +342,6 @@
         </div>
       </div>
 
-      <div class="req-actions">
-        <button type="button" class="linklike" data-toggle-military>${r.isMilitary ? 'Unmark military' : 'Mark as military'}</button>
-        ${r.hasMilitaryIdPhoto ? '<button type="button" class="linklike" data-view-id>View ID photo</button>' : ''}
-        <button type="button" class="secondary" data-add-id>${r.hasMilitaryIdPhoto ? 'Replace ID photo' : 'Add ID photo'}</button>
-      </div>
-
       <button type="button" class="toggle-note" data-toggle="edit">Edit details</button>
       <div class="edit-block" data-edit>
         <div class="grid2">
@@ -383,6 +377,9 @@
 
       ${STEP_BACK[r.status] ? `<button type="button" class="toggle-note" data-move-back>${STEP_BACK[r.status](r)[1]}</button>` : ''}
       <button type="button" class="toggle-note" data-toggle="note">${r.reviewNotes ? 'Edit note' : '+ Add note'}</button>
+      <button type="button" class="toggle-note" data-toggle-military>${r.isMilitary ? 'Unmark military' : 'Mark military'}</button>
+      ${r.hasMilitaryIdPhoto ? '<button type="button" class="toggle-note" data-view-id>View ID photo</button>' : ''}
+      <button type="button" class="toggle-note" data-add-id>${r.hasMilitaryIdPhoto ? 'Replace ID photo' : 'Add ID photo'}</button>
       <div class="note-block" data-note>
         <textarea rows="2" data-note-text placeholder="e.g. gate code, dog on property, availability check…">${esc(r.reviewNotes || '')}</textarea>
         <button type="button" data-save-note>Save note</button>
@@ -728,7 +725,13 @@
   // resolve to this wrapper itself instead of the real one, infinite
   // self-recursion on every call.
   const sharedFmtDate = window.fmtDate;
-  function fmtReqDate(iso) { return sharedFmtDate(iso, '\u2014'); }
+  // "Fri, Oct 23" like the rest of the app (year added when it isn't this year)
+  function fmtReqDate(iso) {
+    if (!/^\d{4}-\d{2}-\d{2}/.test(String(iso || ''))) return sharedFmtDate(iso, '\u2014');
+    const d = new Date(String(iso).slice(0, 10) + 'T12:00:00Z');
+    const sameYear = String(iso).slice(0, 4) === todayCT().slice(0, 4);
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }), timeZone: 'UTC' });
+  }
   function fmtDateTime(iso) {
     if (!iso) return '';
     const d = new Date(iso);
