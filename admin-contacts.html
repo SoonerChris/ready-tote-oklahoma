@@ -244,8 +244,8 @@
             : `Asked ${day(p.leadDate)}<span class="minor">${esc(p.leads[0].status === 'declined' ? 'Declined' : 'Not booked yet')}${SENT_FLAGS['leadFollowup:' + p.key] ? ' · followed up ' + esc(day(String(SENT_FLAGS['leadFollowup:' + p.key]).slice(0, 10))) : ''}</span>`;
           return `<tr>
             <td class="c-who who"><button type="button" class="who-btn" data-open="${escAttr(p.key)}" aria-expanded="${OPEN.has(p.key)}">${esc(p.name || 'No name')}</button> ${tag}${p.partner ? `<span class="minor">Referred by ${esc(p.partner.name)}</span>` : ''}</td>
-            <td class="c-contact">${p.phone ? `<a href="tel:${escAttr(digits)}">${esc(p.phone)}</a>` : '—'}${p.email ? `<span class="minor"><a href="mailto:${escAttr(p.email)}">${esc(p.email)}</a></span>` : ''}</td>
-            <td class="c-money r">${p.rentals.length ? `${p.rentals.length} ${p.rentals.length === 1 ? 'rental' : 'rentals'}<span class="minor">${money(p.paid)} paid</span>${p.owes ? `<span class="minor owes">Owes ${money(p.owes)}</span>` : ''}` : '<span style="color:var(--steel)">—</span>'}</td>
+            <td class="c-contact">${p.phone ? `<a href="tel:${escAttr(digits)}">${esc(fmtPhone(p.phone))}</a>` : '—'}${p.email ? `<span class="minor"><a href="mailto:${escAttr(p.email)}">${esc(p.email)}</a></span>` : ''}</td>
+            <td class="c-money r">${p.rentals.length ? `${p.rentals.length} ${p.rentals.length === 1 ? 'rental' : 'rentals'}${p.paid || !p.owes ? `<span class="minor">${money(p.paid)} paid</span>` : ''}${p.owes ? `<span class="minor owes">Owes ${money(p.owes)}</span>` : ''}` : '<span style="color:var(--steel)">—</span>'}</td>
             <td class="c-last">${last}</td>
             <td class="c-hide" style="color:var(--steel);">${esc(p.city || (p.address.split(',').slice(-2, -1)[0] || '').trim() || '—')}</td>
             <td class="c-act"><div class="acts">

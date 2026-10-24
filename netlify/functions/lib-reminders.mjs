@@ -134,7 +134,7 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
         const msg = `${hi(first)} Just wanted to make sure you got the invoice we sent over for your tote rental. Let me know if you have any questions, happy to help however I can!`;
         const flagId = "followup:" + (r.key || r.phone + invoicedDate);
         if (!sentFlags[flagId]) {
-          out.followup.push({ ...r, flagId, ...timing(shiftDate(invoicedDate, 3)), address: `Invoiced ${friendlyDate(invoicedDate)}`, message: msg, sms: smsLink(r.phone, msg) });
+          out.followup.push({ ...r, flagId, ...timing(shiftDate(invoicedDate, 3)), address: `Invoiced ${new Date(invoicedDate + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}`, message: msg, sms: smsLink(r.phone, msg) });
         }
       }
     }
