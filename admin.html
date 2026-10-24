@@ -490,7 +490,7 @@
         <span class="kind ${e.cls}">${e.kind}</span>
         <div class="person">
           <div class="who">${e.phone ? `<a href="tel:${escAttr(normalizePhone(e.phone))}" title="Call ${escAttr(e.name)}">${esc(e.name)}</a>` : esc(e.name)}${e.unpaid ? ' <span class="kind due">Unpaid</span>' : ''}</div>
-          <div class="meta">${e.addr ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.addr)}" target="_blank" rel="noopener" title="Open in Maps">${esc(e.addr)}</a>` : 'At our place'}</div>
+          <div class="meta">${e.addr ? `<a href="${escAttr(mapsLink(e.addr))}" target="_blank" rel="noopener" title="Open in Maps">${esc(e.addr)}</a>` : 'At our place'}</div>
         </div>
         <div class="totes num">${e.totes || '—'} totes${e.date === today && e.addr && e.phone && !e.marked ? `<span class="otw" data-otw="${escAttr(e.key)}" data-leg="${e.leg}"><button type="button" class="btn ghost">On the way</button></span>` : ''}${e.date === today ? markHtml(e) : ''}</div>
       </div>`;

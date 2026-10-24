@@ -310,7 +310,7 @@
         <div><span class="lbl">Package</span>${r.package ? `<span class="tag">${esc(r.package)}</span>` : 'Not given'}</div>
         <div><span class="lbl">Delivery</span>${esc(fmtReqDate(r.deliveryDate))}${pref(r.deliveryWindow)}</div>
         <div><span class="lbl">Pickup</span>${esc(fmtReqDate(r.pickupDate))}${pref(r.pickupWindow)}</div>
-        <div><span class="lbl">Address</span>${addr ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${esc(addr)}</a>` : r.serviceType === 'self' ? 'Not needed, self pickup' : 'Not given'}</div>
+        <div><span class="lbl">Address</span>${addr ? `<a href="${escAttr(mapsLink(addr))}" target="_blank" rel="noopener">${esc(addr)}</a>` : r.serviceType === 'self' ? 'Not needed, self pickup' : 'Not given'}</div>
         ${OPEN_STATUSES.includes(r.status) ? `<div class="avail-row"><span class="lbl">Stock</span><span class="avail-list">${requestAvailability(r)}</span></div>` : ''}
         <div><span class="lbl">Phone</span>${r.phone ? `<a href="tel:${escAttr(phoneDigits)}">${esc(fmtPhone(r.phone))}</a>` : 'Not given'}</div>
         <div><span class="lbl">Email</span>${r.email ? `<a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : 'Not given'}</div>

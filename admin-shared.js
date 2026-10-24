@@ -55,6 +55,15 @@ function smsLink(phone, message) {
   return `sms:${normalizePhone(phone)}?&body=${encodeURIComponent(message)}`;
 }
 
+// ---- Map links ----
+// Apple Maps on iPhone, iPad and Mac (opens the Maps app); Google Maps on
+// Android and everything else, where Apple Maps isn't installed.
+const APPLE_DEVICE = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+function mapsLink(addr) {
+  const q = encodeURIComponent(addr || '');
+  return APPLE_DEVICE ? `https://maps.apple.com/?q=${q}` : `https://www.google.com/maps/search/?api=1&query=${q}`;
+}
+
 // ---- Address composition ----
 // Booking requests and rentals store addresses as separate street/city/
 // state/zip fields. This joins them into one display/lookup string, same
