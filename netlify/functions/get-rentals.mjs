@@ -31,7 +31,7 @@ export default async (request) => {
   // phones, emails, addresses, payments or texts.
   if (access === "inventory") {
     const KEEP = ["key", "name", "package", "toteCount", "dollyCount", "serviceType", "cancelled", "dropoffDate", "dropoffTime",
-      "pickupDate", "pickupTime", "deliveredAt", "pickedUpAt", "cleanedAt"];
+      "pickupDate", "pickupTime", "deliveredAt", "pickedUpAt", "cleanedAt", "cleanedTotes"];
     const slim = rentals.map((r) => Object.fromEntries(KEEP.filter((k) => r[k] !== undefined).map((k) => [k, r[k]])));
     return new Response(JSON.stringify({ rentals: slim }), { status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
   }
