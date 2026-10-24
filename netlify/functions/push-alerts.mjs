@@ -9,16 +9,22 @@
 //           the last alert, so the same shortage doesn't buzz every morning.
 //
 // What's already been sent is kept in the "meta" store under "pushAlerts".
+//
+// It also backs up the 7 AM reminders email (daily-reminders.mjs): Netlify's
+// scheduler sometimes skips a run, so from 7:20 AM on, if today's email
+// hasn't gone out yet, it's sent from here (runDigestOnce keeps it to one).
 
 import { getStore } from "@netlify/blobs";
 import { notify } from "./lib-push.mjs";
 import { friendlyTime, dropoffAddressOf, pickupAddressOf } from "./lib-reminders.mjs";
 import { computeAvailability } from "./lib-stock.mjs";
+import { runDigestOnce } from "./lib-digest.mjs";
 
 const LEAD_MINUTES = 75;     // alert when a stop is this close or closer
 const LOW_TOTES = 20;        // matches "Under 20" on the Inventory page
 const STOCK_DAYS = 30;
 const STOCK_FROM_HOUR = 7;
+const DIGEST_CATCHUP = [7 * 60 + 20, 20 * 60];   // 7:20 AM to 8 PM
 
 // Oklahoma date and minutes since midnight, right now.
 export function nowInOklahoma(at = new Date()) {
@@ -146,6 +152,11 @@ export default async () => {
     } catch (e) {
       console.error("push-alerts stock check failed:", e.message);
     }
+  }
+
+  if (now.minutes >= DIGEST_CATCHUP[0] && now.minutes < DIGEST_CATCHUP[1]) {
+    try { await runDigestOnce("catch-up"); }
+    catch (e) { console.error("push-alerts digest catch-up failed:", e.message); }
   }
 
   if (changed) await meta.setJSON("pushAlerts", { ...state, soonSent });
