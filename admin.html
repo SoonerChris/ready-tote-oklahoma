@@ -424,12 +424,16 @@
       .reduce((t,e) => t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity), 0);
     const totalTotesOwned = owned('tote');
     const totesDeployed = activeRentals.reduce((t,r) => t + toteQty(r), 0);
+    // On today's books but not out yet (delivery later today): not free to
+    // book, same rule as Inventory's "Free today" (rentalEndDate)
+    const goingOut = rentals.filter(r => r.dropoffDate && r.pickupDate && r.dropoffDate <= today && rentalEndDate(r, today) >= today && rentalPhase(r) !== 'out');
+    const totesGoingOut = goingOut.reduce((t,r) => t + toteQty(r), 0);
     const heldToday = findPendingConfirmed(requests, rentals)
       .filter(p => p.estTotes > 0 && p.deliveryDate <= today && p.pickupDate >= today);
     const totesHeld = heldToday.reduce((t,p) => t + p.estTotes, 0);
-    const totesAvailable = totalTotesOwned - totesDeployed - totesHeld;
+    const totesAvailable = totalTotesOwned - totesDeployed - totesGoingOut - totesHeld;
     const dolliesTracked = invEvents.some(e => e.item === 'dolly');
-    const dolliesOut = activeRentals.reduce((t,r) => t + dollyQty(r), 0) + heldToday.reduce((t,p) => t + (p.estDollies || 0), 0);
+    const dolliesOut = [...activeRentals, ...goingOut].reduce((t,r) => t + dollyQty(r), 0) + heldToday.reduce((t,p) => t + (p.estDollies || 0), 0);
     const dolliesFree = owned('dolly') - dolliesOut;
     const isUnpaid = r => !!r.invoicedAt && !r.backfilled && !DATA.paidFlags[r.key];
 
@@ -515,7 +519,8 @@
     else { pa.href = 'admin-invoice.html?mode=log'; pa.textContent = 'Add rental'; }
 
     // ---- Tote fleet ----
-    const scale = Math.max(totalTotesOwned, totesDeployed + totesHeld) || 1;
+    const totesReserved = totesGoingOut + totesHeld;   // booked for today, not out yet
+    const scale = Math.max(totalTotesOwned, totesDeployed + totesReserved) || 1;
     const segs = activeRentals.slice().sort((a,b) => a.pickupDate.localeCompare(b.pickupDate));
     let used = 0;
     const segHtml = segs.map(r => {
@@ -525,7 +530,7 @@
       used += n;
       return (fits ? `<span style="flex:0 0 calc(${(fits/scale*100).toFixed(3)}% - 2px)" title="${escAttr(r.name)}: ${n} totes"></span>` : '')
         + (over ? `<span class="over" style="flex:0 0 calc(${(over/scale*100).toFixed(3)}% - 2px)" title="${over} oversold"></span>` : '');
-    }).join('') + (totesHeld ? `<span class="held" style="flex:0 0 calc(${(Math.max(0, Math.min(totesHeld, totalTotesOwned - used))/scale*100).toFixed(3)}% - 2px)" title="${totesHeld} held for bookings not invoiced yet"></span>` : '');
+    }).join('') + (totesReserved ? `<span class="held" style="flex:0 0 calc(${(Math.max(0, Math.min(totesReserved, totalTotesOwned - used))/scale*100).toFixed(3)}% - 2px)" title="${totesReserved} booked for today, not out yet"></span>` : '');
     const backRows = segs.slice(0, 4).map(r => `
       <div class="row">
         <div class="who">${esc(r.name)}</div>
@@ -534,11 +539,12 @@
       </div>`).join('');
     $('fleet').innerHTML = `
       <div class="fleet-figs">
-        <div><div class="big num">${totesAvailable}</div><div class="lbl">${totesHeld ? 'free to book' : 'on the shelf'}</div></div>
+        <div><div class="big num">${totesAvailable}</div><div class="lbl">${totesHeld || totesGoingOut ? 'free to book' : 'on the shelf'}</div></div>
         <div class="right"><div class="big num">${totesDeployed}</div><div class="lbl">out with ${plural(activeRentals.length, 'customer')}</div></div>
       </div>
       <div class="bar" role="img" aria-label="${totesDeployed} of ${totalTotesOwned} totes out with customers">${segHtml}</div>
       <div class="bar-scale num"><span>0</span><span>${totalTotesOwned} owned</span></div>
+      ${totesGoingOut ? `<div class="meta held-line"><span class="swatch"></span>${totesGoingOut} going out later today (${goingOut.map(r => esc(r.name)).join(', ')}).</div>` : ''}
       ${totesHeld ? `<div class="meta held-line"><span class="swatch"></span>${totesHeld} held for ${plural(heldToday.length, 'booking')} not invoiced yet. <a href="admin-inventory.html">See them</a></div>` : ''}
       ${dolliesTracked
         ? `<div class="dolly-line"><span class="num"><b>${dolliesFree}</b> ${dolliesFree === 1 ? 'dolly' : 'dollies'} free</span><span class="meta num">${dolliesOut} out · ${owned('dolly')} owned</span></div>`
@@ -568,12 +574,14 @@
     $('unpaidList').innerHTML = `
       <div class="owed"><span class="lbl">Outstanding</span><span class="big num">${moneyDec(total)}</span></div>` + list.map(r => {
       const reminded = DATA.sentFlags['emailReminder:' + r.key];
-      const late = r.dropoffDate && r.dropoffDate <= shiftDate(TODAY, 2);
+      // Same out / done / upcoming rule as the schedule (rentalPhase)
+      const phase = rentalPhase(r);
+      const tag = isLatePickup(r) ? 'Late pickup' : phase === 'out' ? 'Out now' : phase === 'done' ? 'Returned' : r.dropoffDate && r.dropoffDate <= shiftDate(TODAY, 2) ? 'Soon' : '';
       const canEmail = r.email && r.stripeUrl;
       return `
       <div class="row" data-key="${escAttr(r.key)}">
         <div class="person">
-          <div class="who">${esc(r.name)}${late ? ' <span class="kind due">' + (r.dropoffDate < TODAY ? 'Out now' : 'Soon') + '</span>' : ''}</div>
+          <div class="who">${esc(r.name)}${tag ? ' <span class="kind due">' + tag + '</span>' : ''}</div>
           <div class="meta">Invoiced ${ago(r.invoicedAt)}${r.dropoffDate ? ' · drop-off ' + dayName(r.dropoffDate).replace(/^(Today|Tomorrow)$/, d => d.toLowerCase()) : ''}${reminded ? ' · emailed ' + shortDate(String(reminded).slice(0,10)) : ''}${canEmail ? '' : ' · no payment link on file'}</div>
         </div>
         <div class="amt num">${moneyDec(priceNum(r.price))}</div>

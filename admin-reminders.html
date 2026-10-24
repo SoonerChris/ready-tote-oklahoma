@@ -306,11 +306,13 @@
     }
     const events = [];
     for (const r of rentals) {
+      if (r.cancelled) continue;
       const self = r.serviceType === 'self';
+      // marked: tapped Delivered / Picked up on the Dashboard
       if (r.dropoffDate >= TODAY && r.dropoffDate <= endStr)
-        events.push({ date: r.dropoffDate, time: r.dropoffTime, label: self ? 'Customer pickup' : 'Deliver', r, addr: self ? '' : dropoffAddressOf(r) });
+        events.push({ date: r.dropoffDate, time: r.dropoffTime, label: self ? 'Customer pickup' : 'Deliver', r, addr: self ? '' : dropoffAddressOf(r), marked: r.deliveredAt ? (self ? 'Handed off ' : 'Delivered ') + markText(r.deliveredAt).split(', ').pop() : '' });
       if (r.pickupDate >= TODAY && r.pickupDate <= endStr)
-        events.push({ date: r.pickupDate, time: r.pickupTime, label: self ? 'Customer return' : 'Pick up', r, addr: self ? '' : pickupAddressOf(r) });
+        events.push({ date: r.pickupDate, time: r.pickupTime, label: self ? 'Customer return' : 'Pick up', r, addr: self ? '' : pickupAddressOf(r), marked: r.pickedUpAt ? (self ? 'Returned ' : 'Picked up ') + markText(r.pickedUpAt).split(', ').pop() : '' });
     }
     if (!events.length) { el.innerHTML = '<p class="empty" style="margin:0;">Nothing scheduled in the next 7 days.</p>'; return; }
     events.sort((a,b) => a.date.localeCompare(b.date) || timeKey(a.time) - timeKey(b.time));
@@ -318,7 +320,7 @@
     el.innerHTML = events.map(e => {
       const head = e.date !== last ? `<div class="week-day">${e.date === TODAY ? 'Today' : esc(new Date(e.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }))}</div>` : '';
       last = e.date;
-      return head + `<div class="week-row"><span class="t" style="min-width:68px;">${esc(fmtTime(e.time)) || '—'}</span><div class="what"><b>${esc(e.label)}</b> · ${esc(e.r.name)}${e.addr ? `<div class="t" style="white-space:normal;">${esc(e.addr)}</div>` : ''}</div><span class="t">${totesOf(e.r) || '—'} totes</span></div>`;
+      return head + `<div class="week-row"><span class="t" style="min-width:68px;">${esc(fmtTime(e.time)) || '—'}</span><div class="what"><b>${esc(e.label)}</b> · ${esc(e.r.name)}${e.marked ? `<div class="t" style="color:#14492F;font-weight:600;">${esc(e.marked)}</div>` : ''}${e.addr ? `<div class="t" style="white-space:normal;">${esc(e.addr)}</div>` : ''}</div><span class="t">${totesOf(e.r) || '—'} totes</span></div>`;
     }).join('');
   }
 

@@ -855,8 +855,10 @@
       .sort((a, b) => (b.dropoffDate||'').localeCompare(a.dropoffDate||''));
     $('rentTabCount').textContent = ' ' + ALL_RENTALS.length;
     $('rentCount').innerHTML = rows.length ? `<b class="num">${plural(rows.length, 'rental')}</b> · <b class="num">${money(rows.reduce((t, r) => t + priceNum(r.price), 0))}</b>${f === 'unpaid' ? ' not paid yet' : ' booked'}` : '';
-    const status = r => r.dropoffDate <= TODAY && r.pickupDate >= TODAY ? '<span class="pill ok">Out now</span>'
-      : r.pickupDate < TODAY ? '<span class="pill neutral">Done</span>' : '<span class="pill pending">Upcoming</span>';
+    // Same out / done / upcoming rule as the Dashboard (rentalPhase in admin-shared.js)
+    const status = r => r.cancelled ? '<span class="pill neutral">Cancelled</span>'
+      : isLatePickup(r) ? '<span class="pill err">Late pickup</span>'
+      : ({ out: '<span class="pill ok">Out now</span>', done: '<span class="pill neutral">Done</span>' })[rentalPhase(r)] || '<span class="pill pending">Upcoming</span>';
     const pay = r => { const p = payState(r); return p.paid ? `<span class="pill ok">Paid</span><span class="minor">${esc(fmtDate(p.date))} · ${esc(p.via)}</span>` : '<span class="pill err">Not paid</span>'; };
     $('rentList').innerHTML = rows.length ? `
       <table class="data">

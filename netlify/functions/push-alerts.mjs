@@ -2,7 +2,8 @@
 // notifications to the admin Home Screen app (see lib-push.mjs):
 //
 //   soon  - a delivery or pickup starts within the hour. Uses the rental's
-//           drop-off/pickup time; rentals with no time set are skipped.
+//           drop-off/pickup time; rentals with no time set, and stops
+//           already marked delivered or picked up, are skipped.
 //   stock - totes (or dollies) run low in the next 30 days. Checked once a
 //           day from 7 AM, and only sent when the picture has changed since
 //           the last alert, so the same shortage doesn't buzz every morning.
@@ -50,11 +51,12 @@ export function dueSoon(rentals, now, sent = {}) {
   const out = [];
   for (const r of rentals) {
     if (r.cancelled) continue;
-    for (const [kind, date, time, addr] of [
-      ["Delivery", r.dropoffDate, r.dropoffTime, dropoffAddressOf(r)],
-      ["Pickup", r.pickupDate, r.pickupTime, pickupAddressOf(r)],
+    for (const [kind, date, time, addr, marked] of [
+      ["Delivery", r.dropoffDate, r.dropoffTime, dropoffAddressOf(r), r.deliveredAt || r.pickedUpAt],
+      ["Pickup", r.pickupDate, r.pickupTime, pickupAddressOf(r), r.pickedUpAt],
     ]) {
-      if (date !== now.date) continue;
+      // Already marked done on the Dashboard: nothing to remind about
+      if (date !== now.date || marked) continue;
       const at = timeToMinutes(time);
       if (at === null) continue;
       const until = at - now.minutes;
