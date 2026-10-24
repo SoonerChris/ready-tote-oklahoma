@@ -43,7 +43,7 @@ export default async (request) => {
   }
   // An inventory-only login can only mark totes clean (or undo it)
   if (access === "inventory") {
-    const extra = Object.keys(body).filter((k) => !["key", "mark", "undo", "secret"].includes(k));
+    const extra = Object.keys(body).filter((k) => !["key", "mark", "undo", "count", "secret"].includes(k));
     if (body.mark !== "cleaned" || extra.length) return new Response("Not allowed for this login", { status: 403 });
   }
   if (!body.key) return new Response("Missing key", { status: 400 });
@@ -95,14 +95,23 @@ export default async (request) => {
     // Delivered / Picked up / Clean buttons: { mark: "delivered" | "pickedUp"
     // | "cleaned" }, or with undo: true to take it back. Picked up implies
     // delivered. "cleaned" is the totes washed after they came back (Inventory).
-    if (body.mark === "delivered" || body.mark === "pickedUp" || body.mark === "cleaned") {
+    // "cleaned" with count: N saves a partial wash (N totes done so far).
+    if (body.mark === "cleaned" && body.undo !== true && body.count !== undefined) {
+      const n = Number(body.count);
+      if (!Number.isInteger(n) || n < 0 || n > 10000) return new Response("Bad count", { status: 400 });
+      if (n) updated.cleanedTotes = n; else delete updated.cleanedTotes;
+      delete updated.cleanedAt;
+      changed = true;
+    } else if (body.mark === "delivered" || body.mark === "pickedUp" || body.mark === "cleaned") {
       const field = { delivered: "deliveredAt", pickedUp: "pickedUpAt", cleaned: "cleanedAt" }[body.mark];
       if (body.undo === true) {
         delete updated[field];
         if (field === "deliveredAt") delete updated.pickedUpAt;
+        if (field === "cleanedAt") delete updated.cleanedTotes;
       } else {
         const now = new Date().toISOString();
         updated[field] = now;
+        if (field === "cleanedAt") delete updated.cleanedTotes;
         if (field === "pickedUpAt" && !updated.deliveredAt) updated.deliveredAt = now;
       }
       changed = true;
@@ -115,7 +124,7 @@ export default async (request) => {
     if (updated.price !== existing.price && updated.lineItems) delete updated.lineItems;
 
     await store.setJSON(body.key, updated);
-    return new Response(JSON.stringify({ ok: true, deliveredAt: updated.deliveredAt || null, pickedUpAt: updated.pickedUpAt || null, cleanedAt: updated.cleanedAt || null }), { status: 200 });
+    return new Response(JSON.stringify({ ok: true, deliveredAt: updated.deliveredAt || null, pickedUpAt: updated.pickedUpAt || null, cleanedAt: updated.cleanedAt || null, cleanedTotes: updated.cleanedTotes || 0 }), { status: 200 });
   } catch (e) {
     console.error("edit-rental failed:", e.message);
     return new Response("Storage error", { status: 502 });

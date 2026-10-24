@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Dashboard · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261022">
-<script src="admin-shared.js?v=20261109"></script>
+<script src="admin-shared.js?v=20261110"></script>
 <style>
   /* Dashboard layout: the cream body is the frame (sidebar on it, no rule),
      the work sits on one white sheet inset 8px from the window's right,
@@ -742,7 +742,7 @@
     // Back from a rental, not cleaned yet (Inventory has the Clean buttons)
     const dirty = DATA.rentals.filter(r => needsCleaning(r));
     if (dirty.length) {
-      const n = dirty.reduce((t, r) => t + toteQty(r), 0);
+      const n = dirty.reduce((t, r) => t + totesToClean(r), 0);
       lines.push(`<a href="admin-inventory.html"><b>${plural(n, 'tote')}</b> need cleaning</a>`);
     }
     if (DATA.reviewLinkMissing) lines.push(`<a href="admin-reminders.html"><b>Review texts are off:</b> the Google review link isn't set in Netlify</a>`);

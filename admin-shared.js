@@ -203,6 +203,11 @@ function needsCleaning(r, now = okNow()) {
   const cutoff = new Date(now.date + 'T12:00:00Z'); cutoff.setUTCDate(cutoff.getUTCDate() - CLEAN_LOOKBACK_DAYS);
   return (backDate(r) || '') >= cutoff.toISOString().slice(0, 10);
 }
+// Totes from this rental still waiting to be washed. Some may be done
+// already (cleanedTotes, saved with "Some" on the Inventory page).
+function totesToClean(r, now = okNow()) {
+  return needsCleaning(r, now) ? Math.max(0, toteQty(r) - (Number(r.cleanedTotes) || 0)) : 0;
+}
 
 // "Oct 23, 2:14 PM" for a deliveredAt / pickedUpAt stamp
 function markText(iso) {
