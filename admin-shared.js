@@ -415,6 +415,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (location.pathname.endsWith('admin-app.html')) appLink.setAttribute('aria-current', 'page');
   if (!INVENTORY_ONLY) nav.appendChild(appLink);
 
+  // How-to guide for running a day with the app
+  const helpLink = document.createElement('a');
+  helpLink.href = 'admin-help.html';
+  helpLink.textContent = 'Help';
+  if (location.pathname.endsWith('admin-help.html')) helpLink.setAttribute('aria-current', 'page');
+  if (!INVENTORY_ONLY) nav.appendChild(helpLink);
+
   const logout = document.createElement('a');
   logout.href = '#';
   logout.className = 'logout-link';

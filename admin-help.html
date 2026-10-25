@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#F5F1E7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ready Tote">
+<link rel="apple-touch-icon" href="/app-icon-180.png">
+<title>Help · Ready Tote Oklahoma admin</title>
+<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<script src="admin-shared.js?v=20261112"></script>
+<style>
+  :root{--col:680px;}
+  /* How-to guide: one section per job, each with short steps and a screenshot
+     (test data, no real customers). Screenshots live in images/help/. */
+  .toc{display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 4px;}
+  .toc a{display:inline-block; padding:6px 12px; border:1px solid var(--control); border-radius:999px; font-size:14px; font-weight:600; color:var(--ink); text-decoration:none; background:#fff;}
+  .toc a:hover{border-color:var(--ink);}
+  .guide{border:1px solid var(--line); border-radius:10px; padding:16px 20px; margin-top:20px; scroll-margin-top:72px;}
+  .guide h2{margin:0 0 4px; font-size:18px;}
+  .guide h3{margin:16px 0 4px; font-size:15px;}
+  .guide p{margin:0 0 8px; font-size:15px; line-height:1.55;}
+  .guide .why{color:var(--steel); font-size:14px;}
+  .guide ol, .guide ul{margin:6px 0 10px; padding-left:22px; font-size:15px; line-height:1.6;}
+  .guide li{margin:2px 0;}
+  .guide b{font-weight:600;}
+  .shot{margin:10px 0 6px; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:#fff; max-width:390px;}
+  .shot img{display:block; width:100%; height:auto;}
+  .cap{font-size:12px; color:var(--steel); margin:0 0 10px;}
+  .day{width:100%; border-collapse:collapse; font-size:15px; margin:8px 0 4px;}
+  .day td{padding:8px 0; border-top:1px solid #EEEAE1; vertical-align:top;}
+  .day tr:first-child td{border-top:none;}
+  .day td:first-child{width:92px; font-weight:600; white-space:nowrap;}
+  .tip{background:#FAF8F3; border-radius:8px; padding:10px 12px; font-size:14px; line-height:1.5; margin:10px 0 4px;}
+  .fix dt{font-weight:600; margin-top:10px; font-size:15px;}
+  .fix dd{margin:2px 0 0; font-size:15px; line-height:1.5;}
+</style>
+</head>
+<body>
+<nav class="admin-nav" aria-label="Admin tools">
+  <a href="admin.html">Dashboard</a>
+  <a href="admin-requests.html">Requests</a>
+  <a href="admin-invoice.html">Send Invoice</a>
+  <a href="admin-invoice.html?mode=log">Add Rental</a>
+  <a href="admin-reminders.html">Reminders</a>
+  <a href="admin-rentals.html">All Rentals</a>
+  <a href="admin-contacts.html">Contacts</a>
+  <a href="admin-finance.html">Finance</a>
+  <a href="admin-outreach.html">Outreach</a>
+  <a href="admin-inventory.html">Inventory</a>
+</nav>
+<div class="card">
+  <h1>Help</h1>
+  <p class="sub">How to run a day with the app, from a new booking to clean totes back on the shelf. Screenshots use test data.</p>
+
+  <nav class="toc" aria-label="Jump to">
+    <a href="#day">Your day</a>
+    <a href="#requests">New request</a>
+    <a href="#invoice">Invoice</a>
+    <a href="#texts">Texts</a>
+    <a href="#stops">Delivery day</a>
+    <a href="#paid">Getting paid</a>
+    <a href="#clean">Cleaning</a>
+    <a href="#stock">Stock</a>
+    <a href="#pages">Other pages</a>
+    <a href="#fix">If something's off</a>
+  </nav>
+
+  <section class="guide" id="day">
+    <h2>Your day at a glance</h2>
+    <table class="day">
+      <tr><td>7:00 AM</td><td>Morning email and phone alert: what's due today. On quiet days, a short "Nothing due today" email with the next few stops.</td></tr>
+      <tr><td>9:00 AM</td><td>Send the day's texts (Dashboard or Reminders). A nudge comes if any are still unsent.</td></tr>
+      <tr><td>Stops</td><td>Tap <b>On the way</b> as you leave, then <b>Delivered</b> or <b>Picked up</b> when it's done. An alert comes about an hour before each stop that has a time.</td></tr>
+      <tr><td>After pickup</td><td>Wash the totes and tap <b>All clean</b> on Inventory.</td></tr>
+      <tr><td>6:00 PM</td><td>Send review asks. A nudge comes if any are still unsent.</td></tr>
+    </table>
+    <p>The <b>Dashboard</b> is home base. <b>Needs you</b> at the top lists anything waiting: requests, late pickups, totes to clean, partner follow-ups, trips to log. Tap a line to go fix it.</p>
+    <div class="shot"><img src="images/help/dashboard-top.jpg" alt="Dashboard with the Needs you list" width="390" height="436" loading="lazy"></div>
+  </section>
+
+  <section class="guide" id="requests">
+    <h2>1. A new booking request comes in</h2>
+    <p class="why">You get a phone alert. The request waits on the Requests page.</p>
+    <ol>
+      <li>Open <b>Requests</b>. Check the <b>Stock</b> line: green means you have the totes, red means you're short on those dates.</li>
+      <li>Tap <b>Text to confirm</b>. Messages opens with the text and a confirm link filled in. Send it.</li>
+      <li>Back in the app, tap <b>Yes, sent</b>. The request moves to <b>Awaiting customer</b>.</li>
+    </ol>
+    <div class="shot"><img src="images/help/requests-card.jpg" alt="A new request with Text to confirm" width="390" height="544" loading="lazy"></div>
+    <div class="shot"><img src="images/help/requests-sent-ask.jpg" alt="Sent the confirm text? Yes, sent" width="390" height="112" loading="lazy"></div>
+    <p>When the customer taps the link, you get a <b>Booking confirmed</b> alert and the request shows <b>Confirmed</b>. If they reply YES by text instead, tap <b>Mark confirmed</b> yourself.</p>
+    <div class="tip"><b>Can't do it?</b> Tap <b>Decline</b> and pick a reason. Not sure yet? <b>Mark reviewed</b> keeps it on your list without a reply.</div>
+  </section>
+
+  <section class="guide" id="invoice">
+    <h2>2. Send the invoice</h2>
+    <ol>
+      <li>On the confirmed request, tap <b>Create invoice</b>. Send Invoice opens with everything filled in from the request.</li>
+      <li>Check the package, dates, address and <b>Total price</b>. Rush fee, military and partner discounts are worked out for you.</li>
+      <li>Tap <b>Review and send</b>, check the preview, and send. The customer gets the invoice email with a Stripe pay button, and the rental is added to your list.</li>
+    </ol>
+    <div class="shot"><img src="images/help/requests-ready.jpg" alt="A confirmed request with Create invoice" width="390" height="574" loading="lazy"></div>
+    <div class="tip"><b>Paid another way, or an old rental?</b> Use <b>Add Rental</b> (Send Invoice, "Log only, no email"). It adds the rental without emailing anyone.</div>
+  </section>
+
+  <section class="guide" id="texts">
+    <h2>3. Send the day's texts (9 AM)</h2>
+    <p class="why">Delivery and pickup reminders, address checks and payment nudges. They come from your own phone number, so replies land in your Messages.</p>
+    <ol>
+      <li>On the Dashboard (<b>Texts to send today</b>) or the <b>Reminders</b> page, tap <b>Text [name]</b>. Messages opens with the text ready.</li>
+      <li>Send it, come back, and tap <b>Yes, sent</b>. It drops off the list. Changed your mind? Tap <b>Undo</b>.</li>
+      <li>Don't need one? Tap <b>Skip</b>.</li>
+    </ol>
+    <div class="shot"><img src="images/help/dashboard-texts.jpg" alt="Texts to send today on the Dashboard" width="390" height="284" loading="lazy"></div>
+    <div class="shot"><img src="images/help/dashboard-text-sent.jpg" alt="Sent to Marcus? Yes, sent" width="390" height="265" loading="lazy"></div>
+    <p>Anything you miss stays on <b>Reminders</b>, marked <b>Overdue</b>, until it's sent, skipped, or too late to matter. Review asks show up 3 days after pickup; send those around 6 PM.</p>
+    <div class="shot"><img src="images/help/reminders-top.jpg" alt="Reminders page" width="390" height="520" loading="lazy"></div>
+  </section>
+
+  <section class="guide" id="stops">
+    <h2>4. Delivery and pickup day</h2>
+    <p>Today's stops are on the Dashboard under <b>Next 7 days</b>. Tap the address to open Maps, or the name to call.</p>
+    <ol>
+      <li>Leaving for a stop? Tap <b>On the way</b>. The app works out your arrival time and fills in a text to the customer. Send it.</li>
+      <li>Totes dropped off? Tap <b>Delivered</b>. Totes collected? Tap <b>Picked up</b>. Each has an <b>Undo</b>.</li>
+    </ol>
+    <div class="shot"><img src="images/help/dashboard-stops.jpg" alt="Today's stops with On the way and Delivered" width="390" height="308" loading="lazy"></div>
+    <p>Why tap them? Marked stops stop sending reminder texts and alerts, the tote counts stay right, and a pickup that's past its time without <b>Picked up</b> shows as a <b>Late pickup</b> in Needs you.</p>
+  </section>
+
+  <section class="guide" id="paid">
+    <h2>5. Getting paid</h2>
+    <ul>
+      <li><b>Paid with the Stripe button:</b> it's marked paid on its own, and you get a phone alert.</li>
+      <li><b>Paid cash, Venmo or check:</b> tap <b>Mark paid</b> on the Dashboard's <b>Unpaid invoices</b> (or on All Rentals).</li>
+      <li><b>Still not paid?</b> The app lines up a friendly follow-up text 3 days after the invoice, then a payment reminder from day 5. <b>Email reminder</b> sends one by email.</li>
+    </ul>
+    <div class="shot"><img src="images/help/dashboard-unpaid.jpg" alt="Unpaid invoices with Mark paid and Email reminder" width="390" height="571" loading="lazy"></div>
+  </section>
+
+  <section class="guide" id="clean">
+    <h2>6. Cleaning totes after a pickup</h2>
+    <p>Every rental that comes back shows under <b>Tote cleaning</b> at the top of <b>Inventory</b> until it's washed.</p>
+    <ol>
+      <li>Washed them all? Tap <b>All clean</b>.</li>
+      <li>Washed only part of a big return? Tap <b>Some</b>, type how many are done so far, and tap <b>Save</b>. The row shows how many are left.</li>
+      <li>Mis-tap? Tap <b>Undo</b> in the green bar, or next to the name under <b>Washed today</b>.</li>
+    </ol>
+    <div class="shot"><img src="images/help/inventory-cleaning.jpg" alt="Tote cleaning card" width="390" height="500" loading="lazy"></div>
+    <div class="shot"><img src="images/help/inventory-some.jpg" alt="Washed so far box" width="390" height="149" loading="lazy"></div>
+  </section>
+
+  <section class="guide" id="stock">
+    <h2>7. Logging a stock change</h2>
+    <p class="why">Rentals move totes in and out on their own. This is only for the totes you own changing: new ones bought, broken, lost, or worn out.</p>
+    <ol>
+      <li>On <b>Inventory</b>, scroll to <b>Log a stock change</b>. Pick <b>Totes</b> or <b>Dollies</b>.</li>
+      <li>Set the date, what happened, and how many. Add a note if it helps (an order number, which customer).</li>
+      <li>Tap <b>Add stock change</b>. It shows in <b>History</b>, where you can delete it if it was a mistake.</li>
+    </ol>
+    <div class="shot"><img src="images/help/inventory-stock-form.jpg" alt="Log a stock change form" width="390" height="386" loading="lazy"></div>
+    <p><b>Free today</b> is totes you can still book today. <b>Out with customers</b> is totes at customers' homes right now. The 60-day chart shows what's free each day ahead; tap a day to see who has totes out.</p>
+  </section>
+
+  <section class="guide" id="pages">
+    <h2>The other pages</h2>
+    <ul>
+      <li><b>All Rentals:</b> find any rental, edit it, cancel it, add photos, and see what's next for it.</li>
+      <li><b>Contacts:</b> everyone who rented or asked, with their history, what they owe, and Text / Email buttons.</li>
+      <li><b>Finance:</b> money in and out, expenses with receipt photos, mileage (on the Mileage tab, tap a delivery or pickup that isn't logged yet to fill it in), and a tax set-aside. Download a year for your accountant.</li>
+      <li><b>Outreach:</b> partners like movers, realtors and remodelers, with follow-up reminders and partner discount codes.</li>
+      <li><b>App &amp; alerts:</b> put the app on your Home Screen and pick which phone alerts you get. Each phone is set up on its own.</li>
+    </ul>
+  </section>
+
+  <section class="guide" id="fix">
+    <h2>If something's off</h2>
+    <dl class="fix">
+      <dt>No morning email by 7:30 AM</dt>
+      <dd>It should come every day, even quiet ones. Check spam first; if it's not there, something's wrong, so get it looked at.</dd>
+      <dt>Numbers look stale</dt>
+      <dd>Tap <b>Refresh</b> at the top of the page.</dd>
+      <dt>The app asks you to sign in</dt>
+      <dd>Sign-ins last 30 days. Sign in again and you're back where you were.</dd>
+      <dt>Tapped the wrong thing</dt>
+      <dd>Almost every action has an <b>Undo</b> right after, in the green bar or next to the item.</dd>
+      <dt>No phone alerts</dt>
+      <dd>Open <b>App &amp; alerts</b> on that phone and make sure notifications are on. On iPhone, the app has to be opened from the Home Screen icon.</dd>
+    </dl>
+  </section>
+</div>
+</body>
+</html>
