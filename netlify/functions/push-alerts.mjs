@@ -8,6 +8,10 @@
 //           day from 7 AM, and only sent when the picture has changed since
 //           the last alert, so the same shortage doesn't buzz every morning.
 //
+//   reminders (nudges) - at 9 AM, if any reminder texts are still unsent;
+//           at 6 PM, if any review asks are still unsent. Once a day each,
+//           and only when there's something left (best times to text).
+//
 // What's already been sent is kept in the "meta" store under "pushAlerts".
 //
 // It also backs up the 7 AM reminders email (daily-reminders.mjs): Netlify's
@@ -16,7 +20,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { notify } from "./lib-push.mjs";
-import { friendlyTime, dropoffAddressOf, pickupAddressOf } from "./lib-reminders.mjs";
+import { friendlyTime, dropoffAddressOf, pickupAddressOf, computeReminders } from "./lib-reminders.mjs";
 import { computeAvailability } from "./lib-stock.mjs";
 import { runDigestOnce } from "./lib-digest.mjs";
 
@@ -25,6 +29,12 @@ const LOW_TOTES = 20;        // matches "Under 20" on the Inventory page
 const STOCK_DAYS = 30;
 const STOCK_FROM_HOUR = 7;
 const DIGEST_CATCHUP = [7 * 60 + 20, 20 * 60];   // 7:20 AM to 8 PM
+// Nudges: [from, until] in minutes since midnight. A run missed at 9:00
+// still nudges at 9:15; after "until" the day's nudge is skipped.
+const NUDGES = {
+  texts:   { window: [9 * 60, 12 * 60], kinds: ["delivery", "pickupTomorrow", "pickup", "addressCheck", "followup", "emailReminder"] },
+  reviews: { window: [18 * 60, 20 * 60], kinds: ["review"] },
+};
 
 // Oklahoma date and minutes since midnight, right now.
 export function nowInOklahoma(at = new Date()) {
@@ -83,6 +93,17 @@ export function dueSoon(rentals, now, sent = {}) {
   return out;
 }
 
+// The nudge for one NUDGES entry from computeReminders output, or null when
+// nothing of that kind is left to send.
+export function nudgeFor(which, rem, date) {
+  const n = NUDGES[which].kinds.reduce((t, k) => t + (rem[k] || []).length, 0);
+  if (!n) return null;
+  const many = n === 1 ? "" : "s";
+  return which === "texts"
+    ? { title: `${n} text${many} still to send`, body: "Good time to send reminders now. Tap to open Reminders.", url: "/admin-reminders.html", tag: `nudge-texts-${date}` }
+    : { title: `${n} review ask${many} to send`, body: "Evening is the best time for review texts. Tap to open Reminders.", url: "/admin-reminders.html", tag: `nudge-reviews-${date}` };
+}
+
 // The low-stock message for the next STOCK_DAYS, or null if stock is fine.
 export function stockAlert(avail) {
   const days = avail.days.slice(0, STOCK_DAYS);
@@ -125,10 +146,11 @@ export default async () => {
   const soonSent = Object.fromEntries(Object.entries(state.soonSent || {}).filter(([id]) => id.endsWith(":" + now.date)));
   let changed = Object.keys(soonSent).length !== Object.keys(state.soonSent || {}).length;
 
+  let rentals = null;
   try {
     const store = getStore("rentals");
     const { blobs } = await store.list();
-    const rentals = [];
+    rentals = [];
     for (const b of blobs) {
       const r = await store.get(b.key, { type: "json" }).catch(() => null);
       if (r) rentals.push({ key: b.key, ...r });
@@ -140,6 +162,26 @@ export default async () => {
     }
   } catch (e) {
     console.error("push-alerts soon check failed:", e.message);
+  }
+
+  // 9 AM texts nudge / 6 PM review nudge, once a day each
+  const nudgesDue = rentals ? Object.entries(NUDGES).filter(([which, n]) =>
+    now.minutes >= n.window[0] && now.minutes < n.window[1] && (state.nudged || {})[which] !== now.date) : [];
+  if (nudgesDue.length) {
+    try {
+      let sentFlags = {}, paidFlags = {};
+      try { sentFlags = (await meta.get("sentFlags", { type: "json" })) || {}; } catch {}
+      try { paidFlags = (await meta.get("paidFlags", { type: "json" })) || {}; } catch {}
+      const rem = computeReminders(rentals, process.env.GOOGLE_REVIEW_LINK || "", sentFlags, paidFlags);
+      for (const [which] of nudgesDue) {
+        const msg = nudgeFor(which, rem, now.date);
+        if (msg) await notify("reminders", msg);
+        state.nudged = { ...(state.nudged || {}), [which]: now.date };
+        changed = true;
+      }
+    } catch (e) {
+      console.error("push-alerts nudge failed:", e.message);
+    }
   }
 
   if (now.minutes >= STOCK_FROM_HOUR * 60 && state.stockCheckedOn !== now.date) {
