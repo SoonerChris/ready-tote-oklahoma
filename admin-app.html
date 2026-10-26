@@ -101,6 +101,11 @@
     <p class="note"><b>Icon badge:</b> the Ready Tote icon shows how many things are waiting on you: booking requests to handle plus late pickups. It updates when a notification comes in and when you open the app. To hide it, go to iPhone Settings, Notifications, Ready Tote, Badges.</p>
     <p class="note">Each phone or computer is set up on its own. Turning these on here doesn't change Shon's or anyone else's.</p>
   </section>
+  <section class="panel" aria-labelledby="autoTitle">
+    <h2 id="autoTitle">Automatic invoices</h2>
+    <label class="kind"><input type="checkbox" id="autoInvoice"><div><b>Email the invoice when a customer confirms</b><span>For standard bookings only: a regular package for 2 weeks, no rush fee, no military or promo discount, a full address, and totes free on those dates. The customer gets a Pay now button right on the confirm page. Anything else waits on Requests as Ready to invoice, with the reason.</span></div></label>
+    <p class="note" id="autoSay" hidden></p>
+  </section>
   <section class="panel" aria-labelledby="teamTitle">
     <h2 id="teamTitle">3. Inventory-only login</h2>
     <p>For a helper like Shon: they sign in with their own username and password and see <b>only Inventory</b>. They can log stock changes and mark totes clean. No customer phones, emails, addresses, prices or payments.</p>
@@ -295,6 +300,22 @@ $('teamList').addEventListener('click', async (e) => {
   catch (err) { teamSay(err.message); }
 });
 loadTeam();
+
+// ---- Automatic invoices (settings.mjs) ----
+async function settingsCall(body) {
+  const r = await fetch('/.netlify/functions/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error("Couldn't save that. Try again.");
+  return (await r.json()).settings || {};
+}
+settingsCall({ action: 'get' }).then(s => { $('autoInvoice').checked = s.autoInvoice !== false; }).catch(() => {});
+$('autoInvoice').addEventListener('change', async (e) => {
+  const on = e.target.checked;
+  try {
+    await settingsCall({ action: 'set', autoInvoice: on });
+    $('autoSay').textContent = on ? 'On. Standard bookings are invoiced as soon as the customer confirms.' : 'Off. Every confirmed booking waits on Requests for you to invoice.';
+  } catch (err) { e.target.checked = !on; $('autoSay').textContent = err.message; }
+  $('autoSay').hidden = false;
+});
 
 $('secret').value = adminSessionMarker();
 refresh().catch((e) => show('off', e.message || "Couldn't check this device."));

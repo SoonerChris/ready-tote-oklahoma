@@ -35,6 +35,7 @@
   .row b{text-align:right;font-weight:600;}
   button{width:100%;padding:16px;font:700 1.1rem 'Barlow',sans-serif;background:var(--ink);color:#fff;border:0;border-radius:10px;cursor:pointer;}
   button:disabled{opacity:0.6;cursor:wait;}
+  a.pay{display:block;text-align:center;padding:16px;font:700 1.1rem 'Barlow',sans-serif;background:var(--gold);color:var(--ink);border-radius:10px;text-decoration:none;}
   .done{display:inline-block;background:var(--green-bg);color:var(--green);font-weight:700;font-size:0.85rem;padding:5px 10px;border-radius:999px;margin-bottom:12px;}
   a{color:var(--ink);font-weight:600;}
   [hidden]{display:none !important;}
@@ -48,7 +49,7 @@
 
     <div id="ask" hidden>
       <h1 id="askTitle">Confirm your booking</h1>
-      <p>Tap below to confirm these dates. We'll send your invoice shortly after.</p>
+      <p>Tap below to confirm these dates. Your invoice comes right after.</p>
       <div class="details" id="details"></div>
       <button id="confirmBtn">Confirm my booking</button>
     </div>
@@ -56,8 +57,13 @@
     <div id="done" hidden>
       <span class="done">Confirmed</span>
       <h1 id="doneTitle">You're all set</h1>
-      <p>Thanks! Your dates are confirmed. Watch your email for the invoice, and pay it to lock in your rental.</p>
+      <p id="doneText">Thanks! Your dates are confirmed. Watch your email for the invoice, and pay it to lock in your rental.</p>
       <div class="details" id="doneDetails"></div>
+      <!-- Invoiced on confirm: pay right here (same Stripe link as the invoice email) -->
+      <div id="payBox" hidden>
+        <a class="pay" id="payBtn" href="#" rel="noopener">Pay now</a>
+        <p class="muted" style="margin:10px 0 0;">Secure payment by Stripe. The same link is in the invoice we just emailed you.</p>
+      </div>
     </div>
 
     <div id="msg" hidden>
@@ -92,7 +98,15 @@
       $('ask').hidden = false;
     } else if (b.state === 'done') {
       if (b.first) $('doneTitle').textContent = "You're all set, " + b.first;
-      $('doneDetails').innerHTML = details(b);
+      $('doneDetails').innerHTML = details(b) + (b.pay && b.pay.price ? `<div class="row"><span>Total</span><b>${text(b.pay.price)}</b></div>` : '');
+      if (b.pay && b.pay.paid) {
+        $('doneText').textContent = "Thanks! Your dates are confirmed and your payment came through. See you soon.";
+      } else if (b.pay && /^https:\/\/([a-z0-9-]+\.)?stripe\.com\//.test(b.pay.url)) {
+        $('doneText').textContent = "Thanks! Your dates are confirmed and your invoice is in your email. Pay now to lock in your rental.";
+        $('payBtn').href = b.pay.url;
+        $('payBtn').textContent = 'Pay now' + (b.pay.price ? ' (' + b.pay.price + ')' : '');
+        $('payBox').hidden = false;
+      }
       $('done').hidden = false;
     } else {
       $('msgTitle').textContent = 'This booking is closed';
