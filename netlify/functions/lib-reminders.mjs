@@ -118,7 +118,10 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
     // Confirm pickup address: delivery-service rentals only (self-service has
     // no real pickup address to confirm). Catches cases where the address on
     // file was a placeholder or has since changed.
-    if (!self && !r.pickedUpAt && r.pickupDate && open(shiftDate(r.pickupDate, -5), shiftDate(r.pickupDate, -2))) {
+    // Extensions (see admin-shared.js): no pickup texts for a rental that
+    // was extended, no delivery text for the extension itself
+    const noPickup = !!r.extendedBy, noDelivery = !!r.extendsKey;
+    if (!self && !noPickup && !r.pickedUpAt && r.pickupDate && open(shiftDate(r.pickupDate, -5), shiftDate(r.pickupDate, -2))) {
       const flagId = "addressCheck:" + (r.key || r.phone + r.pickupDate);
       if (!sentFlags[flagId]) {
         const { message, sms } = pickupAddressRequestMessageFor(r, { withPickup: today === shiftDate(r.pickupDate, -2) });
@@ -156,7 +159,7 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
 
     // Delivery reminder: the day before drop-off, or on the day if missed.
     // Not once it's marked delivered (or picked up) on the Dashboard.
-    if (r.dropoffDate && !r.deliveredAt && !r.pickedUpAt && open(shiftDate(r.dropoffDate, -1), r.dropoffDate)) {
+    if (r.dropoffDate && !noDelivery && !r.deliveredAt && !r.pickedUpAt && open(shiftDate(r.dropoffDate, -1), r.dropoffDate)) {
       const when = r.dropoffDate === today ? "today" : "tomorrow";
       const msg = self
         ? `${hi(first)} Reminder: your totes are ready for pickup ${when} (${friendlyDate(r.dropoffDate)}) around ${friendlyTime(r.dropoffTime)}. See you then!`
@@ -167,7 +170,7 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
 
     // Pickup reminder: the day before pickup, or on the day if missed.
     // Not once it's marked picked up (totes came back early).
-    if (r.pickupDate && !r.pickedUpAt && open(shiftDate(r.pickupDate, -1), r.pickupDate)) {
+    if (r.pickupDate && !noPickup && !r.pickedUpAt && open(shiftDate(r.pickupDate, -1), r.pickupDate)) {
       const when = r.pickupDate === today ? "today" : "tomorrow";
       const msg = self
         ? `${hi(first)} Reminder: please have your totes ready for return ${when} (${friendlyDate(r.pickupDate)}) around ${friendlyTime(r.pickupTime)}. Thanks!`
@@ -180,7 +183,7 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
     // Skipped when the address check (still due, or sent today) carries it
     const addrId = "addressCheck:" + (r.key || r.phone + r.pickupDate);
     const carriedByAddressCheck = !self && (!sentFlags[addrId] || sentOn(addrId) === today);
-    if (r.pickupDate === shiftDate(today, 2) && !r.pickedUpAt && !carriedByAddressCheck) {
+    if (r.pickupDate === shiftDate(today, 2) && !noPickup && !r.pickedUpAt && !carriedByAddressCheck) {
       const msg = self
         ? `${hi(first)} Friendly reminder to return your totes on ${friendlyDate(r.pickupDate)} around ${friendlyTime(r.pickupTime)}. Thanks!`
         : `${hi(first)} We'll pick up your totes on ${friendlyDate(r.pickupDate)} around ${friendlyTime(r.pickupTime)}. Please have them empty and accessible. Thanks!`;
@@ -190,8 +193,9 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
 
     // Review request: from 3 days after pickup, for up to two weeks. Not
     // while it's marked delivered but not yet picked up (a late pickup).
+    // An extended rental's review waits for the extension to end
     const stillOut = r.deliveredAt && !r.pickedUpAt;
-    if (reviewLink && r.pickupDate && !stillOut && open(shiftDate(r.pickupDate, 3), shiftDate(r.pickupDate, 14))) {
+    if (reviewLink && r.pickupDate && !noPickup && !stillOut && open(shiftDate(r.pickupDate, 3), shiftDate(r.pickupDate, 14))) {
       const link = reviewLink;
       const msg = `${hi(first)} Thanks for renting with us. If we made your move easier, we'd love a quick Google review: ${link}`;
       const flagId = "review:" + (r.key || r.phone + r.pickupDate);
@@ -367,7 +371,8 @@ export function rentalToICSAttachments(rental, { forCustomer = false } = {}) {
         : `${rental.package}\n${self ? 'Customer returns totes' : 'Pick up totes from customer'}\nPhone: ${rental.phone || ''}`,
     },
   ];
-  return legs.map((l) => ({
+  // An extension has no delivery (the totes are already there)
+  return legs.filter((l) => !(rental.extendsKey && l.file === 'delivery')).map((l) => ({
     filename: forCustomer ? `ready-tote-${l.file}-${l.date}.ics` : `${l.file}-${first}-${l.date}.ics`,
     content: Buffer.from(generateICS({ title: l.title, date: l.date, time: l.time || '10:00 AM', durationMinutes: 30, location: l.location, description: l.description })).toString('base64'),
   }));

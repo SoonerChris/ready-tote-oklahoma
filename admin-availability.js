@@ -47,16 +47,20 @@ function totesInPackageText(pkg) {
 // Returns null when there's nothing to check (no dates, or all in the past).
 // needDollies is checked too once the business tracks dollies (AVAIL.dolliesTracked);
 // holdBack may carry dollies the same way it carries totes.
+// holdBack: one { start, end, totes, dollies } or a list of them, totes that
+// already count on those days and shouldn't be counted twice (a request's
+// own hold, or the rental an extension continues).
 function checkAvailability(start, end, need, holdBack, needDollies) {
   if (!AVAIL || !start || !end || end < start) return null;
+  const holds = [].concat(holdBack || []).filter(Boolean);
   let low = null, lowD = null;
   for (const d of AVAIL.days) {
     if (d.date < start || d.date > end) continue;
-    const held = holdBack && d.date >= holdBack.start && d.date <= holdBack.end;
-    const free = d.available + (held ? holdBack.totes : 0);
+    const on = holds.filter(h => d.date >= h.start && d.date <= h.end);
+    const free = d.available + on.reduce((t, h) => t + (h.totes || 0), 0);
     if (!low || free < low.free) low = { free, date: d.date };
     if (typeof d.dolliesAvailable === 'number') {
-      const freeD = d.dolliesAvailable + (held ? (holdBack.dollies || 0) : 0);
+      const freeD = d.dolliesAvailable + on.reduce((t, h) => t + (h.dollies || 0), 0);
       if (!lowD || freeD < lowD.free) lowD = { free: freeD, date: d.date };
     }
   }

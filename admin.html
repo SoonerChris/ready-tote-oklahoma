@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Dashboard · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261026">
-<script src="admin-shared.js?v=20261112"></script>
+<script src="admin-shared.js?v=20261113"></script>
 <style>
   /* Dashboard layout: the cream body is the frame (sidebar on it, no rule),
      the work sits on one white sheet inset 8px from the window's right,
@@ -473,12 +473,13 @@
     const events = [];
     for (const r of rentals) {
       const self = r.serviceType === 'self';
-      if (r.dropoffDate >= today && r.dropoffDate <= endDate) {
+      // An extension has no delivery and an extended rental no pickup
+      if (hasDeliveryLeg(r) && r.dropoffDate >= today && r.dropoffDate <= endDate) {
         events.push({ key: r.key, leg: 'delivery', date: r.dropoffDate, time: r.dropoffTime || '', kind: self ? 'Customer pickup' : 'Deliver',
           cls: self ? 'self' : 'go', name: r.name, phone: r.phone, totes: toteQty(r), unpaid: isUnpaid(r),
           addr: self ? '' : dropoffAddressOf(r), self, marked: r.deliveredAt || '' });
       }
-      if (r.pickupDate >= today && r.pickupDate <= endDate) {
+      if (hasPickupLeg(r) && r.pickupDate >= today && r.pickupDate <= endDate) {
         events.push({ key: r.key, leg: 'pickup', date: r.pickupDate, time: r.pickupTime || '', kind: self ? 'Customer return' : 'Pick up',
           cls: self ? 'self' : 'back', name: r.name, phone: r.phone, totes: toteQty(r), unpaid: false,
           addr: self ? '' : pickupAddressOf(r), self, marked: r.pickedUpAt || '' });

@@ -55,6 +55,7 @@ export async function sendInvoice(body) {
   const pickupAddress = escapeHtml(body.pickupAddress);
   const sameAddress = body.dropoffAddress === body.pickupAddress;
   const selfService = body.serviceType === "self";
+  const extendsKey = cleanExtendsKey(body.extendsKey);
   const stripeUrl = String(body.stripeUrl);
   if (!/^https:\/\/([a-z0-9-]+\.)?stripe\.com\//.test(stripeUrl)) {
     return { ok: false, status: 400, error: "stripeUrl must be a stripe.com link" };
@@ -72,7 +73,11 @@ export async function sendInvoice(body) {
               rows: [
                 ["Package", pkg],
                 ["Duration", duration],
-                ...(selfService
+                ...(extendsKey
+                  // Extension: the totes stay put, so there's no new drop-off
+                  ? [["Extension", `Keep your totes through ${formatDate(body.pickupDate)}`], [selfService ? "Return totes" : "Pickup", pickup],
+                     ...(selfService ? [] : [["Address", pickupAddress]])]
+                  : selfService
                   ? [["Service", "You pick up and return the totes"], ["Pick up totes", dropoff], ["Return totes", pickup]]
                   : [["Drop-off", dropoff], ["Pickup", pickup],
                      ...(sameAddress ? [["Address", dropoffAddress]] : [["Drop-off address", dropoffAddress], ["Pickup address", pickupAddress]])]),
@@ -143,13 +148,35 @@ export async function sendInvoice(body) {
       ...(lineItems ? { lineItems } : {}),
       militaryIdKey: body.militaryIdKey || "",
       ...(body.autoInvoiced ? { autoInvoiced: true } : {}),
+      ...(extendsKey ? { extendsKey } : {}),
     });
+    if (extendsKey && !(await linkExtension(store, extendsKey, key, body.dropoffDate))) console.error("Extension link failed: original not found", extendsKey);
   } catch (e) {
     console.error("Rental log failed (invoice still sent):", e.message);
     key = null;
   }
 
   return { ok: true, key };
+}
+
+// ---- Extensions ----
+// An extension is billed as its own rental while the totes stay with the
+// customer (rules in admin-shared.js). The new rental carries extendsKey;
+// this marks the original with extendedBy (the new key) and extendedOn (the
+// extension's first day), or clears that when unlinking.
+export const cleanExtendsKey = (v) => (typeof v === "string" && /^[\w@.:-]{1,200}$/.test(v) ? v : "");
+export async function linkExtension(store, originalKey, newKey, startDate) {
+  if (!originalKey || originalKey === newKey) return false;
+  const original = await store.get(originalKey, { type: "json" });
+  if (!original || original.cancelled) return false;
+  await store.setJSON(originalKey, { ...original, extendedBy: newKey, extendedOn: startDate });
+  return true;
+}
+export async function unlinkExtension(store, originalKey, newKey) {
+  const original = originalKey && await store.get(originalKey, { type: "json" });
+  if (!original || original.extendedBy !== newKey) return;
+  const { extendedBy, extendedOn, ...rest } = original;
+  await store.setJSON(originalKey, rest);
 }
 
 // ---- Automatic invoices ----

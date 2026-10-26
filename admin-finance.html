@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Finance · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261026">
-<script src="admin-shared.js?v=20261112"></script>
+<script src="admin-shared.js?v=20261113"></script>
 <style>
   /* Finance answers one question first: how is the business doing in the
      period picked (a month, a year, or all time), and where is the money
@@ -918,6 +918,7 @@
     for (const r of ALL_RENTALS) {
       if (r.serviceType === 'self') continue;
       for (const leg of ['delivery', 'pickup']) {
+        if (leg === 'delivery' ? !hasDeliveryLeg(r) : !hasPickupLeg(r)) continue;   // no trip for an extension's handover
         const date = leg === 'delivery' ? r.dropoffDate : r.pickupDate;
         if (!date || date < fromDate || date > toDate) continue;
         const addr = leg === 'delivery' ? dropoffAddressOf(r) : pickupAddressOf(r);

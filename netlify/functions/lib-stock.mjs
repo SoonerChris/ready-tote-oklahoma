@@ -95,7 +95,10 @@ export async function computeAvailability(daysAhead = DAYS_AHEAD) {
   const today0 = now.date;
   const dayBefore = (d) => shiftDate(d, -1);
   const endOf = (r) => {
-    if (r.deliveredAt && !r.pickedUpAt) {
+    // Extension (see admin-shared.js): the original ends the day before the
+    // extension starts; the extension counts as delivered from its first day
+    if (r.extendedBy && r.extendedOn && !r.pickedUpAt) return dayBefore(r.extendedOn);
+    if ((r.deliveredAt || (r.extendsKey && r.dropoffDate <= today0)) && !r.pickedUpAt) {
       const t = clockMinutes(r.pickupTime);
       const late = r.pickupDate < today0 || (r.pickupDate === today0 && t !== null && now.minutes >= t);
       return late && r.pickupDate < today0 ? today0 : r.pickupDate;

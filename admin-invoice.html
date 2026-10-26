@@ -16,8 +16,8 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Send invoice · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261026">
-<script src="admin-shared.js?v=20261112"></script>
-<script src="admin-availability.js?v=20261026"></script>
+<script src="admin-shared.js?v=20261113"></script>
+<script src="admin-availability.js?v=20261027"></script>
 <style>
   :root{--col:720px;}
   /* One form, two jobs: send the invoice email, or just log the rental */
@@ -46,6 +46,11 @@
   .linkish{all:unset; cursor:pointer; margin-top:6px; font-size:13px; font-weight:600; color:var(--ink); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
   .linkish[hidden]{display:none;}
   #discAmtRow[hidden]{display:none;}
+  /* Extension: more time for totes the customer already has */
+  .ext{margin-top:12px; padding:10px 12px; border-radius:8px; font-size:14px; line-height:1.5; background:var(--gold-bg); color:var(--gold-ink);}
+  .ext.on{background:var(--green-bg); color:var(--green-ink);}
+  .ext button{width:auto; margin:6px 8px 0 0; padding:6px 12px; font-size:13px;}
+  .ext button.linkish{background:none; border:none; padding:6px 0; color:inherit; text-decoration:underline; text-underline-offset:3px;}
   .note.bad{color:var(--red-ink); font-weight:600;}
   .disc-row{margin-top:6px;}
   .after-send{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:14px;}
@@ -174,6 +179,7 @@
     </div>
   </div>
   <p class="note" id="timeNote" hidden></p>
+  <div id="extBox" class="ext" hidden></div>
   <div id="availLine" style="margin-top:12px;"></div>
 
   <h2 class="sec">Where</h2>
@@ -632,12 +638,89 @@
   // ---- Earlier rentals, for the "already invoiced?" check ----
   let RENTALS = [];
   fetch('/.netlify/functions/get-rentals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: $('secret').value }) })
-    .then(r => r.ok ? r.json() : null).then(d => { if (d) RENTALS = (d.rentals || []).filter(r => !r.cancelled); }).catch(() => {});
+    .then(r => r.ok ? r.json() : null).then(d => { if (d) RENTALS = (d.rentals || []).filter(r => !r.cancelled); applyExtendPrefill(); renderExtension(); }).catch(() => {});
   const digits = v => String(v || '').replace(/\D/g, '').slice(-10);
   function duplicatesOf(p) {
     return RENTALS.filter(r => r.dropoffDate === p.dropoffDate && (
       (p.email && r.email && r.email.toLowerCase() === p.email.toLowerCase()) ||
       (digits(p.phone).length === 10 && digits(r.phone) === digits(p.phone))));
+  }
+
+  // ---- Extensions ----
+  // More time for totes a customer already has, billed as its own rental.
+  // Linked with extendsKey: the first rental stops expecting a pickup, this
+  // one a delivery, and the totes count once (rules in admin-shared.js).
+  let EXTENDS = null, EXT_DISMISSED = '';
+  const plusDays = (d, n) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+  const sameCustomer = (r, email, phone) => (email && r.email && r.email.toLowerCase() === email.toLowerCase()) || (digits(phone).length === 10 && digits(r.phone) === digits(phone));
+  // A rental of theirs that's still out (or not picked up) when this one starts
+  function extensionCandidate() {
+    const start = $('dropoffDate').value, email = $('email').value.trim(), phone = $('phone').value.trim();
+    if (EXTENDS || !start || (!email && digits(phone).length !== 10)) return null;
+    return RENTALS.find(r => r.key !== EXT_DISMISSED && !r.extendedBy && !r.pickedUpAt && r.dropoffDate && r.pickupDate
+      && r.dropoffDate < start && start <= plusDays(r.pickupDate, 1) && sameCustomer(r, email, phone)) || null;
+  }
+  function renderExtension() {
+    const box = $('extBox'), span = r => `${fmtDay(r.dropoffDate)} to ${fmtDay(r.pickupDate)}, ${toteQty(r)} totes`;
+    if (EXTENDS) {
+      box.className = 'ext on';
+      box.innerHTML = `<b>Extension of ${esc(EXTENDS.name || 'their')}'s rental</b> (${esc(span(EXTENDS))}). The totes stay with them: no pickup for that rental, no delivery for this one, and they count once in stock. <button type="button" class="linkish" data-ext="off">Not an extension</button>`;
+      box.hidden = false; return;
+    }
+    const c = extensionCandidate();
+    box.hidden = !c;
+    if (!c) { box.innerHTML = ''; return; }
+    box.className = 'ext';
+    box.dataset.key = c.key;
+    box.innerHTML = `${esc(c.name || 'This customer')} still has totes out (${esc(span(c))}). Is this an extension? <br><button type="button" data-ext="yes">Yes, it's an extension</button><button type="button" class="linkish" data-ext="no">No, a new rental</button>`;
+  }
+  $('extBox').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-ext]'); if (!b) return;
+    if (b.dataset.ext === 'yes') EXTENDS = RENTALS.find(r => r.key === $('extBox').dataset.key) || null;
+    if (b.dataset.ext === 'no') EXT_DISMISSED = $('extBox').dataset.key;
+    if (b.dataset.ext === 'off') { EXT_DISMISSED = EXTENDS.key; EXTENDS = null; }
+    renderExtension(); renderAvailLine();
+  });
+  ['email', 'phone', 'dropoffDate'].forEach(id => $(id).addEventListener('input', renderExtension));
+  $('dropoffDate').addEventListener('change', renderExtension);
+  // The first rental's totes already count until it ends: don't count them twice
+  function extensionHold() {
+    const start = $('dropoffDate').value;
+    if (!EXTENDS || !start) return null;
+    const end = rentalEndDate(EXTENDS, okNow().date);
+    return end >= start ? { start, end, totes: toteQty(EXTENDS), dollies: dollyQty(EXTENDS) } : null;
+  }
+  // "Extend" on All Rentals: fill this in from that rental
+  function applyExtendPrefill(tries = 0) {
+    if (!PACKAGES.length && tries < 20) return setTimeout(() => applyExtendPrefill(tries + 1), 250);   // package list still loading
+    let key = null;
+    try { key = sessionStorage.getItem('rto-prefill-extend'); sessionStorage.removeItem('rto-prefill-extend'); } catch {}
+    const r = key && RENTALS.find(x => x.key === key);
+    if (!r) return;
+    const to24 = t => { const m = clockMinutes(t); return m === null ? '' : String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
+    $('name').value = r.name || ''; $('email').value = r.email || ''; $('phone').value = r.phone || '';
+    $('serviceType').value = r.serviceType === 'self' ? 'self' : 'delivery';
+    $('serviceType').dispatchEvent(new Event('change'));
+    // Where the totes are now: the pickup address
+    const st = r.pickupAddressStreet || r.dropoffAddressStreet;
+    if (st) {
+      const pre = r.pickupAddressStreet ? 'pickupAddress' : 'dropoffAddress';
+      $('street').value = st; $('city').value = r[pre + 'City'] || ''; $('state').value = r[pre + 'State'] || 'OK'; $('zip').value = r[pre + 'Zip'] || '';
+    } else {
+      const parts = String(r.pickupAddress || r.dropoffAddress || '').split(',').map(x => x.trim());
+      if (parts.length >= 3) { $('street').value = parts[0]; $('city').value = parts[1]; const m = parts[2].match(/([A-Za-z]{2})\s*(\d{5})?/); if (m) { $('state').value = m[1].toUpperCase(); $('zip').value = m[2] || ''; } }
+    }
+    const idx = PACKAGES.findIndex(p => p.name === r.package);
+    if (idx >= 0) { $('package').value = String(idx); $('package').dispatchEvent(new Event('change')); }
+    else { $('package').value = 'custom'; $('package').dispatchEvent(new Event('change')); $('customPackageName').value = r.package || 'Extension'; }
+    $('toteCount').value = toteQty(r); $('dollyCount').value = dollyQty(r);
+    $('dropoffDate').value = r.pickupDate; $('dropoffDate').dispatchEvent(new Event('change'));
+    $('pickupDate').value = plusDays(r.pickupDate, 14); PICKUP_BY_HAND = true;
+    if (to24(r.pickupTime)) { $('dropoffTime').value = to24(r.pickupTime); $('pickupTime').value = to24(r.pickupTime); }
+    $('notes').value = `Extension of the ${fmtDay(r.dropoffDate)} to ${fmtDay(r.pickupDate)} rental.`;
+    EXTENDS = r;
+    renderExtension(); renderAvailLine();
+    showStatus('ok', `Filled in as an extension of ${r.name || 'their'}'s rental. Check the dates and price before sending.`);
   }
 
   // ---- Send: build and check the payload, show a summary, send once ----
@@ -707,6 +790,7 @@
     payload.dollyCount = dollyCount;
 
     payload.serviceType = $('serviceType').value;
+    if (EXTENDS) payload.extendsKey = EXTENDS.key;
     payload.notes = $('notes').value.trim();
     payload.isMilitary = $('isMilitary').checked;
     payload.isRush = $('isRush').checked;
@@ -752,7 +836,7 @@
 
   function showSummary(p) {
     const day = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    const res = checkAvailability(p.dropoffDate, p.pickupDate, p.toteCount, prefillHold(), p.dollyCount);
+    const res = checkAvailability(p.dropoffDate, p.pickupDate, p.toteCount, [prefillHold(), extensionHold()], p.dollyCount);
     const short = d => new Date(String(d).slice(0, 10) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const issues = [];
     const mm = !LOG_MODE && stripeMismatch();
@@ -765,7 +849,7 @@
         <dt>${LOG_MODE ? 'Customer' : 'To'}</dt><dd>${esc(p.name)}${p.email ? ' · ' + esc(p.email) : ''}${LOG_MODE ? ' · ' + esc(p.phone) : ''}</dd>
         <dt>Amount</dt><dd><b>${esc(p.price)}</b> · ${esc(p.package)}${p.lineItems ? '<br>' + p.lineItems.map((i, n) => `${esc(i.label)} ${n === 0 ? '' : i.amount < 0 ? '\u2212' : '+'}$${Math.abs(i.amount).toFixed(2)}`).join(' · ') : (p.isMilitary ? ' · military' : '') + (p.isRush ? ' · rush' : '')}</dd>
         <dt>Totes</dt><dd>${p.toteCount} totes · ${p.dollyCount} ${p.dollyCount === 1 ? 'dolly' : 'dollies'}</dd>
-        <dt>Dates</dt><dd>${esc(day(p.dropoffDate))} ${esc(p.dropoffTime)} to ${esc(day(p.pickupDate))} ${esc(p.pickupTime)}</dd>
+        <dt>Dates</dt><dd>${esc(day(p.dropoffDate))} ${esc(p.dropoffTime)} to ${esc(day(p.pickupDate))} ${esc(p.pickupTime)}${EXTENDS ? `<br>Extension of ${esc(EXTENDS.name || 'their')}'s rental: no delivery, the totes are already there` : ''}</dd>
         <dt>Where</dt><dd>${p.serviceType === 'self' ? 'Customer picks up and returns' : LOG_MODE ? (esc([p.dropoffAddressStreet, p.dropoffAddressCity].filter(Boolean).join(', ')) || 'No address') : esc(p.dropoffAddress) + (p.pickupAddress !== p.dropoffAddress ? '<br>Pickup: ' + esc(p.pickupAddress) : '')}</dd>
         ${LOG_MODE ? '<dt>Email</dt><dd>None. The customer isn’t emailed.</dd>' : ''}
         ${res && !res.ok ? `<dt>Stock</dt><dd>${availabilityHtml(res)}</dd>` : ''}
@@ -844,7 +928,7 @@
     const start = $('dropoffDate').value, end = $('pickupDate').value;
     if (!start || !end) { $('availLine').innerHTML = ''; return; }
     const need = Number($('toteCount').value) || 0;
-    $('availLine').innerHTML = availabilityHtml(checkAvailability(start, end, need, prefillHold(), Number($('dollyCount').value) || 0));
+    $('availLine').innerHTML = availabilityHtml(checkAvailability(start, end, need, [prefillHold(), extensionHold()], Number($('dollyCount').value) || 0));
   }
   ['dropoffDate', 'pickupDate', 'toteCount', 'dollyCount'].forEach(id => $(id).addEventListener('input', renderAvailLine));
   $('package').addEventListener('change', () => setTimeout(renderAvailLine, 0));

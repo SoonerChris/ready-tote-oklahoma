@@ -162,22 +162,34 @@ function clockMinutes(t) {
   if (m[3]) { const pm = m[3].toUpperCase() === 'PM'; if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
   return h < 24 && min < 60 ? h * 60 + min : null;
 }
+// ---- Extensions ----
+// An extension is billed as its own rental, but the totes never leave the
+// customer: the original rental (extendedBy, extendedOn = the extension's
+// first day) has no pickup, and the extension (extendsKey) has no delivery;
+// it counts as delivered from its first day. Same rules on the server
+// (lib-stock.mjs, lib-reminders.mjs, push-alerts.mjs, lib-push.mjs).
+const hasDeliveryLeg = r => !(r && r.extendsKey);
+const hasPickupLeg = r => !(r && r.extendedBy);
+const isDelivered = (r, now = okNow()) => !!(r && (r.deliveredAt || (r.extendsKey && r.dropoffDate && r.dropoffDate <= now.date)));
+
 // Tapping Delivered / Picked up overrides the clock: marked picked up is
 // done; marked delivered stays out, even past the pickup time, until it's
 // marked picked up (a late pickup).
 function rentalPhase(r, now = okNow()) {
   if (!r || r.cancelled || !r.dropoffDate || !r.pickupDate) return '';
   if (r.pickedUpAt) return 'done';
-  if (r.deliveredAt) return 'out';
+  // Extended: hands its totes to the extension on the extension's first day
+  if (r.extendedBy && r.extendedOn && now.date >= r.extendedOn) return 'done';
+  if (isDelivered(r, now)) return 'out';
   const passed = (date, time) => date < now.date || (date === now.date && clockMinutes(time) !== null && now.minutes >= clockMinutes(time));
-  if (passed(r.pickupDate, r.pickupTime)) return 'done';
+  if (hasPickupLeg(r) && passed(r.pickupDate, r.pickupTime)) return 'done';
   if (r.dropoffDate > now.date || (r.dropoffDate === now.date && clockMinutes(r.dropoffTime) !== null && now.minutes < clockMinutes(r.dropoffTime))) return 'upcoming';
   return 'out';
 }
 
 // Marked delivered, not picked up, and the pickup time has passed
 function isLatePickup(r, now = okNow()) {
-  if (!r || r.cancelled || !r.deliveredAt || r.pickedUpAt || !r.pickupDate) return false;
+  if (!r || r.cancelled || !isDelivered(r, now) || r.pickedUpAt || !r.pickupDate || !hasPickupLeg(r)) return false;
   const t = clockMinutes(r.pickupTime);
   return r.pickupDate < now.date || (r.pickupDate === now.date && t !== null && now.minutes >= t);
 }
@@ -190,6 +202,8 @@ function isLatePickup(r, now = okNow()) {
 //  - otherwise: the pickup date (a future pickup day stays busy all day)
 function rentalEndDate(r, today) {
   const dayBefore = (d) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() - 1); return x.toISOString().slice(0, 10); };
+  // Extended: the extension holds the totes from its first day on
+  if (r.extendedBy && r.extendedOn && !r.pickedUpAt) return dayBefore(r.extendedOn);
   if (isLatePickup(r)) return r.pickupDate < today ? today : r.pickupDate;
   if (r.pickedUpAt) {
     const back = new Date(r.pickedUpAt).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
@@ -208,7 +222,7 @@ function backDate(r) {
   return r.pickedUpAt ? new Date(r.pickedUpAt).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }) : r.pickupDate;
 }
 function needsCleaning(r, now = okNow()) {
-  if (!r || r.cancelled || r.cleanedAt || rentalPhase(r, now) !== 'done') return false;
+  if (!r || r.cancelled || r.cleanedAt || !hasPickupLeg(r) || rentalPhase(r, now) !== 'done') return false;
   const cutoff = new Date(now.date + 'T12:00:00Z'); cutoff.setUTCDate(cutoff.getUTCDate() - CLEAN_LOOKBACK_DAYS);
   return (backDate(r) || '') >= cutoff.toISOString().slice(0, 10);
 }

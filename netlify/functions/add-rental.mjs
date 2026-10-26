@@ -6,6 +6,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { isAdmin } from "./lib-auth.mjs";
+import { cleanExtendsKey, linkExtension } from "./lib-invoice.mjs";
 
 // toteCount/dollyCount drive Inventory math directly, so they're validated
 // as real whole numbers here rather than parsed out of the package text.
@@ -73,7 +74,10 @@ export default async (request) => {
       ...(body.militaryIdKey ? { militaryIdKey: body.militaryIdKey } : {}),
       invoicedAt: new Date().toISOString(),
       backfilled: true,
+      ...(cleanExtendsKey(body.extendsKey) ? { extendsKey: cleanExtendsKey(body.extendsKey) } : {}),
     });
+    // An extension of a rental already out: mark the original (lib-invoice.mjs)
+    if (cleanExtendsKey(body.extendsKey)) await linkExtension(store, cleanExtendsKey(body.extendsKey), key, body.dropoffDate);
     return new Response(JSON.stringify({ ok: true, key }), { status: 200 });
   } catch (e) {
     console.error("add-rental failed:", e.message);
