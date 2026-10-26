@@ -15,12 +15,14 @@
 // Authenticates as a real Google account via OAuth, not a service account —
 // service accounts have zero storage quota on a personal Drive and can only
 // write into Shared Drives, which aren't available on a plain personal
-// account. See oauth-setup.mjs for the one-time authorization step.
+// account. The one-time authorization step was oauth-setup.mjs, removed
+// once the token was saved; if the refresh token ever needs replacing,
+// restore it with: git checkout a392205 -- netlify/functions/oauth-setup.mjs
 //
 // Setup required:
 //   GOOGLE_OAUTH_CLIENT_ID       - from a Web application OAuth client
 //   GOOGLE_OAUTH_CLIENT_SECRET   - from that same OAuth client
-//   GOOGLE_OAUTH_REFRESH_TOKEN   - obtained once via oauth-setup.mjs
+//   GOOGLE_OAUTH_REFRESH_TOKEN   - obtained once via oauth-setup.mjs (see above)
 //   GOOGLE_DRIVE_BACKUP_FOLDER_ID - the ID of the destination Drive folder
 //
 // No admin-secret auth on this function, matching daily-reminders.mjs — it
@@ -57,7 +59,7 @@ async function dumpMetaFlags() {
 
 // Exchanges a long-lived refresh token for a short-lived access token.
 // Authenticates as a real Google account (via the one-time authorization
-// done through oauth-setup.mjs) rather than a service account — service
+// done through oauth-setup.mjs, see the top of this file) rather than a service account — service
 // accounts turned out to have zero storage quota on a personal Drive and
 // can only write into Shared Drives, which aren't available on a plain
 // personal Google account.
