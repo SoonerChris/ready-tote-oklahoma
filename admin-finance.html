@@ -7,14 +7,15 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#F5F1E7">
+<meta name="theme-color" content="#F5F1E7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141210" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Ready Tote">
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Finance · Ready Tote Oklahoma admin</title>
-<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<link rel="stylesheet" href="admin-shared.css?v=20261026">
 <script src="admin-shared.js?v=20261112"></script>
 <style>
   /* Finance answers one question first: how is the business doing in the
@@ -22,7 +23,7 @@
      coming from and going. The period drives the figures, the chart's
      highlight and both breakdowns; the work areas (expenses, mileage,
      rentals) sit in tabs underneath. */
-  :root{--col:1140px; --data:#A87F22; --data-2:#B9AFA0; --row-rule:#F1EDE4;}
+  :root{--col:1140px; --data:#A87F22; --data-2:#B9AFA0; --row-rule:var(--rule-soft);}
   .num{font-variant-numeric:tabular-nums;}
   .finding{margin:4px 0 20px; font-size:15px; max-width:760px;}
   .finding .when{color:var(--steel);}
@@ -32,7 +33,7 @@
   .seg{display:inline-flex; gap:2px; padding:2px; background:var(--track); border-radius:8px;}
   .seg button{all:unset; box-sizing:border-box; height:32px; line-height:30px; padding:0 14px; border:1px solid transparent; border-radius:6px; font-size:14px; font-weight:600; color:var(--steel); cursor:pointer;}
   .seg button:hover{color:var(--ink);}
-  .seg button[aria-pressed="true"]{background:#fff; color:var(--ink); border-color:var(--line);}
+  .seg button[aria-pressed="true"]{background:var(--white); color:var(--ink); border-color:var(--line);}
   .seg button:focus-visible,.step button:focus-visible,.tabs button:focus-visible,.link:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
   .step{display:inline-flex; align-items:center; gap:4px;}
   .step button{all:unset; box-sizing:border-box; width:32px; height:32px; text-align:center; line-height:30px; border:1px solid var(--control); border-radius:6px; font-size:16px; cursor:pointer; color:var(--ink);}
@@ -90,7 +91,7 @@
   table.data td.r{white-space:nowrap;}
   table.data tfoot td{border-top:1px solid var(--line); border-bottom:none; font-weight:600;}
   table.data tbody tr.pick{cursor:pointer;}
-  table.data tbody tr.pick:hover td{background:#FAF8F3;}
+  table.data tbody tr.pick:hover td{background:var(--surface-2);}
   table.data tbody tr.sel td{background:var(--track);}
   table.data .minor{display:block; font-size:12px; color:var(--steel); margin-top:2px;}
   .scroll-x{overflow-x:auto;}
@@ -115,7 +116,7 @@
   .totals-line{font-size:14px; color:var(--steel); margin:0 0 8px;}
   .totals-line b{color:var(--ink);}
 
-  .form-panel{background:#FAF8F3; border-radius:10px; padding:16px; margin-bottom:16px;}
+  .form-panel{background:var(--surface-2); border-radius:10px; padding:16px; margin-bottom:16px;}
   .form-panel[hidden]{display:none;}
   .form-panel h3{margin:0 0 4px;}
   .form-panel label{margin-top:12px;}
@@ -124,12 +125,12 @@
   .form-actions{display:flex; gap:8px; margin-top:16px;}
   .form-actions button{width:auto; margin:0;}
   .chips{display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 4px;}
-  .chips button{width:auto; margin:0; padding:6px 12px; font-size:13px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:999px; font-weight:500;}
-  .chips button:hover{background:#fff; border-color:var(--ink);}
+  .chips button{width:auto; margin:0; padding:6px 12px; font-size:13px; background:var(--white); color:var(--ink); border:1px solid var(--control); border-radius:999px; font-weight:500;}
+  .chips button:hover{background:var(--white); border-color:var(--ink);}
   .rate{display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap;}
   .rate input{width:96px; height:36px; padding:6px 10px 6px 22px; font-size:14px;}
 
-  .pill.neutral{background:var(--track); color:#4A433B;}
+  .pill.neutral{background:var(--track); color:var(--muted-ink);}
   .econ-row{display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-top:1px solid var(--row-rule); font-size:14px;}
   .econ-row:first-child{border-top:none;}
   .econ-row span:first-child{color:var(--steel);}
@@ -143,7 +144,7 @@
   .tax-row{display:flex; justify-content:space-between; gap:12px; padding:6px 0; font-size:14px; font-variant-numeric:tabular-nums;}
   .tax-row.part{padding-left:12px; color:var(--steel); font-size:13px;}
   .tax-row.total{border-top:1px solid var(--line); margin-top:4px; padding-top:10px; font-weight:700;}
-  .tax-row.aside{background:var(--gold-bg); color:#6B4C0C; border-radius:8px; padding:10px 12px; margin-top:10px; font-weight:700;}
+  .tax-row.aside{background:var(--gold-bg); color:var(--gold-ink); border-radius:8px; padding:10px 12px; margin-top:10px; font-weight:700;}
   .tax-row.aside input{width:56px; height:28px; padding:2px 6px; margin:0 4px; font-size:13px;}
   .tax-note{font-size:12px; color:var(--steel); margin:8px 0 0; line-height:1.5;}
   .rates .rate-row{display:flex; gap:8px; align-items:baseline; font-size:14px; margin-top:4px;}
@@ -155,7 +156,7 @@
   .chips .chip{display:inline-flex; align-items:stretch;}
   .chips .chip > button:first-child{border-radius:999px 0 0 999px; border-right:none;}
   .chips .chip > button.x{border-radius:0 999px 999px 0; padding:6px 10px 6px 8px; color:var(--steel); font-size:15px; line-height:1;}
-  .chips .chip > button.x:hover{color:#831C1E;}
+  .chips .chip > button.x:hover{color:var(--red-ink);}
   .trip-clear{all:unset; cursor:pointer; font-weight:600; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control); margin-left:4px;}
   .trip-clear:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
   .del-ask{font-size:13px; font-weight:600;}
@@ -165,7 +166,7 @@
   .fee-line input{width:72px; height:32px; padding:4px 8px; font-size:14px; margin:0;}
   .fee-line .btn-sm{height:32px;}
   .kpi .cap a{color:inherit;}
-  .kpi .cap.warn{color:#6B4C0C;}
+  .kpi .cap.warn{color:var(--gold-ink);}
 
   @media(max-width:900px){
     .kpis{grid-template-columns:repeat(2,1fr);}
@@ -779,7 +780,7 @@
     let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Revenue and expenses for the 12 months ending ${monthName(endKey)}">`;
     rows.forEach((r, i) => { if (sel(r.month)) s += `<rect class="band" x="${padL + i * slot + 1}" y="${padT}" width="${slot - 2}" height="${plotH}" rx="4"></rect>`; });
     ticks.forEach(t => {
-      s += `<line x1="${padL}" x2="${W - padR}" y1="${y(t)}" y2="${y(t)}" stroke="${t === 0 ? '#CFC7B8' : '#EEEAE1'}" stroke-width="1"></line>`;
+      s += `<line x1="${padL}" x2="${W - padR}" y1="${y(t)}" y2="${y(t)}" stroke="${t === 0 ? '#CFC7B8' : 'var(--rule-soft)'}" stroke-width="1"></line>`;
       s += `<text class="tick" x="${padL - 8}" y="${y(t) + 4}" text-anchor="end">${t >= 1000 ? '$' + (t / 1000).toLocaleString('en-US', { maximumFractionDigits: 1 }) + 'k' : '$' + t}</text>`;
     });
     rows.forEach((r, i) => {
@@ -1172,7 +1173,7 @@
     if (!b.dataset.has) { RECEIPT_FOR = b.dataset.receipt; $('receiptInput').value = ''; $('receiptInput').click(); return; }
     // Open the tab first so phones don't treat it as a pop-up
     const win = window.open('', '_blank');
-    if (win) win.document.write('<title>Receipt</title><body style="margin:0;background:#111;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;">Loading…</body>');
+    if (win) win.document.write('<title>Receipt</title><body style="margin:0;background:var(--ink);color:var(--on-ink);font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;">Loading…</body>');
     try {
       const resp = await fetch('/.netlify/functions/get-photo', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ secret: $('secret').value.trim(), key: b.dataset.receipt, type: 'receipt' }) });

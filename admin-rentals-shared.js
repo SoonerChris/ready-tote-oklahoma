@@ -127,7 +127,7 @@ function emailReminderBtn(r) {
   if (sent) {
     return `<button type="button" class="email-reminder-btn" data-key="${esc(r.key)}" title="Resends with whatever price and payment link are currently on file" style="width:auto; padding:8px 16px; font-size:14px; background:var(--track); color:var(--steel); border:1px solid transparent; border-radius:6px; cursor:pointer;">Emailed ${esc(fmtDate(sent))} · Resend</button>`;
   }
-  return `<button type="button" class="email-reminder-btn" data-key="${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">Send reminder</button>`;
+  return `<button type="button" class="email-reminder-btn" data-key="${esc(r.key)}" style="width:auto; padding:8px 16px; font-size:14px; background:var(--white); color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">Send reminder</button>`;
 }
 
 // Text version of the same nudge. Independent of the email reminder —

@@ -28,8 +28,61 @@
   --line:#E9E4D8;        /* card edges and row rules, about 1.2:1 on white */
   --control:#D6CFBF;     /* input and secondary-button borders, one step darker */
   --track:#EFEBE2;       /* quiet fills: bar tracks, sent buttons, segmented controls */
-  --white:#FFFFFF;
+  --white:#FFFFFF;       /* the sheet (and any surface that matches it) */
+  --on-ink:#FFFFFF;      /* text on --ink buttons and chips */
+  --ink-hover:#3A342D;
+  --surface-2:#FAF8F3;   /* quiet panels inside the sheet */
+  --rule-soft:#F1EDE4;   /* the lightest row rules */
+  --red-ink:#831C1E;     /* text on --red-bg */
+  --green-ink:#14492F;   /* text on --green-bg */
+  --gold-ink:#6B4C0C;    /* text on --gold-bg */
+  --muted-ink:#4A433B;   /* text on neutral pills */
+  --neutral-bg:#F1EEE7;
+  --placeholder:#7A7168;
+  --hover-tint:rgba(30,27,24,0.05);
+  --current-tint:rgba(30,27,24,0.08);
+  --shadow-tint:rgba(30,27,24,0.12);
   --col:880px;           /* content column inside the sheet; pages may override */
+  color-scheme:light dark;
+}
+
+/* Dark mode follows the phone or computer setting (light/dark, including a
+   sunset schedule). Same tokens, warm dark values: the frame is the darkest,
+   the sheet one step up, quiet fills one step further. Status colours keep
+   their meaning (green ok, gold pending, red needs attention). */
+@media (prefers-color-scheme: dark){
+  :root{
+    --ink:#EDE7DC;
+    --ink-2:#D9D2C5;
+    --on-ink:#1A1714;
+    --ink-hover:#D4CCBE;
+    --gold:#E2B85E;
+    --gold-2:#D9A13B;
+    --gold-bg:#3A2F17;
+    --gold-ink:#F0CF86;
+    --cream:#141210;
+    --white:#1E1B18;
+    --surface-2:#25211D;
+    --steel:#A99F93;
+    --green:#5EC08C;
+    --green-bg:#16301F;
+    --green-ink:#96DDB5;
+    --red:#FF7A72;
+    --red-bg:#3B1B1A;
+    --red-ink:#FFADA6;
+    --crate-red:#F2915F;
+    --crate-red-bg:#3A2218;
+    --line:#332E28;
+    --control:#4A443C;
+    --track:#2A2621;
+    --rule-soft:#2B2722;
+    --muted-ink:#CFC6B8;
+    --neutral-bg:#2E2A25;
+    --placeholder:#8C8377;
+    --hover-tint:rgba(237,231,220,0.06);
+    --current-tint:rgba(237,231,220,0.10);
+    --shadow-tint:rgba(0,0,0,0.5);
+  }
 }
 *{box-sizing:border-box;}
 body{
@@ -61,7 +114,7 @@ body > footer{margin:12px 16px 4px; font-size:13px; color:var(--steel); text-ali
 body > footer a{color:var(--steel);}
 
 .card{
-  max-width:640px;margin:0 auto;background:#fff;border-radius:10px;
+  max-width:640px;margin:0 auto;background:var(--white);border-radius:10px;
   border:1px solid var(--line);padding:24px;
 }
 
@@ -79,13 +132,13 @@ body > .wrap h1, body > .card h1{padding-right:110px;}
 
 label{display:block;font-size:14px;font-weight:600;margin:16px 0 6px;}
 input, select, textarea{width:100%;padding:10px 12px;font-size:15px;border:1px solid var(--control);border-radius:6px;background:var(--white);font-family:inherit;color:var(--ink);}
-input::placeholder, textarea::placeholder{color:#7A7168;}
+input::placeholder, textarea::placeholder{color:var(--placeholder);}
 input:focus, select:focus, textarea:focus{outline:2px solid var(--ink);outline-offset:-1px;border-color:var(--ink);}
 input[type=checkbox], input[type=radio]{accent-color:var(--ink);}
 
 /* Buttons: one near-black primary; secondary is white with a border */
-button{margin-top:16px;width:100%;padding:12px 16px;font-size:15px;font-weight:600;font-family:'Barlow',sans-serif;background:var(--ink);color:#fff;border:1px solid var(--ink);border-radius:6px;cursor:pointer;transition:background 0.12s ease, border-color 0.12s ease;}
-button:hover{background:#3A342D;}
+button{margin-top:16px;width:100%;padding:12px 16px;font-size:15px;font-weight:600;font-family:'Barlow',sans-serif;background:var(--ink);color:var(--on-ink);border:1px solid var(--ink);border-radius:6px;cursor:pointer;transition:background 0.12s ease, border-color 0.12s ease;}
+button:hover{background:var(--ink-hover);}
 button:active{transform:translateY(1px);}
 button:focus-visible, a:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
 button:disabled{opacity:0.6;cursor:wait;}
@@ -102,8 +155,8 @@ button.secondary:hover{background:var(--white);border-color:var(--ink);}
 .note{font-size:13px;color:var(--steel);margin-top:6px;}
 
 .status{margin-top:12px;padding:10px 14px;border-radius:6px;font-size:14px;display:none;}
-.status.err{display:block;background:var(--red-bg);border:none;color:#831C1E;}
-.status.ok{display:block;background:var(--green-bg);border:none;color:#14492F;}
+.status.err{display:block;background:var(--red-bg);border:none;color:var(--red-ink);}
+.status.ok{display:block;background:var(--green-bg);border:none;color:var(--green-ink);}
 
 /* Tote-tag badge -- the one signature detail, used for package/tier tags.
    The small notch reads like a hole-punched rental tag. Status pills
@@ -113,7 +166,7 @@ button.secondary:hover{background:var(--white);border-color:var(--ink);}
   position:relative;display:inline-flex;align-items:center;
   padding:3px 10px 3px 18px;
   font-size:12px; font-weight:600; font-variant-numeric:tabular-nums;
-  background:var(--gold-bg); color:#6B4C0C; border:none;
+  background:var(--gold-bg); color:var(--gold-ink); border:none;
   border-radius:3px 10px 10px 3px; white-space:nowrap;
 }
 .tag::before{
@@ -125,9 +178,9 @@ button.secondary:hover{background:var(--white);border-color:var(--ink);}
 
 /* Status pills: a pale tint with dark text of the same hue */
 .pill{display:inline-flex;align-items:center;height:22px;font-size:12px;font-weight:600;padding:0 8px;border-radius:4px;white-space:nowrap;flex:none;}
-.pill.ok{background:var(--green-bg);color:#14492F;border:none;}
-.pill.err{background:var(--red-bg);color:#831C1E;border:none;}
-.pill.pending{background:var(--gold-bg);color:#6B4C0C;border:none;}
+.pill.ok{background:var(--green-bg);color:var(--green-ink);border:none;}
+.pill.err{background:var(--red-bg);color:var(--red-ink);border:none;}
+.pill.pending{background:var(--gold-bg);color:var(--gold-ink);border:none;}
 
 /* Phone numbers, dates and amounts: same face, figures that line up */
 .mono{font-variant-numeric:tabular-nums;}
@@ -136,9 +189,9 @@ button.secondary:hover{background:var(--white);border-color:var(--ink);}
 .tbl-wrap{background:var(--white);border:1px solid var(--line);border-radius:10px;overflow-x:auto;box-shadow:none;}
 .tbl-wrap table{width:100%;border-collapse:collapse;font-size:14px;}
 .tbl-wrap thead th{text-align:left;padding:10px 14px;background:none;border-bottom:1px solid var(--line);font-size:12px;font-weight:500;color:var(--steel);white-space:nowrap;}
-.tbl-wrap tbody td{padding:12px 14px;border-bottom:1px solid #F1EDE4;vertical-align:top;font-variant-numeric:tabular-nums;}
+.tbl-wrap tbody td{padding:12px 14px;border-bottom:1px solid var(--rule-soft);vertical-align:top;font-variant-numeric:tabular-nums;}
 .tbl-wrap tbody tr:last-child td{border-bottom:none;}
-.tbl-wrap tbody tr:hover{background:#FAF8F3;}
+.tbl-wrap tbody tr:hover{background:var(--surface-2);}
 
 /* Two-column form rows that collapse to one column on phones */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
@@ -184,8 +237,8 @@ button.secondary:hover{background:var(--white);border-color:var(--ink);}
   height:34px; padding:0 12px; font-size:14px; font-weight:500;
   color:var(--ink-2); text-decoration:none; border-radius:8px;
 }
-.admin-nav a:hover{background:rgba(30,27,24,0.05); color:var(--ink);}
-.admin-nav a[aria-current="page"]{background:rgba(30,27,24,0.08); color:var(--ink); font-weight:600;}
+.admin-nav a:hover{background:var(--hover-tint); color:var(--ink);}
+.admin-nav a[aria-current="page"]{background:var(--current-tint); color:var(--ink); font-weight:600;}
 .admin-nav a:focus-visible{outline:2px solid var(--ink); outline-offset:-2px;}
 .admin-nav a.logout-link{margin-top:auto; color:var(--steel);}
 .admin-nav a.logout-link:hover{color:var(--red); background:var(--red-bg);}
@@ -221,7 +274,7 @@ body:has(.admin-nav){padding:8px 8px 8px 236px !important;}
   .admin-menu-btn:hover{background:transparent; text-decoration:underline;}
   .admin-nav a{display:none; flex:1 1 100%; height:44px; font-size:16px;}
   .admin-nav a.admin-brand{display:flex; flex:1; height:auto;}
-  .admin-nav.open{padding-bottom:12px; box-shadow:0 8px 24px rgba(30,27,24,0.12);}
+  .admin-nav.open{padding-bottom:12px; box-shadow:0 8px 24px var(--shadow-tint);}
   .admin-nav.open a{display:flex;}
   .admin-nav a.logout-link{margin-top:8px;}
 }
