@@ -16,7 +16,7 @@ export const DEFAULTS = { autoInvoice: true };
 
 export async function getSettings() {
   let saved = {};
-  try { saved = (await getStore("meta").get("settings", { type: "json" })) || {}; } catch {}
+  try { saved = (await getStore({ name: "meta", consistency: "strong" }).get("settings", { type: "json" })) || {}; } catch {}
   return { ...DEFAULTS, ...saved };
 }
 
@@ -30,6 +30,6 @@ export default async (request) => {
   if (body.action === "get") return json({ settings });
   if (body.action !== "set") return json({ error: "Unknown action" }, 400);
   if (typeof body.autoInvoice === "boolean") settings.autoInvoice = body.autoInvoice;
-  await getStore("meta").setJSON("settings", settings);
+  await getStore({ name: "meta", consistency: "strong" }).setJSON("settings", settings);
   return json({ settings });
 };

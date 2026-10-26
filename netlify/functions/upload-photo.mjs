@@ -44,7 +44,7 @@ export default async (request) => {
   if (buf.length > MAX_BYTES) return new Response("Image too large", { status: 413 });
 
   try {
-    const store = getStore("photos");
+    const store = getStore({ name: "photos", consistency: "strong" });
     const blobKey = `${body.key}:${body.type}`;
     // Trim the Buffer view down to a plain ArrayBuffer for @netlify/blobs.
     const arrayBuffer = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);

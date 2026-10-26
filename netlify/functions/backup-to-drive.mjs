@@ -36,7 +36,7 @@ import { getStore } from "@netlify/blobs";
 const STORES_TO_BACK_UP = ["rentals", "requests", "inventory", "finance", "outreach"];
 
 async function dumpStore(name) {
-  const store = getStore(name);
+  const store = getStore({ name, consistency: "strong" });
   const { blobs } = await store.list();
   const out = {};
   for (const b of blobs) {
@@ -51,7 +51,7 @@ async function dumpStore(name) {
 }
 
 async function dumpMetaFlags() {
-  const store = getStore("meta");
+  const store = getStore({ name: "meta", consistency: "strong" });
   const paidFlags = (await store.get("paidFlags", { type: "json" }).catch(() => null)) || {};
   const sentFlags = (await store.get("sentFlags", { type: "json" }).catch(() => null)) || {};
   return { paidFlags, sentFlags };

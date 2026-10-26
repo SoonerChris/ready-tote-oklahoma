@@ -37,7 +37,11 @@ export default async (request) => {
   }
 
   try {
-    const store = getStore("requests");
+    // Strong reads everywhere (all functions): a default read can return a
+    // copy from just before the last save for up to a minute, and saving that
+    // copy back wipes the newer change. That lost confirm-link codes when
+    // "Yes, sent" followed "Text to confirm" within seconds.
+    const store = getStore({ name: "requests", consistency: "strong" });
     const existing = await store.get(body.key, { type: "json" });
     if (!existing) return new Response("Request not found", { status: 404 });
 

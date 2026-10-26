@@ -41,7 +41,7 @@ export default async (request) => {
   }
 
   try {
-    const store = getStore("rentals");
+    const store = getStore({ name: "rentals", consistency: "strong" });
     const emailPart = (body.email || "no-email").replace(/[^a-zA-Z0-9@.]/g, "");
     const key = `${body.dropoffDate}_${emailPart}_${Date.now()}`;
     await store.setJSON(key, {

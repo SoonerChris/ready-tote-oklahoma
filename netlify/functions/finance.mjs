@@ -57,8 +57,8 @@ export default async (request) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const store = getStore("finance");
-  const meta = getStore("meta");
+  const store = getStore({ name: "finance", consistency: "strong" });
+  const meta = getStore({ name: "meta", consistency: "strong" });
 
   try {
     switch (body.action) {
@@ -83,7 +83,7 @@ export default async (request) => {
         const taxPct = (await meta.get("taxSetAsidePct", { type: "json" })) ?? 25;
         // Which expenses have a receipt photo (photos store, "<key>:receipt")
         try {
-          const { blobs: photos } = await getStore("photos").list();
+          const { blobs: photos } = await getStore({ name: "photos", consistency: "strong" }).list();
           const withReceipt = new Set(photos.map((b) => b.key).filter((k) => k.endsWith(":receipt")).map((k) => k.slice(0, -8)));
           for (const e of expenses) if (withReceipt.has(e.key)) e.hasReceipt = true;
         } catch {}

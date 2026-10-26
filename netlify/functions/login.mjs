@@ -31,7 +31,7 @@ export default async (request, context) => {
   // One counter per client address; the rate limit is best-effort, so a
   // storage hiccup never blocks a correct sign-in.
   const ip = (context && context.ip) || request.headers.get("x-nf-client-connection-ip") || "unknown";
-  const store = getStore("login-attempts");
+  const store = getStore({ name: "login-attempts", consistency: "strong" });
   const key = "ip_" + ip.replace(/[^a-zA-Z0-9.:_-]/g, "_");
   let record = null;
   try { record = await store.get(key, { type: "json" }); } catch {}

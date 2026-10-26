@@ -116,7 +116,7 @@ export async function sendInvoice(body) {
   // goes back to the caller so it can mark the "invoice sent" text for it.
   let key = null;
   try {
-    const store = getStore("rentals");
+    const store = getStore({ name: "rentals", consistency: "strong" });
     key = `${body.dropoffDate}_${body.email.replace(/[^a-zA-Z0-9@.]/g, "")}_${Date.now()}`;
     await store.setJSON(key, {
       name: body.name,

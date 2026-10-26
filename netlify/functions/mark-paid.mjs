@@ -18,7 +18,7 @@ export default async (request) => {
   if (!body.key) return new Response("Missing key", { status: 400 });
 
   try {
-    const store = getStore("meta");
+    const store = getStore({ name: "meta", consistency: "strong" });
     let flags = {};
     try {
       flags = (await store.get("paidFlags", { type: "json" })) || {};

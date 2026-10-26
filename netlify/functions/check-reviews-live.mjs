@@ -17,7 +17,7 @@ const SITE_URL = "https://readytoteokc.com";
 const FLAG_KEY = "reviewsLiveNotified";
 
 export default async () => {
-  const metaStore = getStore("meta");
+  const metaStore = getStore({ name: "meta", consistency: "strong" });
 
   // Don't re-notify if we've already flagged this as live before
   let alreadyNotified = false;

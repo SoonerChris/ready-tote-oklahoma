@@ -16,7 +16,7 @@ export default async (request) => {
   if (!body.key) return new Response("Missing key", { status: 400 });
 
   try {
-    const store = getStore("rentals");
+    const store = getStore({ name: "rentals", consistency: "strong" });
     await store.delete(body.key);
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (e) {

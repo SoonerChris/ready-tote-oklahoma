@@ -24,7 +24,7 @@ export default async (request) => {
   if (!ALLOWED_TYPES.includes(body.type)) return new Response("Invalid type", { status: 400 });
 
   try {
-    const store = getStore("photos");
+    const store = getStore({ name: "photos", consistency: "strong" });
     const blobKey = `${body.key}:${body.type}`;
     const result = await store.getWithMetadata(blobKey, { type: "arrayBuffer" });
     if (!result) return new Response("Not found", { status: 404 });

@@ -32,7 +32,7 @@ const DONE = ["confirmed", "invoiced"];
 const fmt = (iso) => (iso ? new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }) : "");
 
 async function listRentals() {
-  const store = getStore("rentals");
+  const store = getStore({ name: "rentals", consistency: "strong" });
   const { blobs } = await store.list();
   return (await Promise.all(blobs.map((b) => store.get(b.key, { type: "json" }).catch(() => null)))).filter(Boolean);
 }
@@ -74,7 +74,7 @@ export default async (request) => {
   if (!/^[A-Za-z0-9_-]{16,64}$/.test(t)) return json({ error: "This link isn't valid." }, 404);
 
   try {
-    const store = getStore("requests");
+    const store = getStore({ name: "requests", consistency: "strong" });
     const { blobs } = await store.list();
     let key = null, req = null;
     for (const b of blobs) {
@@ -94,7 +94,7 @@ export default async (request) => {
       };
       if (r.status === "invoiced" && r.payUrl) {
         let paid = false;
-        try { paid = !!((await getStore("meta").get("paidFlags", { type: "json" })) || {})[r.invoiceRentalKey]; } catch {}
+        try { paid = !!((await getStore({ name: "meta", consistency: "strong" }).get("paidFlags", { type: "json" })) || {})[r.invoiceRentalKey]; } catch {}
         out.pay = { url: r.payUrl, price: r.payPrice || "", paid };
       }
       return out;

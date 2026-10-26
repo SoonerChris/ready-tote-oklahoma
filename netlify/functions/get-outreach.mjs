@@ -15,7 +15,7 @@ export default async (request) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const store = getStore("outreach");
+  const store = getStore({ name: "outreach", consistency: "strong" });
   const { blobs } = await store.list();
   const fetched = await Promise.all(
     blobs.map(async (b) => {

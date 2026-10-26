@@ -103,10 +103,10 @@ export function isAdmin(request, body) {
 // or removing the login bumps/deletes it, which ends that person's sessions.
 const STAFF_KEY = "staffAccounts";
 export async function getStaffAccounts() {
-  try { return (await getStore("meta").get(STAFF_KEY, { type: "json" })) || {}; } catch { return {}; }
+  try { return (await getStore({ name: "meta", consistency: "strong" }).get(STAFF_KEY, { type: "json" })) || {}; } catch { return {}; }
 }
 export async function saveStaffAccounts(accounts) {
-  await getStore("meta").setJSON(STAFF_KEY, accounts);
+  await getStore({ name: "meta", consistency: "strong" }).setJSON(STAFF_KEY, accounts);
 }
 export const normUser = (u) => String(u || "").trim().toLowerCase().slice(0, 40);
 export function hashPassword(password, salt = randomBytes(16).toString("hex")) {

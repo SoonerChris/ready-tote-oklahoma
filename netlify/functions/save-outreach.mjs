@@ -33,7 +33,7 @@ export default async (request) => {
   }
 
   try {
-    const store = getStore("outreach");
+    const store = getStore({ name: "outreach", consistency: "strong" });
     const key = body.key || `${body.category}_${Date.now()}`;
     const existing = body.key ? await store.get(key, { type: "json" }) : null;
 

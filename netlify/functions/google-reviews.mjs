@@ -35,7 +35,7 @@ export default async (request) => {
     return json({ reviews: [], error: "Missing GOOGLE_PLACES_API_KEY env var" }, { noStore: debug });
   }
 
-  const store = getStore("meta");
+  const store = getStore({ name: "meta", consistency: "strong" });
 
   // Check cache first (skip cache if ?debug=1 is on the URL)
   if (!debug) {
