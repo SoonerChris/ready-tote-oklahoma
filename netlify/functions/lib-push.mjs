@@ -73,7 +73,8 @@ export async function badgeCount() {
   try {
     const [requests, rentals] = await Promise.all([readAll("requests"), readAll("rentals")]);
     const now = okNow();
-    const late = rentals.filter((r) => !r.cancelled && r.deliveredAt && !r.pickedUpAt && r.pickupDate &&
+    // Late pickups, same rule as isLatePickup in admin-shared.js (extensions included)
+    const late = rentals.filter((r) => !r.cancelled && !r.extendedBy && (r.deliveredAt || (r.extendsKey && r.dropoffDate <= now.date)) && !r.pickedUpAt && r.pickupDate &&
       (r.pickupDate < now.date || (r.pickupDate === now.date && clockMinutes(r.pickupTime) !== null && now.minutes >= clockMinutes(r.pickupTime))));
     return requests.filter((r) => WAITING.includes(r.status)).length + late.length;
   } catch (e) {

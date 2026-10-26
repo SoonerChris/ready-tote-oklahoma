@@ -6,6 +6,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { accessLevel } from "./lib-auth.mjs";
+import { linkExtension, unlinkExtension } from "./lib-invoice.mjs";
 
 const EDITABLE_FIELDS = [
   "name", "email", "phone", "package", "price", "duration",
@@ -83,13 +84,28 @@ export default async (request) => {
     // Cancel keeps the record (and its history) but takes it out of
     // reminders, inventory, availability, revenue and payment matching.
     // { cancel: true, cancelReason } cancels; { cancel: false } restores.
+    // A cancelled extension hands the pickup back to the original rental;
+    // restoring it takes it over again (extensions: lib-invoice.mjs).
     if (body.cancel === true) {
       updated.cancelled = true;
       updated.cancelledAt = new Date().toISOString();
       updated.cancelReason = String(body.cancelReason || "").trim().slice(0, 120);
+      if (updated.extendsKey) await unlinkExtension(store, updated.extendsKey, body.key);
       changed = true;
     } else if (body.cancel === false) {
       delete updated.cancelled; delete updated.cancelledAt; delete updated.cancelReason;
+      if (updated.extendsKey) await linkExtension(store, updated.extendsKey, body.key, updated.dropoffDate);
+      changed = true;
+    }
+    // An extension's new start date moves the original's handover day too
+    if (updated.extendsKey && !updated.cancelled && updated.dropoffDate !== existing.dropoffDate) {
+      await linkExtension(store, updated.extendsKey, body.key, updated.dropoffDate);
+    }
+    // { unlinkExtension: true } on an extension: it's a separate rental after
+    // all (its own delivery; the original gets its pickup back)
+    if (body.unlinkExtension === true && updated.extendsKey) {
+      await unlinkExtension(store, updated.extendsKey, body.key);
+      delete updated.extendsKey;
       changed = true;
     }
     // Delivered / Picked up / Clean buttons: { mark: "delivered" | "pickedUp"

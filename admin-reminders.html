@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Reminders · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261026">
-<script src="admin-shared.js?v=20261112"></script>
+<script src="admin-shared.js?v=20261113"></script>
 <script src="admin-rentals-shared.js?v=20261030"></script>
 <style>
   /* Reminders answers one question: what do I need to send right now?
@@ -310,9 +310,9 @@
       if (r.cancelled) continue;
       const self = r.serviceType === 'self';
       // marked: tapped Delivered / Picked up on the Dashboard
-      if (r.dropoffDate >= TODAY && r.dropoffDate <= endStr)
+      if (hasDeliveryLeg(r) && r.dropoffDate >= TODAY && r.dropoffDate <= endStr)
         events.push({ date: r.dropoffDate, time: r.dropoffTime, label: self ? 'Customer pickup' : 'Deliver', r, addr: self ? '' : dropoffAddressOf(r), marked: r.deliveredAt ? (self ? 'Handed off ' : 'Delivered ') + markText(r.deliveredAt).split(', ').pop() : '' });
-      if (r.pickupDate >= TODAY && r.pickupDate <= endStr)
+      if (hasPickupLeg(r) && r.pickupDate >= TODAY && r.pickupDate <= endStr)
         events.push({ date: r.pickupDate, time: r.pickupTime, label: self ? 'Customer return' : 'Pick up', r, addr: self ? '' : pickupAddressOf(r), marked: r.pickedUpAt ? (self ? 'Returned ' : 'Picked up ') + markText(r.pickedUpAt).split(', ').pop() : '' });
     }
     if (!events.length) { el.innerHTML = '<p class="empty" style="margin:0;">Nothing scheduled in the next 7 days.</p>'; return; }

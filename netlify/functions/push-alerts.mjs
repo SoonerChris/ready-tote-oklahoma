@@ -68,8 +68,9 @@ export function dueSoon(rentals, now, sent = {}) {
   for (const r of rentals) {
     if (r.cancelled) continue;
     for (const [kind, date, time, addr, marked] of [
-      ["Delivery", r.dropoffDate, r.dropoffTime, dropoffAddressOf(r), r.deliveredAt || r.pickedUpAt],
-      ["Pickup", r.pickupDate, r.pickupTime, pickupAddressOf(r), r.pickedUpAt],
+      // An extension has no delivery and an extended rental no pickup (admin-shared.js)
+      ["Delivery", r.dropoffDate, r.dropoffTime, dropoffAddressOf(r), r.deliveredAt || r.pickedUpAt || r.extendsKey],
+      ["Pickup", r.pickupDate, r.pickupTime, pickupAddressOf(r), r.pickedUpAt || r.extendedBy],
     ]) {
       // Already marked done on the Dashboard: nothing to remind about
       if (date !== now.date || marked) continue;

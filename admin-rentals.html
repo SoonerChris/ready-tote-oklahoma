@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>All rentals · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261026">
-<script src="admin-shared.js?v=20261112"></script>
+<script src="admin-shared.js?v=20261113"></script>
 <script src="admin-rentals-shared.js?v=20261030"></script>
 <style>
   .rem .who{font-weight:600;font-size:16px;}
@@ -366,8 +366,8 @@
     const facts = [totes, `${shortDate(r.dropoffDate)} to ${shortDate(r.pickupDate)}`, city].filter(Boolean).join(' · ');
     const dOff = dropoffAddressOf(r), pOff = pickupAddressOf(r);
     // On the way texts only on the day of the stop (or a late pickup), like the Dashboard
-    const otwDelivery = !r.cancelled && r.serviceType !== 'self' && dOff && r.dropoffDate === TODAY && !r.deliveredAt;
-    const otwPickup = !r.cancelled && r.serviceType !== 'self' && pOff && !r.pickedUpAt && (r.pickupDate === TODAY || isLatePickup(r));
+    const otwDelivery = !r.cancelled && r.serviceType !== 'self' && dOff && hasDeliveryLeg(r) && r.dropoffDate === TODAY && !r.deliveredAt;
+    const otwPickup = !r.cancelled && r.serviceType !== 'self' && pOff && hasPickupLeg(r) && !r.pickedUpAt && (r.pickupDate === TODAY || isLatePickup(r));
     const otwToday = otwDelivery || otwPickup;
     const addr = r.serviceType === 'self' ? 'Customer picks up and returns' : dOff && dOff === pOff ? esc(dOff) : [dOff ? 'Drop-off: ' + esc(dOff) : '', pOff ? 'Pickup: ' + esc(pOff) : ''].filter(Boolean).join('<br>') || '—';
     const counts = typeof r.toteCount === 'number' || typeof r.dollyCount === 'number'
@@ -398,6 +398,7 @@
             <div><span class="k">Address</span>${addr}</div>
             <div><span class="k">Contact</span>${r.phone ? `<a href="tel:${escAttr(r.phone)}">${esc(fmtPhone(r.phone))}</a>` : '—'}${r.email ? ` · <a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : ''}</div>
             ${(r.stockLosses || []).length ? `<div><span class="k">Stock</span><span style="color:var(--red-ink);">${r.stockLosses.map(l => `${l.quantity} ${l.item === 'dolly' ? (l.quantity === 1 ? 'dolly' : 'dollies') : (l.quantity === 1 ? 'tote' : 'totes')} ${l.type === 'lost' ? 'not returned' : 'damaged'} (${esc(shortDate(l.date))})`).join(', ')}</span></div>` : ''}
+            ${extensionFact(r)}
             ${r.tosAccepted ? `<div><span class="k">Terms</span>Accepted ${esc(fmtDate((r.tosAcceptedAt || '').slice(0, 10)))}</div>` : ''}
             ${missing.length ? `<div><span class="k">Missing</span><span style="color:var(--red-ink);">${esc(missing.join(', '))}</span></div>` : ''}
           </div>
@@ -406,6 +407,7 @@
           ${askFor(r.key, String(r.name || '').split(' ')[0])}
           ${paymentControls ? `<div class="actions payment-actions">${paymentControls}</div>` : ''}
           ${marksHtml(r)}
+          ${canExtend(r) ? `<div class="actions"><button type="button" class="ghost-btn" data-extend="${k}">Extend rental</button></div>` : ''}
           ${otwToday ? `<div class="actions">
             ${otwDelivery ? onTheWayBtn('delivery', r.key) : ''}
             ${otwPickup ? onTheWayBtn('pickup', r.key) : ''}
@@ -489,11 +491,11 @@
       if (!sent('followup')) steps.push(['Invoice follow-up', addDays(inv, 3)]);
       steps.push(['Payment reminder', addDays(inv, 5)]);
     }
-    if (r.dropoffDate && !sent('delivery')) steps.push([self ? 'Pickup-day reminder' : 'Delivery reminder', addDays(r.dropoffDate, -1)]);
-    if (r.pickupDate && !self && !sent('addressCheck')) steps.push(['Confirm pickup address', addDays(r.pickupDate, -5)]);
-    if (r.pickupDate && self && !sent('pickup')) steps.push(['Return reminder', addDays(r.pickupDate, -2)]);
-    if (r.pickupDate && !sent('pickupTomorrow')) steps.push([self ? 'Return reminder' : 'Pickup reminder', addDays(r.pickupDate, -1)]);
-    if (r.pickupDate && r.reviewSms && !sent('review')) steps.push(['Ask for a review', addDays(r.pickupDate, 3)]);
+    if (r.dropoffDate && hasDeliveryLeg(r) && !sent('delivery')) steps.push([self ? 'Pickup-day reminder' : 'Delivery reminder', addDays(r.dropoffDate, -1)]);
+    if (r.pickupDate && hasPickupLeg(r) && !self && !sent('addressCheck')) steps.push(['Confirm pickup address', addDays(r.pickupDate, -5)]);
+    if (r.pickupDate && hasPickupLeg(r) && self && !sent('pickup')) steps.push(['Return reminder', addDays(r.pickupDate, -2)]);
+    if (r.pickupDate && hasPickupLeg(r) && !sent('pickupTomorrow')) steps.push([self ? 'Return reminder' : 'Pickup reminder', addDays(r.pickupDate, -1)]);
+    if (r.pickupDate && hasPickupLeg(r) && r.reviewSms && !sent('review')) steps.push(['Ask for a review', addDays(r.pickupDate, 3)]);
     const next = steps.filter(([, d]) => d > TODAY).sort((a, b) => a[1].localeCompare(b[1]))[0];
     return next ? `<div class="next upcoming"><div class="what"><b>Coming up: ${esc(next[0])}</b><span>${shortDate(next[1])}</span></div></div>` : '';
   }
@@ -598,6 +600,41 @@
     return viewBtn + replaceBtn;
   }
 
+  // ---- Extensions ----
+  // More time for totes a customer already has: invoiced as its own rental
+  // on Send Invoice, linked so there's no pickup for this one and no
+  // delivery for the extension (rules in admin-shared.js).
+  const canExtend = r => !r.cancelled && !r.extendedBy && !r.pickedUpAt && (['out', 'upcoming'].includes(rentalPhase(r)) || isLatePickup(r));
+  function extensionFact(r) {
+    const other = key => ALL_RENTALS.find(x => x.key === key);
+    if (r.extendedBy) {
+      const ext = other(r.extendedBy);
+      return `<div><span class="k">Extended</span>Totes stay for the extension${ext ? ` through ${esc(fmtDay(ext.pickupDate))}` : ''}, so no pickup for this one (from ${esc(fmtDay(r.extendedOn))}).</div>`;
+    }
+    if (r.extendsKey) {
+      const orig = other(r.extendsKey);
+      return `<div><span class="k">Extension</span>Of the ${orig ? esc(fmtDay(orig.dropoffDate)) + ' rental' : 'earlier rental'}: the totes were already there, so no delivery. <button type="button" class="link-btn" data-unlink="${escAttr(r.key)}">Not an extension</button></div>`;
+    }
+    return '';
+  }
+  document.addEventListener('click', async (e) => {
+    const ext = e.target.closest('[data-extend]');
+    if (ext) {
+      try { sessionStorage.setItem('rto-prefill-extend', ext.dataset.extend); } catch {}
+      location.href = 'admin-invoice.html';
+      return;
+    }
+    const un = e.target.closest('[data-unlink]');
+    if (!un || !confirm('Treat this as a separate rental? It gets its own delivery, and the first rental gets its pickup back.')) return;
+    un.disabled = true;
+    try {
+      const resp = await fetch('/.netlify/functions/edit-rental', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: $('secret').value.trim(), key: un.dataset.unlink, unlinkExtension: true }) });
+      if (!resp.ok) throw new Error();
+      await load();
+    } catch { un.disabled = false; showErr('Couldn’t save that. Try again.'); }
+  });
+
   // ---- Delivered / Picked up ----
   // Tap when it actually happens. Marking overrides the clock: delivered
   // stays "Out now" until picked up, and turns "Late pickup" after its time.
@@ -610,10 +647,11 @@
     const btn = (label, mark) => `<button type="button" class="ghost-btn" data-rmark="${mark}" data-key="${k}">Mark ${label.toLowerCase()}</button>`;
     const ph = rentalPhase(r);
     const parts = [];
+    // An extension has no delivery and an extended rental no pickup
     if (r.deliveredAt) parts.push(done(dLabel, r.deliveredAt, 'delivered'));
-    else if (r.dropoffDate === TODAY && ph !== 'done') parts.push(btn(dLabel, 'delivered'));
+    else if (hasDeliveryLeg(r) && r.dropoffDate === TODAY && ph !== 'done') parts.push(btn(dLabel, 'delivered'));
     if (r.pickedUpAt) parts.push(done(pLabel, r.pickedUpAt, 'pickedUp'));
-    else if (r.deliveredAt || (ph === 'out' && r.pickupDate === TODAY)) parts.push(btn(pLabel, 'pickedUp'));
+    else if (hasPickupLeg(r) && (isDelivered(r) || (ph === 'out' && r.pickupDate === TODAY))) parts.push(btn(pLabel, 'pickedUp'));
     // Back, so the totes need a wash before the next rental (Inventory)
     if (r.cleanedAt) parts.push(done('Cleaned', r.cleanedAt, 'cleaned'));
     else if (needsCleaning(r)) parts.push(btn('Clean', 'cleaned'));
