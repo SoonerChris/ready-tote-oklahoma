@@ -7,26 +7,27 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#F5F1E7">
+<meta name="theme-color" content="#F5F1E7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141210" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Ready Tote">
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Reminders · Ready Tote Oklahoma admin</title>
-<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<link rel="stylesheet" href="admin-shared.css?v=20261026">
 <script src="admin-shared.js?v=20261112"></script>
-<script src="admin-rentals-shared.js?v=20261029"></script>
+<script src="admin-rentals-shared.js?v=20261030"></script>
 <style>
   /* Reminders answers one question: what do I need to send right now?
      A summary line, then only the sections with something due (most urgent
      first), each card with its Text button in reach, then what was sent
      today and the week ahead. */
   :root{--col:760px;}
-  .summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 16px; padding:14px 16px; border-radius:10px; background:#FAF8F3; margin:0 0 8px;}
+  .summary{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 16px; padding:14px 16px; border-radius:10px; background:var(--surface-2); margin:0 0 8px;}
   .summary b{font-size:20px; font-weight:600; font-variant-numeric:tabular-nums;}
-  .summary .od{color:#831C1E; font-weight:600;}
-  .summary.done{background:var(--green-bg); color:#14492F;}
+  .summary .od{color:var(--red-ink); font-weight:600;}
+  .summary.done{background:var(--green-bg); color:var(--green-ink);}
   .sec-h{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin:28px 0 10px; font-size:17px; font-weight:700;}
   .sec-h .n{font-weight:500; color:var(--steel);}
   .sec-h .note{font-size:13px; font-weight:400; color:var(--steel);}
@@ -36,14 +37,14 @@
   .rcard .who{font-weight:600; font-size:16px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
   .rcard .meta{color:var(--steel); font-size:14px; margin-top:2px; line-height:1.45; font-variant-numeric:tabular-nums;}
   .ract{flex:none; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;}
-  .ract .sms-btn{background:var(--ink); color:#fff; border-color:var(--ink); min-height:40px;}
-  .ract .sms-btn:hover{background:#3A342D;}
+  .ract .sms-btn{background:var(--ink); color:var(--on-ink); border-color:var(--ink); min-height:40px;}
+  .ract .sms-btn:hover{background:var(--ink-hover);}
   .ract button{width:auto; margin:0; min-height:40px;}
   details.preview{margin-top:6px;}
   details.preview summary{cursor:pointer; font-size:13px; font-weight:600; color:var(--ink); list-style:none; display:inline-block; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
   details.preview summary::-webkit-details-marker{display:none;}
-  details.preview .msg{margin-top:8px; background:#FAF8F3; border-radius:8px; padding:10px 12px; font-size:14px; line-height:1.55;}
-  .sent-row,.week-row{display:flex; align-items:baseline; gap:12px; padding:9px 0; border-top:1px solid #F1EDE4; font-size:14px;}
+  details.preview .msg{margin-top:8px; background:var(--surface-2); border-radius:8px; padding:10px 12px; font-size:14px; line-height:1.55;}
+  .sent-row,.week-row{display:flex; align-items:baseline; gap:12px; padding:9px 0; border-top:1px solid var(--rule-soft); font-size:14px;}
   .sent-row:first-child,.week-row:first-child{border-top:none;}
   .sent-row .what,.week-row .what{flex:1; min-width:0;}
   .sent-row .t,.week-row .t{color:var(--steel); white-space:nowrap; font-variant-numeric:tabular-nums;}
@@ -54,14 +55,14 @@
   .undo:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
   .ract .skip{all:unset; cursor:pointer; align-self:center; font-size:13px; font-weight:600; color:var(--steel); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control); padding:0 4px;}
   .ract .skip:hover{color:var(--ink);}
-  .ract .ghost{background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; padding:8px 14px; font-size:14px; font-weight:600; cursor:pointer;}
+  .ract .ghost{background:var(--white); color:var(--ink); border:1px solid var(--control); border-radius:6px; padding:8px 14px; font-size:14px; font-weight:600; cursor:pointer;}
   .ract .ghost:hover{border-color:var(--ink);}
-  .ask{display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; margin-top:10px; padding:9px 12px; background:#FAF8F3; border-radius:8px; font-size:14px; font-weight:600;}
+  .ask{display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; margin-top:10px; padding:9px 12px; background:var(--surface-2); border-radius:8px; font-size:14px; font-weight:600;}
   .ask[hidden]{display:none;}
   .ask button{width:auto; margin:0; padding:7px 14px; font-size:14px; min-height:0;}
   .ask .linklike{all:unset; cursor:pointer; text-decoration:underline; text-underline-offset:3px; font-weight:600;}
-  .also{margin-top:6px; font-size:13px; color:#6B4C0C; background:var(--gold-bg); display:inline-block; padding:3px 8px; border-radius:4px; font-weight:600;}
-  .banner{margin:0 0 8px; padding:10px 14px; border-radius:8px; background:var(--gold-bg); color:#6B4C0C; font-size:14px; font-weight:600;}
+  .also{margin-top:6px; font-size:13px; color:var(--gold-ink); background:var(--gold-bg); display:inline-block; padding:3px 8px; border-radius:4px; font-weight:600;}
+  .banner{margin:0 0 8px; padding:10px 14px; border-radius:8px; background:var(--gold-bg); color:var(--gold-ink); font-size:14px; font-weight:600;}
   @media(max-width:560px){
     .rtop{flex-direction:column; align-items:stretch;}
     .ract{justify-content:stretch;}
@@ -320,7 +321,7 @@
     el.innerHTML = events.map(e => {
       const head = e.date !== last ? `<div class="week-day">${e.date === TODAY ? 'Today' : esc(new Date(e.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }))}</div>` : '';
       last = e.date;
-      return head + `<div class="week-row"><span class="t" style="min-width:68px;">${esc(fmtTime(e.time)) || '—'}</span><div class="what"><b>${esc(e.label)}</b> · ${esc(e.r.name)}${e.marked ? `<div class="t" style="color:#14492F;font-weight:600;">${esc(e.marked)}</div>` : ''}${e.addr ? `<div class="t" style="white-space:normal;">${esc(e.addr)}</div>` : ''}</div><span class="t">${totesOf(e.r) || '—'} totes</span></div>`;
+      return head + `<div class="week-row"><span class="t" style="min-width:68px;">${esc(fmtTime(e.time)) || '—'}</span><div class="what"><b>${esc(e.label)}</b> · ${esc(e.r.name)}${e.marked ? `<div class="t" style="color:var(--green-ink);font-weight:600;">${esc(e.marked)}</div>` : ''}${e.addr ? `<div class="t" style="white-space:normal;">${esc(e.addr)}</div>` : ''}</div><span class="t">${totesOf(e.r) || '—'} totes</span></div>`;
     }).join('');
   }
 

@@ -7,16 +7,17 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#F5F1E7">
+<meta name="theme-color" content="#F5F1E7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141210" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Ready Tote">
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Requests · Ready Tote Oklahoma admin</title>
-<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<link rel="stylesheet" href="admin-shared.css?v=20261026">
 <script src="admin-shared.js?v=20261112"></script>
-<script src="admin-availability.js?v=20261024"></script>
+<script src="admin-availability.js?v=20261026"></script>
 <style>
   :root{--col:820px;}
   .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
@@ -28,18 +29,18 @@
   .req-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
   .req-name{font-weight:bold;font-size:16px;}
   .req-sub{font-size:13px;color:var(--steel);margin-top:2px;font-variant-numeric:tabular-nums;}
-  .req-sub .late{color:#831C1E;font-weight:600;}
+  .req-sub .late{color:var(--red-ink);font-weight:600;}
   .req-tags{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
   .avail-row{display:flex;align-items:flex-start;}
   .avail-row .lbl{flex:none;}
   .avail-list{display:flex;flex-wrap:wrap;min-width:0;}
   /* Decline: pick a reason in place instead of a browser pop-up */
-  .decline-box{display:none;margin-top:12px;padding:12px 14px;border-radius:8px;background:#FAF8F3;}
+  .decline-box{display:none;margin-top:12px;padding:12px 14px;border-radius:8px;background:var(--surface-2);}
   .decline-box.shown{display:block;}
   .decline-box p{margin:0 0 8px;font-size:14px;font-weight:600;}
   .decline-box .reasons{display:flex;flex-wrap:wrap;gap:6px;}
-  .decline-box .reasons button{width:auto;margin:0;padding:7px 12px;font-size:14px;background:#fff;color:var(--ink);border:1px solid var(--control);}
-  .decline-box .reasons button:hover{background:#fff;border-color:var(--red);color:var(--red);}
+  .decline-box .reasons button{width:auto;margin:0;padding:7px 12px;font-size:14px;background:var(--white);color:var(--ink);border:1px solid var(--control);}
+  .decline-box .reasons button:hover{background:var(--white);border-color:var(--red);color:var(--red);}
   .decline-box .other{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
   .decline-box .other input{flex:1 1 220px;margin:0;height:36px;padding:6px 10px;font-size:14px;}
   .decline-box .other button{width:auto;margin:0;height:36px;padding:0 12px;font-size:14px;}
@@ -70,7 +71,7 @@
   .tabs{display:flex;gap:2px;padding:2px;background:var(--track);border-radius:8px;flex-wrap:wrap;margin-bottom:10px;}
   .tabs button{all:unset;box-sizing:border-box;cursor:pointer;height:32px;padding:0 12px;border:1px solid transparent;border-radius:6px;font-size:13px;font-weight:600;color:var(--steel);white-space:nowrap;}
   .tabs button:hover{color:var(--ink);}
-  .tabs button[aria-pressed="true"]{background:#fff;color:var(--ink);border-color:var(--line);}
+  .tabs button[aria-pressed="true"]{background:var(--white);color:var(--ink);border-color:var(--line);}
   .tabs button:focus-visible{outline:2px solid var(--ink);outline-offset:1px;}
   .tabs .n{margin-left:6px;font-variant-numeric:tabular-nums;color:var(--steel);font-weight:500;}
   .summary{margin:-8px 0 18px;font-size:15px;color:var(--steel);}
@@ -79,12 +80,12 @@
   /* Things to double-check before confirming */
   .warns{margin-top:8px;display:flex;flex-direction:column;gap:6px;}
   .req-body .muted{color:var(--steel);font-size:13px;}
-  .warn{padding:7px 10px;border-radius:6px;background:var(--gold-bg);color:#6B4C0C;font-size:13px;font-weight:600;line-height:1.4;}
+  .warn{padding:7px 10px;border-radius:6px;background:var(--gold-bg);color:var(--gold-ink);font-size:13px;font-weight:600;line-height:1.4;}
 
   /* "Sent to Hannah?" after tapping Text to confirm */
-  .ask{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;margin-top:12px;padding:10px 12px;background:#FAF8F3;border-radius:8px;font-size:14px;font-weight:600;}
+  .ask{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;margin-top:12px;padding:10px 12px;background:var(--surface-2);border-radius:8px;font-size:14px;font-weight:600;}
   .ask[hidden]{display:none;}
-  .undo-line{display:flex;align-items:center;gap:12px;margin-top:12px;padding:9px 12px;border-radius:8px;background:var(--green-bg);color:#14492F;font-size:14px;font-weight:600;}
+  .undo-line{display:flex;align-items:center;gap:12px;margin-top:12px;padding:9px 12px;border-radius:8px;background:var(--green-bg);color:var(--green-ink);font-size:14px;font-weight:600;}
   .undo-line button.linklike{all:unset;cursor:pointer;margin-left:auto;color:var(--ink);text-decoration:underline;text-underline-offset:3px;font-weight:600;}
   .ask button{width:auto;margin:0;padding:7px 14px;font-size:14px;}
   .ask button.linklike{background:none;border:none;color:var(--ink);text-decoration:underline;text-underline-offset:3px;padding:7px 4px;}
@@ -609,7 +610,7 @@
     if (!secret) return showErr('Enter the admin secret first.');
     const win = window.open('', '_blank');
     if (win) {
-      win.document.write(`<title>Military ID photo</title><body style="margin:0;background:#111;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;">Loading…</body>`);
+      win.document.write(`<title>Military ID photo</title><body style="margin:0;background:var(--ink);color:var(--on-ink);font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;">Loading…</body>`);
     }
     try {
       const resp = await fetch('/.netlify/functions/get-photo', {

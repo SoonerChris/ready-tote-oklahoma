@@ -7,14 +7,15 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#F5F1E7">
+<meta name="theme-color" content="#F5F1E7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141210" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Ready Tote">
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Dashboard · Ready Tote Oklahoma admin</title>
-<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<link rel="stylesheet" href="admin-shared.css?v=20261026">
 <script src="admin-shared.js?v=20261112"></script>
 <style>
   /* Dashboard layout: the cream body is the frame (sidebar on it, no rule),
@@ -23,18 +24,17 @@
      Grid at 1440: 1440 - 228 sidebar - 8 inset = 1204 sheet;
      1204 - 2 x 32 padding = 1140 = 732 main + 24 gap + 384 rail. */
   :root{
-    --sheet:#FFFFFF;
-    --border:#E9E4D8;      /* card edge, about 1.2:1 on white */
-    --rule:#F1EDE4;        /* row rules, one step lighter */
-    --control:#D6CFBF;     /* control borders, one step darker */
-    --muted:#6B6259;       /* the brand's steel, 5.9:1 on white */
+    /* Dashboard names for the shared tokens in admin-shared.css (dark mode too) */
+    --sheet:var(--white);
+    --border:var(--line);  /* card edge */
+    --rule:var(--rule-soft);
+    --muted:var(--steel);
     --data:#A87F22;        /* brand gold darkened to 3.6:1 on white, for marks only */
-    --track:#EFEBE2;
-    --positive:#247B50;
-    --negative:#C0392B;
-    --pill-go-bg:#E3F4E9;   --pill-go-ink:#14492F;
-    --pill-back-bg:#FBF0D6; --pill-back-ink:#6B4C0C;
-    --pill-self-bg:#F1EEE7; --pill-self-ink:#4A433B;
+    --positive:var(--green);
+    --negative:var(--red);
+    --pill-go-bg:var(--green-bg);   --pill-go-ink:var(--green-ink);
+    --pill-back-bg:var(--gold-bg);  --pill-back-ink:var(--gold-ink);
+    --pill-self-bg:var(--neutral-bg); --pill-self-ink:var(--muted-ink);
   }
   body{padding:8px 8px 8px 236px !important;font-size:15px;line-height:1.45;}
   .sheet{background:var(--sheet);border:1px solid var(--border);border-radius:16px;min-height:calc(100vh - 16px);padding:28px 32px 40px;}
@@ -51,16 +51,16 @@
   .linkbtn:hover{text-decoration-color:var(--ink);}
   .linkbtn:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:2px;}
   .btn{display:inline-flex;align-items:center;justify-content:center;height:36px;padding:0 16px;border-radius:6px;font:600 14px/1 'Barlow',Arial,sans-serif;text-decoration:none;white-space:nowrap;cursor:pointer;transition:background .12s ease;}
-  .btn.primary{background:var(--ink);color:#fff;border:1px solid var(--ink);}
-  .btn.primary:hover{background:#3a342d;}
-  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--control);}
+  .btn.primary{background:var(--ink);color:var(--on-ink);border:1px solid var(--ink);}
+  .btn.primary:hover{background:var(--ink-hover);}
+  .btn.ghost{background:var(--white);color:var(--ink);border:1px solid var(--control);}
   .btn.ghost:hover{border-color:var(--ink);}
   .btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
 
   /* Grid */
   .grid{display:grid;grid-template-columns:minmax(0,1fr) 384px;gap:24px;align-items:start;}
   .col{display:flex;flex-direction:column;gap:24px;min-width:0;}
-  .card{max-width:none;margin:0;background:#fff;border:1px solid var(--border);border-radius:10px;padding:0;box-shadow:none;}
+  .card{max-width:none;margin:0;background:var(--white);border:1px solid var(--border);border-radius:10px;padding:0;box-shadow:none;}
   .card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:16px 20px 12px;}
   .card-head h2{font-family:'Barlow',Arial,sans-serif;font-weight:700;font-size:16px;margin:0;letter-spacing:0;}
   .card-head .count{color:var(--muted);font-weight:500;margin-left:6px;}
@@ -79,7 +79,7 @@
   .texts .why{font-size:13px;color:var(--muted);white-space:nowrap;text-align:right;}
   .texts .btn{height:34px;}
   /* After tapping Text: "Sent to Hannah?" in the row, so it can be marked done */
-  .texts .ask{grid-column:1 / -1; display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; margin-top:6px; padding:8px 10px; background:#FAF8F3; border-radius:8px; font-size:14px; font-weight:600;}
+  .texts .ask{grid-column:1 / -1; display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; margin-top:6px; padding:8px 10px; background:var(--surface-2); border-radius:8px; font-size:14px; font-weight:600;}
   .texts .ask[hidden]{display:none;}
   .texts .ask .btn{height:32px;}
   .texts .sent{display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--rule); font-size:14px; color:var(--muted);}
@@ -97,34 +97,34 @@
   .kind.go{background:var(--pill-go-bg);color:var(--pill-go-ink);}
   .kind.back{background:var(--pill-back-bg);color:var(--pill-back-ink);}
   .kind.self{background:var(--pill-self-bg);color:var(--pill-self-ink);}
-  .kind.due{background:#FFEDEA;color:#831C1E;height:20px;font-size:11px;margin-left:6px;vertical-align:1px;}
+  .kind.due{background:var(--red-bg);color:var(--red-ink);height:20px;font-size:11px;margin-left:6px;vertical-align:1px;}
   .kind.due.quiet{background:var(--pill-self-bg);color:var(--pill-self-ink);}
   .sched .who a,.sched .meta a{color:inherit;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--control);}
   .sched .who a:hover,.sched .meta a:hover{text-decoration-color:currentColor;}
 
   /* Needs you */
-  .needs{display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin:0 0 20px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:#FAF8F3; font-size:14px;}
+  .needs{display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin:0 0 20px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--surface-2); font-size:14px;}
   .needs[hidden]{display:none;}
   .needs-h{font-weight:700; margin-right:4px;}
-  .needs a{color:var(--ink); text-decoration:none; padding:4px 10px; background:#fff; border:1px solid var(--border); border-radius:999px;}
+  .needs a{color:var(--ink); text-decoration:none; padding:4px 10px; background:var(--white); border:1px solid var(--border); border-radius:999px;}
   .needs a:hover{border-color:var(--ink);}
   .needs b{font-weight:700;}
-  .needs .rush{color:#831C1E; font-weight:700;}
+  .needs .rush{color:var(--red-ink); font-weight:700;}
   .needs-pair{display:inline-flex; align-items:stretch;}
   .needs-pair a{border-radius:999px 0 0 999px;}
-  .needs-x{width:auto; margin:0; padding:4px 12px 4px 10px; font-size:13px; font-weight:600; background:#fff; color:var(--steel); border:1px solid var(--border); border-left:none; border-radius:0 999px 999px 0;}
-  .needs-x:hover{background:#fff; color:var(--ink); border-color:var(--ink);}
+  .needs-x{width:auto; margin:0; padding:4px 12px 4px 10px; font-size:13px; font-weight:600; background:var(--white); color:var(--steel); border:1px solid var(--border); border-left:none; border-radius:0 999px 999px 0;}
+  .needs-x:hover{background:var(--white); color:var(--ink); border-color:var(--ink);}
   .texts .skip{font-size:12px; color:var(--muted);}
   /* Today's stops: On the way / Delivered in one row under the name */
   .sched .acts{grid-column:3 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:4px;}
   .otw .btn{height:34px; padding:0 12px; font-size:13px; width:auto;}
   .mark .btn{height:34px; padding:0 12px; font-size:13px; width:auto;}
-  .marked{font-size:12px; font-weight:600; color:#14492F;}
+  .marked{font-size:12px; font-weight:600; color:var(--green-ink);}
   .marked .linkbtn{font-size:12px; margin-left:4px;}
   .unpaid .pay-acts{display:flex; align-items:center; gap:12px; grid-column:1 / -1; margin-top:4px;}
   .unpaid .pay-acts .btn{width:auto; flex:none;}
   .unpaid .pay-acts .linkbtn{white-space:nowrap;}
-  .unpaid .ask{grid-column:1 / -1; display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; margin-top:6px; padding:8px 10px; background:#FAF8F3; border-radius:8px; font-size:14px; font-weight:600;}
+  .unpaid .ask{grid-column:1 / -1; display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; margin-top:6px; padding:8px 10px; background:var(--surface-2); border-radius:8px; font-size:14px; font-weight:600;}
   .unpaid .ask[hidden]{display:none;}
 
   /* Unpaid invoices */
@@ -150,7 +150,7 @@
   .held-line a,.dolly-line a{color:var(--ink);font-weight:600;}
   .dolly-line{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:4px 0 8px;padding:10px 0 0;border-top:1px solid var(--rule);font-size:14px;}
   .bar-scale{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px;}
-  .notice{margin:8px 0 12px;padding:8px 12px;border-radius:6px;background:#FFEDEA;color:#831C1E;font-size:13px;font-weight:600;}
+  .notice{margin:8px 0 12px;padding:8px 12px;border-radius:6px;background:var(--red-bg);color:var(--red-ink);font-size:13px;font-weight:600;}
   .back-list .row{grid-template-columns:minmax(0,1fr) auto auto;padding:10px 0;}
   .back-list .totes,.back-list .date{font-size:14px;text-align:right;}
   .back-list .date{min-width:72px;color:var(--muted);}
@@ -159,7 +159,7 @@
   .seg{display:flex;gap:2px;padding:2px;background:var(--track);border-radius:8px;margin:0 20px 16px;}
   .seg button{all:unset;box-sizing:border-box;flex:1;text-align:center;height:30px;line-height:28px;border:1px solid transparent;border-radius:6px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;}
   .seg button:hover{color:var(--ink);}
-  .seg button[aria-pressed="true"]{background:#fff;color:var(--ink);border-color:var(--border);}
+  .seg button[aria-pressed="true"]{background:var(--white);color:var(--ink);border-color:var(--border);}
   .seg button:focus-visible{outline:2px solid var(--ink);outline-offset:1px;}
   .net .lbl{font-size:14px;color:var(--muted);}
   .net .big{font-size:30px;font-weight:600;line-height:1.15;margin-top:2px;}

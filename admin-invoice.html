@@ -6,7 +6,8 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#F5F1E7">
+<meta name="theme-color" content="#F5F1E7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141210" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -14,29 +15,29 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <meta name="robots" content="noindex, nofollow">
 <title>Send invoice · Ready Tote Oklahoma admin</title>
-<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<link rel="stylesheet" href="admin-shared.css?v=20261026">
 <script src="admin-shared.js?v=20261112"></script>
-<script src="admin-availability.js?v=20261024"></script>
+<script src="admin-availability.js?v=20261026"></script>
 <style>
   :root{--col:720px;}
   /* One form, two jobs: send the invoice email, or just log the rental */
   .mode-seg{display:inline-flex; gap:2px; padding:2px; background:var(--track); border-radius:8px; margin:0 0 8px;}
   .mode-seg button{all:unset; box-sizing:border-box; height:34px; line-height:32px; padding:0 14px; border:1px solid transparent; border-radius:6px; font-size:14px; font-weight:600; color:var(--steel); cursor:pointer;}
   .mode-seg button:hover{color:var(--ink);}
-  .mode-seg button[aria-pressed="true"]{background:#fff; color:var(--ink); border-color:var(--line);}
+  .mode-seg button[aria-pressed="true"]{background:var(--white); color:var(--ink); border-color:var(--line);}
   .mode-seg button:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
   .log-only{display:none;}
   body.log-mode .log-only{display:inline;}
   body.log-mode .send-only{display:none;}
   /* The check before an invoice email goes out */
-  .send-summary{margin-top:24px; padding:16px; border-radius:10px; background:#FAF8F3; border:1px solid var(--line);}
+  .send-summary{margin-top:24px; padding:16px; border-radius:10px; background:var(--surface-2); border:1px solid var(--line);}
   .send-summary h3{margin:0 0 8px; font-size:16px;}
   .send-summary dl{display:grid; grid-template-columns:max-content 1fr; gap:4px 16px; margin:0; font-size:14px; font-variant-numeric:tabular-nums;}
   .send-summary dt{color:var(--steel);}
   .send-summary dd{margin:0; min-width:0; overflow-wrap:anywhere;}
   .send-summary .row-btns{display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;}
   .send-summary .row-btns button{width:auto; margin:0;}
-  .send-summary .warn{display:block; margin:0 0 6px; padding:7px 10px; border-radius:6px; background:var(--red-bg); color:#831C1E; font-weight:600; line-height:1.4;}
+  .send-summary .warn{display:block; margin:0 0 6px; padding:7px 10px; border-radius:6px; background:var(--red-bg); color:var(--red-ink); font-weight:600; line-height:1.4;}
   /* Form sections */
   .sec{margin:28px 0 0; padding-top:20px; border-top:1px solid var(--line); font-size:15px; font-weight:700; color:var(--ink);}
   .sec.first{border-top:none; padding-top:0; margin-top:20px;}
@@ -45,7 +46,7 @@
   .linkish{all:unset; cursor:pointer; margin-top:6px; font-size:13px; font-weight:600; color:var(--ink); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
   .linkish[hidden]{display:none;}
   #discAmtRow[hidden]{display:none;}
-  .note.bad{color:#831C1E; font-weight:600;}
+  .note.bad{color:var(--red-ink); font-weight:600;}
   .disc-row{margin-top:6px;}
   .after-send{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:14px;}
   .after-send .sms-btn[aria-disabled="true"]{background:var(--track); color:var(--steel); pointer-events:none;}

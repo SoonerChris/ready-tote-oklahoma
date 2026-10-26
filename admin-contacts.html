@@ -7,16 +7,17 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#F5F1E7">
+<meta name="theme-color" content="#F5F1E7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141210" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Ready Tote">
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Contacts · Ready Tote Oklahoma admin</title>
-<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<link rel="stylesheet" href="admin-shared.css?v=20261026">
 <script src="admin-shared.js?v=20261112"></script>
-<script src="admin-rentals-shared.js?v=20261029"></script>
+<script src="admin-rentals-shared.js?v=20261030"></script>
 <style>
   /* One row per person, built from every rental and booking request:
      customers (with what they've rented and spent) and leads (people who
@@ -28,15 +29,15 @@
   .toolbar .grow{flex:1;}
   .toolbar button{width:auto; margin:0; height:38px; padding:0 14px; font-size:14px;}
   .fchips{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;}
-  .fchips button{width:auto; margin:0; height:34px; padding:0 12px; font-size:14px; font-weight:600; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:999px;}
-  .fchips button:hover{background:#fff; border-color:var(--ink);}
-  .fchips button[aria-pressed="true"]{background:var(--ink); color:#fff; border-color:var(--ink);}
+  .fchips button{width:auto; margin:0; height:34px; padding:0 12px; font-size:14px; font-weight:600; background:var(--white); color:var(--ink); border:1px solid var(--control); border-radius:999px;}
+  .fchips button:hover{background:var(--white); border-color:var(--ink);}
+  .fchips button[aria-pressed="true"]{background:var(--ink); color:var(--on-ink); border-color:var(--ink);}
   .fchips .n{font-weight:500; opacity:.75; margin-left:4px;}
   .count-line{font-size:14px; color:var(--steel); margin:0 0 8px;}
   .count-line b{color:var(--ink);}
   table.people{width:100%; border-collapse:collapse; font-size:14px;}
   table.people th{font-size:12px; font-weight:500; color:var(--steel); text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap;}
-  table.people td{padding:12px 10px; border-bottom:1px solid #F1EDE4; vertical-align:top; font-variant-numeric:tabular-nums;}
+  table.people td{padding:12px 10px; border-bottom:1px solid var(--rule-soft); vertical-align:top; font-variant-numeric:tabular-nums;}
   table.people tr:last-child td{border-bottom:none;}
   table.people .r{text-align:right; white-space:nowrap;}
   table.people .who b{font-size:15px;}
@@ -46,19 +47,19 @@
   .acts a{display:inline-flex; align-items:center; height:32px; padding:0 10px; border:1px solid var(--control); border-radius:6px; font-size:13px; font-weight:600; text-decoration:none !important; white-space:nowrap;}
   .acts a:hover{border-color:var(--ink);}
   .link-btn{font-size:13px; font-weight:600; color:var(--ink);}
-  .pill.neutral{background:var(--track); color:#4A433B;}
+  .pill.neutral{background:var(--track); color:var(--muted-ink);}
   .who-btn{all:unset; cursor:pointer; font-weight:700; font-size:15px; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
   .who-btn:hover{text-decoration-color:var(--ink);}
-  .owes{color:#831C1E; font-weight:600;}
-  tr.detail td{background:#FAF8F3; padding:14px 16px;}
+  .owes{color:var(--red-ink); font-weight:600;}
+  tr.detail td{background:var(--surface-2); padding:14px 16px;}
   tr.detail[hidden]{display:none;}
   .det{display:grid; grid-template-columns:1fr 1fr; gap:14px 24px; font-size:14px;}
   .det h4{margin:0 0 6px; font-size:13px; color:var(--steel); font-weight:600;}
-  .det .line{padding:4px 0; border-top:1px solid #EEE8DC; display:flex; justify-content:space-between; gap:10px;}
+  .det .line{padding:4px 0; border-top:1px solid var(--rule-soft); display:flex; justify-content:space-between; gap:10px;}
   .det .line:first-of-type{border-top:none;}
   .det-acts{grid-column:1 / -1; display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
   .det-acts .sms-btn{padding:7px 12px; font-size:13px;}
-  .card-ask{display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; padding:9px 12px; background:#fff; border-radius:8px; font-size:14px; font-weight:600; grid-column:1 / -1;}
+  .card-ask{display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; padding:9px 12px; background:var(--white); border-radius:8px; font-size:14px; font-weight:600; grid-column:1 / -1;}
   .card-ask[hidden]{display:none;}
   .card-ask button{width:auto; margin:0; padding:7px 14px; font-size:14px;}
   .card-ask .linklike{all:unset; cursor:pointer; text-decoration:underline; text-underline-offset:3px; font-weight:600;}
@@ -67,7 +68,7 @@
   @media(max-width:960px){
     table.people thead{display:none;}
     table.people, table.people tbody{display:block;}
-    table.people tr{display:grid; grid-template-columns:1fr auto; gap:4px 12px; padding:12px 0; border-bottom:1px solid #F1EDE4;}
+    table.people tr{display:grid; grid-template-columns:1fr auto; gap:4px 12px; padding:12px 0; border-bottom:1px solid var(--rule-soft);}
     table.people td{display:block; padding:0; border:none;}
     table.people td.c-who{grid-column:1; grid-row:1;}
     table.people td.c-money{grid-column:2; grid-row:1;}

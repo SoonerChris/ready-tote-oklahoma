@@ -7,14 +7,15 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#F5F1E7">
+<meta name="theme-color" content="#F5F1E7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141210" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Ready Tote">
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Outreach · Ready Tote Oklahoma admin</title>
-<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<link rel="stylesheet" href="admin-shared.css?v=20261026">
 <script src="admin-shared.js?v=20261112"></script>
 <style>
   :root{--col:960px;}
@@ -31,11 +32,11 @@
   .entry-tools a.small-btn{display:inline-flex; align-items:center; text-decoration:none; border-radius:6px; font-weight:600;}
   .entry-tools [hidden]{display:none;}
   .del-ask{font-size:13px; font-weight:600; display:inline-flex; gap:6px; align-items:center;}
-  .history{margin-top:10px; padding:10px 12px; background:#FAF8F3; border-radius:8px;}
+  .history{margin-top:10px; padding:10px 12px; background:var(--surface-2); border-radius:8px;}
   .history[hidden]{display:none;}
   .log-add{display:flex; gap:6px; margin-bottom:8px;}
   .log-add input{flex:1; margin:0; height:34px; padding:4px 10px; font-size:14px;}
-  .log-row{display:flex; gap:10px; font-size:14px; padding:5px 0; border-top:1px solid #EEE8DC;}
+  .log-row{display:flex; gap:10px; font-size:14px; padding:5px 0; border-top:1px solid var(--rule-soft);}
   .log-row span{color:var(--steel); min-width:52px; font-variant-numeric:tabular-nums;}
   .undo-link{all:unset; cursor:pointer; margin-left:8px; text-decoration:underline; text-underline-offset:3px; font-weight:600;}
   .scard{background:var(--white);padding:14px 16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 -1px -1px 0;}
@@ -51,15 +52,15 @@
   .addform .grid2{margin-bottom:0;}
   .addform button{width:auto;padding:10px 18px;font-size:14px;}
 
-  .entry{border-top:1px solid #F1EDE4;padding:12px 0;}
+  .entry{border-top:1px solid var(--rule-soft);padding:12px 0;}
   .entry-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
   .entry-name{font-weight:600;font-size:16px;}
   .entry-meta{font-size:14px;color:var(--steel);margin-top:2px;font-variant-numeric:tabular-nums;}
   .entry-notes{font-size:14px;color:var(--steel);margin-top:6px;}
   .entry-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-  .status-pill{display:inline-flex;align-items:center;height:22px;font-size:12px;font-weight:600;padding:0 8px;border-radius:4px;background:var(--track);color:#4A433B;}
-  .status-pill.active{background:var(--green-bg);color:#14492F;}
-  .status-pill.contacted, .status-pill.followup{background:var(--gold-bg);color:#6B4C0C;}
+  .status-pill{display:inline-flex;align-items:center;height:22px;font-size:12px;font-weight:600;padding:0 8px;border-radius:4px;background:var(--track);color:var(--muted-ink);}
+  .status-pill.active{background:var(--green-bg);color:var(--green-ink);}
+  .status-pill.contacted, .status-pill.followup{background:var(--gold-bg);color:var(--gold-ink);}
   .status-pill.notinterested{background:var(--crate-red-bg);color:var(--crate-red);}
   select.inline-status{width:auto;padding:6px 8px;font-size:13px;}
   .small-btn{width:auto;padding:6px 12px;font-size:13px;margin-top:0;background:var(--white);border:1px solid var(--control);color:var(--ink);}
@@ -70,13 +71,13 @@
 
   /* Follow-ups: when each partner was last contacted and when to reach out next */
   .dates{font-size:13px; color:var(--steel); margin-top:4px; font-variant-numeric:tabular-nums;}
-  .dates .due{color:#831C1E; font-weight:600;}
-  .dates .soon{color:#6B4C0C; font-weight:600;}
+  .dates .due{color:var(--red-ink); font-weight:600;}
+  .dates .soon{color:var(--gold-ink); font-weight:600;}
   .due-box{border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin-bottom:24px;}
-  .due-box.clear{background:var(--green-bg); border-color:transparent; color:#14492F; font-size:14px; font-weight:600;}
+  .due-box.clear{background:var(--green-bg); border-color:transparent; color:var(--green-ink); font-size:14px; font-weight:600;}
   .due-box h2{margin:0 0 8px; font-size:17px;}
   .due-box h2 .n{font-weight:500; color:var(--steel); margin-left:6px;}
-  .due-row{display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid #F1EDE4; flex-wrap:wrap;}
+  .due-row{display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--rule-soft); flex-wrap:wrap;}
   .due-row:first-of-type{border-top:none;}
   .due-row .who{flex:1; min-width:200px;}
   .due-row .who b{font-size:15px;}

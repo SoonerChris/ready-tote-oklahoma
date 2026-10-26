@@ -92,9 +92,9 @@ function toteAvailabilityHtml(res) {
 (function injectAvailabilityStyles() {
   const css = `
     .avail{display:inline-block; padding:3px 8px; border-radius:4px; font-size:13px; font-weight:600; line-height:1.4; margin:0 4px 4px 0;}
-    .avail.ok{background:var(--green-bg); color:#14492F;}
-    .avail.short{background:var(--red-bg); color:#831C1E;}
-    .avail.info{background:var(--track); color:#4A433B; font-weight:500;}`;
+    .avail.ok{background:var(--green-bg); color:var(--green-ink);}
+    .avail.short{background:var(--red-bg); color:var(--red-ink);}
+    .avail.info{background:var(--track); color:var(--muted-ink); font-weight:500;}`;
   const s = document.createElement('style');
   s.textContent = css;
   document.head.appendChild(s);

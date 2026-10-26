@@ -7,16 +7,17 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#F5F1E7">
+<meta name="theme-color" content="#F5F1E7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141210" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Ready Tote">
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>All rentals · Ready Tote Oklahoma admin</title>
-<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<link rel="stylesheet" href="admin-shared.css?v=20261026">
 <script src="admin-shared.js?v=20261112"></script>
-<script src="admin-rentals-shared.js?v=20261029"></script>
+<script src="admin-rentals-shared.js?v=20261030"></script>
 <style>
   .rem .who{font-weight:600;font-size:16px;}
   .rem .meta{color:var(--steel);font-size:14px;margin:3px 0 0;line-height:1.45;font-variant-numeric:tabular-nums;}
@@ -25,7 +26,7 @@
   #results h2:first-child{margin-top:8px;}
   #results .empty{margin:0 0 0 2px; font-size:14px;}
   .rem{margin-bottom:8px;}
-  .rem .msg{background:#FAF8F3;border-radius:8px;padding:12px 14px;font-size:14px;color:var(--ink);line-height:1.55;margin-bottom:10px;}
+  .rem .msg{background:var(--surface-2);border-radius:8px;padding:12px 14px;font-size:14px;color:var(--ink);line-height:1.55;margin-bottom:10px;}
   /* Group related row buttons so each group wraps independently and
      lines up the same way regardless of which buttons are "Sent" */
   .rem .actions{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px;}
@@ -78,23 +79,23 @@
      green tint + left border so they stand out at a glance in the list,
      same green used for the "Active rentals" stat on Dashboard/Inventory. */
   .rem.active-rental{border-left:3px solid var(--green);}
-  .rem .marks .marked{font-size:13px; font-weight:600; color:#14492F;}
+  .rem .marks .marked{font-size:13px; font-weight:600; color:var(--green-ink);}
   .rem .marks .link-btn{all:unset; cursor:pointer; font-weight:600; font-size:13px; color:var(--ink); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control); margin-left:4px;}
 
   /* Find: search + filter buttons with counts */
   .list-tools{display:flex; flex-direction:column; gap:10px; margin:8px 0 16px;}
   .fchips{display:flex; flex-wrap:wrap; gap:6px;}
-  .fchips button{width:auto; margin:0; height:34px; padding:0 12px; font-size:14px; font-weight:600; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:999px;}
-  .fchips button:hover{background:#fff; border-color:var(--ink);}
-  .fchips button[aria-pressed="true"]{background:var(--ink); color:#fff; border-color:var(--ink);}
+  .fchips button{width:auto; margin:0; height:34px; padding:0 12px; font-size:14px; font-weight:600; background:var(--white); color:var(--ink); border:1px solid var(--control); border-radius:999px;}
+  .fchips button:hover{background:var(--white); border-color:var(--ink);}
+  .fchips button[aria-pressed="true"]{background:var(--ink); color:var(--on-ink); border-color:var(--ink);}
   .fchips .n{font-weight:500; opacity:.75; margin-left:4px; font-variant-numeric:tabular-nums;}
-  .unpaid-link{display:flex; justify-content:space-between; align-items:center; gap:12px; width:100%; margin:0 0 14px; padding:10px 14px; background:var(--red-bg); color:#831C1E; border:none; border-radius:8px; font-size:14px; font-weight:600; text-align:left;}
-  .unpaid-link:hover{background:#FFE1DC;}
+  .unpaid-link{display:flex; justify-content:space-between; align-items:center; gap:12px; width:100%; margin:0 0 14px; padding:10px 14px; background:var(--red-bg); color:var(--red-ink); border:none; border-radius:8px; font-size:14px; font-weight:600; text-align:left;}
+  .unpaid-link:hover{background:var(--red-bg);}
   .group-h{display:flex; justify-content:space-between; align-items:baseline; margin:20px 0 8px; font-size:15px; font-weight:700;}
   .group-h:first-child{margin-top:0;}
   .group-h .n{font-weight:500; color:var(--steel); margin-left:6px;}
-  .show-past{width:auto; margin:8px 0 0; background:#fff; color:var(--ink); border:1px solid var(--control);}
-  .show-past:hover{background:#fff; border-color:var(--ink);}
+  .show-past{width:auto; margin:8px 0 0; background:var(--white); color:var(--ink); border:1px solid var(--control);}
+  .show-past:hover{background:var(--white); border-color:var(--ink);}
   .no-match{padding:14px; border:1px dashed var(--control); border-radius:8px; color:var(--steel); font-size:14px;}
 
   /* Card summary: name and one line of facts on the left, price and status on the right */
@@ -106,42 +107,42 @@
   .facts .k{color:var(--steel); display:inline-block; min-width:76px;}
 
   /* Next step: the one text that's due next, as the main button */
-  .next{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 14px; background:#FAF8F3; border-radius:8px; margin-bottom:12px;}
+  .next{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 14px; background:var(--surface-2); border-radius:8px; margin-bottom:12px;}
   .next .what{font-size:14px;}
   .next .what b{display:block; font-size:15px;}
   .next .what span{color:var(--steel);}
-  .next .sms-btn{background:var(--ink); color:#fff; border-color:var(--ink);}
-  .next .sms-btn:hover{background:#3A342D;}
+  .next .sms-btn{background:var(--ink); color:var(--on-ink); border-color:var(--ink);}
+  .next .sms-btn:hover{background:var(--ink-hover);}
   .next.upcoming{background:none; border:1px dashed var(--control);}
   .next-btns{display:flex; align-items:center; gap:10px;}
   .skip{all:unset; cursor:pointer; font-size:13px; font-weight:600; color:var(--steel); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
   .skip:hover{color:var(--ink);}
-  .card-ask{display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; margin:-4px 0 12px; padding:9px 12px; background:#FAF8F3; border-radius:8px; font-size:14px; font-weight:600;}
+  .card-ask{display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; margin:-4px 0 12px; padding:9px 12px; background:var(--surface-2); border-radius:8px; font-size:14px; font-weight:600;}
   .card-ask[hidden]{display:none;}
   .card-ask button{width:auto; margin:0; padding:7px 14px; font-size:14px;}
   .card-ask .linklike{all:unset; cursor:pointer; text-decoration:underline; text-underline-offset:3px; font-weight:600;}
-  .ghost-btn{width:auto; margin:0; padding:8px 14px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;}
-  .ghost-btn:hover{background:#fff; border-color:var(--ink);}
-  .cancel-box{margin-top:10px; padding:12px 14px; border-radius:8px; background:#FAF8F3;}
+  .ghost-btn{width:auto; margin:0; padding:8px 14px; font-size:14px; background:var(--white); color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;}
+  .ghost-btn:hover{background:var(--white); border-color:var(--ink);}
+  .cancel-box{margin-top:10px; padding:12px 14px; border-radius:8px; background:var(--surface-2);}
   .cancel-box[hidden]{display:none;}
   .cancel-box p{margin:0 0 8px; font-size:14px; font-weight:600;}
   .cancel-box .reasons{display:flex; flex-wrap:wrap; gap:6px;}
-  .cancel-box .reasons button{width:auto; margin:0; padding:7px 12px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control);}
-  .cancel-box .reasons button:hover{background:#fff; border-color:var(--ink);}
+  .cancel-box .reasons button{width:auto; margin:0; padding:7px 12px; font-size:14px; background:var(--white); color:var(--ink); border:1px solid var(--control);}
+  .cancel-box .reasons button:hover{background:var(--white); border-color:var(--ink);}
   .cancel-box .other{display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;}
   .cancel-box .other input{flex:1 1 200px; margin:0; height:36px; padding:6px 10px; font-size:14px;}
   .cancel-box .other button{width:auto; margin:0; height:36px; padding:0 12px; font-size:14px;}
-  .edit-form .warn{margin:10px 0 0; padding:8px 10px; border-radius:6px; background:var(--red-bg); color:#831C1E; font-size:13px; font-weight:600;}
+  .edit-form .warn{margin:10px 0 0; padding:8px 10px; border-radius:6px; background:var(--red-bg); color:var(--red-ink); font-size:13px; font-weight:600;}
   .edit-form .warn[hidden]{display:none;}
   .tool-row{display:flex; flex-wrap:wrap; gap:8px; padding-top:10px; border-top:1px solid var(--line);}
-  .tool-row button{width:auto; margin:0; padding:8px 14px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control);}
-  .tool-row button:hover{background:#fff; border-color:var(--ink);}
+  .tool-row button{width:auto; margin:0; padding:8px 14px; font-size:14px; background:var(--white); color:var(--ink); border:1px solid var(--control);}
+  .tool-row button:hover{background:var(--white); border-color:var(--ink);}
   .tool-row button[aria-expanded="true"]{background:var(--track); border-color:var(--track);}
   .xpanel{display:none; margin-top:12px;}
   .xpanel.shown{display:block;}
 
   /* One edit form per rental */
-  .edit-form{background:#FAF8F3; border-radius:10px; padding:14px 16px;}
+  .edit-form{background:var(--surface-2); border-radius:10px; padding:14px 16px;}
   .edit-form h4{margin:16px 0 0; font-size:14px;}
   .edit-form h4:first-child{margin-top:0;}
   .edit-form label{font-size:13px; margin:10px 0 4px;}
@@ -156,8 +157,8 @@
     .edit-form .g4 .w2{grid-column:1 / -1;}
     .rem-summary .sum-side .pills{max-width:120px;}
   }
-  .pill.neutral{background:var(--track); color:#4A433B;}
-  .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 16px; border-radius:8px; font-size:14px; font-weight:600; z-index:30; box-shadow:0 8px 24px rgba(30,27,24,.2);}
+  .pill.neutral{background:var(--track); color:var(--muted-ink);}
+  .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--ink); color:var(--on-ink); padding:10px 16px; border-radius:8px; font-size:14px; font-weight:600; z-index:30; box-shadow:0 8px 24px rgba(30,27,24,.2);}
 </style>
 </head>
 <body>
@@ -370,7 +371,7 @@
     const otwToday = otwDelivery || otwPickup;
     const addr = r.serviceType === 'self' ? 'Customer picks up and returns' : dOff && dOff === pOff ? esc(dOff) : [dOff ? 'Drop-off: ' + esc(dOff) : '', pOff ? 'Pickup: ' + esc(pOff) : ''].filter(Boolean).join('<br>') || '—';
     const counts = typeof r.toteCount === 'number' || typeof r.dollyCount === 'number'
-      ? `${typeof r.toteCount === 'number' ? r.toteCount : '—'} totes · ${typeof r.dollyCount === 'number' ? r.dollyCount : '—'} ${r.dollyCount === 1 ? 'dolly' : 'dollies'}` : '<span style="color:#831C1E;">Not set. Inventory can’t count this rental</span>';
+      ? `${typeof r.toteCount === 'number' ? r.toteCount : '—'} totes · ${typeof r.dollyCount === 'number' ? r.dollyCount : '—'} ${r.dollyCount === 1 ? 'dolly' : 'dollies'}` : '<span style="color:var(--red-ink);">Not set. Inventory can’t count this rental</span>';
     // Paid rentals keep "Mark unpaid" under More; it's rarely needed
     const paid = !!PAID_FLAGS[r.key];
     const paymentControls = paid || r.cancelled ? '' : payBtn(r) + invoiceReminderBtn(r) + emailReminderBtn(r) + textReminderBtn(r);
@@ -396,9 +397,9 @@
             <div><span class="k">Times</span>out ${esc(whenText(r.dropoffDate, r.dropoffTime))}, back ${esc(whenText(r.pickupDate, r.pickupTime))}</div>
             <div><span class="k">Address</span>${addr}</div>
             <div><span class="k">Contact</span>${r.phone ? `<a href="tel:${escAttr(r.phone)}">${esc(fmtPhone(r.phone))}</a>` : '—'}${r.email ? ` · <a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : ''}</div>
-            ${(r.stockLosses || []).length ? `<div><span class="k">Stock</span><span style="color:#831C1E;">${r.stockLosses.map(l => `${l.quantity} ${l.item === 'dolly' ? (l.quantity === 1 ? 'dolly' : 'dollies') : (l.quantity === 1 ? 'tote' : 'totes')} ${l.type === 'lost' ? 'not returned' : 'damaged'} (${esc(shortDate(l.date))})`).join(', ')}</span></div>` : ''}
+            ${(r.stockLosses || []).length ? `<div><span class="k">Stock</span><span style="color:var(--red-ink);">${r.stockLosses.map(l => `${l.quantity} ${l.item === 'dolly' ? (l.quantity === 1 ? 'dolly' : 'dollies') : (l.quantity === 1 ? 'tote' : 'totes')} ${l.type === 'lost' ? 'not returned' : 'damaged'} (${esc(shortDate(l.date))})`).join(', ')}</span></div>` : ''}
             ${r.tosAccepted ? `<div><span class="k">Terms</span>Accepted ${esc(fmtDate((r.tosAcceptedAt || '').slice(0, 10)))}</div>` : ''}
-            ${missing.length ? `<div><span class="k">Missing</span><span style="color:#831C1E;">${esc(missing.join(', '))}</span></div>` : ''}
+            ${missing.length ? `<div><span class="k">Missing</span><span style="color:var(--red-ink);">${esc(missing.join(', '))}</span></div>` : ''}
           </div>
           ${r.notes ? `<div class="msg">${esc(r.notes)}</div>` : ''}
           ${r.cancelled ? `<div class="next upcoming"><div class="what"><b>Cancelled ${esc(fmtDate((r.cancelledAt || '').slice(0, 10)))}</b><span>${esc(r.cancelReason || 'No reason given')}. It doesn't count in reminders, inventory, availability or revenue.</span></div><button type="button" class="ghost-btn" onclick="restoreRental('${k}')">Restore rental</button></div>` : nextStep(r)}
@@ -428,7 +429,7 @@
           <div class="xpanel" id="more-${k}">
             <div class="actions">
               ${paid ? payBtn(r) : ''}
-              <button type="button" class="edit-military-btn" data-key="${k}" data-military="${r.isMilitary ? 'true' : 'false'}" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">${r.isMilitary ? 'Remove military discount' : 'Mark as military'}</button>
+              <button type="button" class="edit-military-btn" data-key="${k}" data-military="${r.isMilitary ? 'true' : 'false'}" style="width:auto; padding:8px 16px; font-size:14px; background:var(--white); color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">${r.isMilitary ? 'Remove military discount' : 'Mark as military'}</button>
               ${r.cancelled ? '' : `<button type="button" class="ghost-btn" onclick="this.closest('.xpanel').querySelector('.cancel-box').hidden = false">Cancel rental</button>`}
               <button type="button" class="delete-btn" onclick="deleteRental('${k}', '${esc(r.name).replaceAll("'", '&#39;')}')">Delete rental</button>
             </div>
@@ -589,11 +590,11 @@
     const label = type === 'delivery' ? 'Delivery' : type === 'pickup' ? 'Pickup' : 'Military ID';
     const key = type === 'military_id' ? r.militaryIdKey : r.key;
     if (!has) {
-      return `<button type="button" class="add-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">Add ${label} photo</button>`;
+      return `<button type="button" class="add-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:14px; background:var(--white); color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">Add ${label} photo</button>`;
     }
     const viewBtn = `<button type="button" class="view-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:14px; background:var(--track); color:var(--steel); border:1px solid transparent; border-radius:6px; cursor:pointer;">View ${label} photo</button>`;
     if (type !== 'military_id') return viewBtn;
-    const replaceBtn = `<button type="button" class="add-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">Replace ID photo</button>`;
+    const replaceBtn = `<button type="button" class="add-photo-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:14px; background:var(--white); color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">Replace ID photo</button>`;
     return viewBtn + replaceBtn;
   }
 
@@ -642,7 +643,7 @@
   // the on-my-way function, then swaps in a ready-to-tap text link.
   function onTheWayBtn(type, key) {
     const label = type === 'delivery' ? 'Delivery' : 'Pickup';
-    return `<span id="otw-wrap-${type}-${key}"><button type="button" id="otw-${type}-${key}" class="otw-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">On the way: ${label.toLowerCase()}</button></span>`;
+    return `<span id="otw-wrap-${type}-${key}"><button type="button" id="otw-${type}-${key}" class="otw-btn" data-key="${esc(key)}" data-type="${type}" style="width:auto; padding:8px 16px; font-size:14px; background:var(--white); color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">On the way: ${label.toLowerCase()}</button></span>`;
   }
 
   window.onTheWay = async (key, type) => {
@@ -665,7 +666,7 @@
         if (btn) { btn.disabled = false; btn.textContent = 'On the way: ' + label.toLowerCase(); }
         return;
       }
-      wrap.innerHTML = `<a class="sms-btn" href="${escAttr(data.sms)}" style="padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control);">${data.arrivalTime ? `Text ETA (${esc(data.arrivalTime)})` : 'Text: on our way'}</a>`;
+      wrap.innerHTML = `<a class="sms-btn" href="${escAttr(data.sms)}" style="padding:8px 16px; font-size:14px; background:var(--white); color:var(--ink); border:1px solid var(--control);">${data.arrivalTime ? `Text ETA (${esc(data.arrivalTime)})` : 'Text: on our way'}</a>`;
       if (data.warning) showErr('No ETA in the text. ' + data.warning);
     } catch {
       showErr('Network error calculating ETA.');
@@ -681,10 +682,10 @@
 
   function paymentBadge(r) {
     if (PAID_FLAGS[r.key]) {
-      return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--green-bg); color:#14492F; border-radius:4px; vertical-align:middle;">Paid</span>`;
+      return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--green-bg); color:var(--green-ink); border-radius:4px; vertical-align:middle;">Paid</span>`;
     }
     if (!r.invoicedAt || r.backfilled) return '';
-    return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--red-bg); color:#831C1E; border-radius:4px; vertical-align:middle;">Invoiced, unpaid</span>`;
+    return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--red-bg); color:var(--red-ink); border-radius:4px; vertical-align:middle;">Invoiced, unpaid</span>`;
   }
 
   // Shows only once the customer has checked the terms-of-service box at
@@ -692,19 +693,19 @@
   function tosBadge(r) {
     if (!r.tosAccepted) return '';
     const acceptedDate = esc(fmtDate((r.tosAcceptedAt || '').slice(0, 10)));
-    return `<span title="Accepted ${acceptedDate}" style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--gold-bg); color:#6B4C0C; border-radius:4px; vertical-align:middle;">Terms accepted</span>`;
+    return `<span title="Accepted ${acceptedDate}" style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--gold-bg); color:var(--gold-ink); border-radius:4px; vertical-align:middle;">Terms accepted</span>`;
   }
 
   function militaryBadge(r) {
     if (!r.isMilitary) return '';
-    return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--gold-bg); color:#6B4C0C; border-radius:4px; vertical-align:middle;">Military</span>`;
+    return `<span style="display:inline-block; margin-left:8px; padding:3px 10px; font-size:13px; font-weight:600; background:var(--gold-bg); color:var(--gold-ink); border-radius:4px; vertical-align:middle;">Military</span>`;
   }
 
   function payBtn(r) {
     if (PAID_FLAGS[r.key]) {
-      return `<button type="button" class="pay-btn" data-key="${esc(r.key)}" data-setpaid="false" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--steel); border:1px solid var(--control); border-radius:6px; cursor:pointer;">Mark unpaid</button>`;
+      return `<button type="button" class="pay-btn" data-key="${esc(r.key)}" data-setpaid="false" style="width:auto; padding:8px 16px; font-size:14px; background:var(--white); color:var(--steel); border:1px solid var(--control); border-radius:6px; cursor:pointer;">Mark unpaid</button>`;
     }
-    return `<button type="button" class="pay-btn" data-key="${esc(r.key)}" data-setpaid="true" style="width:auto; padding:8px 16px; font-size:14px; background:#fff; color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">Mark paid</button>`;
+    return `<button type="button" class="pay-btn" data-key="${esc(r.key)}" data-setpaid="true" style="width:auto; padding:8px 16px; font-size:14px; background:var(--white); color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;">Mark paid</button>`;
   }
 
   window.togglePaid = async (key, setPaid) => {
@@ -954,7 +955,7 @@
     const label = type === 'delivery' ? 'Delivery' : type === 'pickup' ? 'Pickup' : 'Military ID';
     const win = window.open('', '_blank');
     if (win) {
-      win.document.write(`<title>${label} photo</title><body style="margin:0;background:#111;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;">Loading…</body>`);
+      win.document.write(`<title>${label} photo</title><body style="margin:0;background:var(--ink);color:var(--on-ink);font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;">Loading…</body>`);
     }
     try {
       const resp = await fetch('/.netlify/functions/get-photo', {

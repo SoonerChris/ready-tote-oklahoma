@@ -7,20 +7,21 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#F5F1E7">
+<meta name="theme-color" content="#F5F1E7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141210" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Ready Tote">
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Inventory · Ready Tote Oklahoma admin</title>
-<link rel="stylesheet" href="admin-shared.css?v=20261022">
+<link rel="stylesheet" href="admin-shared.css?v=20261026">
 <script src="admin-shared.js?v=20261112"></script>
 <style>
   :root{--col:960px;}
   .finding{margin:4px 0 20px; font-size:17px; max-width:760px; line-height:1.45;}
   .finding b{font-weight:600;}
-  .finding .bad{color:#831C1E; font-weight:600;}
+  .finding .bad{color:var(--red-ink); font-weight:600;}
   .stats{display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--line); border-radius:10px; margin-bottom:24px;}
   .stats .stat{padding:14px 18px; border-left:1px solid var(--line);}
   .stats .stat:first-child{border-left:none;}
@@ -35,18 +36,18 @@
   .clean-figs .num{font-weight:600; font-size:30px; line-height:1.1; font-variant-numeric:tabular-nums;}
   .clean-figs .dirty .num{color:var(--crate-red);}
   .clean-figs .lbl{font-size:13px; color:var(--steel);}
-  .clean-row{display:flex; align-items:center; gap:10px 12px; padding:10px 0; border-top:1px solid #EEEAE1; font-size:15px; flex-wrap:wrap;}
+  .clean-row{display:flex; align-items:center; gap:10px 12px; padding:10px 0; border-top:1px solid var(--rule-soft); font-size:15px; flex-wrap:wrap;}
   .clean-row:first-child{border-top:none;}
   .clean-row .who{flex:1 1 180px; min-width:0;}
   .clean-row .who b{font-weight:600;}
   .clean-row .who span{display:block; font-size:13px; color:var(--steel);}
   .clean-row .acts{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
   .clean-row button{width:auto; margin:0; min-height:40px; padding:8px 16px; font-size:14px; border-radius:999px;}
-  .clean-row button.ghost{background:#fff; color:var(--ink); border:1px solid var(--control);}
+  .clean-row button.ghost{background:var(--white); color:var(--ink); border:1px solid var(--control);}
   .clean-row button.ghost:hover{border-color:var(--ink);}
   .clean-row .some-in{width:76px; min-height:40px; margin:0; padding:6px 10px; font-size:15px;}
   .clean-row .some-lbl{font-size:13px; color:var(--steel);}
-  .clean-empty{margin:0; padding:6px 0; font-size:15px; color:#14492F; font-weight:600;}
+  .clean-empty{margin:0; padding:6px 0; font-size:15px; color:var(--green-ink); font-weight:600;}
   .washed{margin-top:8px; padding-top:8px; border-top:1px solid var(--line); font-size:13px; color:var(--steel);}
   .washed .link-btn{margin-left:4px;}
   .link-btn{all:unset; cursor:pointer; font-size:13px; font-weight:600; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
@@ -59,14 +60,14 @@
   #freeChart .lbl{font-size:12px; fill:var(--ink); font-weight:600;}
   /* Click a day: what's owned, who has totes out, what's held, what's free */
   #freeChart .hit{fill:transparent; cursor:pointer;}
-  #freeChart .hit:hover{fill:rgba(30,27,24,0.05);}
-  #freeChart .hit:focus{outline:none; fill:rgba(30,27,24,0.08);}
+  #freeChart .hit:hover{fill:var(--hover-tint);}
+  #freeChart .hit:focus{outline:none; fill:var(--current-tint);}
   #freeChart .sel{fill:var(--track);}
   .lookup{display:flex; justify-content:space-between; align-items:flex-end; gap:12px 20px; flex-wrap:wrap; margin-top:8px;}
   .lookup .note{flex:1 1 320px;}
   .lookup-field{display:flex; align-items:center; gap:8px; margin:0; font-size:13px; font-weight:600; white-space:nowrap;}
   .lookup-field input{width:auto; height:34px; padding:4px 8px; font-size:14px;}
-  .day-detail{margin-top:14px; padding:16px; border-radius:10px; background:#FAF8F3;}
+  .day-detail{margin-top:14px; padding:16px; border-radius:10px; background:var(--surface-2);}
   .day-detail .dd-head{display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap;}
   .day-detail h3{margin:0; font-size:17px;}
   .day-detail h3 .free{font-variant-numeric:tabular-nums;}
@@ -78,16 +79,16 @@
   .dolly-line{margin:8px 0 0; font-size:14px; font-variant-numeric:tabular-nums;}
   .dd-group{margin-top:14px;}
   .dd-group h4{margin:0 0 4px; font-size:14px;}
-  .dd-row{display:flex; align-items:baseline; gap:12px; padding:6px 0; border-top:1px solid #EEEAE1; font-size:14px;}
+  .dd-row{display:flex; align-items:baseline; gap:12px; padding:6px 0; border-top:1px solid var(--rule-soft); font-size:14px;}
   .dd-row:first-of-type{border-top:none;}
   .dd-row .who{flex:1; min-width:0;}
   .dd-row .who a{color:var(--ink); font-weight:600; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
   .dd-row .when{color:var(--steel); font-size:13px;}
   .dd-row .q{font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap;}
-  .guess{display:inline-block; margin-left:6px; padding:0 6px; border-radius:4px; background:var(--gold-bg); color:#6B4C0C; font-size:12px; font-weight:600;}
+  .guess{display:inline-block; margin-left:6px; padding:0 6px; border-radius:4px; background:var(--gold-bg); color:var(--gold-ink); font-size:12px; font-weight:600;}
   .item-seg{display:inline-flex; gap:2px; padding:2px; background:var(--track); border-radius:8px; margin-bottom:10px;}
   .item-seg button{all:unset; box-sizing:border-box; height:32px; line-height:30px; padding:0 14px; border:1px solid transparent; border-radius:6px; font-size:14px; font-weight:600; color:var(--steel); cursor:pointer;}
-  .item-seg button[aria-pressed="true"]{background:#fff; color:var(--ink); border-color:var(--line);}
+  .item-seg button[aria-pressed="true"]{background:var(--white); color:var(--ink); border-color:var(--line);}
   .item-seg button:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
   .stat.clickable{cursor:pointer;}
   .stat.clickable:hover .num{text-decoration:underline; text-underline-offset:4px; text-decoration-thickness:2px;}
@@ -122,12 +123,12 @@
   .exp-day{
     aspect-ratio:1; border-radius:6px; border:1px solid var(--line);
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    font-size:13px; background:#FAF8F3; position:relative; font-variant-numeric:tabular-nums;
+    font-size:13px; background:var(--surface-2); position:relative; font-variant-numeric:tabular-nums;
   }
   .exp-day.blank{visibility:hidden;}
   .exp-day.open{background:var(--green-bg); border-color:#BFE3CC;}
   .exp-day.limited{background:var(--gold-bg); border-color:#EED9A4;}
-  .exp-day.booked{background:var(--red-bg); border-color:#F5C2BB; color:#831C1E;}
+  .exp-day.booked{background:var(--red-bg); border-color:#F5C2BB; color:var(--red-ink);}
   .exp-day .n{font-weight:bold; font-size:12px;}
   .exp-day .a{font-size:12px; margin-top:1px;}
   .exp-day.today{outline:2px solid var(--ink); outline-offset:-2px;}
@@ -141,7 +142,7 @@
   .ev-after{text-align:right; font-weight:600; font-size:14px; min-width:84px;}
   .ev-after span{display:block; font-size:12px; font-weight:400; color:var(--steel);}
   .ev-act{display:flex; align-items:center; gap:6px;}
-  .ev-act button{width:auto; margin:0; padding:6px 12px; font-size:13px; background:#fff; border:1px solid var(--control); border-radius:6px; color:var(--ink);}
+  .ev-act button{width:auto; margin:0; padding:6px 12px; font-size:13px; background:var(--white); border:1px solid var(--control); border-radius:6px; color:var(--ink);}
   .ev-act .ev-del,.ev-act .ev-yes{color:var(--red);}
   .ev-act [hidden]{display:none;}
   .ev-confirm{font-size:13px; font-weight:600;}
@@ -249,7 +250,7 @@
         <p class="note" style="margin:0 0 10px;"><span id="cleanupCount"></span> Sets tote and dolly counts on older rentals by reading the package text. Anything it can't read confidently (like "Custom package") is listed for you to fix by hand, never guessed.</p>
         <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
           <button type="button" id="backfillBtn" style="width:auto; margin:0; padding:10px 18px;">Fill in counts from package text</button>
-          <a href="admin-rentals.html?filter=info" class="sms-btn" style="margin:0; padding:10px 18px; background:#fff; color:var(--ink); border:1px solid var(--control);">Open the ones that need info</a>
+          <a href="admin-rentals.html?filter=info" class="sms-btn" style="margin:0; padding:10px 18px; background:var(--white); color:var(--ink); border:1px solid var(--control);">Open the ones that need info</a>
         </div>
         <div id="backfillResult" style="margin-top:10px;"></div>
       </div>
@@ -411,7 +412,7 @@
         </div>
         ${INVENTORY_ONLY ? '' : p.status === 'confirmed'
           ? `<button type="button" class="sms-btn" data-invoice="${escAttr(p.key)}" style="padding:7px 12px; font-size:13px; width:auto; margin:0;">Create invoice</button>`
-          : `<a href="admin-requests.html" class="sms-btn" style="padding:7px 12px; font-size:13px; background:#fff; color:var(--ink); border:1px solid var(--control);">Open Requests</a>`}
+          : `<a href="admin-requests.html" class="sms-btn" style="padding:7px 12px; font-size:13px; background:var(--white); color:var(--ink); border:1px solid var(--control);">Open Requests</a>`}
       </div>`).join('');
   }
 
@@ -522,7 +523,7 @@
     const slot = (W - padL - padR) / ahead.length, bw = Math.max(1, slot - (slot > 6 ? 2 : 1));
     let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Free totes for the next ${ahead.length} days">`;
     for (let v = bot; v <= top + 1e-9; v += step) {
-      svg += `<line x1="${padL}" x2="${W - padR}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#CFC7B8' : '#EEEAE1'}"/>`;
+      svg += `<line x1="${padL}" x2="${W - padR}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#CFC7B8' : 'var(--rule-soft)'}"/>`;
       svg += `<text class="tick" x="${padL - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
     }
     if (LOW <= top) svg += `<line x1="${padL}" x2="${W - padR}" y1="${y(LOW)}" y2="${y(LOW)}" stroke="#D9A13B" stroke-dasharray="4 3"/>`;
