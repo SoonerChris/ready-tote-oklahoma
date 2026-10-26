@@ -16,8 +16,8 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>All rentals · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261026">
-<script src="admin-shared.js?v=20261113"></script>
-<script src="admin-rentals-shared.js?v=20261030"></script>
+<script src="admin-shared.js?v=20261114"></script>
+<script src="admin-rentals-shared.js?v=20261114"></script>
 <style>
   .rem .who{font-weight:600;font-size:16px;}
   .rem .meta{color:var(--steel);font-size:14px;margin:3px 0 0;line-height:1.45;font-variant-numeric:tabular-nums;}
@@ -117,10 +117,6 @@
   .next-btns{display:flex; align-items:center; gap:10px;}
   .skip{all:unset; cursor:pointer; font-size:13px; font-weight:600; color:var(--steel); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--control);}
   .skip:hover{color:var(--ink);}
-  .card-ask{display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; margin:-4px 0 12px; padding:9px 12px; background:var(--surface-2); border-radius:8px; font-size:14px; font-weight:600;}
-  .card-ask[hidden]{display:none;}
-  .card-ask button{width:auto; margin:0; padding:7px 14px; font-size:14px;}
-  .card-ask .linklike{all:unset; cursor:pointer; text-decoration:underline; text-underline-offset:3px; font-weight:600;}
   .ghost-btn{width:auto; margin:0; padding:8px 14px; font-size:14px; background:var(--white); color:var(--ink); border:1px solid var(--control); border-radius:6px; cursor:pointer;}
   .ghost-btn:hover{background:var(--white); border-color:var(--ink);}
   .cancel-box{margin-top:10px; padding:12px 14px; border-radius:8px; background:var(--surface-2);}
@@ -404,7 +400,6 @@
           </div>
           ${r.notes ? `<div class="msg">${esc(r.notes)}</div>` : ''}
           ${r.cancelled ? `<div class="next upcoming"><div class="what"><b>Cancelled ${esc(fmtDate((r.cancelledAt || '').slice(0, 10)))}</b><span>${esc(r.cancelReason || 'No reason given')}. It doesn't count in reminders, inventory, availability or revenue.</span></div><button type="button" class="ghost-btn" onclick="restoreRental('${k}')">Restore rental</button></div>` : nextStep(r)}
-          ${askFor(r.key, String(r.name || '').split(' ')[0])}
           ${paymentControls ? `<div class="actions payment-actions">${paymentControls}</div>` : ''}
           ${marksHtml(r)}
           ${canExtend(r) ? `<div class="actions"><button type="button" class="ghost-btn" data-extend="${k}">Extend rental</button></div>` : ''}

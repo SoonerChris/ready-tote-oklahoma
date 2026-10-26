@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Dashboard · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261026">
-<script src="admin-shared.js?v=20261113"></script>
+<script src="admin-shared.js?v=20261114"></script>
 <style>
   /* Dashboard layout: the cream body is the frame (sidebar on it, no rule),
      the work sits on one white sheet inset 8px from the window's right,
@@ -78,10 +78,6 @@
   .texts .row{grid-template-columns:minmax(0,1fr) auto auto auto;}
   .texts .why{font-size:13px;color:var(--muted);white-space:nowrap;text-align:right;}
   .texts .btn{height:34px;}
-  /* After tapping Text: "Sent to Hannah?" in the row, so it can be marked done */
-  .texts .ask{grid-column:1 / -1; display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; margin-top:6px; padding:8px 10px; background:var(--surface-2); border-radius:8px; font-size:14px; font-weight:600;}
-  .texts .ask[hidden]{display:none;}
-  .texts .ask .btn{height:32px;}
   .texts .sent{display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--rule); font-size:14px; color:var(--muted);}
   .texts .sent b{color:var(--positive); font-weight:600;}
   .texts .sent .linkbtn{margin-left:auto;}
@@ -301,8 +297,7 @@
   $('loadBtn').addEventListener('click', load);
 
   // Coming back to this tab (say, from Messages after texting someone)
-  // refreshes the numbers, at most once a minute. Open "Sent to X?" questions
-  // stay open through the refresh.
+  // refreshes the numbers, at most once a minute.
   let LOADED_AT = 0;
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && TODAY && Date.now() - LOADED_AT > 60000 && !$('loadBtn').disabled) load();
@@ -448,25 +443,23 @@
       ...(reminders.followup || []).map(r => ({ ...r, why: 'Invoice follow-up' })),
       ...reminders.review.map(r => ({ ...r, why: 'Ask for a review' })),
     ].map(r => ({ ...r, why: r.why + (r.overdue ? ' · overdue' : '') }));
-    $('textsCount').textContent = allTexts.length ? ' ' + allTexts.length : '';
+    // One text per person: reminders for the same phone go out together
+    const texts = combineTexts(allTexts).map(t => ({ ...t, why: t.parts.map(p => p.why).join(' + ') }));
+    TEXTS = new Map(texts.map(t => [t.flagIds.join(' '), t]));
+    $('textsCount').textContent = texts.length ? ' ' + texts.length : '';
     const firstName = r => esc(String(r.name || '').split(' ')[0] || 'them');
-    $('textsList').innerHTML = (allTexts.length ? allTexts.map(r => `
-      <div class="row" data-flag="${escAttr(r.flagId)}">
+    $('textsList').innerHTML = (texts.length ? texts.map(r => `
+      <div class="row" data-flags="${escAttr(r.flagIds.join(' '))}">
         <div class="person">
           <div class="who">${esc(r.name)}</div>
-          <div class="meta"><span class="num">${esc(fmtPhone(r.phone))}</span> · ${plural(toteQty(r), 'tote')}</div>
+          <div class="meta"><span class="num">${esc(fmtPhone(r.phone))}</span> · ${plural(toteQty(r), 'tote')}${r.parts.length > 1 ? ` · one text covers ${r.parts.length}` : ''}</div>
         </div>
-        <div class="why">${r.why}</div>
+        <div class="why">${esc(r.why)}</div>
         <a class="btn ghost" data-text href="${escAttr(r.sms)}">Text ${firstName(r)}</a>
-        <div class="ask"${OPEN_ASKS.has(r.flagId) ? '' : ' hidden'}>
-          <span>Sent to ${firstName(r)}?</span>
-          <button type="button" class="btn primary" data-yes data-why="${escAttr(r.why)}" data-name="${escAttr(r.name)}">Yes, sent</button>
-          <button type="button" class="linkbtn" data-no>Not yet</button>
-        </div>
-        <button type="button" class="linkbtn skip" data-skip data-why="${escAttr(r.why)}" data-name="${escAttr(r.name)}">Skip</button>
+        <button type="button" class="linkbtn skip" data-skip>Skip</button>
       </div>`).join('') : '<p class="empty-line">No texts due today.</p>')
-      + JUST_SENT.map(x => `
-      <div class="sent"><span><b>${x.skipped ? 'Skipped' : 'Sent'}</b> ${x.skipped ? '' : 'to '}${esc(x.name)} · ${esc(x.why)}</span><button type="button" class="linkbtn" data-undo="${escAttr(x.flagId)}">Undo</button></div>`).join('');
+      + JUST_SENT.map((x, i) => `
+      <div class="sent"><span><b>${x.skipped ? 'Skipped' : 'Sent'}</b> ${x.skipped ? '' : 'to '}${esc(x.name)} · ${esc(x.why)}</span><button type="button" class="linkbtn" data-undo="${i}">Undo</button></div>`).join('');
 
     // ---- Next 7 days ----
     const endDate = shiftDate(today, 7);
@@ -507,7 +500,7 @@
     // ---- Finding line under the title ----
     const nextOut = events.find(e => e.cls === 'go');
     const parts = [];
-    parts.push(allTexts.length ? plural(allTexts.length, 'text') + ' to send' : 'No texts due');
+    parts.push(texts.length ? plural(texts.length, 'text') + ' to send' : 'No texts due');
     if (nextOut) {
       const when = nextOut.date === today ? 'today' : nextOut.date === shiftDate(today, 1) ? 'tomorrow' : dayName(nextOut.date);
       const city = cityOf(nextOut.addr);
@@ -836,55 +829,45 @@
 
   // ---- Marking dashboard texts as sent ----
   // Same sent flags as the Reminders page (mark-sent), so a text marked sent
-  // here is gone there too, and the server stops listing it.
-  let JUST_SENT = [];   // marked this visit, shown with Undo
-  const OPEN_ASKS = new Set();   // "Sent to X?" rows waiting for an answer; kept across refreshes
+  // here is gone there too, and the server stops listing it. Tapping Text
+  // counts as sent right away (Messages opens with it written out); if it
+  // didn't go out after all, Undo puts it back.
+  let JUST_SENT = [];   // marked this visit, shown with Undo: { flagIds, name, why, skipped }
+  let TEXTS = new Map();   // row's flag list -> combined text
+  function doneWith(t, skipped) {
+    JUST_SENT.push({ flagIds: t.flagIds, name: t.name, why: t.why.replace(/ · overdue/g, ''), skipped });
+    const gone = new Set(t.flagIds);
+    for (const k of Object.keys(DATA.reminders)) DATA.reminders[k] = (DATA.reminders[k] || []).filter(x => !gone.has(x.flagId));
+    render();
+  }
   $('textsList').addEventListener('click', async (e) => {
     const row = e.target.closest('.row');
-    if (e.target.closest('[data-text]') && row) {
-      // Messages opens; the question waits in the row for when you come back
-      OPEN_ASKS.add(row.dataset.flag);
-      setTimeout(() => { const ask = row.querySelector('.ask'); if (ask) ask.hidden = false; }, 400);
+    const t = row && TEXTS.get(row.dataset.flags);
+    if (e.target.closest('[data-text]') && t) {
+      // Let Messages open first, then move the row to "Sent"
+      if (t.saving) return;
+      t.saving = true;
+      const saved = saveSentFlags(t.flagIds);
+      await new Promise(r => setTimeout(r, 400));
+      if (await saved) doneWith(t, false);
+      else { t.saving = false; showErr(`Couldn’t mark the text to ${t.name} as sent. Tap Text again, or Skip.`); }
       return;
     }
-    if (e.target.closest('[data-no]') && row) { OPEN_ASKS.delete(row.dataset.flag); row.querySelector('.ask').hidden = true; return; }
     const skip = e.target.closest('[data-skip]');
-    if (skip && row) {
+    if (skip && t) {
       skip.disabled = true;
-      const ok = await setSent(row.dataset.flag, true, true);
-      if (!ok) { skip.disabled = false; return; }
-      OPEN_ASKS.delete(row.dataset.flag);
-      JUST_SENT.push({ flagId: row.dataset.flag, name: skip.dataset.name, why: skip.dataset.why.replace(' · overdue', ''), skipped: true });
-      for (const k of Object.keys(DATA.reminders)) DATA.reminders[k] = (DATA.reminders[k] || []).filter(x => x.flagId !== row.dataset.flag);
-      render();
-      return;
-    }
-    const yes = e.target.closest('[data-yes]');
-    if (yes && row) {
-      yes.disabled = true; yes.textContent = 'Saving…';
-      const ok = await setSent(row.dataset.flag, true);
-      if (!ok) { yes.disabled = false; yes.textContent = 'Yes, sent'; return; }
-      OPEN_ASKS.delete(row.dataset.flag);
-      JUST_SENT.push({ flagId: row.dataset.flag, name: yes.dataset.name, why: yes.dataset.why.replace(' · overdue', '') });
-      for (const k of Object.keys(DATA.reminders)) DATA.reminders[k] = (DATA.reminders[k] || []).filter(x => x.flagId !== row.dataset.flag);
-      render();
+      if (!(await saveSentFlags(t.flagIds, { skip: true }))) { skip.disabled = false; return showErr('Couldn’t skip that text. Try again.'); }
+      doneWith(t, true);
       return;
     }
     const undo = e.target.closest('[data-undo]');
     if (undo) {
+      const x = JUST_SENT[+undo.dataset.undo]; if (!x) return;
       undo.disabled = true;
-      if (await setSent(undo.dataset.undo, false)) { JUST_SENT = JUST_SENT.filter(x => x.flagId !== undo.dataset.undo); load(); }
-      else undo.disabled = false;
+      if (await saveSentFlags(x.flagIds, { unsent: true })) { JUST_SENT = JUST_SENT.filter(y => y !== x); load(); }
+      else { undo.disabled = false; showErr('Couldn’t undo that. Try again.'); }
     }
   });
-  async function setSent(flagId, sent, skip) {
-    try {
-      const resp = await post('mark-sent', { secret: $('secret').value.trim(), flagId, ...(sent ? (skip ? { skip: true } : {}) : { unsent: true }) });
-      if (resp.ok) return true;
-      showErr(sent ? 'Couldn’t mark that text as sent. Try again.' : 'Couldn’t undo that. Try again.');
-    } catch { showErr('Network error. Nothing was changed.'); }
-    return false;
-  }
 
   function shiftDate(iso, days) {
     const d = new Date(iso + 'T12:00:00Z');

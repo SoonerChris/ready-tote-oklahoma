@@ -16,8 +16,8 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Reminders · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261026">
-<script src="admin-shared.js?v=20261113"></script>
-<script src="admin-rentals-shared.js?v=20261030"></script>
+<script src="admin-shared.js?v=20261114"></script>
+<script src="admin-rentals-shared.js?v=20261114"></script>
 <style>
   /* Reminders answers one question: what do I need to send right now?
      A summary line, then only the sections with something due (most urgent
@@ -57,10 +57,6 @@
   .ract .skip:hover{color:var(--ink);}
   .ract .ghost{background:var(--white); color:var(--ink); border:1px solid var(--control); border-radius:6px; padding:8px 14px; font-size:14px; font-weight:600; cursor:pointer;}
   .ract .ghost:hover{border-color:var(--ink);}
-  .ask{display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; margin-top:10px; padding:9px 12px; background:var(--surface-2); border-radius:8px; font-size:14px; font-weight:600;}
-  .ask[hidden]{display:none;}
-  .ask button{width:auto; margin:0; padding:7px 14px; font-size:14px; min-height:0;}
-  .ask .linklike{all:unset; cursor:pointer; text-decoration:underline; text-underline-offset:3px; font-weight:600;}
   .also{margin-top:6px; font-size:13px; color:var(--gold-ink); background:var(--gold-bg); display:inline-block; padding:3px 8px; border-radius:4px; font-weight:600;}
   .banner{margin:0 0 8px; padding:10px 14px; border-radius:8px; background:var(--gold-bg); color:var(--gold-ink); font-size:14px; font-weight:600;}
   @media(max-width:560px){
@@ -87,7 +83,7 @@
 </nav>
 <div class="card">
   <h1>Reminders</h1>
-  <p class="sub">Tap Text to open Messages with the reminder filled in, then say whether it went out. Anything you miss stays here, marked overdue, until it's sent, skipped, or too late to matter.</p>
+  <p class="sub">Tap Text to open Messages with the reminder filled in. That marks it sent; if it didn't go out, tap Undo under Sent today. Two reminders for the same person go out as one text. Anything you miss stays here, marked overdue, until it's sent, skipped, or too late to matter.</p>
 
   <input type="hidden" id="secret">
 
@@ -110,7 +106,6 @@
   $('secret').value = adminSessionMarker();   // signed-in marker; the session cookie is what the server checks
 
   let ALL_RENTALS = [], REM = {}, SKIPPED = {};
-  const OPEN_ASKS = new Set();   // "Sent to Hannah?" questions waiting for an answer; kept across reloads
   const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
 
   $('loadBtn').addEventListener('click', load);
@@ -165,21 +160,18 @@
     { id: 'review',         title: 'Review requests',        short: 'review request',     note: 'from 3 days after pickup' },
   ];
   let DUE_BY_KEY = {};
-  function alsoLine(r, sec) {
-    const others = (DUE_BY_KEY[r.key] || []).filter(x => x !== sec);
-    return others.length ? `<div class="also">Also due for ${esc(first(r))}: ${esc(others.join(', '))}</div>` : '';
+  // covered: what this card's one text already includes (a combined text)
+  function alsoLine(r, sec, covered = [sec]) {
+    const others = (DUE_BY_KEY[r.key] || []).filter(x => !covered.includes(x));
+    return (covered.length > 1 ? `<div class="also">One text covers: ${esc(covered.join(', '))}</div> ` : '')
+      + (others.length ? `<div class="also">Also due for ${esc(first(r))}: ${esc(others.join(', '))}</div>` : '');
   }
-  // Text button, Skip, and the "Sent?" question that follows a tap
-  function actions(flagId, sms, label) {
-    return `<a class="sms-btn" href="${escAttr(sms || '#')}" data-text data-flag="${escAttr(flagId)}">${esc(label)}</a>
-      <button type="button" class="skip" data-skip data-flag="${escAttr(flagId)}">Skip</button>`;
-  }
-  function askHtml(r, flagId) {
-    return `<div class="ask" data-ask="${escAttr(flagId)}"${OPEN_ASKS.has(flagId) ? '' : ' hidden'}>
-      <span>Sent to ${esc(first(r))}?</span>
-      <button type="button" data-yes data-flag="${escAttr(flagId)}">Yes, sent</button>
-      <button type="button" class="linklike" data-no data-flag="${escAttr(flagId)}">Not yet</button>
-    </div>`;
+  // Text button and Skip. Tapping Text counts as sent (Undo is under Sent
+  // today); flags lists every reminder the text covers.
+  function actions(flagIds, sms, label) {
+    const flags = escAttr(JSON.stringify(flagIds));
+    return `<a class="sms-btn" href="${escAttr(sms || '#')}" data-text data-flags="${flags}">${esc(label)}</a>
+      <button type="button" class="skip" data-skip data-flags="${flags}">Skip</button>`;
   }
   const shortDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const totesOf = r => typeof r.toteCount === 'number' ? r.toteCount : +((String(r.package || '').match(/(\d+)\s*totes?/i) || [0, 0])[1]);
@@ -189,14 +181,23 @@
     // Everything due per rental, so each card can say what else that person has coming
     DUE_BY_KEY = {};
     for (const sec of SECTIONS) for (const r of (REM[sec.id] || [])) (DUE_BY_KEY[r.key] ||= []).push(sec.short);
+    const sorted = id => (REM[id] || []).slice().sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+    // One text per person (combineTexts): the card sits in the most urgent
+    // section, and the other sections leave that person out
+    const textSecs = SECTIONS.filter(x => x.id !== 'emailReminder');
+    const LEAD = new Map(), FOLDED = new Set();
+    for (const t of combineTexts(textSecs.flatMap(sec => sorted(sec.id).map(r => ({ ...r, sec: sec.short }))))) {
+      LEAD.set(t.flagIds[0], t);
+      t.flagIds.slice(1).forEach(f => FOLDED.add(f));
+    }
     let texts = 0, overdue = 0, payments = 0, html = '';
     for (const sec of SECTIONS) {
-      const items = (REM[sec.id] || []).slice().sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+      const items = sorted(sec.id).filter(r => !FOLDED.has(r.flagId));
       if (!items.length) continue;
       if (sec.id === 'emailReminder') payments += items.length; else texts += items.length;
       overdue += items.filter(r => r.overdue).length;
       html += `<h2 class="sec-h">${sec.title}<span class="n">${items.length}</span>${sec.note ? `<span class="note">${sec.note}</span>` : ''}</h2>`
-        + items.map(r => sec.id === 'emailReminder' ? paymentCard(r) : textCard(sec.id, r)).join('');
+        + items.map(r => sec.id === 'emailReminder' ? paymentCard(r) : textCard(sec.id, LEAD.get(r.flagId) || { ...r, flagIds: [r.flagId], parts: [r] })).join('');
     }
     $('due').innerHTML = html;
     $('due').querySelectorAll('.email-reminder-btn').forEach(btn => btn.addEventListener('click', () => sendEmailReminder(btn.dataset.key)));
@@ -231,10 +232,9 @@
             <div class="who">${esc(r.name)}${dueTag(r)}</div>
             <div class="meta">${facts}</div>
           </div>
-          <div class="ract">${actions(r.flagId, r.sms, 'Text ' + first(r))}</div>
+          <div class="ract">${actions(r.flagIds, r.sms, 'Text ' + first(r))}</div>
         </div>
-        ${alsoLine(r, (SECTIONS.find(x => x.id === type) || {}).short)}
-        ${askHtml(r, r.flagId)}
+        ${alsoLine(r, (SECTIONS.find(x => x.id === type) || {}).short, r.parts.length > 1 ? r.parts.map(p => p.sec) : undefined)}
         <details class="preview" data-flag="${escAttr(r.flagId)}"><summary>Show message</summary><div class="msg">${esc(r.message)}</div></details>
       </div>`;
   }
@@ -249,12 +249,11 @@
             <div class="who">${esc(r.name)}${dueTag(r)}</div>
             <div class="meta">${facts}</div>
           </div>
-          <div class="ract">${emailReminderBtn(r)}${r.phone && r.sms ? `<a class="sms-btn" href="${escAttr(r.sms)}" data-text data-flag="textReminder:${escAttr(r.key)}">Text ${esc(first(r))}</a>` : ''}
+          <div class="ract">${emailReminderBtn(r)}${r.phone && r.sms ? `<a class="sms-btn" href="${escAttr(r.sms)}" data-text data-flags="${escAttr(JSON.stringify(['textReminder:' + r.key]))}">Text ${esc(first(r))}</a>` : ''}
             <button type="button" class="ghost" data-paid data-key="${escAttr(r.key)}" data-name="${escAttr(r.name)}">Mark paid</button>
-            <button type="button" class="skip" data-skip data-flag="${escAttr(r.flagId)}">Skip</button></div>
+            <button type="button" class="skip" data-skip data-flags="${escAttr(JSON.stringify([r.flagId]))}">Skip</button></div>
         </div>
         ${alsoLine(r, 'payment reminder')}
-        ${askHtml(r, 'textReminder:' + r.key)}
         <details class="preview" data-flag="${escAttr(r.flagId)}"><summary>Show text message</summary><div class="msg">${esc(r.message)}</div></details>
       </div>`;
   }
@@ -266,21 +265,26 @@
   };
   function renderSentToday() {
     const chicagoDay = v => { const d = new Date(v); return isNaN(d) ? '' : d.toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }); };
-    const rows = Object.entries(SENT_FLAGS)
-      .filter(([, v]) => chicagoDay(v) === TODAY)
-      .map(([flagId, v]) => {
-        const i = flagId.indexOf(':'), type = flagId.slice(0, i), key = flagId.slice(i + 1);
-        const r = ALL_RENTALS.find(x => x.key === key);
-        return { flagId, type, name: r ? r.name : key, at: new Date(v), skipped: !!SKIPPED[flagId] };
-      })
-      .sort((a, b) => b.at - a.at);
+    // Reminders marked in one tap (a combined text) share a timestamp and
+    // read as one row, with one Undo for all of them
+    const byTap = new Map();
+    for (const [flagId, v] of Object.entries(SENT_FLAGS)) {
+      if (chicagoDay(v) !== TODAY) continue;
+      const i = flagId.indexOf(':'), type = flagId.slice(0, i), key = flagId.slice(i + 1);
+      const r = ALL_RENTALS.find(x => x.key === key);
+      const name = r ? r.name : key;
+      const tap = v + '|' + name;
+      if (!byTap.has(tap)) byTap.set(tap, { flagIds: [], types: [], name, at: new Date(v), skipped: !!SKIPPED[flagId] });
+      const row = byTap.get(tap); row.flagIds.push(flagId); row.types.push(type);
+    }
+    const rows = [...byTap.values()].sort((a, b) => b.at - a.at);
     if (!rows.length) { $('sentToday').innerHTML = ''; return; }
     $('sentToday').innerHTML = `<h2 class="sec-h">Sent today<span class="n">${rows.length}</span></h2>
       <div class="rem" style="padding:6px 14px;">${rows.map(x => `
         <div class="sent-row">
-          <div class="what"><b>${esc(x.name)}</b> · ${esc(SENT_LABEL[x.type] || x.type)}${x.skipped ? ' <span class="pill">Skipped</span>' : ''}</div>
+          <div class="what"><b>${esc(x.name)}</b> · ${esc(x.types.map(t => SENT_LABEL[t] || t).join(' + '))}${x.skipped ? ' <span class="pill">Skipped</span>' : ''}</div>
           <span class="t">${x.at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' })}</span>
-          ${x.type === 'emailReminder' && !x.skipped ? '' : `<button type="button" class="undo" data-undo="${escAttr(x.flagId)}">Undo</button>`}
+          ${x.types.includes('emailReminder') && !x.skipped ? '' : `<button type="button" class="undo" data-undo="${escAttr(JSON.stringify(x.flagIds))}">Undo</button>`}
         </div>`).join('')}</div>`;
   }
 
@@ -331,23 +335,31 @@
       body: JSON.stringify({ secret: $('secret').value.trim(), ...body }) });
     if (!resp.ok) throw new Error(await resp.text().catch(() => '') || String(resp.status));
   }
-  async function setFlag(flagId, extra, okMsg) {
-    try { await post('mark-sent', { flagId, ...extra }); if (okMsg) showOk(okMsg); load(); }
+  async function setFlag(flagIds, extra, okMsg) {
+    try { await post('mark-sent', { flagIds, ...extra }); if (okMsg) showOk(okMsg); load(); }
     catch (e) { showErr('Couldn’t save that. ' + (e.message || 'Network error.')); }
   }
+  const flagsOf = el => { try { return JSON.parse(el.dataset.flags || el.dataset.undo); } catch { return []; } };
+  const SAVING = new Set();   // Text taps still saving, so a double tap marks once
   document.querySelector('.card').addEventListener('click', async (e) => {
-    const t = e.target.closest('[data-text],[data-yes],[data-no],[data-skip],[data-paid],[data-undo],[data-unpaid]');
+    const t = e.target.closest('[data-text],[data-skip],[data-paid],[data-undo],[data-unpaid]');
     if (!t) return;
     if (t.matches('[data-text]')) {
-      // Messages opens; the question waits in the card for when you come back
-      OPEN_ASKS.add(t.dataset.flag);
-      setTimeout(() => { const a = document.querySelector(`[data-ask="${CSS.escape(t.dataset.flag)}"]`); if (a) a.hidden = false; }, 400);
+      // Messages opens with the text written out; it counts as sent now,
+      // and the card moves to Sent today once you're back
+      const flags = flagsOf(t), id = flags.join('\n');
+      if (SAVING.has(id)) return;
+      SAVING.add(id);
+      const saved = saveSentFlags(flags);
+      await new Promise(r => setTimeout(r, 400));
+      const ok = await saved;
+      SAVING.delete(id);
+      if (ok) { showOk('Marked sent. If it didn’t go out, tap Undo under Sent today.'); load(); }
+      else showErr('Couldn’t mark that text as sent. Tap Text again, or Skip.');
       return;
     }
-    if (t.matches('[data-no]')) { OPEN_ASKS.delete(t.dataset.flag); t.closest('.ask').hidden = true; return; }
-    if (t.matches('[data-yes]')) { t.disabled = true; OPEN_ASKS.delete(t.dataset.flag); return setFlag(t.dataset.flag, {}); }
-    if (t.matches('[data-skip]')) { t.disabled = true; OPEN_ASKS.delete(t.dataset.flag); return setFlag(t.dataset.flag, { skip: true }, 'Skipped. Undo it under Sent today.'); }
-    if (t.matches('[data-undo]')) { t.disabled = true; return setFlag(t.dataset.undo, { unsent: true }); }
+    if (t.matches('[data-skip]')) { t.disabled = true; return setFlag(flagsOf(t), { skip: true }, 'Skipped. Undo it under Sent today.'); }
+    if (t.matches('[data-undo]')) { t.disabled = true; return setFlag(flagsOf(t), { unsent: true }); }
     if (t.matches('[data-paid]')) {
       t.disabled = true;
       try {
