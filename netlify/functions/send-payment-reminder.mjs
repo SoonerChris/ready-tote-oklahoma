@@ -33,7 +33,7 @@ export default async (request) => {
   }
   if (!body.key) return new Response("Missing key", { status: 400 });
 
-  const store = getStore("rentals");
+  const store = getStore({ name: "rentals", consistency: "strong" });
   const rental = await store.get(body.key, { type: "json" });
   if (!rental) return new Response("Rental not found", { status: 404 });
   if (!rental.email) return new Response("This rental has no email on file", { status: 400 });
@@ -110,7 +110,7 @@ export default async (request) => {
   // Record that the reminder was sent, in the same flags store the SMS
   // reminders use (flagId prefix keeps it distinct: "emailReminder:<key>")
   try {
-    const metaStore = getStore("meta");
+    const metaStore = getStore({ name: "meta", consistency: "strong" });
     let flags = {};
     try { flags = (await metaStore.get("sentFlags", { type: "json" })) || {}; } catch {}
     flags["emailReminder:" + body.key] = new Date().toISOString();

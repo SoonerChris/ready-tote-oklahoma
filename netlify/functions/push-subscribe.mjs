@@ -24,7 +24,7 @@ export default async (request) => {
   try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
   if (!isAdmin(request, body)) return json({ error: "Unauthorized" }, 401);
 
-  const store = getStore("push");
+  const store = getStore({ name: "push", consistency: "strong" });
   const endpoint = body.endpoint || body.subscription?.endpoint;
   try {
     switch (body.action) {

@@ -138,7 +138,7 @@ export function stockAlert(avail) {
 }
 
 export default async () => {
-  const meta = getStore("meta");
+  const meta = getStore({ name: "meta", consistency: "strong" });
   let state = {};
   try { state = (await meta.get("pushAlerts", { type: "json" })) || {}; } catch {}
   const now = nowInOklahoma();
@@ -148,7 +148,7 @@ export default async () => {
 
   let rentals = null;
   try {
-    const store = getStore("rentals");
+    const store = getStore({ name: "rentals", consistency: "strong" });
     const { blobs } = await store.list();
     rentals = [];
     for (const b of blobs) {

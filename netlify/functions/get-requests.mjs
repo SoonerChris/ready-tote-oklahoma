@@ -18,7 +18,7 @@ export default async (request) => {
   }
 
   try {
-    const store = getStore("requests");
+    const store = getStore({ name: "requests", consistency: "strong" });
     const { blobs } = await store.list();
     const fetched = await Promise.all(
       blobs.map(async (b) => {
@@ -40,7 +40,7 @@ export default async (request) => {
     // existed yet); it falls back to the request's own key here so a
     // staff-added photo (uploaded directly from admin-requests.html, keyed
     // to the request itself) is found the same way.
-    const photosStore = getStore("photos");
+    const photosStore = getStore({ name: "photos", consistency: "strong" });
     let photoKeys = new Set();
     try {
       const { blobs } = await photosStore.list();

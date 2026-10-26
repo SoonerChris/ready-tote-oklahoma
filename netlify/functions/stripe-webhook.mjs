@@ -202,7 +202,7 @@ function escapeHtml(str) {
 // no email match is found. If a customer has more than one unpaid invoice,
 // narrows by the paid amount, then falls back to the most recently invoiced.
 async function autoMarkPaid(email, name, amountCents, tosAccepted) {
-  const rentalsStore = getStore("rentals");
+  const rentalsStore = getStore({ name: "rentals", consistency: "strong" });
   const { blobs } = await rentalsStore.list();
   const fetched = await Promise.all(
     blobs.map(async (b) => {
@@ -212,7 +212,7 @@ async function autoMarkPaid(email, name, amountCents, tosAccepted) {
   );
   const rentals = fetched.filter(Boolean);
 
-  const metaStore = getStore("meta");
+  const metaStore = getStore({ name: "meta", consistency: "strong" });
   let paidFlags = {};
   try {
     paidFlags = (await metaStore.get("paidFlags", { type: "json" })) || {};

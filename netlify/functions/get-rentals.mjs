@@ -17,7 +17,7 @@ export default async (request) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const store = getStore("rentals");
+  const store = getStore({ name: "rentals", consistency: "strong" });
   const { blobs } = await store.list();
   const fetched = await Promise.all(
     blobs.map(async (b) => {
@@ -36,7 +36,7 @@ export default async (request) => {
     return new Response(JSON.stringify({ rentals: slim }), { status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
   }
 
-  const metaStore = getStore("meta");
+  const metaStore = getStore({ name: "meta", consistency: "strong" });
   let sentFlags = {};
   try { sentFlags = (await metaStore.get("sentFlags", { type: "json" })) || {}; } catch {}
   let paidFlags = {};
@@ -51,7 +51,7 @@ export default async (request) => {
 
   // Flag which rentals already have a delivery/pickup proof photo, using a
   // single list() call rather than checking each rental individually.
-  const photosStore = getStore("photos");
+  const photosStore = getStore({ name: "photos", consistency: "strong" });
   let photoKeys = new Set();
   try {
     const { blobs } = await photosStore.list();
@@ -71,7 +71,7 @@ export default async (request) => {
 
   // Stock lost or damaged by a customer, logged on Inventory against the rental
   try {
-    const inv = getStore("inventory");
+    const inv = getStore({ name: "inventory", consistency: "strong" });
     const { blobs } = await inv.list();
     const events = (await Promise.all(blobs.map((b) => inv.get(b.key, { type: "json" })))).filter((e) => e && e.rentalKey);
     const byKey = {};

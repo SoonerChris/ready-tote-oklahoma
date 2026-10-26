@@ -24,7 +24,7 @@ export default async (request) => {
   // can only delete those (to fix a mistake), never the rest of the history.
   const staffUser = access === "inventory" ? readSession(request).u : null;
 
-  const store = getStore("inventory");
+  const store = getStore({ name: "inventory", consistency: "strong" });
 
   try {
     switch (body.action) {
