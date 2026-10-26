@@ -7,6 +7,7 @@
 import { getStore } from "@netlify/blobs";
 import { accessLevel } from "./lib-auth.mjs";
 import { linkExtension, unlinkExtension } from "./lib-invoice.mjs";
+import { logTrip, unlogTrip } from "./lib-mileage.mjs";
 
 const EDITABLE_FIELDS = [
   "name", "email", "phone", "package", "price", "duration",
@@ -32,7 +33,7 @@ function normalizeTime(v) {
   return (h % 12 || 12) + ":" + m[2] + " " + (h >= 12 ? "PM" : "AM");
 }
 
-export default async (request) => {
+export default async (request, context) => {
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
@@ -140,6 +141,27 @@ export default async (request) => {
     if (updated.price !== existing.price && updated.lineItems) delete updated.lineItems;
 
     await store.setJSON(body.key, updated);
+
+    // Delivered / Picked up: log the trip's miles on Finance (lib-mileage.mjs);
+    // Undo takes it back. Runs after the answer when the runtime allows it.
+    let trips = null;
+    if (body.mark === "delivered" || body.mark === "pickedUp") {
+      const legs = body.mark === "delivered" ? ["delivery"] : ["pickup"];
+      if (body.undo === true) {
+        trips = Promise.all((body.mark === "delivered" ? ["delivery", "pickup"] : legs).map((leg) => unlogTrip(body.key, leg)));
+      } else {
+        // Picked up without a Delivered tap: the delivery happened too, on
+        // its drop-off day
+        const runs = legs.map((leg) => logTrip(body.key, updated, leg));
+        if (body.mark === "pickedUp" && !existing.deliveredAt && updated.dropoffDate) {
+          runs.unshift(logTrip(body.key, updated, "delivery", new Date(updated.dropoffDate + "T18:00:00Z")));
+        }
+        trips = Promise.all(runs);
+      }
+      if (context && typeof context.waitUntil === "function") context.waitUntil(trips);
+      else await trips;
+    }
+
     return new Response(JSON.stringify({ ok: true, deliveredAt: updated.deliveredAt || null, pickedUpAt: updated.pickedUpAt || null, cleanedAt: updated.cleanedAt || null, cleanedTotes: updated.cleanedTotes || 0 }), { status: 200 });
   } catch (e) {
     console.error("edit-rental failed:", e.message);

@@ -13,10 +13,7 @@
 import { getStore } from "@netlify/blobs";
 import { dropoffAddressOf, pickupAddressOf } from "./lib-reminders.mjs";
 import { isAdmin } from "./lib-auth.mjs";
-import { routeMatrix } from "./lib-routes.mjs";
-
-const DEFAULT_HOME_ADDRESS = "313 SW 166th St, Oklahoma City, OK 73170";
-const METERS_PER_MILE = 1609.344;
+import { roundTripMiles, homeAddress } from "./lib-mileage.mjs";
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
 
@@ -35,16 +32,10 @@ export default async (request) => {
   if (!rental) return json({ error: "Rental not found" }, 404);
   const destination = body.type === "delivery" ? dropoffAddressOf(rental) : pickupAddressOf(rental);
   if (!destination) return json({ error: "No address on file for this rental" }, 400);
-  const origin = String(body.origin || "").trim() || process.env.HOME_ADDRESS || DEFAULT_HOME_ADDRESS;
+  const origin = String(body.origin || "").trim() || homeAddress();
 
   try {
-    // Out and back as two legs, since one-way distance can differ by direction
-    const grid = await routeMatrix(apiKey, [origin, destination], [destination, origin]);
-    const out = grid[0][0], back = grid[1][1];
-    if (!out || !back) {
-      return json({ error: "Couldn't find a driving route to that address. Check it and try again." }, 502);
-    }
-    const miles = Math.round(((out.meters + back.meters) / METERS_PER_MILE) * 10) / 10;
+    const miles = await roundTripMiles(apiKey, origin, destination);
     return json({ miles, destination, origin });
   } catch (e) {
     console.error("trip-miles failed:", e.message);

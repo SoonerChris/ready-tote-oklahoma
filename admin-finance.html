@@ -982,7 +982,7 @@
         <tbody>${mileSorted.map(m => `
           <tr data-row="${escAttr(m.key)}">
             <td class="c-meta" style="white-space:nowrap;">${esc(fmtDay(m.date))}</td>
-            <td class="c-main">${esc(m.purpose)}</td>
+            <td class="c-main">${esc(m.purpose)}${m.auto ? '<span class="minor">Logged automatically when marked done</span>' : ''}</td>
             <td class="r c-amt">${Number(m.miles).toLocaleString('en-US',{maximumFractionDigits:1})} mi</td>
             <td class="r c-hide" style="color:var(--steel);">${rateOn(m.date) ? money(m.miles * rateOn(m.date)) : '—'}</td>
             <td class="c-act">${rowActions(m.key, 'mile')}</td>
