@@ -73,7 +73,7 @@ async function listAll(store) {
 }
 
 export async function computeAvailability(daysAhead = DAYS_AHEAD) {
-  const invEvents = await listAll(getStore("inventory"));
+  const invEvents = await listAll(getStore({ name: "inventory", consistency: "strong" }));
   const net = (list) => list.reduce((t, e) => t + (ADD_TYPES.includes(e.type) ? e.quantity : -e.quantity), 0);
   const totalOwned = net(invEvents.filter((e) => !isDolly(e)));
   // Dollies are only counted once at least one dolly stock change is logged;
@@ -82,8 +82,8 @@ export async function computeAvailability(daysAhead = DAYS_AHEAD) {
   const dolliesTracked = dollyEvents.length > 0;
   const dolliesOwned = dolliesTracked ? net(dollyEvents) : null;
 
-  const rentals = await listAll(getStore("rentals"));
-  const requests = await listAll(getStore("requests"));
+  const rentals = await listAll(getStore({ name: "rentals", consistency: "strong" }));
+  const requests = await listAll(getStore({ name: "requests", consistency: "strong" }));
 
   // Normalize both stores into the same {start, end, totes} shape so the
   // per-day loop below doesn't need to know which store anything came from.

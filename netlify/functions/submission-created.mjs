@@ -63,7 +63,7 @@ export default async (request) => {
   // page, instead of only existing as a Netlify notification email. Never
   // let a storage hiccup block the customer auto-reply below.
   try {
-    const store = getStore("requests");
+    const store = getStore({ name: "requests", consistency: "strong" });
     const emailPart = String(customerEmail).replace(/[^a-zA-Z0-9@.]/g, "");
     const dateKey = data.delivery_date || "no-date";
     const key = `${dateKey}_${emailPart}_${Date.now()}`;

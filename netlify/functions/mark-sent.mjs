@@ -19,7 +19,7 @@ export default async (request) => {
   if (!body.flagId) return new Response("Missing flagId", { status: 400 });
 
   try {
-    const store = getStore("meta");
+    const store = getStore({ name: "meta", consistency: "strong" });
     let flags = {};
     try {
       flags = (await store.get("sentFlags", { type: "json" })) || {};

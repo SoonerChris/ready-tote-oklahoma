@@ -30,7 +30,7 @@ export default async (request) => {
   if (!/^[A-Za-z0-9_-]{16,64}$/.test(t)) return json({ error: "This link isn't valid." }, 404);
 
   try {
-    const store = getStore("requests");
+    const store = getStore({ name: "requests", consistency: "strong" });
     const { blobs } = await store.list();
     let key = null, req = null;
     for (const b of blobs) {

@@ -44,7 +44,7 @@ export default async (request) => {
     return json({ error: "Missing GOOGLE_PLACES_API_KEY env var" }, 500);
   }
 
-  const store = getStore("rentals");
+  const store = getStore({ name: "rentals", consistency: "strong" });
   let rental;
   try { rental = await store.get(key, { type: "json" }); } catch {}
   if (!rental) return json({ error: "Rental not found" }, 404);

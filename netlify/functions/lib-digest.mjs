@@ -21,7 +21,7 @@ const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 // (only on the first try of the day, so a retry doesn't buzz twice).
 // Returns { total, ok } - ok is false when Resend refused the email.
 export async function sendDigest({ notifyPhone = true } = {}) {
-  const store = getStore("rentals");
+  const store = getStore({ name: "rentals", consistency: "strong" });
   const { blobs } = await store.list();
   const rentals = [];
   for (const b of blobs) {
@@ -29,7 +29,7 @@ export async function sendDigest({ notifyPhone = true } = {}) {
     if (r) rentals.push({ key: b.key, ...r });
   }
 
-  const metaStore = getStore("meta");
+  const metaStore = getStore({ name: "meta", consistency: "strong" });
   let sentFlags = {};
   try { sentFlags = (await metaStore.get("sentFlags", { type: "json" })) || {}; } catch {}
   let paidFlags = {};
@@ -195,7 +195,7 @@ export function quietDayEmail(rentals, today) {
 // retried up to MAX_TRIES times.
 const MAX_TRIES = 3;
 export async function runDigestOnce(source) {
-  const meta = getStore("meta");
+  const meta = getStore({ name: "meta", consistency: "strong" });
   const today = todayInOklahoma();
   let last = null;
   try { last = await meta.get("digestRun", { type: "json" }); } catch {}

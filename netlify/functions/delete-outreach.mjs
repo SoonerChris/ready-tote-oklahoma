@@ -17,7 +17,7 @@ export default async (request) => {
   if (!body.key) return new Response("Missing field: key", { status: 400 });
 
   try {
-    const store = getStore("outreach");
+    const store = getStore({ name: "outreach", consistency: "strong" });
     await store.delete(body.key);
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (e) {

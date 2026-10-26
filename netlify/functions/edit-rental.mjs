@@ -49,7 +49,7 @@ export default async (request) => {
   if (!body.key) return new Response("Missing key", { status: 400 });
 
   try {
-    const store = getStore("rentals");
+    const store = getStore({ name: "rentals", consistency: "strong" });
     const existing = await store.get(body.key, { type: "json" });
     if (!existing) return new Response("Rental not found", { status: 404 });
 

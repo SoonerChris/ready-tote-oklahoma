@@ -486,7 +486,8 @@
 
     card.querySelector('[data-ask-yes]').addEventListener('click', () => {
       OPEN_ASKS.delete(r.key);
-      act(r.key, 'send-confirmation', 'Marked awaiting the customer.');
+      // Re-send the confirm-link code with this save so it can't be lost
+      act(r.key, 'send-confirmation', 'Marked awaiting the customer.', r.confirmToken ? { confirmToken: r.confirmToken } : undefined);
     });
     card.querySelector('[data-ask-no]').addEventListener('click', () => {
       OPEN_ASKS.delete(r.key);

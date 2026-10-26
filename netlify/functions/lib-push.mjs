@@ -23,7 +23,7 @@ export const KINDS = ["requests", "payments", "reminders", "confirmed", "soon", 
 export const deviceKey = (endpoint) => "dev_" + createHash("sha256").update(String(endpoint)).digest("hex").slice(0, 32);
 
 export async function vapidKeys() {
-  const meta = getStore("meta");
+  const meta = getStore({ name: "meta", consistency: "strong" });
   let keys = null;
   try { keys = await meta.get("pushKeys", { type: "json" }); } catch {}
   if (keys && keys.publicKey && keys.privateKey) return keys;
@@ -65,7 +65,7 @@ function clockMinutes(t) {
   return h < 24 && min < 60 ? h * 60 + min : null;
 }
 async function readAll(name) {
-  const store = getStore(name);
+  const store = getStore({ name, consistency: "strong" });
   const { blobs } = await store.list();
   return (await Promise.all(blobs.map((b) => store.get(b.key, { type: "json" }).catch(() => null)))).filter(Boolean);
 }
@@ -88,7 +88,7 @@ export async function notify(kind, message) {
   try {
     const badge = await badgeCount();
     if (badge !== null) message = { ...message, badge };
-    const store = getStore("push");
+    const store = getStore({ name: "push", consistency: "strong" });
     const { blobs } = await store.list();
     let sent = 0;
     for (const b of blobs) {

@@ -31,7 +31,7 @@ export default async (request) => {
   if (!apiKey) return json({ error: "Missing GOOGLE_PLACES_API_KEY env var" }, 500);
 
   let rental;
-  try { rental = await getStore("rentals").get(body.key, { type: "json" }); } catch {}
+  try { rental = await getStore({ name: "rentals", consistency: "strong" }).get(body.key, { type: "json" }); } catch {}
   if (!rental) return json({ error: "Rental not found" }, 404);
   const destination = body.type === "delivery" ? dropoffAddressOf(rental) : pickupAddressOf(rental);
   if (!destination) return json({ error: "No address on file for this rental" }, 400);
