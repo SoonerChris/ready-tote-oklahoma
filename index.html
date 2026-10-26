@@ -62,1105 +62,795 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="images/totes-hero-driveway.webp" type="image/webp">
 <style>
+  /* Design rules: ink + tote yellow (sampled from the logo) on warm paper.
+     One type family (Archivo; wide + heavy for headlines), mono only for
+     small labels. Real photos, no stock art. Yellow is a fill with ink
+     text on top, never yellow text on a light background. */
   :root{
-    --ink:#1E1B18;
-    --ink-2:#2B2620;
-    --yellow:#C99A32;
-    --yellow-2:#D9AE4E;
-    --cream:#F5F1E7;
+    --ink:#16140F;
+    --ink-2:#24211B;
+    --tote:#F5B312;
+    --tote-2:#FFC633;
+    --paper:#F7F5F0;
     --white:#FFFFFF;
-    --steel:#6B6259;
-    --crate-red:#B3481D;
-    --line: rgba(255,255,255,0.14);
-    --line-dark: rgba(30,27,24,0.12);
-    --radius: 4px;
-    --radius-lg: 16px;
-    --max: 1120px;
+    --stone:#625C52;
+    --stone-inv:rgba(255,255,255,0.72);
+    --line:rgba(22,20,15,0.12);
+    --line-inv:rgba(255,255,255,0.16);
+    --ok:#1F7A4A;
+    --r:14px;
+    --r-sm:8px;
+    --max:1180px;
+    --gut:20px;
   }
+  @media(min-width:760px){:root{--gut:32px;}}
   *{box-sizing:border-box;}
-  html{scroll-behavior:smooth;}
+  [hidden]{display:none !important;}
+  html{scroll-behavior:smooth; scroll-padding-top:84px;}
   body{
-    margin:0;
-    font-family:'Barlow', sans-serif;
-    color:var(--ink);
-    background:var(--cream);
-    line-height:1.5;
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:'Archivo', system-ui, sans-serif; font-size:1.0625rem; line-height:1.55;
+    -webkit-font-smoothing:antialiased;
   }
-  h1,h2,h3{
-    font-family:'Archivo Black', sans-serif;
-    font-weight:400;
-    letter-spacing:-0.01em;
-    line-height:1.05;
-    margin:0;
+  h1,h2,h3{margin:0; font-weight:800; font-stretch:112%; letter-spacing:-0.02em; line-height:1;}
+  h2{font-size:clamp(2rem, 4.4vw, 3.2rem);}
+  h3{font-size:1.15rem; font-stretch:105%; letter-spacing:-0.01em; line-height:1.2;}
+  p{margin:0;}
+  a{color:inherit;}
+  img{display:block; max-width:100%; height:auto;}
+  button{font:inherit; color:inherit;}
+  .wrap{max-width:var(--max); margin:0 auto; padding:0 var(--gut);}
+  .label{
+    font-family:'JetBrains Mono', monospace; font-size:0.74rem; font-weight:500;
+    letter-spacing:0.14em; text-transform:uppercase;
   }
-  .mono{
-    font-family:'JetBrains Mono', monospace;
-  }
-  .eyebrow{
-    font-family:'JetBrains Mono', monospace;
-    font-size:0.72rem;
-    letter-spacing:0.16em;
-    text-transform:uppercase;
-    color:var(--crate-red);
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    margin-bottom:14px;
-  }
-  .eyebrow::before{
-    content:"";
-    width:18px;
-    height:2px;
-    background:var(--crate-red);
-    display:inline-block;
-  }
-  .wrap{max-width:var(--max); margin:0 auto; padding:0 24px;}
-  a{color:inherit; text-decoration:none;}
-  img,svg{display:block; max-width:100%;}
-  button{font-family:inherit;}
+  .muted{color:var(--stone);}
+  /* Two-ring focus so it shows on both dark and light sections */
+  :focus-visible{outline:3px solid var(--tote); outline-offset:2px; box-shadow:0 0 0 2px var(--ink);}
+  .skip-link{position:absolute; left:-999px; top:8px; z-index:300; background:var(--tote); color:var(--ink); padding:10px 16px; border-radius:var(--r-sm); font-weight:700;}
+  .skip-link:focus{left:8px;}
 
-  /* Skip link */
-  .skip-link{
-    position:absolute; left:-999px; top:0; background:var(--ink); color:var(--white);
-    padding:10px 16px; z-index:200; border-radius:var(--radius);
-  }
-  .skip-link:focus{left:16px; top:16px;}
-
-  /* NAV */
-  header{
-    position:sticky; top:0; z-index:100;
-    background:var(--ink);
-    border-bottom:1px solid var(--line);
-  }
-  .nav-inner{
-    display:flex; align-items:center; justify-content:space-between;
-    padding:8px 24px;
-  }
-  .logo{
-    display:flex; align-items:center; gap:10px;
-    font-family:'Archivo Black', sans-serif;
-    color:var(--white);
-    font-size:1.05rem;
-    letter-spacing:-0.01em;
-  }
-  .logo .tag-icon{
-    width:26px; height:26px; flex:none;
-  }
-  /* Kept compact: the header is sticky, so every pixel here is lost
-     from every screen while scrolling */
-  .logo img{
-    height:64px; width:auto; flex:none;
-  }
-  @media(min-width:900px){.logo img{height:72px;}}
-  .logo.footer-logo img{
-    height:64px;
-  }
-  nav.links{
-    display:flex; gap:28px; align-items:center;
-  }
-  nav.links a{
-    color:var(--white); opacity:0.82; font-size:0.92rem; font-weight:500;
-    transition:opacity 0.15s;
-  }
-  nav.links a:hover, nav.links a:focus-visible{opacity:1; outline:none; text-decoration:underline; text-underline-offset:4px;}
+  /* Buttons */
   .btn{
-    display:inline-flex; align-items:center; gap:8px;
-    font-weight:700; font-size:0.92rem;
-    padding:12px 22px;
-    border-radius:var(--radius);
-    border:2px solid var(--ink);
-    cursor:pointer;
-    transition:transform 0.12s ease, box-shadow 0.12s ease;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    min-height:48px; padding:12px 22px; border-radius:var(--r-sm);
+    font-weight:700; font-size:1rem; text-decoration:none; cursor:pointer;
+    border:2px solid transparent; transition:background-color .15s, color .15s, transform .15s;
   }
-  .btn:focus-visible{outline:3px solid var(--yellow); outline-offset:2px;}
-  .btn-primary{
-    background:var(--yellow); color:var(--ink); border-color:var(--yellow);
-  }
-  .btn-primary:hover{transform:translateY(-2px);}
-  .btn-ghost{
-    background:transparent; color:var(--white); border-color:var(--line);
-  }
-  .btn-ghost:hover{border-color:var(--white);}
-  .nav-cta{display:none;}
-  @media(min-width:900px){.nav-cta{display:inline-flex;}}
-  .mobile-toggle{
-    display:inline-flex; background:none; border:none; color:var(--white);
-    font-size:1.4rem; cursor:pointer; padding:6px;
-  }
-  @media(min-width:900px){.mobile-toggle{display:none;}}
-  nav.links{display:none;}
-  @media(min-width:900px){nav.links{display:flex;}}
-  .mobile-menu{
-    display:none; flex-direction:column; background:var(--ink-2); padding:8px 24px 20px;
-    border-top:1px solid var(--line);
-  }
-  .mobile-menu.open{display:flex;}
-  .mobile-menu a{color:var(--white); padding:10px 0; border-bottom:1px solid var(--line); font-weight:500;}
+  .btn:hover{transform:translateY(-1px);}
+  .btn-tote{background:var(--tote); color:var(--ink);}
+  .btn-tote:hover{background:var(--tote-2);}
+  .btn-ink{background:var(--ink); color:var(--white);}
+  .btn-ink:hover{background:var(--ink-2);}
+  .btn-line{background:transparent; border-color:currentColor;}
+  .btn-line:hover{background:var(--ink); color:var(--white); border-color:var(--ink);}
+  .on-dark .btn-line:hover{background:var(--white); color:var(--ink); border-color:var(--white);}
+  .btn svg{width:18px; height:18px; flex:none;}
 
-  /* HERO */
-  .hero{
-    color:var(--white);
-    padding:64px 0 56px;
-    position:relative;
-    overflow:hidden;
-    background:
-      linear-gradient(180deg, rgba(30,27,24,0.88), rgba(30,27,24,0.82) 55%, rgba(30,27,24,0.93)),
-      url('images/totes-brick-driveway.jpg') center center / cover no-repeat;
+  /* Header */
+  .site-header{position:sticky; top:0; z-index:100; background:var(--ink); color:var(--white); border-bottom:1px solid var(--line-inv);}
+  .nav{display:flex; align-items:center; gap:20px; min-height:72px;}
+  .nav .brand img{height:52px; width:auto;}
+  .nav-links{display:none; gap:26px; margin-left:auto;}
+  .nav-links a{text-decoration:none; font-weight:500; font-size:0.95rem; opacity:.85;}
+  .nav-links a:hover{opacity:1; text-decoration:underline; text-underline-offset:5px;}
+  .nav-actions{display:flex; align-items:center; gap:10px; margin-left:auto;}
+  .nav-actions .btn{min-height:42px; padding:8px 16px; font-size:0.92rem;}
+  .nav-phone{display:none; text-decoration:none; font-weight:600; font-size:0.92rem; opacity:.85;}
+  .nav-phone:hover{opacity:1;}
+  .menu-btn{display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; background:none; border:1px solid var(--line-inv); border-radius:var(--r-sm); cursor:pointer;}
+  .menu-btn svg{width:22px; height:22px;}
+  @media(min-width:980px){
+    .nav-links{display:flex;}
+    .nav-actions{margin-left:28px;}
+    .nav-phone{display:inline;}
+    .menu-btn{display:none;}
   }
-  .hero .wrap{
-    display:block; max-width:860px; margin:0 auto;
-  }
-  .hero-copy{text-align:center;}
-  .hero h1{
-    font-size:clamp(2.3rem, 9vw, 5.4rem);
-    color:var(--white);
-    text-transform:uppercase;
-  }
-  .hero h1 .hl{color:var(--yellow);}
-  .hero p.lede{
-    font-size:1.35rem; color:rgba(255,255,255,0.78); max-width:58ch;
-    margin:24px auto 32px;
-  }
-  .hero p.lede em{
-    font-style:italic; color:rgba(255,255,255,0.5); font-size:0.85em;
-  }
-  .price-tag{
-    display:inline-flex; align-items:center; gap:14px;
-    background:var(--yellow-2); color:var(--ink);
-    padding:16px 24px; border-radius:var(--radius);
-    font-weight:700; margin-bottom:32px;
-    font-size:1.15rem;
-    position:relative;
-  }
-  .price-tag .hole{
-    width:14px; height:14px; border-radius:50%; background:var(--ink);
-    flex:none;
-  }
-  .price-tag .num{font-family:'Archivo Black', sans-serif; font-size:1.55rem;}
-  /* Phones: price on top, details underneath, instead of wrapping mid-phrase */
-  @media(max-width:600px){
-    .price-tag{flex-direction:column; gap:2px; padding:14px 22px; text-align:center;}
-    .price-tag .hole{display:none;}
-    .price-tag .num{font-size:2rem; line-height:1.1;}
-    .price-tag .details{font-size:1rem;}
-  }
-  .cta-row{display:flex; flex-wrap:wrap; gap:14px; justify-content:center;}
-  .trust-band{
-    background:var(--yellow); width:100%; overflow-x:auto;
-  }
-  .trust-row{
-    display:flex; flex-wrap:nowrap; align-items:center; justify-content:center;
-    gap:10px clamp(10px, 3vw, 28px);
-    font-size:clamp(0.72rem, 1.6vw, 0.95rem);
-    font-weight:700;
-    color:var(--ink);
-    white-space:nowrap;
-    padding:14px 20px;
-    width:max-content;
-    min-width:100%;
-    margin:0 auto;
-  }
-  .trust-row span{display:flex; align-items:center; gap:6px;}
-  .trust-row span::before{content:"✓"; color:var(--ink); font-weight:900;}
+  .mobile-menu{display:none; padding:4px var(--gut) 18px; border-top:1px solid var(--line-inv);}
+  .mobile-menu.open{display:block;}
+  .mobile-menu a{display:block; padding:13px 0; border-bottom:1px solid var(--line-inv); text-decoration:none; font-weight:600;}
+  @media(min-width:980px){.mobile-menu, .mobile-menu.open{display:none;}}
 
-  /* SECTION shared */
-  section{padding:88px 0;}
-  #how{padding-top:40px;}
-  #serve{padding-top:40px;}
-  #compare{padding-top:40px;}
-  #reviews{padding-top:40px;}
-  #faq{padding-top:40px;}
-  #pricing{padding-top:40px;}
-  #totes{padding-top:40px;}
-  #area{padding-top:40px;}
-  #about{padding-top:40px;}
-  #book{padding-top:40px;}
-  #contact{padding-top:40px;}
-  .section-head{max-width:640px; margin-bottom:48px;}
-  .section-head h2{font-size:clamp(1.6rem, 3.4vw, 2.3rem);}
-  .section-head p{color:var(--steel); font-size:1.02rem; margin-top:14px;}
-  .section-alt{background:var(--white);}
+  /* Hero */
+  .hero{background:var(--ink); color:var(--white); padding:48px 0 72px; overflow:hidden;}
+  .hero-grid{display:grid; gap:44px; align-items:center;}
+  @media(min-width:900px){.hero-grid{grid-template-columns:1.1fr 0.9fr; gap:64px;} .hero{padding:56px 0 88px;}}
+  .hero .label{color:var(--tote);}
+  /* Sized so each phrase stays on one line at every width */
+  .hero h1{font-size:clamp(2rem, 9.4vw, 4.4rem); font-weight:900; font-stretch:114%; line-height:0.95; text-transform:uppercase; margin:16px 0 22px;}
+  @media(min-width:900px){.hero h1{font-size:clamp(2.8rem, 4.5vw, 4.4rem);}}
+  .hero h1 span{display:block; white-space:nowrap;}
+  .hero h1 .hl{color:var(--tote);}
+  .hero .lede{font-size:1.2rem; color:var(--stone-inv); max-width:40ch;}
+  .hero .lede em{display:block; margin-top:6px; font-size:0.85em; color:rgba(255,255,255,0.55);}
+  .offer{display:flex; align-items:center; gap:16px; margin:24px 0; padding:14px 0; border-top:1px solid var(--line-inv); border-bottom:1px solid var(--line-inv); max-width:480px;}
+  .offer .amt{font-size:3rem; font-weight:900; font-stretch:115%; color:var(--tote); line-height:1;}
+  .offer .what{font-weight:600; line-height:1.35;}
+  .offer .what small{display:block; font-weight:400; color:var(--stone-inv); font-size:0.9rem;}
+  .hero-ctas{display:flex; flex-wrap:wrap; gap:12px;}
+  .hero-rating{margin-top:20px; font-size:0.92rem; color:var(--stone-inv);}
+  .hero-rating .stars{color:var(--tote); letter-spacing:2px; margin-right:6px;}
+  .hero-media{position:relative; max-width:460px; width:100%; justify-self:center;}
+  .hero-media img{border-radius:var(--r); width:100%;}
+  .sticker{
+    position:absolute; left:-14px; bottom:28px; transform:rotate(-4deg);
+    background:var(--tote); color:var(--ink); border-radius:var(--r-sm);
+    padding:12px 16px; font-weight:800; font-stretch:110%; line-height:1.1; font-size:1rem;
+    box-shadow:0 14px 30px -12px rgba(0,0,0,0.6);
+  }
+  .sticker small{display:block; font-weight:500; font-stretch:100%; font-size:0.78rem; margin-top:2px;}
+  @media(max-width:899px){.hero-media{max-width:360px;} .sticker{left:-6px;}}
 
-  /* Steps */
-  .steps{display:grid; gap:28px; position:relative;}
-  @media(min-width:800px){
-    .steps{grid-template-columns:repeat(3,1fr);}
-    .steps::before{
-      content:'';
-      position:absolute; top:45px;
-      left:calc((100% - 56px) / 6);
-      right:calc((100% - 56px) / 6);
-      height:2px; background:var(--yellow); z-index:0;
-    }
-  }
-  .step{
-    display:flex; flex-direction:column; align-items:center; text-align:center;
-    position:relative; z-index:1;
-  }
-  .step .step-num{
-    font-family:'Archivo Black', sans-serif; font-size:1.7rem;
-    color:var(--yellow); background:var(--ink); width:90px; height:90px;
-    border:3px solid var(--yellow);
-    border-radius:50%; display:flex; align-items:center; justify-content:center;
-    margin-bottom:20px; position:relative; z-index:2; flex:none;
-  }
-  .step h3{font-size:1.2rem; margin-bottom:10px;}
-  .step p{color:var(--steel); font-size:0.95rem; margin:0; max-width:28ch;}
+  /* Facts strip */
+  .facts{background:var(--tote); color:var(--ink);}
+  .facts ul{list-style:none; margin:0 auto; padding-top:18px; padding-bottom:18px; display:grid; grid-template-columns:1fr 1fr; gap:14px 20px;}
+  @media(min-width:900px){.facts ul{grid-template-columns:repeat(4,1fr);}}
+  .facts li{display:flex; align-items:center; gap:10px; font-weight:700; font-size:0.95rem; line-height:1.25;}
+  .facts svg{width:24px; height:24px; flex:none;}
 
-  /* Who we serve */
-  .cards-4{display:grid; gap:16px; grid-template-columns:repeat(2,1fr);}
-  @media(min-width:900px){.cards-4{grid-template-columns:repeat(5,1fr);}}
-  /* Two across on phones: an odd last card spans the row instead of sitting alone */
-  @media(max-width:899px){.cards-4 > :last-child:nth-child(odd){grid-column:1 / -1;}}
-  .card-audience{
-    background:var(--white); color:var(--ink); border:2px solid var(--ink);
-    padding:20px 16px; border-radius:var(--radius-lg);
-    display:flex; flex-direction:column; align-items:center; text-align:center;
-  }
-  .card-audience .icon{margin-bottom:12px;}
-  .card-audience .icon svg{width:28px; height:28px; display:block;}
-  .card-audience h3{font-size:0.92rem; margin-bottom:6px;}
-  .card-audience p{font-size:0.8rem; color:var(--steel); margin:0;}
+  /* Sections */
+  section.block{padding:88px 0;}
+  @media(max-width:759px){section.block{padding:64px 0;}}
+  .block.white{background:var(--white);}
+  .block.dark{background:var(--ink); color:var(--white);}
+  .head{max-width:640px; margin-bottom:44px;}
+  .head .label{color:var(--stone); display:block; margin-bottom:14px;}
+  .dark .head .label{color:var(--tote);}
+  .head p{margin-top:16px; font-size:1.1rem; color:var(--stone);}
+  .dark .head p{color:var(--stone-inv);}
 
-  /* Comparison */
-  .compare{
-    display:grid; gap:28px;
-  }
-  @media(min-width:800px){.compare{grid-template-columns:1fr 1fr;}}
-  .compare-col{
-    padding:36px 32px; border-radius:20px; text-align:left;
-  }
-  .compare-col.us{
-    background:rgba(34,160,90,0.07);
-    border:1.5px solid rgba(34,160,90,0.45);
-  }
-  .compare-col.them{
-    background:rgba(200,60,50,0.06);
-    border:1.5px solid rgba(200,60,50,0.35);
-  }
-  .compare-col h3{
-    font-size:1.05rem; margin-bottom:6px; text-transform:uppercase;
-    letter-spacing:0.04em; text-align:center;
-  }
-  .compare-col.us h3{color:#1E8E52;}
-  .compare-col.them h3{color:#C0392B;}
-  .compare-col .price{
-    font-family:'Archivo Black', sans-serif; font-size:1.3rem;
-    margin-bottom:26px; text-align:center; text-transform:uppercase;
-  }
-  .compare-col.us .price{color:var(--yellow);}
-  .compare-col.them .price{color:var(--steel);}
-  .compare-col ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:14px;}
-  .compare-col li{display:flex; gap:12px; font-size:0.95rem; color:var(--ink);}
-  /* Line icons (same style as the rest of the site) instead of emoji,
-     which look different on every phone */
-  .compare-col li::before{content:""; flex:none; width:18px; height:18px; margin-top:2px; background:no-repeat center/contain;}
-  .compare-col.us li::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231E8E52' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M7.5 12.5l3 3 6-6.5'/%3E%3C/svg%3E");}
-  .compare-col.them li::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C0392B' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M9 9l6 6M15 9l-6 6'/%3E%3C/svg%3E");}
+  /* How it works */
+  .how-grid{display:grid; gap:48px; align-items:center;}
+  @media(min-width:900px){.how-grid{grid-template-columns:1fr 0.8fr; gap:72px;}}
+  .steps{list-style:none; margin:0; padding:0; counter-reset:step;}
+  .steps li{display:grid; grid-template-columns:64px 1fr; gap:20px; padding:24px 0; border-top:1px solid var(--line);}
+  .steps li:last-child{border-bottom:1px solid var(--line);}
+  .steps .n{font-size:2.6rem; font-weight:900; font-stretch:115%; line-height:1; color:var(--ink);}
+  .steps .n::after{content:""; display:block; width:28px; height:5px; background:var(--tote); margin-top:8px;}
+  .steps h3{margin-bottom:6px;}
+  .steps p{color:var(--stone);}
+  .how-photo{border-radius:var(--r); width:100%; max-width:440px; justify-self:center;}
 
   /* Pricing */
-  .price-grid{display:grid; gap:24px;}
-  @media(min-width:900px){.price-grid{grid-template-columns:repeat(3,1fr);}}
-  .price-card{
-    background:var(--white); border:1px solid var(--line-dark); border-radius:var(--radius);
-    padding:34px 28px; position:relative; display:flex; flex-direction:column;
-  }
-  .price-card.popular{
-    border:2px solid var(--yellow); box-shadow:0 18px 40px -20px rgba(30,27,24,0.35);
-    transform:translateY(-6px);
-  }
-  .popular-flag{
-    position:absolute; top:-14px; left:28px;
-    background:var(--crate-red); color:var(--white);
-    font-family:'JetBrains Mono', monospace; font-size:0.7rem; letter-spacing:0.08em;
-    padding:6px 12px; border-radius:2px; text-transform:uppercase;
-  }
-  .price-card .plan-name{font-size:0.85rem; color:var(--steel); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;}
-  .price-card .plan-amount{font-family:'Archivo Black', sans-serif; font-size:2.4rem; margin:10px 0 2px;}
-  .price-card .plan-period{color:var(--steel); font-size:0.85rem; margin-bottom:22px;}
-  .price-card ul{list-style:none; margin:0 0 26px; padding:0; display:flex; flex-direction:column; gap:10px; flex:1;}
-  .price-card li{font-size:0.92rem; display:flex; gap:8px;}
-  .price-card li::before{content:"•"; color:var(--yellow-2); font-weight:900;}
-  .price-note{margin-top:22px; font-size:0.9rem; color:var(--steel);}
+  .plans{display:grid; gap:20px; align-items:stretch;}
+  @media(min-width:900px){.plans{grid-template-columns:repeat(3,1fr);}}
+  .plan{position:relative; display:flex; flex-direction:column; padding:32px 28px; border:1.5px solid var(--line); border-radius:var(--r); background:var(--paper);}
+  .plan.featured{background:var(--ink); color:var(--white); border-color:var(--ink);}
+  .plan .flag{position:absolute; top:-13px; left:28px; background:var(--tote); color:var(--ink); padding:5px 10px; border-radius:6px;}
+  .plan .size{color:var(--stone);}
+  .plan.featured .size{color:var(--tote);}
+  .plan .price{font-size:3.4rem; font-weight:900; font-stretch:115%; line-height:1; margin:14px 0 6px;}
+  .plan .per{font-size:0.95rem; color:var(--stone);}
+  .plan.featured .per{color:var(--stone-inv);}
+  .plan .per strong{color:inherit;}
+  .plan.featured .per strong{color:var(--white);}
+  .plan ul{list-style:none; margin:24px 0 28px; padding:0; display:grid; gap:10px; flex:1;}
+  .plan li{display:flex; gap:10px; align-items:flex-start;}
+  .plan li svg{width:20px; height:20px; flex:none; margin-top:2px; color:var(--ok);}
+  .plan.featured li svg{color:var(--tote);}
+  .plan .btn{width:100%;}
+  .plan-notes{display:grid; gap:12px; margin-top:28px; color:var(--stone); font-size:0.95rem;}
+  @media(min-width:900px){.plan-notes{grid-template-columns:repeat(3,1fr); gap:24px;}}
+  .plan-notes strong{color:var(--ink);}
 
-  /* Feature highlight */
-  .feature-grid{display:grid; grid-template-columns:1fr; gap:16px;}
-  @media(min-width:700px){.feature-grid{grid-template-columns:1fr 1fr;}}
-  @media(min-width:1000px){.feature-grid{grid-template-columns:1fr 1fr 1fr;}}
-  .feature-card{
-    background:var(--white); border:1.5px solid var(--line-dark); border-radius:14px;
-    padding:26px 22px; display:flex; flex-direction:column; gap:8px;
-    box-shadow:0 16px 32px -22px rgba(30,27,24,0.35);
+  /* Totes vs boxes */
+  .vs{width:100%; border-collapse:collapse; background:var(--white); border-radius:var(--r); overflow:hidden; border:1.5px solid var(--line);}
+  .vs th, .vs td{padding:16px 20px; text-align:left; vertical-align:top; border-top:1px solid var(--line);}
+  .vs thead th{border-top:0; font-weight:800; font-stretch:108%; font-size:1.05rem;}
+  .vs thead th.us{background:var(--tote);}
+  .vs tbody th{font-weight:600; color:var(--stone); width:22%;}
+  .vs td.us{background:rgba(245,179,18,0.08); font-weight:600;}
+  .vs td.them{color:var(--stone);}
+  .vs .ic{display:inline-block; width:18px; height:18px; vertical-align:-3px; margin-right:8px;}
+  .vs td.us .ic{color:var(--ok);}
+  .vs td.them .ic{color:#B03A2E;}
+  /* Phones: each row becomes a label with the two answers side by side */
+  @media(max-width:700px){
+    .vs, .vs tbody{display:block;}
+    .vs thead{display:block;}
+    .vs tr{display:grid; grid-template-columns:1fr 1fr;}
+    .vs thead th:first-child{display:none;}
+    .vs tbody th{grid-column:1 / -1; width:auto; padding:14px 16px 4px; border-top:1px solid var(--line); background:var(--white);}
+    .vs td{border-top:0; padding:4px 16px 14px; font-size:0.95rem;}
+    .vs thead th{padding:14px 16px;}
   }
-  .feature-card .icon{line-height:1;}
-  .feature-card .icon svg{width:32px; height:32px; display:block;}
-  .feature-card h3{font-family:'Archivo Black', sans-serif; font-size:0.98rem; margin:0; line-height:1.3;}
-  .feature-card p{margin:0; font-size:0.9rem; color:var(--steel); line-height:1.5;}
+  .features{display:grid; gap:16px; margin-top:28px; grid-template-columns:1fr 1fr;}
+  @media(min-width:900px){.features{grid-template-columns:repeat(4,1fr);}}
+  .features div{padding:18px; border-radius:var(--r-sm); background:var(--white); border:1.5px solid var(--line);}
+  .features strong{display:block; font-stretch:105%;}
+  .features span{color:var(--stone); font-size:0.92rem;}
 
-  /* Photo band */
-  .photo-band{position:relative; height:340px; overflow:hidden;}
-  .photo-band img{
-    width:100%; height:100%; object-fit:cover; object-position:center 20%;
-  }
-  .photo-band-overlay{
-    position:absolute; inset:0;
-    background:linear-gradient(0deg, rgba(30,27,24,0.85) 0%, rgba(30,27,24,0.15) 55%, rgba(30,27,24,0.35) 100%);
-    display:flex; align-items:flex-end;
-  }
-  .photo-band-caption{
-    color:var(--white); padding:28px 24px; max-width:var(--max); margin:0 auto; width:100%;
-  }
-  .photo-band-caption .eyebrow{color:var(--yellow-2);}
-  .photo-band-caption .eyebrow::before{background:var(--yellow-2);}
-  .photo-band-caption h3{font-size:1.4rem; color:var(--white);}
+  /* Reviews */
+  .review-summary{margin-top:16px; font-size:1.05rem;}
+  .review-summary .stars{color:var(--tote); letter-spacing:2px; margin-right:6px;}
+  .reviews{display:grid; grid-auto-flow:column; grid-auto-columns:85%; gap:16px; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:8px;}
+  @media(min-width:900px){.reviews{grid-auto-flow:row; grid-template-columns:repeat(3,1fr); overflow:visible;}}
+  .review{scroll-snap-align:start; display:flex; flex-direction:column; gap:14px; padding:26px; border-radius:var(--r); background:var(--paper); border:1.5px solid var(--line);}
+  .review .stars{color:var(--tote); letter-spacing:2px; font-size:1.05rem; -webkit-text-stroke:0.4px var(--ink);}
+  .review .quote{flex:1;}
+  .review .who{display:flex; align-items:center; gap:10px; font-weight:700; font-size:0.95rem;}
+  .review .who img{width:36px; height:36px; border-radius:50%; object-fit:cover;}
+  .review .who span{display:block; font-weight:400; color:var(--stone); font-size:0.85rem;}
+  .attribution{margin-top:16px; font-size:0.85rem; color:var(--stone);}
 
-  .how-photo{
-    display:block; width:100%; max-width:380px; height:auto; margin:40px auto 0;
-    border-radius:18px; box-shadow:0 20px 44px -18px rgba(30,27,24,0.4);
-  }
-  .about-photo{
-    width:100%; max-width:400px; border-radius:18px; height:auto;
-    box-shadow:0 20px 44px -18px rgba(30,27,24,0.4); margin-bottom:20px;
-    display:block;
-  }
-
-  /* About */
-  .about-grid{display:grid; gap:44px; align-items:stretch;}
-  @media(min-width:900px){.about-grid{grid-template-columns:1.1fr 0.9fr;}}
-  .about-copy p{color:var(--steel); font-size:1.02rem; max-width:56ch;}
-  .stat-grid{
-    display:grid; grid-template-columns:repeat(2,1fr);
-    grid-auto-rows:1fr; gap:18px; height:100%;
-  }
-  .stat-card{
-    background:var(--ink); color:var(--white); padding:22px 20px; border-radius:18px;
-    display:flex; flex-direction:column; justify-content:center;
-  }
-  .stat-card .num{color:var(--yellow);}
-  .stat-card .num svg{width:26px; height:26px; display:block;}
-  .stat-card .lbl{font-size:0.82rem; color:rgba(255,255,255,0.7); margin-top:4px;}
-
-  /* Service area */
-  .area-list{
-    display:flex; flex-wrap:wrap; gap:12px; font-family:'JetBrains Mono', monospace;
-    font-size:0.9rem; padding:0; margin:0; list-style:none;
-  }
-  .area-list li{
-    display:flex; gap:8px; align-items:baseline;
-    background:var(--white); border:1.5px solid var(--ink);
-    border-radius:12px; padding:10px 18px;
-  }
-  .area-list li .zip{color:var(--steel);}
-  .map-grid{
-    display:grid; gap:24px;
-  }
-  @media(min-width:900px){.map-grid{grid-template-columns:1fr 1fr;}}
-  .map-title{font-size:1.05rem; margin-bottom:12px;}
-  .delivery-map{
-    height:400px; border-radius:18px;
-    border:2px solid var(--ink); z-index:1;
-  }
-  .map-grid + .area-list{margin-top:32px;}
-
-  /* Form */
-  .form-wrap{
-    background:var(--white); border:1px solid var(--line-dark); border-radius:var(--radius);
-    padding:36px; max-width:640px;
-  }
-  .form-grid{display:grid; gap:18px;}
-  /* Let grid cells shrink below their content width, so long package names
-     in the select can't push Email/Package off-screen on phones. */
-  .form-grid > *{min-width:0;}
-  .form-grid select{max-width:100%;}
-  @media(min-width:640px){.form-grid.two{grid-template-columns:1fr 1fr;}}
-  @media(min-width:640px){.form-grid.three{grid-template-columns:2fr 1fr 1fr;}}
-  label{display:flex; flex-direction:column; gap:6px; font-size:0.88rem; font-weight:600;}
+  /* Booking */
+  .book-grid{display:grid; gap:40px;}
+  @media(min-width:980px){.book-grid{grid-template-columns:0.8fr 1.2fr; gap:64px; align-items:start;}}
+  .next-steps{list-style:none; margin:28px 0; padding:0; display:grid; gap:18px;}
+  .next-steps li{display:grid; grid-template-columns:36px 1fr; gap:14px; color:var(--stone-inv);}
+  .next-steps b{display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; background:var(--tote); color:var(--ink);}
+  .next-steps strong{color:var(--white); display:block;}
+  .book-help{color:var(--stone-inv);}
+  .book-help a{color:var(--white); font-weight:700;}
+  .form-card{background:var(--white); color:var(--ink); border-radius:var(--r); padding:28px;}
+  @media(min-width:760px){.form-card{padding:36px;}}
+  .stepper{display:flex; gap:8px; margin-bottom:24px;}
+  .stepper span{flex:1; padding-top:10px; border-top:4px solid var(--line); color:var(--stone);}
+  .stepper span.on{border-color:var(--tote); color:var(--ink);}
+  fieldset{border:0; margin:0; padding:0; min-width:0;}
+  legend{padding:0; margin-bottom:18px; font-size:1.3rem; font-weight:800; font-stretch:108%;}
+  .fields{display:grid; gap:16px;}
+  .fields > *{min-width:0;}
+  @media(min-width:640px){.fields.two{grid-template-columns:1fr 1fr;}}
+  /* Even spacing between rows, even when the availability note between them is hidden */
+  fieldset > .fields, fieldset > .check{margin-top:16px;}
+  fieldset > legend + .fields{margin-top:0;}
+  label{display:flex; flex-direction:column; gap:6px; font-size:0.92rem; font-weight:600;}
+  label .hint{font-weight:400; color:var(--stone);}
   input, select{
-    font-family:inherit; font-size:0.95rem; padding:11px 12px;
-    border:1px solid var(--line-dark); border-radius:var(--radius); background:var(--cream);
+    font:inherit; font-size:1rem; min-height:48px; padding:10px 12px; max-width:100%;
+    border:1.5px solid var(--line); border-radius:var(--r-sm); background:var(--paper); color:var(--ink);
   }
-  input:focus, select:focus{outline:2px solid var(--yellow); outline-offset:1px;}
+  input:focus, select:focus{border-color:var(--ink);}
+  .check{flex-direction:row; align-items:flex-start; gap:10px; font-weight:400; color:var(--stone);}
+  .check input{min-height:0; width:20px; height:20px; margin:2px 0 0; flex:none; accent-color:var(--ink);}
+  .check strong{color:var(--ink); font-weight:600;}
+  .small-note{font-size:0.85rem; color:var(--stone); margin-top:10px;}
+  .form-actions{display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:24px;}
+  .form-actions .btn-tote{flex:1; min-width:200px;}
+  .link-btn{background:none; border:0; padding:8px 4px; font-weight:600; color:var(--stone); cursor:pointer; text-decoration:underline; text-underline-offset:4px;}
   .hp{position:absolute; left:-9999px;}
-  .form-submit{margin-top:8px;}
-  .form-note{font-size:0.82rem; color:var(--steel); margin-top:14px;}
-  .form-error{margin:12px 0 0; padding:10px 14px; border-radius:10px; background:#FFEDEA; color:#831C1E; font-size:0.9rem; font-weight:600;}
+  .form-error{margin-top:14px; padding:10px 14px; border-radius:var(--r-sm); background:#FFEDEA; color:#831C1E; font-size:0.92rem; font-weight:600;}
   /* Live availability for the chosen dates (never shows stock numbers) */
-  .avail-note{margin:10px 0 0; padding:10px 14px; border-radius:10px; font-size:0.88rem; font-weight:600; line-height:1.45;}
+  .avail-note{margin-top:14px; padding:10px 14px; border-radius:var(--r-sm); font-size:0.92rem; font-weight:600;}
   .avail-note.ok{background:#E3F4E9; color:#14492F;}
   .avail-note.tight{background:#FBF0D6; color:#6B4C0C;}
+  /* With JavaScript the form runs as two steps; without it, both show */
+  .stepped [data-step="2"]{display:none;}
+  .stepped.on-step-2 [data-step="1"]{display:none;}
+  .stepped.on-step-2 [data-step="2"]{display:block;}
+  .stepper{display:none;}
+  .stepped .stepper{display:flex;}
+  .js-only{display:none;}
+  .stepped .js-only{display:inline-flex;}
+  .form-success h3{font-size:1.6rem; margin-bottom:10px;}
 
-  /* Phones: a Reserve bar along the bottom once you're past the hero,
-     hidden while the booking form is on screen. Takes over from the
-     floating "Text us" pill, which it includes. */
+  /* FAQ */
+  .faq-grid{display:grid; gap:32px;}
+  @media(min-width:900px){.faq-grid{grid-template-columns:0.7fr 1.3fr; gap:64px;}}
+  .faq-grid .head{margin-bottom:0;}
+  .faq-side{position:sticky; top:100px; align-self:start;}
+  .faq-side .btn{margin-top:24px;}
+  details{border-top:1px solid var(--line);}
+  details:last-child{border-bottom:1px solid var(--line);}
+  summary{
+    display:flex; justify-content:space-between; align-items:center; gap:16px;
+    padding:20px 0; cursor:pointer; list-style:none; font-weight:700; font-size:1.05rem;
+  }
+  summary::-webkit-details-marker{display:none;}
+  summary:hover{text-decoration:underline; text-underline-offset:4px;}
+  summary .pm{flex:none; width:28px; height:28px; border-radius:50%; background:var(--tote); position:relative;}
+  summary .pm::before, summary .pm::after{content:""; position:absolute; left:8px; right:8px; top:13px; height:2px; background:var(--ink); transition:transform .2s;}
+  summary .pm::after{transform:rotate(90deg);}
+  details[open] summary .pm::after{transform:rotate(0);}
+  details p{padding:0 44px 20px 0; color:var(--stone);}
+
+  /* Area */
+  .maps{display:grid; gap:20px;}
+  @media(min-width:900px){.maps{grid-template-columns:1fr 1fr;}}
+  .maps h3{margin-bottom:12px;}
+  .delivery-map{height:380px; border-radius:var(--r); border:1.5px solid var(--line); background:#E8E4DA; z-index:1;}
+  .towns{list-style:none; margin:28px 0 0; padding:0; display:flex; flex-wrap:wrap; gap:10px;}
+  .towns li{padding:8px 14px; border-radius:999px; background:var(--white); border:1.5px solid var(--line); font-weight:600; font-size:0.95rem;}
+  .towns li span{font-family:'JetBrains Mono', monospace; font-weight:500; color:var(--stone); font-size:0.82rem; margin-left:6px;}
+
+  /* About */
+  .about-grid{display:grid; gap:40px; align-items:center;}
+  @media(min-width:900px){.about-grid{grid-template-columns:0.8fr 1.2fr; gap:72px;}}
+  .about-photo{border-radius:var(--r); width:100%; max-width:420px; justify-self:center;}
+  .about-copy p{color:var(--stone); font-size:1.1rem; max-width:56ch;}
+  .about-copy p + p{margin-top:14px;}
+  .about-copy h2{margin-bottom:22px;}
+  .serve{margin-top:28px;}
+  .serve .label{color:var(--stone); display:block; margin-bottom:12px;}
+  .serve ul{list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:8px;}
+  .serve li{padding:8px 14px; border-radius:999px; background:var(--paper); font-weight:600; font-size:0.95rem;}
+
+  /* Closing CTA */
+  .cta-band{background:var(--tote); color:var(--ink); padding:80px 0;}
+  .cta-band h2{font-size:clamp(2.4rem, 6vw, 4.4rem); font-weight:900; font-stretch:118%; text-transform:uppercase; line-height:0.95;}
+  .cta-band p{font-size:1.15rem; margin:18px 0 28px; max-width:46ch;}
+  .cta-actions{display:flex; flex-wrap:wrap; gap:12px;}
+  .cta-band .btn-line:hover{background:var(--ink); color:var(--tote);}
+
+  /* Footer */
+  footer{background:var(--ink); color:var(--stone-inv); padding:56px 0 32px; font-size:0.95rem;}
+  .foot{display:grid; gap:32px;}
+  @media(min-width:760px){.foot{grid-template-columns:1.2fr 1fr 1fr;}}
+  .foot img{height:72px; width:auto; margin-bottom:14px;}
+  .foot h3{color:var(--white); font-size:0.95rem; margin-bottom:12px;}
+  .foot ul{list-style:none; margin:0; padding:0; display:grid; gap:8px;}
+  .foot a{text-decoration:none;}
+  .foot a:hover{color:var(--white); text-decoration:underline; text-underline-offset:4px;}
+  .social{display:flex; gap:10px; margin-top:16px;}
+  .social a{display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,0.1); color:var(--white);}
+  .social a:hover{background:var(--tote); color:var(--ink);}
+  .social svg{width:18px; height:18px;}
+  .legal{display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; margin-top:40px; padding-top:20px; border-top:1px solid var(--line-inv); font-size:0.85rem;}
+  .legal nav{display:flex; flex-wrap:wrap; gap:16px;}
+
+  /* Phones: Reserve bar along the bottom once past the hero, hidden over the form */
   .mobile-bar{display:none;}
-  @media(max-width:700px){
-    a.float-text{display:none;}
+  @media(max-width:760px){
     .mobile-bar{
       display:flex; gap:10px; position:fixed; left:0; right:0; bottom:0; z-index:95;
       padding:10px 16px calc(10px + env(safe-area-inset-bottom));
       background:var(--ink); box-shadow:0 -8px 24px -12px rgba(0,0,0,0.5);
-      transform:translateY(110%); transition:transform 0.2s ease;
+      transform:translateY(110%); transition:transform .2s ease;
     }
     .mobile-bar.show{transform:none;}
-    .mobile-bar .btn{flex:1; justify-content:center; padding:13px 10px; font-size:0.95rem;}
-    .mobile-bar .btn-ghost{flex:0 0 auto; padding:13px 18px;}
-    footer{padding-bottom:90px;}
+    .mobile-bar .btn-tote{flex:1;}
+    .mobile-bar .btn-line{color:var(--white);}
+    footer{padding-bottom:100px;}
   }
 
-  /* Contact */
-  .contact-row{display:flex; flex-wrap:wrap; gap:18px;}
-  .contact-pill{
-    display:flex; align-items:center; gap:10px;
-    background:var(--ink); color:var(--white); padding:14px 22px; border-radius:var(--radius);
-    font-weight:600;
-  }
-
-  /* Footer */
-  footer{background:var(--ink); color:rgba(255,255,255,0.7); padding:44px 0 26px;}
-  .footer-top{
-    display:flex; flex-wrap:wrap; justify-content:space-between; gap:20px; align-items:center;
-    border-bottom:1px solid var(--line); padding-bottom:26px; margin-bottom:20px;
-  }
-  .footer-links{display:flex; gap:20px; flex-wrap:wrap; font-size:0.86rem;}
-  .footer-links a:hover{color:var(--white);}
-  .footer-bottom{font-size:0.8rem; display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
-
-  /* Testimonials */
-  .testimonial-carousel{position:relative;}
-  .testimonials{
-    display:flex; gap:22px; overflow-x:auto; scroll-snap-type:x mandatory;
-    padding:4px 4px 12px; scroll-behavior:smooth;
-    scrollbar-width:none; -ms-overflow-style:none;
-  }
-  .testimonials::-webkit-scrollbar{display:none;}
-  .testimonial-card{
-    background:var(--white); border:1px solid var(--line-dark); border-radius:18px;
-    padding:26px 24px; display:flex; flex-direction:column;
-    flex:0 0 300px; scroll-snap-align:start;
-  }
-  @media(min-width:800px){.testimonial-card{flex:0 0 calc(33.333% - 15px);}}
-  .testimonial-card .stars{color:var(--yellow); font-size:1.1rem; letter-spacing:2px; margin-bottom:12px;}
-  .testimonial-card .quote{font-size:0.95rem; color:var(--ink); line-height:1.6; flex:1; font-style:italic;}
-  .testimonial-card .attribution{margin-top:16px; font-size:0.82rem; font-weight:700; color:var(--ink);}
-  .testimonial-card .attribution span{font-weight:400; color:var(--steel);}
-  .testimonial-arrow{
-    position:absolute; top:50%; transform:translateY(-50%); z-index:2;
-    width:42px; height:42px; border-radius:50%; border:1px solid var(--line-dark);
-    background:var(--white); color:var(--ink); font-size:1.3rem; line-height:1; cursor:pointer;
-    display:flex; align-items:center; justify-content:center;
-    box-shadow:0 4px 14px rgba(0,0,0,0.1);
-  }
-  .testimonial-arrow:hover{background:var(--cream);}
-  .testimonial-arrow-left{left:-6px;}
-  .testimonial-arrow-right{right:-6px;}
-  @media(max-width:820px){.testimonial-arrow{display:none;}}
-
-  /* FAQ */
-  .faq-list{display:flex; flex-direction:column; gap:0;}
-  .faq-item{border-bottom:1px solid var(--line-dark);}
-  .faq-item:first-child{border-top:1px solid var(--line-dark);}
-  .faq-q{
-    display:flex; justify-content:space-between; align-items:center; gap:14px;
-    padding:18px 0; cursor:pointer; font-weight:700; font-size:1rem;
-    background:none; border:none; width:100%; text-align:left;
-    font-family:inherit; color:var(--ink);
-  }
-  /* Ink + underline on hover: yellow on cream is too faint to read */
-  .faq-q:hover{text-decoration:underline; text-underline-offset:4px;}
-  .faq-q:focus-visible{outline:3px solid var(--yellow); outline-offset:2px;}
-  .faq-q .arrow{font-size:1.2rem; color:var(--yellow); transition:transform 0.2s; flex:none;}
-  .faq-item.open .faq-q .arrow{transform:rotate(45deg);}
-  /* Grid-row animation opens to the answer's real height, so long
-     answers never get cut off (unlike a fixed max-height) */
-  .faq-a{
-    display:grid; grid-template-rows:0fr; overflow:hidden;
-    transition:grid-template-rows 0.3s ease;
-    font-size:0.95rem; color:var(--steel); line-height:1.6;
-  }
-  .faq-item.open .faq-a{grid-template-rows:1fr;}
-  .faq-a-inner{min-height:0; overflow:hidden;}
-  /* Bottom spacing as content (not padding) so it collapses when closed */
-  .faq-a-inner::after{content:""; display:block; height:18px;}
-
-  /* Floating text button */
-  .float-text{
-    position:fixed; bottom:24px; right:24px; z-index:90;
-    display:flex; align-items:center; gap:8px;
-    background:var(--yellow); color:var(--ink);
-    font-weight:700; font-size:0.92rem;
-    padding:14px 22px; border-radius:999px;
-    text-decoration:none;
-    box-shadow:0 8px 28px -8px rgba(30,27,24,0.4);
-    transition:transform 0.15s;
-  }
-  .float-text:hover{transform:translateY(-2px);}
-  .float-text .bubble{display:block;}
-  .float-text .bubble svg{width:20px; height:20px; display:block;}
-  @media(max-width:480px){
-    .float-text{padding:12px 18px; font-size:0.85rem; bottom:16px; right:16px;}
-  }
-
-  /* Social icons */
-  .social-row{display:flex; gap:14px; margin-top:12px;}
-  .social-icon{
-    display:inline-flex; align-items:center; justify-content:center;
-    width:38px; height:38px; border-radius:50%;
-    background:rgba(255,255,255,0.1); color:var(--white);
-    text-decoration:none; font-size:1rem;
-    transition:background 0.15s;
-  }
-  .social-icon:hover{background:var(--yellow); color:var(--ink);}
-
-  .reveal{
-    opacity:0;
-    transform:translateY(28px) scale(0.96);
-    transition:opacity 0.7s ease, transform 0.7s cubic-bezier(0.2,0.7,0.3,1);
-  }
-  .reveal.is-visible{
-    opacity:1;
-    transform:translateY(0) scale(1);
-  }
-
+  /* Gentle entrance, only when JavaScript is running (content never hides without it) */
+  .js .reveal{opacity:0; transform:translateY(20px); transition:opacity .6s ease, transform .6s cubic-bezier(.2,.7,.3,1);}
+  .js .reveal.in{opacity:1; transform:none;}
   @media (prefers-reduced-motion: reduce){
     html{scroll-behavior:auto;}
     *{transition:none !important;}
-    .reveal{opacity:1; transform:none;}
-        }
-      </style>
-      <noscript><style>.reveal{opacity:1 !important; transform:none !important;}</style></noscript>
-      
-      <!-- Meta Pixel Code -->
-      <script>
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', '1815846916267475');
-      fbq('track', 'PageView');
-      </script>
-      <noscript><img height="1" width="1" style="display:none"
-      src="https://www.facebook.com/tr?id=1815846916267475&ev=PageView&noscript=1"
-      /></noscript>
-      <!-- End Meta Pixel Code -->
-      </head>
-      <body>
+    .js .reveal{opacity:1; transform:none;}
+  }
+</style>
+<script>document.documentElement.classList.add('js');</script>
+
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1815846916267475');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1815846916267475&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+</head>
+<body>
 <a href="#main" class="skip-link">Skip to main content</a>
 
-<header>
-  <div class="nav-inner wrap">
-    <a href="#" class="logo">
-      <img src="images/logo.png?v=20260820" alt="Ready Tote Oklahoma logo" width="401" height="420" decoding="async">
+<header class="site-header">
+  <div class="wrap nav">
+    <a href="#" class="brand" aria-label="Ready Tote Oklahoma, back to top">
+      <img src="images/logo.png?v=20260820" alt="Ready Tote Oklahoma" width="401" height="420" decoding="async">
     </a>
-    <nav class="links">
-      <a href="#how">How It Works</a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="#how">How it works</a>
       <a href="#pricing">Pricing</a>
-      <a href="#compare">Why Totes?</a>
-      <a href="#about">About</a>
-      <a href="#area">Area</a>
-      <a href="#contact">Contact</a>
+      <a href="#compare">Why totes</a>
+      <a href="#reviews">Reviews</a>
       <a href="#faq">FAQ</a>
+      <a href="#area">Area</a>
     </nav>
-    <a href="#book" class="btn btn-primary nav-cta">Reserve Now</a>
-    <button class="mobile-toggle" aria-expanded="false" aria-controls="mobileMenu" id="mobileToggle" aria-label="Toggle menu">☰</button>
+    <div class="nav-actions">
+      <a class="nav-phone" href="sms:+15803993202">Text 580.399.3202</a>
+      <a href="#book" class="btn btn-tote">Reserve</a>
+      <button class="menu-btn" id="mobileToggle" aria-expanded="false" aria-controls="mobileMenu" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
   </div>
-  <div class="mobile-menu" id="mobileMenu">
-    <a href="#how">How It Works</a>
+  <nav class="mobile-menu" id="mobileMenu" aria-label="Mobile">
+    <a href="#how">How it works</a>
     <a href="#pricing">Pricing</a>
-    <a href="#compare">Why Totes?</a>
-    <a href="#about">About</a>
-    <a href="#area">Area</a>
-    <a href="#contact">Contact</a>
+    <a href="#compare">Why totes</a>
+    <a href="#reviews">Reviews</a>
     <a href="#faq">FAQ</a>
-    <a href="#book" class="btn btn-primary" style="margin-top:14px; text-align:center; justify-content:center;">Reserve Now</a>
-  </div>
+    <a href="#area">Delivery area</a>
+    <a href="#contact">Contact</a>
+  </nav>
 </header>
 
 <main id="main">
 
   <!-- HERO -->
-  <section class="hero">
-    <div class="wrap">
-      <div class="hero-copy">
-        <h1>We Drop Off.<br>You Pack.<br><span class="hl">We Pick Up.</span></h1>
-        <p class="lede">Heavy-duty moving totes, delivered and picked up across the OKC metro and Ada area. No tape, no broken boxes. <em>Tote rental service, not a moving company.</em></p>
-        <div class="price-tag">
-          <span class="hole"></span>
-          <span class="num">$99</span>
-          <span class="details">20 Totes + Tote Dolly · 2 Weeks · Free Delivery</span>
+  <section class="hero on-dark">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="label">Moving tote rental · OKC metro &amp; Ada</span>
+        <h1><span>We drop off.</span><span>You pack.</span><span class="hl">We pick up.</span></h1>
+        <p class="lede">Heavy-duty moving totes, delivered and picked up across the OKC metro and Ada area. No tape, no broken boxes.<em>Tote rental service, not a moving company.</em></p>
+        <div class="offer">
+          <span class="amt">$99</span>
+          <span class="what">20 totes + a tote dolly for 2 weeks<small>Free drop-off and pickup</small></span>
         </div>
-        <div class="cta-row">
-          <a href="#book" class="btn btn-primary">Reserve in 2 Minutes →</a>
-          <a href="#pricing" class="btn btn-ghost">See All Packages</a>
+        <div class="hero-ctas">
+          <a href="#book" class="btn btn-tote">Reserve in 2 minutes</a>
+          <a href="#pricing" class="btn btn-line">See all packages</a>
         </div>
+        <p class="hero-rating" id="heroRating" hidden></p>
+      </div>
+      <div class="hero-media">
+        <picture>
+          <source srcset="images/totes-hero-driveway.webp" type="image/webp">
+          <img src="images/totes-hero-driveway.jpg" alt="Ten Ready Tote moving totes with yellow lids, stacked in two columns on a driveway" width="1000" height="1019" fetchpriority="high" decoding="async">
+        </picture>
+        <div class="sticker" aria-hidden="true">Cleaned &amp; sanitized<small>after every single rental</small></div>
       </div>
     </div>
   </section>
 
-  <!-- TRUST BAND -->
-  <div class="trust-band">
-    <div class="trust-row">
-      <span>Free delivery & pickup</span>
-      <span>Stackable & durable</span>
-      <span>No tape needed</span>
-      <span>Cleaned & sanitized</span>
-      <span>Family owned</span>
-    </div>
+  <!-- FACTS -->
+  <div class="facts">
+    <ul class="wrap">
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="7" width="13" height="10" rx="1"/><path d="M14 10h4l4 3v4h-8z"/><circle cx="6" cy="19" r="1.8"/><circle cx="17.5" cy="19" r="1.8"/></svg>Free drop-off &amp; pickup</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>No tape, lids snap shut</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 16l9 5 9-5"/></svg>Stacks clean, holds 65 lbs</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>Family owned in Oklahoma</li>
+    </ul>
   </div>
 
   <!-- HOW IT WORKS -->
-  <section id="how" class="reveal">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Simple as 1&ndash;2&ndash;3</span>
-        <h2>How It Works</h2>
-        <p>We drop off the totes and pick them up. You handle the packing and moving.</p>
+  <section id="how" class="block">
+    <div class="wrap how-grid">
+      <div class="reveal">
+        <div class="head">
+          <span class="label">How it works</span>
+          <h2>Three steps. Two weeks. Zero tape.</h2>
+          <p>We handle the totes. You handle the packing and the move.</p>
+        </div>
+        <ol class="steps">
+          <li><span class="n">01</span><div><h3>Reserve online</h3><p>Pick a package and your drop-off date. It takes about two minutes, and nothing is due today.</p></div></li>
+          <li><span class="n">02</span><div><h3>We drop off, you pack</h3><p>Clean totes and a tote dolly arrive at your door. Pack and move at your own pace for two full weeks.</p></div></li>
+          <li><span class="n">03</span><div><h3>We pick up the empties</h3><p>On pickup day we collect the totes. Nothing to return, no trip to make.</p></div></li>
+        </ol>
       </div>
-      <div class="steps">
-        <div class="step">
-          <div class="step-num">01</div>
-          <h3>Reserve</h3>
-          <p>Pick your package and your drop-off date. Takes less than 2 minutes.</p>
-        </div>
-        <div class="step">
-          <div class="step-num">02</div>
-          <h3>Pack & Move</h3>
-          <p>We drop off clean totes and a tote dolly at your door. Pack up and move at your own pace for 2 full weeks.</p>
-        </div>
-        <div class="step">
-          <div class="step-num">03</div>
-          <h3>We Pick Them Up</h3>
-          <p>On your pickup date, we come collect the empty totes. Nothing to return, no trip to make.</p>
-        </div>
-      </div>
-      <img class="how-photo" src="images/totes-delivery-door-web.jpg" alt="Three stacked Ready Tote totes on a dolly, rolled through a front door" width="900" height="900" loading="lazy" decoding="async">
-    </div>
-  </section>
-
-  <!-- WHO WE SERVE -->
-  <section id="serve" class="section-alt reveal">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Perfect For</span>
-        <h2>Who We Serve</h2>
-        <p>Local moves across OKC metro and the Ada area, made simple.</p>
-      </div>
-      <div class="cards-4">
-        <div class="card-audience">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1"/><line x1="9" y1="7" x2="9" y2="7.01"/><line x1="15" y1="7" x2="15" y2="7.01"/><line x1="9" y1="11" x2="9" y2="11.01"/><line x1="15" y1="11" x2="15" y2="11.01"/><line x1="9" y1="15" x2="9" y2="15.01"/><line x1="15" y1="15" x2="15" y2="15.01"/><rect x="10" y="17" width="4" height="4"/></svg></div>
-          <h3>Apartment Movers</h3>
-          <p>Studio and 1-bedroom renters making a local move.</p>
-        </div>
-        <div class="card-audience">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg></div>
-          <h3>Growing Families</h3>
-          <p>Families relocating to a bigger home across the metro.</p>
-        </div>
-        <div class="card-audience">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div>
-          <h3>Busy Households</h3>
-          <p>No time to hunt for boxes or wrestle with tape.</p>
-        </div>
-        <div class="card-audience">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20c8 0 13-5 13-13 0-1 0-2-.2-3C10 5 5 9 5 16c0 1.4.3 2.8 1 4z"/><path d="M6 20c0-5 3-9 8-12"/></svg></div>
-          <h3>Eco-Conscious Movers</h3>
-          <p>Families who want a low-waste alternative to cardboard.</p>
-        </div>
-        <div class="card-audience">
-          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9 12 5l10 4-10 4z"/><path d="M6 11v5c0 1.5 2.5 3 6 3s6-1.5 6-3v-5"/><path d="M22 9v6"/></svg></div>
-          <h3>College Students</h3>
-          <p>Dorm and apartment moves for OU, UCO, and ECU students.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- COMPARISON -->
-  <section id="compare" class="reveal">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">The Smarter Choice</span>
-        <h2>About the Price of Boxes. Way Easier.</h2>
-        <p>Here's how we stack up against a typical store-bought box kit.</p>
-      </div>
-      <div class="compare">
-        <div class="compare-col us">
-          <h3>Ready Tote Oklahoma</h3>
-          <div class="price">$99 — 1 Bedroom</div>
-          <ul>
-            <li>20 heavy-duty reusable totes</li>
-            <li>Tote dolly included</li>
-            <li>No tape needed — lids snap shut</li>
-            <li>Stackable & uniform size</li>
-            <li>Waterproof & crush-proof</li>
-            <li>Dropped off & picked up for free</li>
-            <li>Cleaned & sanitized after every use</li>
-            <li>Reusable hundreds of times — less waste</li>
-            <li>Faster packing & unpacking</li>
-          </ul>
-        </div>
-        <div class="compare-col them">
-          <h3>Store-Bought Box Kit</h3>
-          <div class="price">About $99 — Apartment Kit</div>
-          <ul>
-            <li>Around 30 mismatched cardboard boxes</li>
-            <li>No tote dolly</li>
-            <li>Requires tape, tape, and more tape</li>
-            <li>Different sizes = unstackable mess</li>
-            <li>Wet box? Ruined stuff</li>
-            <li>You have to go pick them up</li>
-            <li>Straight to the landfill after</li>
-            <li>Assembling boxes takes forever</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- TESTIMONIALS -->
-  <section id="reviews" class="reveal">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">What Customers Say</span>
-        <h2>Don't Take Our Word for It</h2>
-        <p id="reviewSummary"></p>
-      </div>
-      <div class="testimonial-carousel">
-        <button type="button" class="testimonial-arrow testimonial-arrow-left" id="reviewsPrev" aria-label="Previous reviews">&#8249;</button>
-        <div class="testimonials" id="testimonialCards">
-          <!-- Fallback cards shown until Google reviews load (or if API isn't configured) -->
-          <div class="testimonial-card">
-            <div class="stars">★★★★★</div>
-            <div class="quote">"Chris and his team made this such a great experience! They were always quick to respond whenever I had a question, and the whole process was so easy. Delivery and pickup were both super convenient, and the totes were clean, sturdy, and made moving way less stressful. I would definitely use them again and recommend them to anyone who’s moving!"</div>
-            <div class="attribution">Alli B. <span>· Moore, OK</span></div>
-          </div>
-          <div class="testimonial-card">
-            <div class="stars">★★★★★</div>
-            <div class="quote">"Great idea & great owners. We used Ready Tote OK to move stuff from Moore to OKC and it was so convenient for us and saved the hassle of dealing with cardboard boxes. The totes protected all of our things and were really easy to pack and unpack."</div>
-            <div class="attribution">Lauren K. <span>· Oklahoma City, OK</span></div>
-          </div>
-          <div class="testimonial-card">
-            <div class="stars">★★★★★</div>
-            <div class="quote">"Great concept, worked with us on exactly how many totes we needed and the time frame we needed them for, saved us time and money. Will definitely use and recommend to anyone looking to move."</div>
-            <div class="attribution">Chuck M. <span>· Moore, OK</span></div>
-          </div>
-        </div>
-        <button type="button" class="testimonial-arrow testimonial-arrow-right" id="reviewsNext" aria-label="Next reviews">&#8250;</button>
-      </div>
-      <p id="googleAttribution" style="display:none; text-align:center; margin-top:14px; font-size:0.75rem; color:var(--steel);">Reviews from Google</p>
+      <picture>
+        <source srcset="images/totes-door-dolly.webp" type="image/webp">
+        <img class="how-photo reveal" src="images/totes-door-dolly.jpg" alt="Three stacked Ready Tote totes on a dolly, rolled through a front door" width="800" height="800" loading="lazy" decoding="async">
+      </picture>
     </div>
   </section>
 
   <!-- PRICING -->
-  <section id="pricing" class="section-alt reveal">
+  <section id="pricing" class="block white">
     <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Packages</span>
-        <h2>Choose Your Pack Size</h2>
-        <p>Every package includes a tote dolly, free drop-off, and free pickup across the service area.</p>
+      <div class="head reveal">
+        <span class="label">Packages</span>
+        <h2>Pick your pack size.</h2>
+        <p>Every package includes tote dollies, free drop-off and free pickup for two full weeks.</p>
       </div>
-      <div class="price-grid">
-        <div class="price-card">
-          <div class="plan-name">1 Bedroom</div>
-          <div class="plan-amount">$99</div>
-          <div class="plan-period">for 2 weeks</div>
+      <div class="plans reveal">
+        <div class="plan">
+          <span class="label size">1 bedroom</span>
+          <div class="price">$99</div>
+          <div class="per">2 weeks · <strong>$4.95 per tote</strong></div>
           <ul>
-            <li>20 clean, durable totes</li>
-            <li>1 tote dolly included</li>
-            <li>Delivery and pickup</li>
-            <li>Cleaned & sanitized after every use</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>20 clean, heavy-duty totes</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>1 tote dolly</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Free drop-off and pickup</li>
           </ul>
-          <a href="#book" class="btn btn-primary" data-pkg="1 Bedroom — 20 Totes + Dolly — $99">Reserve — $99</a>
+          <a href="#book" class="btn btn-line" data-pkg="1 Bedroom — 20 Totes + Dolly — $99">Reserve 20 totes</a>
         </div>
-        <div class="price-card popular">
-          <div class="popular-flag">Most Popular</div>
-          <div class="plan-name">2–3 Bedrooms</div>
-          <div class="plan-amount">$169</div>
-          <div class="plan-period">for 2 weeks</div>
+        <div class="plan featured on-dark">
+          <span class="label flag">Most popular</span>
+          <span class="label size">2–3 bedrooms</span>
+          <div class="price">$169</div>
+          <div class="per">2 weeks · <strong>$4.23 per tote</strong></div>
           <ul>
-            <li>40 clean, durable totes</li>
-            <li>2 tote dollies included</li>
-            <li>Delivery and pickup</li>
-            <li>Cleaned & sanitized after every use</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>40 clean, heavy-duty totes</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>2 tote dollies</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Free drop-off and pickup</li>
           </ul>
-          <a href="#book" class="btn btn-primary" data-pkg="2–3 Bedrooms — 40 Totes + 2 Dollies — $169">Reserve — $169</a>
+          <a href="#book" class="btn btn-tote" data-pkg="2–3 Bedrooms — 40 Totes + 2 Dollies — $169">Reserve 40 totes</a>
         </div>
-        <div class="price-card">
-          <div class="plan-name">4+ Bedrooms</div>
-          <div class="plan-amount">$219</div>
-          <div class="plan-period">for 2 weeks</div>
+        <div class="plan">
+          <span class="label size">4+ bedrooms</span>
+          <div class="price">$219</div>
+          <div class="per">2 weeks · <strong>$3.65 per tote</strong></div>
           <ul>
-            <li>60 clean, durable totes</li>
-            <li>3 tote dollies included</li>
-            <li>Delivery and pickup</li>
-            <li>Cleaned & sanitized after every use</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>60 clean, heavy-duty totes</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>3 tote dollies</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Free drop-off and pickup</li>
           </ul>
-          <a href="#book" class="btn btn-primary" data-pkg="4+ Bedrooms — 60 Totes + 3 Dollies — $219">Reserve — $219</a>
+          <a href="#book" class="btn btn-line" data-pkg="4+ Bedrooms — 60 Totes + 3 Dollies — $219">Reserve 60 totes</a>
         </div>
       </div>
-      <p class="price-note">Need extra time or extra totes? <a href="#contact" style="text-decoration:underline;">Message us</a> for custom bundles.</p>
+      <div class="plan-notes">
+        <p><strong>Military families save 15%.</strong> Active duty, veterans and immediate family.</p>
+        <p><strong>Need more time or totes?</strong> <a href="sms:+15803993202">Text us</a> for an extension or a custom bundle.</p>
+        <p><strong>Rush delivery.</strong> Within 24 hours for a $25 expedite fee, when we have room.</p>
+      </div>
     </div>
   </section>
 
-  <!-- BOOKING FORM -->
-  <section id="book" class="reveal">
+  <!-- TOTES VS BOXES -->
+  <section id="compare" class="block">
     <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Reserve Your Totes</span>
-        <h2>Book Your Totes</h2>
-        <p>Tell us about your move. We'll text you to confirm your dates, then email your invoice. No commitment yet.</p>
+      <div class="head reveal">
+        <span class="label">Why totes</span>
+        <h2>About the price of boxes. Way less hassle.</h2>
+        <p>How our 1-bedroom package stacks up against a typical store-bought box kit.</p>
       </div>
-      <form
-        class="form-wrap"
-        id="bookingForm"
-        name="booking"
-        method="POST"
-        data-netlify="true"
-        netlify-honeypot="hp_field"
-      >
-        <input type="hidden" name="form-name" value="booking">
-        <input class="hp" type="text" name="hp_field" tabindex="-1" autocomplete="new-password" aria-hidden="true">
-        <div class="form-grid two">
-          <label>Full Name*
-            <input type="text" name="name" autocomplete="name" required>
-          </label>
-          <label>Phone Number*
-            <input type="tel" name="phone" autocomplete="tel" required>
-          </label>
+      <table class="vs reveal">
+        <thead>
+          <tr><th scope="col"><span class="label">Compare</span></th><th scope="col" class="us">Ready Tote</th><th scope="col">Box kit</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Price</th><td class="us">$99 for 2 weeks</td><td class="them">About $99, yours to keep</td></tr>
+          <tr><th scope="row">What you get</th><td class="us">20 matching totes + a dolly</td><td class="them">Around 30 mismatched boxes, no dolly</td></tr>
+          <tr><th scope="row">Getting them</th><td class="us"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Dropped off and picked up free</td><td class="them"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>You drive to the store</td></tr>
+          <tr><th scope="row">Packing</th><td class="us"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>No assembly, no tape</td><td class="them"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>Fold, tape, repeat</td></tr>
+          <tr><th scope="row">Rain &amp; weight</th><td class="us"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Waterproof, crush-proof, stack clean</td><td class="them"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>Wet box, ruined stuff</td></tr>
+          <tr><th scope="row">Afterward</th><td class="us"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>We take them back and clean them</td><td class="them"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>Breaking down a pile for the landfill</td></tr>
+        </tbody>
+      </table>
+      <div class="features reveal">
+        <div><strong>Snap-tight lids</strong><span>No tape needed, ever.</span></div>
+        <div><strong>Recessed stacking lid</strong><span>Stacks clean, stays put.</span></div>
+        <div><strong>Reinforced build</strong><span>Holds up to 65 lbs.</span></div>
+        <div><strong>Reused, not landfilled</strong><span>Hundreds of trips per tote.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REVIEWS -->
+  <section id="reviews" class="block white">
+    <div class="wrap">
+      <div class="head reveal">
+        <span class="label">Reviews</span>
+        <h2>Neighbors who moved with us.</h2>
+        <p class="review-summary" id="reviewSummary" hidden></p>
+      </div>
+      <div class="reviews" id="testimonialCards">
+        <!-- Fallback cards shown until Google reviews load (or if the API isn't configured) -->
+        <figure class="review" style="margin:0;">
+          <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
+          <blockquote class="quote" style="margin:0;">“Chris and his team made this such a great experience! They were always quick to respond whenever I had a question, and the whole process was so easy. Delivery and pickup were both super convenient, and the totes were clean, sturdy, and made moving way less stressful.”</blockquote>
+          <figcaption class="who"><div>Alli B.<span>Moore, OK</span></div></figcaption>
+        </figure>
+        <figure class="review" style="margin:0;">
+          <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
+          <blockquote class="quote" style="margin:0;">“Great idea &amp; great owners. We used Ready Tote OK to move stuff from Moore to OKC and it was so convenient for us and saved the hassle of dealing with cardboard boxes. The totes protected all of our things and were really easy to pack and unpack.”</blockquote>
+          <figcaption class="who"><div>Lauren K.<span>Oklahoma City, OK</span></div></figcaption>
+        </figure>
+        <figure class="review" style="margin:0;">
+          <div class="stars" aria-label="5 out of 5 stars">★★★★★</div>
+          <blockquote class="quote" style="margin:0;">“Great concept, worked with us on exactly how many totes we needed and the time frame we needed them for, saved us time and money. Will definitely use and recommend to anyone looking to move.”</blockquote>
+          <figcaption class="who"><div>Chuck M.<span>Moore, OK</span></div></figcaption>
+        </figure>
+      </div>
+      <p class="attribution" id="googleAttribution" hidden>Reviews from Google</p>
+    </div>
+  </section>
+
+  <!-- BOOKING -->
+  <section id="book" class="block dark on-dark">
+    <div class="wrap book-grid">
+      <div>
+        <div class="head" style="margin-bottom:0;">
+          <span class="label">Reserve your totes</span>
+          <h2>Book in two minutes.</h2>
+          <p>No payment today. Tell us about your move and we'll take it from there.</p>
         </div>
-        <div class="form-grid two" style="margin-top:18px;">
-          <label>Email Address*
-            <input type="email" name="email" autocomplete="email" required>
-          </label>
-          <label>Rental Package*
-            <select name="package" required>
-              <option value="">Choose a package...</option>
-              <option>1 Bedroom — 20 Totes + Dolly — $99</option>
-              <option>2–3 Bedrooms — 40 Totes + 2 Dollies — $169</option>
-              <option>4+ Bedrooms — 60 Totes + 3 Dollies — $219</option>
-              <option>Not sure yet — let's discuss</option>
-            </select>
-          </label>
+        <ol class="next-steps">
+          <li><b>1</b><div><strong>We text to confirm</strong>From 580.399.3202, usually the same day.</div></li>
+          <li><b>2</b><div><strong>We email your invoice</strong>Pay online once your dates are set.</div></li>
+          <li><b>3</b><div><strong>Totes show up at your door</strong>Clean, stacked and ready to pack.</div></li>
+        </ol>
+        <p class="book-help">Questions first? <a href="sms:+15803993202">Text</a> or <a href="tel:+15803993202">call 580.399.3202</a>.</p>
+      </div>
+
+      <div>
+        <form class="form-card" id="bookingForm" name="booking" method="POST" data-netlify="true" netlify-honeypot="hp_field">
+          <input type="hidden" name="form-name" value="booking">
+          <input class="hp" type="text" name="hp_field" tabindex="-1" autocomplete="new-password" aria-hidden="true">
+          <div class="stepper label" aria-hidden="true"><span class="on" id="stepTab1">1 · Your move</span><span id="stepTab2">2 · Your details</span></div>
+
+          <fieldset data-step="1">
+            <legend>Your move</legend>
+            <div class="fields">
+              <label>Rental package*
+                <select name="package" required>
+                  <option value="">Choose a package...</option>
+                  <option>1 Bedroom — 20 Totes + Dolly — $99</option>
+                  <option>2–3 Bedrooms — 40 Totes + 2 Dollies — $169</option>
+                  <option>4+ Bedrooms — 60 Totes + 3 Dollies — $219</option>
+                  <option>Not sure yet — let's discuss</option>
+                </select>
+              </label>
+            </div>
+            <div class="fields two">
+              <label>Drop-off date*
+                <input type="date" name="delivery_date" id="deliveryDate" required>
+              </label>
+              <label>Pickup date* <span class="hint">Set 2 weeks out, change anytime</span>
+                <input type="date" name="pickup_date" id="pickupDate" required>
+              </label>
+            </div>
+            <p class="avail-note" id="availNote" role="status" hidden></p>
+            <div class="fields two">
+              <label>Drop-off window
+                <select name="delivery_window">
+                  <option value="No preference">No preference</option>
+                  <option>Morning (8 AM – 12 PM)</option>
+                  <option>Afternoon (12 – 5 PM)</option>
+                  <option>Evening (5 – 8 PM)</option>
+                </select>
+              </label>
+              <label>Pickup window
+                <select name="pickup_window">
+                  <option value="No preference">No preference</option>
+                  <option>Morning (8 AM – 12 PM)</option>
+                  <option>Afternoon (12 – 5 PM)</option>
+                  <option>Evening (5 – 8 PM)</option>
+                </select>
+              </label>
+            </div>
+            <p class="small-note">Need it within 24 hours? A $25 expedite fee applies. We'll confirm the total before invoicing.</p>
+            <div class="form-actions js-only">
+              <button type="button" class="btn btn-tote" id="toStep2">Continue</button>
+            </div>
+          </fieldset>
+
+          <fieldset data-step="2">
+            <legend>Your details</legend>
+            <div class="fields two">
+              <label>Full name*
+                <input type="text" name="name" autocomplete="name" required>
+              </label>
+              <label>Phone number*
+                <input type="tel" name="phone" autocomplete="tel" required>
+              </label>
+            </div>
+            <div class="fields">
+              <label>Email address*
+                <input type="email" name="email" autocomplete="email" required>
+              </label>
+            </div>
+            <label class="check">
+              <input type="checkbox" name="self_pickup" id="selfPickup" value="true">
+              <span>I'll pick up and return the totes myself (no delivery needed)</span>
+            </label>
+            <div class="fields" id="addressRow">
+              <label>Delivery address*
+                <input type="text" name="delivery_address" id="deliveryAddress" autocomplete="street-address" placeholder="Street address, city, zip" required>
+              </label>
+            </div>
+            <div class="fields">
+              <label>Promo code <span class="hint">Optional, from a partner</span>
+                <input type="text" name="promo_code" maxlength="40" autocomplete="off">
+              </label>
+            </div>
+            <label class="check">
+              <input type="checkbox" name="is_military" value="true">
+              <span><strong>Military family? Save 15%.</strong> Active duty, veteran or immediate family. We'll ask for a photo of your military ID.</span>
+            </label>
+            <div class="form-actions">
+              <button type="button" class="link-btn js-only" id="backStep1">Back</button>
+              <button type="submit" class="btn btn-tote form-submit">Request booking</button>
+            </div>
+            <p class="small-note">No payment due now. Check your email for a copy, then watch for a text from 580.399.3202 to confirm your dates.</p>
+          </fieldset>
+        </form>
+        <div class="form-card form-success" id="formSuccess" role="status" tabindex="-1" hidden>
+          <h3>Thanks, request received!</h3>
+          <p class="muted">Check your email for a copy. We'll text you from <strong>580.399.3202</strong> to confirm your dates, then send your invoice.</p>
         </div>
-        <div class="form-grid two" style="margin-top:18px;">
-          <label>Estimated Delivery Date*
-            <input type="date" name="delivery_date" id="deliveryDate" required>
-          </label>
-          <label>Estimated Pickup Date* <span style="font-weight:400; color:var(--steel);">(auto-set 2 weeks out, editable)</span>
-            <input type="date" name="pickup_date" id="pickupDate" required>
-          </label>
-        </div>
-        <p class="avail-note" id="availNote" role="status" hidden></p>
-        <p style="color:var(--steel); font-size:0.8rem; margin:8px 0 0;">Need delivery in under 24 hours? A $25 expedite fee applies, we'll confirm the total before sending your invoice.</p>
-        <div class="form-grid two" style="margin-top:18px;">
-          <label>Preferred Delivery Window
-            <select name="delivery_window">
-              <option value="No preference">No preference</option>
-              <option>Morning (8 AM – 12 PM)</option>
-              <option>Afternoon (12 – 5 PM)</option>
-              <option>Evening (5 – 8 PM)</option>
-            </select>
-          </label>
-          <label>Preferred Pickup Window
-            <select name="pickup_window">
-              <option value="No preference">No preference</option>
-              <option>Morning (8 AM – 12 PM)</option>
-              <option>Afternoon (12 – 5 PM)</option>
-              <option>Evening (5 – 8 PM)</option>
-            </select>
-          </label>
-        </div>
-        <label style="flex-direction:row; align-items:center; gap:8px; font-weight:400; margin-top:18px; font-size:0.88rem; color:var(--steel);">
-          <input type="checkbox" name="self_pickup" id="selfPickup" value="true" style="width:auto;">
-          <span>I'll pick up and return the totes myself (no delivery needed)</span>
-        </label>
-        <div class="form-grid" style="margin-top:18px;" id="addressRow">
-          <label>Delivery Address*
-            <input type="text" name="delivery_address" id="deliveryAddress" placeholder="Street address, city, state, zip" required>
-          </label>
-        </div>
-        <div class="form-grid" style="margin-top:18px;">
-          <label>Promo code (optional)
-            <input type="text" name="promo_code" maxlength="40" autocomplete="off" placeholder="From a partner, if you have one">
-          </label>
-        </div>
-        <label style="flex-direction:row; align-items:center; gap:8px; font-weight:400; margin-top:18px; font-size:0.88rem; color:var(--steel);">
-          <input type="checkbox" name="is_military" value="true" style="width:auto;">
-          <span>Military? Check here for 15% off (active duty, veteran or immediate family). We'll ask for a photo of your military ID.</span>
-        </label>
-        <button type="submit" class="btn btn-primary form-submit">Request Booking</button>
-        <p class="form-note">No payment due now. Check your email for a copy, then watch for a text from 580.399.3202 to confirm your dates.</p>
-      </form>
-      <div class="form-wrap form-success" id="formSuccess" style="display:none;" role="status" tabindex="-1">
-        <h3 style="margin-bottom:10px;">Thanks, request received!</h3>
-        <p style="color:var(--steel); margin:0;">Check your email for a copy. We'll text you from <strong>580.399.3202</strong> to confirm your dates, then send your invoice.</p>
       </div>
     </div>
   </section>
 
   <!-- FAQ -->
-  <section id="faq" class="reveal">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Common Questions</span>
-        <h2>Frequently Asked Questions</h2>
+  <section id="faq" class="block white">
+    <div class="wrap faq-grid">
+      <div class="faq-side head">
+        <span class="label">FAQ</span>
+        <h2>Good questions.</h2>
+        <p>Don't see yours? Text us, we answer fast.</p>
+        <a class="btn btn-line" href="sms:+15803993202">Text 580.399.3202</a>
       </div>
-      <div class="faq-list">
-        <div class="faq-item">
-          <button class="faq-q">How many totes do I need? <span class="arrow">+</span></button>
-          <div class="faq-a"><div class="faq-a-inner">A rough guide: 20 totes covers a 1-bedroom apartment, 40 covers a 2–3 bedroom home, and 60 covers 4+ bedrooms. When in doubt, go one size up. If you run short mid-move, call us and we'll work something out.</div></div>
-        </div>
-        <div class="faq-item">
-          <button class="faq-q">Are you a moving company? <span class="arrow">+</span></button>
-          <div class="faq-a"><div class="faq-a-inner">No. We're a tote rental service. We deliver clean totes and a dolly to your door and pick them up when you're done. You handle the packing and moving yourself (or hire movers separately).</div></div>
-        </div>
-        <div class="faq-item">
-          <button class="faq-q">What if I need the totes longer than 2 weeks? <span class="arrow">+</span></button>
-          <div class="faq-a"><div class="faq-a-inner">No problem. Contact us before your scheduled pickup and we'll arrange an extension for an additional fee. Just don't wait until after the pickup date, let us know ahead of time.</div></div>
-        </div>
-        <div class="faq-item">
-          <button class="faq-q">What can I put in the totes? <span class="arrow">+</span></button>
-          <div class="faq-a"><div class="faq-a-inner">Normal household and office items. Each tote holds up to 65 lbs. Don't use them for hazardous materials, chemicals, liquids that can spill, perishable food, or anything illegal. Use padding for fragile items.</div></div>
-        </div>
-        <div class="faq-item">
-          <button class="faq-q">What happens if a tote is lost or damaged? <span class="arrow">+</span></button>
-          <div class="faq-a"><div class="faq-a-inner">Normal wear is expected and fine. Lost, stolen, or damaged-beyond-use totes are charged at a reasonable replacement cost. We'll communicate that cost upfront if it ever comes up.</div></div>
-        </div>
-        <div class="faq-item">
-          <button class="faq-q">Can I cancel or reschedule? <span class="arrow">+</span></button>
-          <div class="faq-a"><div class="faq-a-inner">Yes. Cancel or reschedule at no charge up to 48 hours before your scheduled delivery. Within 48 hours, a fee may apply. Just call or text us.</div></div>
-        </div>
-        <div class="faq-item">
-          <button class="faq-q">Do you deliver to my area? <span class="arrow">+</span></button>
-          <div class="faq-a"><div class="faq-a-inner">We offer free delivery across the OKC metro (30-mile radius) and the Ada area (15-mile radius). Check the maps on our delivery area section, or text us your zip code and we'll tell you right away.</div></div>
-        </div>
-        <div class="faq-item">
-          <button class="faq-q">Can I pick up the totes myself? <span class="arrow">+</span></button>
-          <div class="faq-a"><div class="faq-a-inner">Yes! If you prefer to pick up and return the totes yourself, we offer that option. Just let us know when you book.</div></div>
-        </div>
-        <div class="faq-item">
-          <button class="faq-q">Can I get same-day or rush delivery? <span class="arrow">+</span></button>
-          <div class="faq-a"><div class="faq-a-inner">Yes, subject to availability. Requests within 24 hours of delivery include a $25 expedite fee, we'll confirm the total before invoicing.</div></div>
-        </div>
+      <div class="reveal">
+        <details><summary>How many totes do I need? <span class="pm" aria-hidden="true"></span></summary><p>A rough guide: 20 totes covers a 1-bedroom apartment, 40 covers a 2–3 bedroom home, and 60 covers 4+ bedrooms. When in doubt, go one size up. If you run short mid-move, call us and we'll work something out.</p></details>
+        <details><summary>Are you a moving company? <span class="pm" aria-hidden="true"></span></summary><p>No. We're a tote rental service. We deliver clean totes and a dolly to your door and pick them up when you're done. You handle the packing and moving yourself (or hire movers separately).</p></details>
+        <details><summary>What if I need the totes longer than 2 weeks? <span class="pm" aria-hidden="true"></span></summary><p>No problem. Contact us before your scheduled pickup and we'll arrange an extension for an additional fee. Just let us know ahead of time, not after the pickup date.</p></details>
+        <details><summary>What can I put in the totes? <span class="pm" aria-hidden="true"></span></summary><p>Normal household and office items. Each tote holds up to 65 lbs. Don't use them for hazardous materials, chemicals, liquids that can spill, perishable food, or anything illegal. Use padding for fragile items.</p></details>
+        <details><summary>What happens if a tote is lost or damaged? <span class="pm" aria-hidden="true"></span></summary><p>Normal wear is expected and fine. Lost, stolen, or damaged-beyond-use totes are charged at a reasonable replacement cost. We'll communicate that cost upfront if it ever comes up.</p></details>
+        <details><summary>Can I cancel or reschedule? <span class="pm" aria-hidden="true"></span></summary><p>Yes. Cancel or reschedule at no charge up to 48 hours before your scheduled delivery. Within 48 hours, a fee may apply. Just call or text us.</p></details>
+        <details><summary>Do you deliver to my area? <span class="pm" aria-hidden="true"></span></summary><p>We offer free delivery across the OKC metro (30-mile radius) and the Ada area (15-mile radius). Check the maps below, or text us your zip code and we'll tell you right away.</p></details>
+        <details><summary>Can I pick up the totes myself? <span class="pm" aria-hidden="true"></span></summary><p>Yes! If you prefer to pick up and return the totes yourself, we offer that option. Just let us know when you book.</p></details>
+        <details><summary>Can I get same-day or rush delivery? <span class="pm" aria-hidden="true"></span></summary><p>Yes, subject to availability. Requests within 24 hours of delivery include a $25 expedite fee. We'll confirm the total before invoicing.</p></details>
       </div>
     </div>
   </section>
 
-  <!-- FEATURES -->
-  <section id="totes" class="reveal">
+  <!-- AREA -->
+  <section id="area" class="block">
     <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">The Totes</span>
-        <h2>Built Tough. Made to Stack.</h2>
+      <div class="head reveal">
+        <span class="label">Delivery area</span>
+        <h2>Free delivery across OKC and Ada.</h2>
+        <p>Outside the zone? Text us your zip code. We may still be able to help for a small fee.</p>
       </div>
-      <div class="feature-grid">
-        <div class="feature-card"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><h3>Snap-tight lids</h3><p>No tape needed, ever.</p></div>
-        <div class="feature-card"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 16l9 5 9-5"/></svg></span><h3>Recessed stacking lid</h3><p>Stacks clean, stays put.</p></div>
-        <div class="feature-card"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg></span><h3>Reinforced construction</h3><p>Holds up to 65 lbs.</p></div>
-        <div class="feature-card"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3s7 7.5 7 12a7 7 0 0 1-14 0c0-4.5 7-12 7-12z"/></svg></span><h3>Fully waterproof</h3><p>Your stuff stays dry.</p></div>
-        <div class="feature-card"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg></span><h3>Cleaned every rental</h3><p>Sanitized before it reaches you.</p></div>
-        <div class="feature-card"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg></span><h3>Reused, not landfilled</h3><p>Hundreds of trips per tote.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ABOUT -->
-  <section id="about" class="section-alt reveal">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">About Us</span>
-        <h2>A Local Family Business on a Green Mission</h2>
-      </div>
-      <div class="about-grid">
-        <div class="about-copy">
-          <img class="about-photo" src="images/totes-stacked-stock.jpg?v=20260820c" alt="Stack of black and yellow heavy-duty moving totes" width="1200" height="1200" loading="lazy" decoding="async">
-          <p>We're an Oklahoma family who got tired of the cardboard waste every time we moved. So we built a better way, and now we're sharing it with our neighbors across the metro and the Ada area.</p>
-          <p>Every rental keeps dozens of cardboard boxes out of the landfill. Better for you, better for the state.</p>
+      <div class="maps">
+        <div>
+          <h3>OKC metro · 30-mile zone</h3>
+          <div id="deliveryMap" class="delivery-map" role="img" aria-label="Map showing the 30-mile delivery radius around Oklahoma City"></div>
         </div>
-        <div class="stat-grid">
-          <div class="stat-card">
-            <div class="num"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-8"/><path d="M12 13c-4 0-7-3-7-7 4 0 7 3 7 7z"/><path d="M12 13c4 0 7-3 7-7-4 0-7 3-7 7z"/></svg></div>
-            <div class="lbl">Each tote replaces dozens of cardboard boxes over its lifetime</div>
-          </div>
-          <div class="stat-card">
-            <div class="num"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-7.5 7-12a7 7 0 0 0-14 0c0 4.5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
-            <div class="lbl">Proudly serving OKC metro and the Ada area</div>
-          </div>
-          <div class="stat-card">
-            <div class="num"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg></div>
-            <div class="lbl">Industrial-strength totes, up to 65 lbs each</div>
-          </div>
-          <div class="stat-card">
-            <div class="num"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="7" width="13" height="10" rx="1"/><path d="M14 10h4l4 3v4h-8z"/><circle cx="6" cy="19" r="1.8"/><circle cx="17.5" cy="19" r="1.8"/></svg></div>
-            <div class="lbl">We drop off and pick up, you handle the move</div>
-          </div>
+        <div>
+          <h3>Ada area · 15-mile zone</h3>
+          <div id="adaMap" class="delivery-map" role="img" aria-label="Map showing the 15-mile delivery radius around Ada"></div>
         </div>
       </div>
-    </div>
-  </section>
-
-  <!-- SERVICE AREA -->
-  <section id="area" class="reveal">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Where We Deliver</span>
-        <h2>Our Delivery Area</h2>
-        <p>Free drop-off and pickup across OKC metro and the Ada area. Outside this zone? Message us, we may still be able to help for a small fee.</p>
-      </div>
-      <div class="map-grid">
-        <div class="map-block">
-          <h3 class="map-title">OKC Metro — 30-Mile Zone</h3>
-          <div id="deliveryMap" class="delivery-map" aria-label="Map showing 30-mile delivery radius around Oklahoma City"></div>
-        </div>
-        <div class="map-block">
-          <h3 class="map-title">Ada Area — 15-Mile Zone</h3>
-          <div id="adaMap" class="delivery-map" aria-label="Map showing 15-mile delivery radius around Ada"></div>
-        </div>
-      </div>
-      <ul class="area-list">
-        <li>Oklahoma City <span class="zip">73102</span></li>
-        <li>Moore <span class="zip">73160</span></li>
-        <li>Norman <span class="zip">73069</span></li>
-        <li>Edmond <span class="zip">73003</span></li>
-        <li>Midwest City <span class="zip">73110</span></li>
-        <li>Del City <span class="zip">73115</span></li>
-        <li>Yukon <span class="zip">73099</span></li>
-        <li>Ada <span class="zip">74820</span></li>
-        <li>+ all of OKC metro & the Ada area</li>
+      <ul class="towns">
+        <li>Oklahoma City<span>73102</span></li>
+        <li>Moore<span>73160</span></li>
+        <li>Norman<span>73069</span></li>
+        <li>Edmond<span>73003</span></li>
+        <li>Midwest City<span>73110</span></li>
+        <li>Del City<span>73115</span></li>
+        <li>Yukon<span>73099</span></li>
+        <li>Ada<span>74820</span></li>
+        <li>+ the rest of the metro &amp; Ada area</li>
       </ul>
     </div>
   </section>
 
-  <!-- CONTACT -->
-  <section id="contact" class="reveal">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Got Questions?</span>
-        <h2>Get in Touch</h2>
-        <p>Already know what you need? <a href="#book" style="text-decoration:underline;">Book your totes</a>. Have a question first? Call, text or email and we'll get right back to you.</p>
+  <!-- ABOUT -->
+  <section id="about" class="block white">
+    <div class="wrap about-grid">
+      <picture>
+        <source srcset="images/totes-family-driveway.webp" type="image/webp">
+        <img class="about-photo reveal" src="images/totes-family-driveway.jpg" alt="Two tall stacks of Ready Tote totes in a driveway, ready for delivery" width="800" height="1066" loading="lazy" decoding="async">
+      </picture>
+      <div class="about-copy reveal">
+        <span class="label muted" style="display:block; margin-bottom:14px;">About us</span>
+        <h2>A local family business on a green mission.</h2>
+        <p>We're an Oklahoma family who got tired of the cardboard waste every time we moved. So we built a better way, and now we're sharing it with our neighbors across the metro and the Ada area.</p>
+        <p>Every rental keeps dozens of cardboard boxes out of the landfill. Better for you, better for the state.</p>
+        <div class="serve">
+          <span class="label">Who we help</span>
+          <ul>
+            <li>Apartment movers</li>
+            <li>Growing families</li>
+            <li>Busy households</li>
+            <li>Eco-conscious movers</li>
+            <li>OU, UCO &amp; ECU students</li>
+          </ul>
+        </div>
       </div>
-      <div class="contact-row">
-        <a class="contact-pill" href="tel:+15803993202">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-          580.399.3202
-        </a>
-        <a class="contact-pill" href="mailto:readytoteok@gmail.com">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          readytoteok@gmail.com
-        </a>
-        <a class="contact-pill" href="https://facebook.com/readytoteoklahoma" target="_blank" rel="noopener">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-          Facebook
-        </a>
-        <a class="contact-pill" href="https://www.instagram.com/readytoteok/" target="_blank" rel="noopener">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.012-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.332.014 7.052.072 2.695.272.273 2.69.073 7.052.014 8.332 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.332 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
-          Instagram
-        </a>
+    </div>
+  </section>
+
+  <!-- CONTACT / CLOSING CTA -->
+  <section id="contact" class="cta-band">
+    <div class="wrap">
+      <h2>Ready when<br>you are.</h2>
+      <p>Reserve online in two minutes, or reach us directly. Real people, quick answers.</p>
+      <div class="cta-actions">
+        <a href="#book" class="btn btn-ink">Reserve your totes</a>
+        <a href="tel:+15803993202" class="btn btn-line">Call 580.399.3202</a>
+        <a href="mailto:readytoteok@gmail.com" class="btn btn-line">readytoteok@gmail.com</a>
       </div>
     </div>
   </section>
@@ -1169,204 +859,45 @@
 
 <footer>
   <div class="wrap">
-    <div class="footer-top">
-      <a href="#" class="logo footer-logo">
-        <img src="images/logo.png?v=20260820" alt="Ready Tote Oklahoma logo" width="401" height="420" loading="lazy" decoding="async">
-      </a>
-      <div class="footer-links">
-        <a href="#pricing">Pricing</a>
-        <a href="#how">How It Works</a>
-        <a href="#contact">Contact</a>
+    <div class="foot">
+      <div>
+        <img src="images/logo.png?v=20260820" alt="Ready Tote Oklahoma" width="401" height="420" loading="lazy" decoding="async">
+        <p>Moving tote rental for the OKC metro and Ada area. Proudly family-owned in Oklahoma.</p>
+        <div class="social">
+          <a href="https://facebook.com/readytoteoklahoma" target="_blank" rel="noopener" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
+          <a href="https://www.instagram.com/readytoteok/" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.012-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.332.014 7.052.072 2.695.272.273 2.69.073 7.052.014 8.332 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.332 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg></a>
+        </div>
+      </div>
+      <div>
+        <h3>Explore</h3>
+        <ul>
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="#area">Delivery area</a></li>
+          <li><a href="#book">Reserve</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Contact</h3>
+        <ul>
+          <li><a href="tel:+15803993202">Call 580.399.3202</a></li>
+          <li><a href="sms:+15803993202">Text 580.399.3202</a></li>
+          <li><a href="mailto:readytoteok@gmail.com">readytoteok@gmail.com</a></li>
+        </ul>
       </div>
     </div>
-    <div class="footer-bottom">
-      <span>© 2026 Ready Tote Oklahoma. All rights reserved. Proudly family-owned in Oklahoma.</span>
-      <span class="footer-links">
-        <a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms of Service</a> · <a href="accessibility.html">Accessibility</a>
-      </span>
-      <div class="social-row" style="justify-content:center; margin-top:8px;">
-        <a class="social-icon" href="https://facebook.com/readytoteoklahoma" target="_blank" rel="noopener" aria-label="Facebook">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-        </a>
-        <a class="social-icon" href="https://www.instagram.com/readytoteok/" target="_blank" rel="noopener" aria-label="Instagram">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.012-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.332.014 7.052.072 2.695.272.273 2.69.073 7.052.014 8.332 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.332 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
-        </a>
-      </div>
-      </span>
+    <div class="legal">
+      <span>© 2026 Ready Tote Oklahoma. All rights reserved.</span>
+      <nav aria-label="Legal"><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Service</a><a href="accessibility.html">Accessibility</a></nav>
     </div>
   </div>
 </footer>
 
-<script>
-  // Google Reviews loader
-  fetch('/.netlify/functions/google-reviews')
-    .then(r => r.json())
-    .then(data => {
-      if (!data.reviews || data.reviews.length === 0) return; // keep fallback cards
-      const stars = n => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n));
-      const esc = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
-      const cards = data.reviews.slice(0, 6).map(r => `
-        <div class="testimonial-card">
-          <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-            ${r.profilePhoto ? `<img src="${esc(r.profilePhoto)}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">` : ''}
-            <div>
-              <div style="font-weight:700; font-size:0.88rem;">${esc(r.author)}</div>
-              <div style="font-size:0.75rem; color:var(--steel);">${esc(r.time)}</div>
-            </div>
-          </div>
-          <div class="stars">${stars(r.rating)}</div>
-          <div class="quote">"${esc(r.text)}"</div>
-        </div>`).join('');
-      document.getElementById('testimonialCards').innerHTML = cards;
-      if (data.overallRating) {
-        document.getElementById('reviewSummary').innerHTML =
-          `<span style="font-size:1.1rem;color:var(--yellow);">${stars(data.overallRating)}</span> ` +
-          `<strong>${data.overallRating}</strong> out of 5` +
-          (data.totalReviews ? ` based on ${data.totalReviews} review${data.totalReviews !== 1 ? 's' : ''}` : '');
-      }
-      document.getElementById('googleAttribution').style.display = 'block';
-    })
-    .catch(() => {}); // silently keep fallback cards
-
-  // Reviews carousel arrow controls
-  (function() {
-    const track = document.getElementById('testimonialCards');
-    const prev = document.getElementById('reviewsPrev');
-    const next = document.getElementById('reviewsNext');
-    if (!track || !prev || !next) return;
-    const scrollAmount = () => {
-      const card = track.querySelector('.testimonial-card');
-      return card ? card.getBoundingClientRect().width + 22 : 320; // card width + gap
-    };
-    prev.addEventListener('click', () => track.scrollBy({ left: -scrollAmount(), behavior: 'smooth' }));
-    next.addEventListener('click', () => track.scrollBy({ left: scrollAmount(), behavior: 'smooth' }));
-  })();
-
-  // FAQ accordion (aria-expanded/aria-controls tell screen readers
-  // which answer a question opens, and whether it's open)
-  const faqBtns = document.querySelectorAll('.faq-q');
-  faqBtns.forEach((btn, i) => {
-    const answer = btn.nextElementSibling;
-    answer.id = 'faq-a-' + i;
-    btn.setAttribute('aria-controls', answer.id);
-    btn.setAttribute('aria-expanded', 'false');
-    btn.querySelector('.arrow')?.setAttribute('aria-hidden', 'true');
-    btn.addEventListener('click', () => {
-      const item = btn.parentElement;
-      const wasOpen = item.classList.contains('open');
-      // Close all
-      document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
-      faqBtns.forEach(b => b.setAttribute('aria-expanded', 'false'));
-      // Toggle clicked
-      if (!wasOpen) {
-        item.classList.add('open');
-        btn.setAttribute('aria-expanded', 'true');
-      }
-    });
-  });
-
-  const toggle = document.getElementById('mobileToggle');
-  const menu = document.getElementById('mobileMenu');
-  toggle.addEventListener('click', () => {
-    const isOpen = menu.classList.toggle('open');
-    toggle.setAttribute('aria-expanded', isOpen);
-  });
-  menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-    menu.classList.remove('open');
-    toggle.setAttribute('aria-expanded', 'false');
-  }));
-
-  const form = document.getElementById('bookingForm');
-  const formSuccess = document.getElementById('formSuccess');
-
-  // ---- Pickup date auto-fill ----
-  // Saves a second date-picker trip on mobile: picking a delivery date
-  // pre-fills pickup 14 days later (the standard rental). Pickup stays
-  // editable, and once the customer changes it by hand we stop overwriting.
-  const deliveryDateEl = document.getElementById('deliveryDate');
-  const pickupDateEl = document.getElementById('pickupDate');
-  const todayISO = new Date().toLocaleDateString('en-CA');
-  let pickupEditedByHand = false;
-  deliveryDateEl.min = todayISO;
-  pickupDateEl.min = todayISO;
-  deliveryDateEl.addEventListener('change', () => {
-    const d = deliveryDateEl.value;
-    if (!d) return;
-    pickupDateEl.min = d;
-    if (!pickupEditedByHand || !pickupDateEl.value || pickupDateEl.value < d) {
-      const p = new Date(d + 'T12:00:00');
-      p.setDate(p.getDate() + 14);
-      pickupDateEl.value = p.toLocaleDateString('en-CA');
-    }
-  });
-  pickupDateEl.addEventListener('change', () => { pickupEditedByHand = true; });
-
-  // Guards the Meta Pixel Lead event so it fires at most once per page load:
-  // the success state is terminal (the form is hidden and never re-shown), so
-  // one successful submission = one Lead event, never a duplicate.
-  let leadTracked = false;
-
-  function encodeForNetlify(formEl) {
-    const data = new FormData(formEl);
-    return new URLSearchParams(data).toString();
-  }
-
-  // A short message under the button when the form can't send yet, instead
-  // of relying on the browser's bubble (easy to miss on a laptop)
-  const formMsgEl = document.createElement('p');
-  formMsgEl.className = 'form-error'; formMsgEl.setAttribute('role', 'alert'); formMsgEl.hidden = true;
-  form.querySelector('.form-submit').after(formMsgEl);
-  function formMsg(text) { formMsgEl.textContent = text; formMsgEl.hidden = !text; }
-  form.addEventListener('invalid', (e) => {
-    if (!formMsgEl.hidden && formMsgEl.dataset.first) return;
-    const label = (e.target.closest('label')?.childNodes[0]?.textContent || e.target.name || 'a field').replace('*', '').trim();
-    formMsg('Please check ' + label + ': ' + e.target.validationMessage);
-    formMsgEl.dataset.first = '1';
-    setTimeout(() => { delete formMsgEl.dataset.first; }, 0);
-  }, true);
-  form.addEventListener('input', () => { if (!formMsgEl.hidden) formMsg(''); });
-
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    // The hidden anti-spam box (hp_field) is for bots that post the form
-    // without running this page. Browser autofill can drop a saved name or
-    // address into it, which used to make the button silently do nothing.
-    // Anyone here clicked the real button, so clear it; Netlify still
-    // rejects bots that fill it in and post directly.
-    form.hp_field.value = '';
-    formMsg('');
-
-    const submitBtn = form.querySelector('.form-submit');
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Sending...';
-
-    fetch('/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: encodeForNetlify(form),
-    })
-      .then((resp) => {
-        if (!resp.ok) throw new Error('Form endpoint returned ' + resp.status);
-        form.style.display = 'none';
-        formSuccess.style.display = 'block';
-        formSuccess.focus();
-        if (!leadTracked) {
-          leadTracked = true;
-          if (typeof fbq !== 'undefined') {
-            fbq('track', 'Lead', {
-              content_name: 'Tote Rental Booking Request',
-              content_category: 'Booking Request'
-            });
-          }
-        }
-      })
-      .catch(() => {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Request Booking';
-        formMsg('Something went wrong sending your request. Please try again, or call or text 580.399.3202.');
-      });
-  });
-</script>
+<div class="mobile-bar on-dark" id="mobileBar">
+  <a href="#book" class="btn btn-tote" tabindex="-1">Reserve your totes</a>
+  <a href="sms:+15803993202" class="btn btn-line" tabindex="-1">Text us</a>
+</div>
 
 <!--
   Hidden static form so Netlify's build-time bot detects this form and
@@ -1389,59 +920,184 @@
   <input type="text" name="hp_field">
 </form>
 
-<a class="float-text" href="sms:+15803993202" aria-label="Questions? Text us">
-  <span class="bubble"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4A8.6 8.6 0 0 1 8 19l-4 1 1-3.8A8.4 8.4 0 1 1 21 11.5z"/></svg></span> Questions? Text Us
-</a>
-
-<div class="mobile-bar" id="mobileBar">
-  <a href="#book" class="btn btn-primary" tabindex="-1">Reserve your totes</a>
-  <a href="sms:+15803993202" class="btn btn-ghost" tabindex="-1">Text us</a>
-</div>
 <script>
-  // ---- Phone Reserve bar: show after the hero, hide over the booking form ----
-  (function () {
-    const bar = document.getElementById('mobileBar');
-    const hero = document.querySelector('.hero');
-    const book = document.getElementById('book');
-    if (!bar || !hero || !book || !('IntersectionObserver' in window)) return;
-    let pastHero = false, onForm = false;
-    const update = () => {
-      const show = pastHero && !onForm;
-      bar.classList.toggle('show', show);
-      bar.querySelectorAll('a').forEach(a => a.tabIndex = show ? 0 : -1);
-    };
-    new IntersectionObserver(([e]) => { pastHero = !e.isIntersecting; update(); }).observe(hero);
-    new IntersectionObserver(([e]) => { onForm = e.isIntersecting; update(); }, { threshold: 0.05 }).observe(book);
-  })();
+  const esc = s => { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
+  const starStr = n => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n));
 
-  // ---- Pricing buttons pick that package in the form ----
-  document.querySelectorAll('[data-pkg]').forEach(a => a.addEventListener('click', () => {
-    const sel = document.querySelector('#bookingForm select[name="package"]');
-    if (sel) { sel.value = a.dataset.pkg; sel.dispatchEvent(new Event('change')); }
+  // ---- Google reviews (keeps the fallback cards if the API isn't set up) ----
+  fetch('/.netlify/functions/google-reviews')
+    .then(r => r.json())
+    .then(data => {
+      if (!data.reviews || data.reviews.length === 0) return;
+      document.getElementById('testimonialCards').innerHTML = data.reviews.slice(0, 6).map(r => `
+        <figure class="review" style="margin:0;">
+          <div class="stars" aria-label="${Math.round(r.rating)} out of 5 stars">${starStr(r.rating)}</div>
+          <blockquote class="quote" style="margin:0;">“${esc(r.text)}”</blockquote>
+          <figcaption class="who">${r.profilePhoto ? `<img src="${esc(r.profilePhoto)}" alt="" loading="lazy">` : ''}<div>${esc(r.author)}<span>${esc(r.time)}</span></div></figcaption>
+        </figure>`).join('');
+      if (data.overallRating) {
+        const count = data.totalReviews ? ` · ${data.totalReviews} Google review${data.totalReviews !== 1 ? 's' : ''}` : ' on Google';
+        const summary = document.getElementById('reviewSummary');
+        summary.innerHTML = `<span class="stars" aria-hidden="true">${starStr(data.overallRating)}</span><strong>${esc(data.overallRating)}</strong> out of 5${count}`;
+        summary.hidden = false;
+        const hero = document.getElementById('heroRating');
+        hero.innerHTML = `<span class="stars" aria-hidden="true">${starStr(data.overallRating)}</span>Rated ${esc(data.overallRating)} out of 5${count}`;
+        hero.hidden = false;
+      }
+      document.getElementById('googleAttribution').hidden = false;
+    })
+    .catch(() => {});
+
+  // ---- Mobile menu ----
+  const toggle = document.getElementById('mobileToggle');
+  const menu = document.getElementById('mobileMenu');
+  toggle.addEventListener('click', () => {
+    const isOpen = menu.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', isOpen);
+  });
+  menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    menu.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
   }));
 
-  // ---- Self pickup: no delivery address needed ----
-  (function () {
-    const box = document.getElementById('selfPickup');
-    const row = document.getElementById('addressRow');
-    const addr = document.getElementById('deliveryAddress');
-    if (!box || !row || !addr) return;
-    box.addEventListener('change', () => {
-      row.style.display = box.checked ? "none" : "";
-      addr.required = !box.checked;
-      if (box.checked) addr.value = '';
-    });
-  })();
+  // ---- Booking form ----
+  const form = document.getElementById('bookingForm');
+  const formSuccess = document.getElementById('formSuccess');
+  const step1 = form.querySelector('[data-step="1"]');
+  const step2 = form.querySelector('[data-step="2"]');
+
+  // Pickup date auto-fill: picking a drop-off date pre-fills pickup 14 days
+  // later. Pickup stays editable, and once changed by hand we stop overwriting.
+  const deliveryDateEl = document.getElementById('deliveryDate');
+  const pickupDateEl = document.getElementById('pickupDate');
+  const todayISO = new Date().toLocaleDateString('en-CA');
+  let pickupEditedByHand = false;
+  deliveryDateEl.min = todayISO;
+  pickupDateEl.min = todayISO;
+  deliveryDateEl.addEventListener('change', () => {
+    const d = deliveryDateEl.value;
+    if (!d) return;
+    pickupDateEl.min = d;
+    if (!pickupEditedByHand || !pickupDateEl.value || pickupDateEl.value < d) {
+      const p = new Date(d + 'T12:00:00');
+      p.setDate(p.getDate() + 14);
+      pickupDateEl.value = p.toLocaleDateString('en-CA');
+      pickupDateEl.dispatchEvent(new Event('change'));
+      pickupEditedByHand = false;
+    }
+  });
+  pickupDateEl.addEventListener('change', (e) => { if (e.isTrusted) pickupEditedByHand = true; });
+
+  // A short message near the button when the form can't send yet, instead
+  // of relying on the browser's bubble (easy to miss on a laptop)
+  const formMsgEl = document.createElement('p');
+  formMsgEl.className = 'form-error'; formMsgEl.setAttribute('role', 'alert'); formMsgEl.hidden = true;
+  form.appendChild(formMsgEl);
+  function formMsg(text) { formMsgEl.textContent = text; formMsgEl.hidden = !text; }
+  const labelOf = el => (el.closest('label')?.childNodes[0]?.textContent || el.name || 'a field').replace('*', '').trim();
+  form.addEventListener('invalid', (e) => {
+    if (!formMsgEl.hidden && formMsgEl.dataset.first) return;
+    formMsg('Please check ' + labelOf(e.target) + ': ' + e.target.validationMessage);
+    formMsgEl.dataset.first = '1';
+    setTimeout(() => { delete formMsgEl.dataset.first; }, 0);
+  }, true);
+  form.addEventListener('input', () => { if (!formMsgEl.hidden) formMsg(''); });
+
+  // Two steps: the move first (package + dates, with the live availability
+  // check), then contact details. Without JavaScript both steps just show.
+  form.classList.add('stepped');
+  const tab1 = document.getElementById('stepTab1');
+  const tab2 = document.getElementById('stepTab2');
+  function showStep(n) {
+    form.classList.toggle('on-step-2', n === 2);
+    tab1.classList.toggle('on', n === 1);
+    tab2.classList.toggle('on', n === 2);
+    formMsg('');
+    const first = (n === 2 ? step2 : step1).querySelector('input:not([type=hidden]), select');
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    first?.focus({ preventScroll: true });
+  }
+  function step1Valid() {
+    for (const el of step1.querySelectorAll('input, select')) {
+      if (!el.checkValidity()) { el.reportValidity(); el.focus(); return false; }
+    }
+    return true;
+  }
+  document.getElementById('toStep2').addEventListener('click', () => { if (step1Valid()) showStep(2); });
+  document.getElementById('backStep1').addEventListener('click', () => showStep(1));
+  // Enter in step 1 moves on instead of trying to submit hidden fields
+  step1.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); document.getElementById('toStep2').click(); }
+  });
+
+  // Self pickup: no delivery address needed
+  const selfBox = document.getElementById('selfPickup');
+  const addrRow = document.getElementById('addressRow');
+  const addr = document.getElementById('deliveryAddress');
+  selfBox.addEventListener('change', () => {
+    addrRow.hidden = selfBox.checked;
+    addr.required = !selfBox.checked;
+    if (selfBox.checked) addr.value = '';
+  });
+
+  // Pricing buttons pick that package in the form
+  document.querySelectorAll('[data-pkg]').forEach(a => a.addEventListener('click', () => {
+    const sel = form.querySelector('select[name="package"]');
+    sel.value = a.dataset.pkg;
+    sel.dispatchEvent(new Event('change'));
+    if (form.classList.contains('on-step-2')) showStep(1);
+  }));
+
+  // Guards the Meta Pixel Lead event so it fires at most once per page load:
+  // the success state is terminal, so one submission = one Lead event.
+  let leadTracked = false;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!step1Valid()) { showStep(1); return; }
+    // The hidden anti-spam box (hp_field) is for bots that post the form
+    // without running this page. Browser autofill can drop a saved value
+    // into it, so clear it; Netlify still rejects bots that post directly.
+    form.hp_field.value = '';
+    formMsg('');
+
+    const submitBtn = form.querySelector('.form-submit');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+
+    fetch('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(new FormData(form)).toString(),
+    })
+      .then((resp) => {
+        if (!resp.ok) throw new Error('Form endpoint returned ' + resp.status);
+        form.hidden = true;
+        formSuccess.hidden = false;
+        formSuccess.focus();
+        if (!leadTracked) {
+          leadTracked = true;
+          if (typeof fbq !== 'undefined') {
+            fbq('track', 'Lead', {
+              content_name: 'Tote Rental Booking Request',
+              content_category: 'Booking Request'
+            });
+          }
+        }
+      })
+      .catch(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Request booking';
+        formMsg('Something went wrong sending your request. Please try again, or call or text 580.399.3202.');
+      });
+  });
 
   // ---- Are the chosen dates open? ----
   // Uses the same public availability numbers as the admin (totes and
   // dollies free per day), and only ever says "open" or "filling up".
   (function () {
-    const form = document.getElementById('bookingForm');
     const note = document.getElementById('availNote');
-    if (!form || !note) return;
-    const d = form.querySelector('[name="delivery_date"]');
-    const p = form.querySelector('[name="pickup_date"]');
+    const d = deliveryDateEl, p = pickupDateEl;
     const pkg = form.querySelector('[name="package"]');
     let data = null, loading = null;
     const load = () => loading || (loading = fetch('/.netlify/functions/availability')
@@ -1472,96 +1128,73 @@
     d.addEventListener('focus', load, { once: true });
   })();
 
-  // Leaflet (map CSS/JS + tile requests) is loaded lazily: the #area section is
-  // far below the fold and most visitors never scroll to it, so we defer the
-  // ~150KB+ of map assets until it actually comes into view.
+  // ---- Phone Reserve bar: show after the hero, hide over the booking form ----
+  (function () {
+    const bar = document.getElementById('mobileBar');
+    const hero = document.querySelector('.hero');
+    const book = document.getElementById('book');
+    if (!('IntersectionObserver' in window)) return;
+    let pastHero = false, onForm = false;
+    const update = () => {
+      const show = pastHero && !onForm;
+      bar.classList.toggle('show', show);
+      bar.querySelectorAll('a').forEach(a => a.tabIndex = show ? 0 : -1);
+    };
+    new IntersectionObserver(([e]) => { pastHero = !e.isIntersecting; update(); }).observe(hero);
+    new IntersectionObserver(([e]) => { onForm = e.isIntersecting; update(); }, { threshold: 0.05 }).observe(book);
+  })();
+
+  // ---- Section entrances ----
+  (function () {
+    const els = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) { els.forEach(el => el.classList.add('in')); return; }
+    const io = new IntersectionObserver((entries) => entries.forEach(en => {
+      if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+    }), { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    els.forEach(el => io.observe(el));
+  })();
+
+  // ---- Delivery maps ----
+  // Leaflet (CSS/JS + map tiles) loads only when the area section is near,
+  // since most visitors never scroll that far.
   function buildDeliveryMap(elId, center, radiusMeters, popupHtml, zoom) {
     const m = L.map(elId, { scrollWheelZoom: false }).setView(center, zoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(m);
-    L.circle(center, {
-      radius: radiusMeters,
-      color: '#1E8E52',
-      weight: 3,
-      fillColor: '#1E8E52',
-      fillOpacity: 0.18
-    }).addTo(m);
+    L.circle(center, { radius: radiusMeters, color: '#16140F', weight: 2.5, fillColor: '#F5B312', fillOpacity: 0.25 }).addTo(m);
     L.marker(center).addTo(m).bindPopup(popupHtml);
     m.on('click', () => m.scrollWheelZoom.enable());
     return m;
   }
-
   function initDeliveryMaps() {
     // OKC metro: 30 miles = 48,280 m
-    buildDeliveryMap(
-      'deliveryMap',
-      [35.3036, -97.5196],
-      48280,
-      '<strong>Ready Tote Oklahoma</strong><br>Free delivery within 30 miles',
-      8
-    );
-
+    buildDeliveryMap('deliveryMap', [35.3036, -97.5196], 48280, '<strong>Ready Tote Oklahoma</strong><br>Free delivery within 30 miles', 8);
     // Ada area (74820): 15 miles = 24,140 m
-    buildDeliveryMap(
-      'adaMap',
-      [34.8101, -96.7066],
-      24140,
-      '<strong>Ada Area</strong><br>Free delivery within 15 miles',
-      9
-    );
+    buildDeliveryMap('adaMap', [34.8101, -96.7066], 24140, '<strong>Ada Area</strong><br>Free delivery within 15 miles', 9);
   }
-
   let leafletLoadStarted = false;
   function loadLeafletAndInitMaps() {
     if (leafletLoadStarted) return;
     leafletLoadStarted = true;
-
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
     document.head.appendChild(link);
-
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
     script.onload = initDeliveryMaps;
     document.body.appendChild(script);
   }
-
-  // Scroll-reveal animation for section entrances
-  const revealEls = document.querySelectorAll('.reveal');
-  if ('IntersectionObserver' in window) {
-    const revealObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('is-visible');
-          revealObserver.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
-    revealEls.forEach((el) => revealObserver.observe(el));
-  } else {
-    // No IntersectionObserver support — show everything immediately.
-    revealEls.forEach((el) => el.classList.add('is-visible'));
-  }
-
   const areaSection = document.getElementById('area');
-  if (areaSection) {
-    if ('IntersectionObserver' in window) {
-      const areaObserver = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            loadLeafletAndInitMaps();
-            areaObserver.disconnect();
-          }
-        });
-      }, { rootMargin: '200px 0px' });
-      areaObserver.observe(areaSection);
-    } else {
-      // No IntersectionObserver support — fall back to loading immediately.
-      loadLeafletAndInitMaps();
-    }
+  if ('IntersectionObserver' in window) {
+    const areaObserver = new IntersectionObserver((entries) => {
+      if (entries.some(en => en.isIntersecting)) { loadLeafletAndInitMaps(); areaObserver.disconnect(); }
+    }, { rootMargin: '200px 0px' });
+    areaObserver.observe(areaSection);
+  } else {
+    loadLeafletAndInitMaps();
   }
 </script>
 
