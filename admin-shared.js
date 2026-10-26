@@ -142,6 +142,43 @@ function findPendingConfirmed(requests, rentals) {
 // netlify/functions/lib-reminders.mjs).
 const TEXT_SIGNER = 'Chris with Ready Tote Oklahoma';
 
+// ---- One text per person ----
+// Reminders due the same day for the same phone number become one text:
+// the first message as written, then the others without their "Hi Dee,
+// it's Chris..." greeting, each as its own paragraph. Takes reminder
+// items ({ flagId, phone, message, sms, ... }) in the order they should
+// read, and returns one item per person with flagIds (every reminder the
+// text covers), parts (the items themselves) and the combined message/sms.
+// A person with one reminder comes back unchanged apart from flagIds/parts.
+const GREETING = new RegExp('^Hi [^,]*, it\'s ' + TEXT_SIGNER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '!\\s*');
+function combineTexts(items) {
+  const groups = new Map();
+  for (const r of items) {
+    const id = normalizePhone(r.phone) || 'flag:' + r.flagId;
+    if (!groups.has(id)) groups.set(id, []);
+    groups.get(id).push(r);
+  }
+  return [...groups.values()].map(parts => {
+    const flagIds = parts.map(p => p.flagId);
+    if (parts.length === 1) return { ...parts[0], flagIds, parts };
+    const message = parts.map((p, i) => i ? String(p.message || '').replace(GREETING, '') : p.message).filter(Boolean).join('\n\n');
+    return { ...parts[0], flagIds, parts, message, sms: smsLink(parts[0].phone, message) };
+  });
+}
+
+// Tapping Text counts as sent (Undo puts it back). Saved with keepalive,
+// so the save still finishes while Messages takes over the screen.
+// Resolves true when saved.
+async function saveSentFlags(flagIds, extra = {}) {
+  try {
+    const resp = await fetch('/.netlify/functions/mark-sent', {
+      method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: adminSessionMarker(), flagIds, ...extra }),
+    });
+    return resp.ok;
+  } catch { return false; }
+}
+
 // ---- Where a rental is right now ----
 // By date, and on the drop-off or pickup day itself by the time on the
 // rental: it's out once the drop-off time has passed, and back once the

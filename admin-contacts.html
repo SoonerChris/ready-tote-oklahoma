@@ -16,8 +16,8 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Contacts · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261026">
-<script src="admin-shared.js?v=20261113"></script>
-<script src="admin-rentals-shared.js?v=20261030"></script>
+<script src="admin-shared.js?v=20261114"></script>
+<script src="admin-rentals-shared.js?v=20261114"></script>
 <style>
   /* One row per person, built from every rental and booking request:
      customers (with what they've rented and spent) and leads (people who
@@ -59,10 +59,6 @@
   .det .line:first-of-type{border-top:none;}
   .det-acts{grid-column:1 / -1; display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
   .det-acts .sms-btn{padding:7px 12px; font-size:13px;}
-  .card-ask{display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; padding:9px 12px; background:var(--white); border-radius:8px; font-size:14px; font-weight:600; grid-column:1 / -1;}
-  .card-ask[hidden]{display:none;}
-  .card-ask button{width:auto; margin:0; padding:7px 14px; font-size:14px;}
-  .card-ask .linklike{all:unset; cursor:pointer; text-decoration:underline; text-underline-offset:3px; font-weight:600;}
   @media(max-width:960px){ tr.detail{display:block !important;} tr.detail[hidden]{display:none !important;} .det{grid-template-columns:1fr;} }
   .no-results{padding:14px; border:1px dashed var(--control); border-radius:8px; color:var(--steel); font-size:14px;}
   @media(max-width:960px){
@@ -289,7 +285,6 @@
       <div class="det-acts">${review}${follow}
         ${p.rentals.length ? `<a class="link-btn" href="admin-rentals.html?q=${encodeURIComponent(p.name || '')}">Open in All rentals</a>` : ''}
         ${p.leads.length ? `<a class="link-btn" href="admin-requests.html">Open Requests</a>` : ''}</div>
-      ${askFor(p.key, first)}
     </div>`;
   }
   // Repeat customer: hand Send Invoice who they are and their latest drop-off

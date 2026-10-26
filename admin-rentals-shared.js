@@ -36,43 +36,27 @@ function textBtn(type, key, smsLink, icon, label, color) {
   return `<a class="sms-btn" href="${escAttr(smsLink)}" data-text data-flag="${escAttr(flagId)}" data-what="${escAttr(label.replace(/^text\s+/i, ''))}" style="padding:8px 16px; font-size:14px;">${esc(/^text\b/i.test(label) ? label : 'Text: ' + label)}</a>`;
 }
 
-// ---- "Sent to Hannah?" after tapping a Text button ----
-// Tapping Text opens Messages; the card then asks whether it went out, in
-// its .card-ask box (cards carry data-key and data-first). Open questions
-// are remembered by card, so a reload puts them back.
-const TEXT_ASKS = new Map();   // card key -> { flag, what }
-function askFor(key, first) {
-  const a = TEXT_ASKS.get(key);
-  return `<div class="card-ask" data-card-ask${a ? '' : ' hidden'}>${a ? askInner(a, first) : ''}</div>`;
-}
-function askInner(a, first) {
-  const what = a.what && !/^text$/i.test(a.what) ? ' the ' + esc(a.what.toLowerCase()) + ' text' : '';
-  return `<span>Sent${what} to ${esc(first || 'them')}?</span>
-    <button type="button" data-ask-yes>Yes, sent</button>
-    <button type="button" class="linklike" data-ask-no>Not yet</button>`;
-}
+// ---- Tapping Text counts as sent ----
+// Messages opens with the text written out, and the button turns into
+// "... sent · Undo" once you're back (saveSentFlags in admin-shared.js).
+// Undo puts it back if it didn't go out.
+const TEXT_SAVING = new Set();   // flags still saving, so a double tap marks once
 function wireTextAsks(root) {
-  root.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-text],[data-ask-yes],[data-ask-no],[data-skip],[data-undo-flag]');
+  root.addEventListener('click', async (e) => {
+    const t = e.target.closest('[data-text],[data-skip],[data-undo-flag]');
     if (!t) return;
-    const card = t.closest('[data-key]');
-    const key = card && card.dataset.key;
     if (t.matches('[data-text]')) {
-      const a = { flag: t.dataset.flag, what: t.dataset.what || '' };
-      TEXT_ASKS.set(key, a);
-      setTimeout(() => {
-        const box = card.querySelector('[data-card-ask]');
-        if (box) { box.innerHTML = askInner(a, card.dataset.first); box.hidden = false; }
-      }, 400);
-    } else if (t.matches('[data-ask-no]')) {
-      TEXT_ASKS.delete(key);
-      t.closest('[data-card-ask]').hidden = true;
-    } else if (t.matches('[data-ask-yes]')) {
-      const a = TEXT_ASKS.get(key); if (!a) return;
-      t.disabled = true; TEXT_ASKS.delete(key);
-      markSent(a.flag);
+      const flag = t.dataset.flag;
+      if (TEXT_SAVING.has(flag)) return;
+      TEXT_SAVING.add(flag);
+      const saved = saveSentFlags([flag]);
+      await new Promise(r => setTimeout(r, 400));
+      const ok = await saved;
+      TEXT_SAVING.delete(flag);
+      if (ok) $('loadBtn').click();
+      else showErr('Couldn’t mark that text as sent. Tap it again.');
     } else if (t.matches('[data-skip]')) {
-      t.disabled = true; TEXT_ASKS.delete(key);
+      t.disabled = true;
       markSent(t.dataset.flag, { skip: true });
     } else if (t.matches('[data-undo-flag]')) {
       t.disabled = true;
