@@ -5,6 +5,8 @@
 // Admin only (signed-in session, see lib-auth.mjs).
 //
 // Body: { key, type: "delivery" | "pickup", origin? }
+// Reply: { miles, oneCar, cars, destination, origin }. Over 40 totes takes
+// two cars, so miles is the one-car round trip times cars (lib-mileage.mjs).
 //
 // Env vars:
 //   GOOGLE_PLACES_API_KEY - same Google Cloud API key used for reviews
@@ -13,7 +15,7 @@
 import { getStore } from "@netlify/blobs";
 import { dropoffAddressOf, pickupAddressOf } from "./lib-reminders.mjs";
 import { isAdmin } from "./lib-auth.mjs";
-import { roundTripMiles, homeAddress } from "./lib-mileage.mjs";
+import { roundTripMiles, homeAddress, carsFor } from "./lib-mileage.mjs";
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
 
@@ -35,8 +37,9 @@ export default async (request) => {
   const origin = String(body.origin || "").trim() || homeAddress();
 
   try {
-    const miles = await roundTripMiles(apiKey, origin, destination);
-    return json({ miles, destination, origin });
+    const oneCar = await roundTripMiles(apiKey, origin, destination);
+    const cars = carsFor(rental);
+    return json({ miles: Math.round(oneCar * cars * 10) / 10, oneCar, cars, destination, origin });
   } catch (e) {
     console.error("trip-miles failed:", e.message);
     return json({ error: e.message || "Network error calculating miles" }, 502);

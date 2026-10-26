@@ -10,14 +10,22 @@
 // handover legs of an extension, trips already logged or cleared on
 // Finance, and everything when the switch is off (settings.mjs).
 // unlogTrip() takes back a trip it logged, for Undo.
+//
+// One car carries up to 40 totes. A bigger rental takes two cars (three
+// past 80), and every car drives the round trip, so the miles multiply.
 
 import { getStore } from "@netlify/blobs";
 import { routeMatrix } from "./lib-routes.mjs";
 import { dropoffAddressOf, pickupAddressOf } from "./lib-reminders.mjs";
 import { getSettings } from "./settings.mjs";
+import { totesFor } from "./lib-stock.mjs";
 
 export const DEFAULT_HOME_ADDRESS = "313 SW 166th St, Oklahoma City, OK 73170";
 const METERS_PER_MILE = 1609.344;
+export const TOTES_PER_CAR = 40;
+
+export const carsFor = (rental) => Math.max(1, Math.ceil(totesFor(rental || {}) / TOTES_PER_CAR));
+const times = (miles, cars) => Math.round(miles * cars * 10) / 10;
 
 export const homeAddress = () => process.env.HOME_ADDRESS || DEFAULT_HOME_ADDRESS;
 
@@ -61,12 +69,13 @@ export async function logTrip(rentalKey, rental, leg, at = new Date()) {
     try { skips = (await getStore({ name: "meta", consistency: "strong" }).get("tripSkips", { type: "json" })) || {}; } catch {}
     if (skips[`${rentalKey}:${leg}`]) return { skipped: "cleared on Finance" };
 
-    const miles = await roundTripMiles(apiKey, homeAddress(), destination);
+    const cars = carsFor(rental);
+    const miles = times(await roundTripMiles(apiKey, homeAddress(), destination), cars);
     const date = okDate(at);
     await store.setJSON(`mile_${date}_${Date.now()}`, {
       date,
-      purpose: `${leg === "delivery" ? "Deliver" : "Pick up"}, ${rental.name || "customer"}, ${destination}`.slice(0, 200),
-      miles, rentalKey, leg, auto: true,
+      purpose: `${leg === "delivery" ? "Deliver" : "Pick up"}, ${rental.name || "customer"}${cars > 1 ? ` (${cars} cars)` : ""}, ${destination}`.slice(0, 200),
+      miles, rentalKey, leg, auto: true, ...(cars > 1 ? { cars } : {}),
     });
     return { logged: miles };
   } catch (e) {
