@@ -66,7 +66,7 @@ async function tryAutoInvoice(store, key) {
   return { invoiced: true, request: done };
 }
 
-export default async (request) => {
+export default async (request, context) => {
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
   let body;
   try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
@@ -115,9 +115,14 @@ export default async (request) => {
     }
 
     const dates = `${fmt(req.deliveryDate)} to ${fmt(req.pickupDate)}`;
-    await notify("confirmed", auto.invoiced
+    // The phone alert goes out after the page has its answer when the
+    // runtime allows it (context.waitUntil), so the customer waits less.
+    const alert = notify("confirmed", auto.invoiced
       ? { title: "Booking confirmed and invoiced", body: `${req.name || "A customer"} confirmed ${dates}. Invoice for ${auto.request.payPrice} emailed with a pay link.`, url: "/admin-rentals.html", tag: "confirmed-" + key }
-      : { title: "Booking confirmed", body: `${req.name || "A customer"} confirmed ${dates}. Ready to invoice${auto.reasons.length ? ` (check: ${auto.reasons.join(", ")})` : ""}.`, url: "/admin-requests.html", tag: "confirmed-" + key });
+      : { title: "Booking confirmed", body: `${req.name || "A customer"} confirmed ${dates}. Ready to invoice${auto.reasons.length ? ` (check: ${auto.reasons.join(", ")})` : ""}.`, url: "/admin-requests.html", tag: "confirmed-" + key })
+      .catch((e) => console.error("Confirm alert failed:", e.message));
+    if (context && typeof context.waitUntil === "function") context.waitUntil(alert);
+    else await alert;
     return json(await view(auto.invoiced ? auto.request : confirmed));
   } catch (e) {
     console.error("confirm-booking failed:", e.message);

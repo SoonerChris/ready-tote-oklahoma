@@ -93,6 +93,8 @@
       $('msgText').textContent = b.error + ' If you meant to confirm, just reply YES to our text.';
       $('msg').hidden = false;
     } else if (b.state === 'open') {
+      $('confirmBtn').disabled = false;
+      $('confirmBtn').textContent = 'Confirm my booking';
       if (b.first) $('askTitle').textContent = b.first + ', confirm your booking';
       $('details').innerHTML = details(b);
       $('ask').hidden = false;
@@ -119,17 +121,30 @@
     try {
       const r = await fetch('/.netlify/functions/confirm-booking', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t, action }) });
       return await r.json();
-    } catch { return { error: "We couldn't reach our server." }; }
+    } catch { return { error: "We couldn't reach our server.", lost: true }; }
+  }
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  // The answer can get lost on the way back even though the server finished,
+  // most often when the phone switches to the invoice email that just
+  // arrived (iPhone pauses the page and drops the waiting request). So before
+  // showing an error, ask again what state the booking is in.
+  async function recheck(res) {
+    for (let i = 0; i < 3 && res.lost; i++) { await wait(1500); res = await call('look'); }
+    return res;
   }
 
   $('confirmBtn').addEventListener('click', async () => {
     $('confirmBtn').disabled = true;
     $('confirmBtn').textContent = 'Confirming…';
-    show(await call('confirm'));
+    show(await recheck(await call('confirm')));
+  });
+  // Coming back to this page (from Mail, Messages...): refresh what it shows
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && t && !$('msg').hidden) call('look').then(show);
   });
 
   if (!t) show({ error: 'This link is missing its code.' });
-  else call('look').then(show);
+  else call('look').then(recheck).then(show);
 </script>
 </body>
 </html>
