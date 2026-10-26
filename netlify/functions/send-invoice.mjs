@@ -1,5 +1,6 @@
 // POST /.netlify/functions/send-invoice
-// Sends a branded invoice email to a customer with a Stripe payment button.
+// Sends a branded invoice email to a customer with a Stripe payment button,
+// and logs the rental (lib-invoice.mjs, shared with automatic invoices).
 // Admin only (signed-in session, see lib-auth.mjs).
 //
 // Env vars required:
@@ -7,23 +8,8 @@
 //   RESEND_FROM    - verified sender
 //   INVOICE_SECRET - a password you choose; the admin page asks for it
 
-import { getStore } from "@netlify/blobs";
-import { rentalToICSAttachments } from "./lib-reminders.mjs";
 import { isAdmin } from "./lib-auth.mjs";
-import { emailLayout, heading, pill, detailsCard, button, contactLine, cleanLineItems, lineItemRows, callout, htmlToText } from "./lib-email.mjs";
-
-const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
-const OWNER_EMAIL = "readytoteok@gmail.com";
-
-// toteCount/dollyCount drive Inventory math directly, so they're validated
-// as real whole numbers here rather than parsed out of the package text.
-function parseCount(value, fieldName) {
-  const n = Number(value);
-  if (value === undefined || value === null || value === "" || !Number.isInteger(n) || n < 0) {
-    throw new Error(`${fieldName} must be a whole number (0 or more)`);
-  }
-  return n;
-}
+import { sendInvoice } from "./lib-invoice.mjs";
 
 export default async (request) => {
   if (request.method !== "POST") {
@@ -42,147 +28,12 @@ export default async (request) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const required = ["email", "name", "phone", "package", "duration", "price", "dropoffDate", "dropoffTime", "pickupDate", "pickupTime", "dropoffAddress", "pickupAddress", "stripeUrl"];
-  for (const f of required) {
-    if (!body[f]) return new Response(`Missing field: ${f}`, { status: 400 });
+  const { autoInvoiced, ...data } = body;   // only confirm-booking marks those
+  const result = await sendInvoice(data);
+  if (!result.ok) {
+    return result.status === 502
+      ? new Response(JSON.stringify({ ok: false, error: result.error }), { status: 502 })
+      : new Response(result.error, { status: result.status });
   }
-
-  let toteCount, dollyCount;
-  try {
-    toteCount = parseCount(body.toteCount, "toteCount");
-    dollyCount = parseCount(body.dollyCount, "dollyCount");
-  } catch (e) {
-    return new Response(e.message, { status: 400 });
-  }
-
-  const name = escapeHtml(body.name);
-  const firstName = name.split(" ")[0];
-  const pkg = escapeHtml(body.package);
-  const duration = escapeHtml(body.duration);
-  const rawPrice = String(body.price).trim();
-  const price = escapeHtml(rawPrice.startsWith("$") ? rawPrice : "$" + rawPrice);
-  // Package / rush / military lines, only when they add up to the price
-  let lineItems = cleanLineItems(body.lineItems);
-  const priceNum = parseFloat(rawPrice.replace(/[^0-9.]/g, ""));
-  if (lineItems && !(Math.abs(lineItems.reduce((t, i) => t + i.amount, 0) - priceNum) < 0.01)) lineItems = null;
-  const dropoff = `${formatDate(body.dropoffDate)} at ${escapeHtml(body.dropoffTime)}`;
-  const pickup = `${formatDate(body.pickupDate)} at ${escapeHtml(body.pickupTime)}`;
-  const dropoffAddress = escapeHtml(body.dropoffAddress);
-  const pickupAddress = escapeHtml(body.pickupAddress);
-  const sameAddress = body.dropoffAddress === body.pickupAddress;
-  const selfService = body.serviceType === "self";
-  const stripeUrl = String(body.stripeUrl);
-  if (!/^https:\/\/([a-z0-9-]+\.)?stripe\.com\//.test(stripeUrl)) {
-    return new Response("stripeUrl must be a stripe.com link", { status: 400 });
-  }
-
-  const from = process.env.RESEND_FROM || FROM_FALLBACK;
-
-
-  const html = emailLayout({
-    preheader: "Your invoice is ready. Complete your reservation to lock in your dates.",
-    body: `
-            ${heading(`Your invoice is ready, ${firstName}`, {
-              badge: pill("Payment due", "gold"),
-              lead: "Here are your rental details. Complete your reservation below to lock in your dates.",
-            })}
-            ${detailsCard({
-              label: "Rental invoice",
-              rows: [
-                ["Package", pkg],
-                ["Duration", duration],
-                ...(selfService
-                  ? [["Service", "You pick up and return the totes"], ["Pick up totes", dropoff], ["Return totes", pickup]]
-                  : [["Drop-off", dropoff], ["Pickup", pickup],
-                     ...(sameAddress ? [["Address", dropoffAddress]] : [["Drop-off address", dropoffAddress], ["Pickup address", pickupAddress]])]),
-                ...lineItemRows(lineItems),
-              ],
-              total: ["Total due", price],
-            })}
-            ${button(stripeUrl, "Complete reservation", { note: "Secure payment by Stripe" })}
-            ${callout(`<strong>${selfService ? "Pick-up and return" : "Drop-off and pickup"} are attached.</strong> Tap them to add to your calendar.<br>Free to cancel or reschedule up to 48 hours before ${selfService ? "your pick-up" : "delivery"}.`, "plain")}
-            ${contactLine("Need to change anything?")}`,
-  });
-
-  // Generate calendar event attachments
-  const icsAttachments = rentalToICSAttachments(body, { forCustomer: true });
-
-  const resp = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to: [body.email],
-      bcc: [OWNER_EMAIL],
-      reply_to: OWNER_EMAIL,
-      subject: `Your Ready Tote invoice, ${String(body.name).split(" ")[0]} (${rawPrice.startsWith("$") ? rawPrice : "$" + rawPrice})`,
-      html,
-      text: htmlToText(html),
-      attachments: icsAttachments,
-    }),
-  });
-
-  if (!resp.ok) {
-    const errText = await resp.text();
-    console.error("Resend API error:", resp.status, errText);
-    return new Response(JSON.stringify({ ok: false, error: errText }), { status: 502 });
-  }
-
-  // Log the rental so reminders and review requests can find it. The key
-  // goes back to the page so it can mark the "invoice sent" text for it.
-  let key = null;
-  try {
-    const store = getStore({ name: "rentals", consistency: "strong" });
-    key = `${body.dropoffDate}_${body.email.replace(/[^a-zA-Z0-9@.]/g, "")}_${Date.now()}`;
-    await store.setJSON(key, {
-      name: body.name,
-      email: body.email,
-      phone: body.phone,
-      package: body.package,
-      toteCount,
-      dollyCount,
-      price: body.price,
-      duration: body.duration,
-      dropoffDate: body.dropoffDate,
-      dropoffTime: body.dropoffTime,
-      pickupDate: body.pickupDate,
-      pickupTime: body.pickupTime,
-      dropoffAddress: body.dropoffAddress,
-      pickupAddress: body.pickupAddress,
-      serviceType: body.serviceType || "delivery",
-      notes: body.notes || "",
-      invoicedAt: new Date().toISOString(),
-      stripeUrl,
-      isMilitary: !!body.isMilitary,
-      isRush: !!body.isRush,
-      ...(body.promoCode ? { promoCode: String(body.promoCode).trim().slice(0, 40) } : {}),
-      ...(lineItems ? { lineItems } : {}),
-      militaryIdKey: body.militaryIdKey || "",
-    });
-  } catch (e) {
-    console.error("Rental log failed (invoice still sent):", e.message);
-    key = null;
-  }
-
-  return new Response(JSON.stringify({ ok: true, key }), { status: 200 });
+  return new Response(JSON.stringify({ ok: true, key: result.key }), { status: 200 });
 };
-
-function escapeHtml(str) {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function formatDate(isoDate) {
-  const d = new Date(isoDate + "T12:00:00");
-  if (isNaN(d)) return escapeHtml(isoDate);
-  return d.toLocaleDateString("en-US", {
-    weekday: "long", year: "numeric", month: "long", day: "numeric",
-  });
-}

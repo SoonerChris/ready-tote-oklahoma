@@ -81,6 +81,7 @@
   .warns{margin-top:8px;display:flex;flex-direction:column;gap:6px;}
   .req-body .muted{color:var(--steel);font-size:13px;}
   .warn{padding:7px 10px;border-radius:6px;background:var(--gold-bg);color:var(--gold-ink);font-size:13px;font-weight:600;line-height:1.4;}
+  .warn.ok{background:var(--green-bg);color:var(--green-ink);}
 
   /* "Sent to Hannah?" after tapping Text to confirm */
   .ask{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;margin-top:12px;padding:10px 12px;background:var(--surface-2);border-radius:8px;font-size:14px;font-weight:600;}
@@ -276,6 +277,9 @@
   function warnings(r) {
     if (!ACTIVE_STATUSES.includes(r.status)) return [];
     const out = [];
+    // Confirmed by the customer, but held back from the automatic invoice
+    if (r.status === 'confirmed' && Array.isArray(r.autoInvoiceSkipped) && r.autoInvoiceSkipped.length)
+      out.push(`Not invoiced automatically: ${r.autoInvoiceSkipped.join(', ')}. Check it and send the invoice.`);
     if (r.deliveryDate && r.pickupDate) {
       const len = daysBetween(r.deliveryDate, r.pickupDate);
       if (len !== 14) out.push(len <= 0 ? 'Pickup is not after delivery. Fix the dates before confirming.'
@@ -319,6 +323,7 @@
         ${r.reviewNotes ? `<div><span class="lbl">Notes</span>${esc(r.reviewNotes)}</div>` : ''}
         ${r.status === 'declined' && r.declineReason ? `<div><span class="lbl">Declined</span>${esc(r.declineReason)}</div>` : ''}
       </div>
+      ${r.autoInvoicedAt ? `<div class="warns"><div class="warn ok">Invoiced automatically when they confirmed (${esc(fmtDateTime(r.autoInvoicedAt))}): ${esc(r.payPrice || '')} invoice emailed with a pay link.</div></div>` : ''}
       ${warns.length ? `<div class="warns">${warns.map(w => `<div class="warn">${esc(w)}</div>`).join('')}</div>` : ''}
 
       <div class="req-actions" data-actions></div>
