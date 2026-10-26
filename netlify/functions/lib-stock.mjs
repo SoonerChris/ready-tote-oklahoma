@@ -29,7 +29,7 @@ function totesInPackage(pkg) {
 // Prefer the validated toteCount field (rentals only); fall back to
 // parsing the package label for legacy records or requests, which don't
 // have a toteCount field at all.
-function totesFor(record) {
+export function totesFor(record) {
   if (typeof record.toteCount === "number" && record.toteCount > 0) {
     return record.toteCount;
   }

@@ -982,7 +982,7 @@
         <tbody>${mileSorted.map(m => `
           <tr data-row="${escAttr(m.key)}">
             <td class="c-meta" style="white-space:nowrap;">${esc(fmtDay(m.date))}</td>
-            <td class="c-main">${esc(m.purpose)}</td>
+            <td class="c-main">${esc(m.purpose)}${m.auto ? '<span class="minor">Logged automatically when marked done</span>' : ''}</td>
             <td class="r c-amt">${Number(m.miles).toLocaleString('en-US',{maximumFractionDigits:1})} mi</td>
             <td class="r c-hide" style="color:var(--steel);">${rateOn(m.date) ? money(m.miles * rateOn(m.date)) : '—'}</td>
             <td class="c-act">${rowActions(m.key, 'mile')}</td>
@@ -1030,7 +1030,11 @@
       const resp = await fetch('/.netlify/functions/trip-miles', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ secret: $('secret').value.trim(), key: b.dataset.trip, type: b.dataset.leg, origin: sessionStorage.getItem('rto-admin-startfrom') || '' }) });
       const d = await resp.json().catch(() => ({}));
-      if (resp.ok && d.miles) { $('mileMiles').value = d.miles; $('mileNote').textContent = `Round trip from ${d.origin}. Change it if you made other stops.`; }
+      if (resp.ok && d.miles) {
+        $('mileMiles').value = d.miles;
+        $('mileNote').textContent = `Round trip from ${d.origin}${d.cars > 1 ? `, times ${d.cars} cars (${d.oneCar} mi each, over ${40 * (d.cars - 1)} totes)` : ''}. Change it if you made other stops.`;
+        if (d.cars > 1 && !/cars\)/.test($('milePurpose').value)) $('milePurpose').value = $('milePurpose').value.replace(/^([^,]*,[^,]*)/, `$1 (${d.cars} cars)`);
+      }
       else $('mileNote').textContent = (d.error || 'Couldn’t work out the miles.') + ' Type them in.';
     } catch { $('mileNote').textContent = 'Couldn’t work out the miles. Type them in.'; }
     $('mileMiles').placeholder = '0.0';
