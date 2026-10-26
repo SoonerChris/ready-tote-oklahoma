@@ -12,9 +12,9 @@
 <!-- Canonical URL: prevents duplicate-content SEO issues between www/non-www or trailing slash variants -->
 <link rel="canonical" href="https://www.readytoteokc.com/">
 
-<!-- TODO: Replace with the actual verification tag Google Search Console gives you
-     when you add www.readytoteokc.com as a property (Settings > Ownership verification > HTML tag) -->
-<meta name="google-site-verification" content="PASTE_YOUR_VERIFICATION_CODE_HERE">
+<!-- Google Search Console: when you add www.readytoteokc.com as a property
+     (Settings > Ownership verification > HTML tag), paste the
+     <meta name="google-site-verification" ...> tag it gives you here. -->
 
 <!-- Open Graph tags: controls how links look when shared on Facebook/Instagram/iMessage -->
 <meta property="og:type" content="business.business">
@@ -148,9 +148,12 @@
   .logo .tag-icon{
     width:26px; height:26px; flex:none;
   }
+  /* Kept compact: the header is sticky, so every pixel here is lost
+     from every screen while scrolling */
   .logo img{
-    height:104px; width:auto; flex:none;
+    height:64px; width:auto; flex:none;
   }
+  @media(min-width:900px){.logo img{height:72px;}}
   .logo.footer-logo img{
     height:64px;
   }
@@ -564,15 +567,22 @@
     background:none; border:none; width:100%; text-align:left;
     font-family:inherit; color:var(--ink);
   }
-  .faq-q:hover{color:var(--yellow);}
+  /* Ink + underline on hover: yellow on cream is too faint to read */
+  .faq-q:hover{text-decoration:underline; text-underline-offset:4px;}
+  .faq-q:focus-visible{outline:3px solid var(--yellow); outline-offset:2px;}
   .faq-q .arrow{font-size:1.2rem; color:var(--yellow); transition:transform 0.2s; flex:none;}
   .faq-item.open .faq-q .arrow{transform:rotate(45deg);}
+  /* Grid-row animation opens to the answer's real height, so long
+     answers never get cut off (unlike a fixed max-height) */
   .faq-a{
-    max-height:0; overflow:hidden; transition:max-height 0.3s ease;
+    display:grid; grid-template-rows:0fr; overflow:hidden;
+    transition:grid-template-rows 0.3s ease;
     font-size:0.95rem; color:var(--steel); line-height:1.6;
   }
-  .faq-item.open .faq-a{max-height:500px;}
-  .faq-a-inner{padding:0 0 18px;}
+  .faq-item.open .faq-a{grid-template-rows:1fr;}
+  .faq-a-inner{min-height:0; overflow:hidden;}
+  /* Bottom spacing as content (not padding) so it collapses when closed */
+  .faq-a-inner::after{content:""; display:block; height:18px;}
 
   /* Floating text button */
   .float-text{
@@ -678,7 +688,7 @@
     <div class="wrap">
       <div class="hero-copy">
         <h1>We Drop Off.<br>You Pack.<br><span class="hl">We Pick Up.</span></h1>
-        <p class="lede">Heavy-duty moving totes delivered to your door in the Oklahoma City metro and Ada area. No tape, no broken boxes, far less waste. Just pack, move, and we handle the rest. <em>Tote rental service — not a moving company.</em></p>
+        <p class="lede">Heavy-duty moving totes, delivered and picked up across the OKC metro and Ada area. No tape, no broken boxes. <em>Tote rental service, not a moving company.</em></p>
         <div class="price-tag">
           <span class="hole"></span>
           <span class="num">$99</span>
@@ -1232,15 +1242,26 @@
     next.addEventListener('click', () => track.scrollBy({ left: scrollAmount(), behavior: 'smooth' }));
   })();
 
-  // FAQ accordion
-  document.querySelectorAll('.faq-q').forEach(btn => {
+  // FAQ accordion (aria-expanded/aria-controls tell screen readers
+  // which answer a question opens, and whether it's open)
+  const faqBtns = document.querySelectorAll('.faq-q');
+  faqBtns.forEach((btn, i) => {
+    const answer = btn.nextElementSibling;
+    answer.id = 'faq-a-' + i;
+    btn.setAttribute('aria-controls', answer.id);
+    btn.setAttribute('aria-expanded', 'false');
+    btn.querySelector('.arrow')?.setAttribute('aria-hidden', 'true');
     btn.addEventListener('click', () => {
       const item = btn.parentElement;
       const wasOpen = item.classList.contains('open');
       // Close all
       document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+      faqBtns.forEach(b => b.setAttribute('aria-expanded', 'false'));
       // Toggle clicked
-      if (!wasOpen) item.classList.add('open');
+      if (!wasOpen) {
+        item.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      }
     });
   });
 
