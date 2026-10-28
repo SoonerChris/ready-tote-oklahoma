@@ -7,6 +7,7 @@ import { getStore } from "@netlify/blobs";
 import { computeReminders, rentalToICSAttachments, todayInOklahoma, friendlyTime, dropoffAddressOf, pickupAddressOf } from "./lib-reminders.mjs";
 import { emailLayout, heading, sectionLabel, pill, button, escapeHtml, emailColors as C, SITE_URL } from "./lib-email.mjs";
 import { notify } from "./lib-push.mjs";
+import { autoPaymentReminders } from "./lib-payment-reminder.mjs";
 
 const OWNER_EMAIL = "readytoteok@gmail.com";
 // Always get the digest, on top of REMINDER_EMAILS (or the owner if unset).
@@ -35,13 +36,24 @@ export async function sendDigest({ notifyPhone = true } = {}) {
   let paidFlags = {};
   try { paidFlags = (await metaStore.get("paidFlags", { type: "json" })) || {}; } catch {}
 
+  // Payment reminders that came due this morning go out by email first
+  // (Automation switch), so the list below only has what's left for you
+  let autoSent = [];
+  try { autoSent = await autoPaymentReminders(rentals, sentFlags, paidFlags); }
+  catch (e) { console.error("Automatic payment reminders failed:", e.message); }
+  if (autoSent.length) {
+    try { sentFlags = (await metaStore.get("sentFlags", { type: "json" })) || {}; } catch {}
+    const names = autoSent.map((x) => x.name || "a customer").join(", ");
+    await notify("payments", { title: `Payment reminder${autoSent.length === 1 ? "" : "s"} emailed`, body: `Sent to ${names}. Their invoices are still unpaid.`, url: "/admin-reminders.html", tag: "autopay-" + todayInOklahoma() });
+  }
+
   const rem = computeReminders(rentals, process.env.GOOGLE_REVIEW_LINK || "", sentFlags, paidFlags);
   const total = rem.delivery.length + rem.pickupTomorrow.length + rem.pickup.length + rem.review.length + rem.followup.length + rem.emailReminder.length + rem.addressCheck.length;
 
   // Nothing due: still a short email (no phone buzz), so a quiet morning
   // never looks the same as a broken one
   if (total === 0) {
-    const quiet = quietDayEmail(rentals, todayInOklahoma());
+    const quiet = quietDayEmail(rentals, todayInOklahoma(), autoSent);
     const ok = await sendEmail(quiet.subject, quiet.html);
     console.log(`No reminders due today; quiet-day email ${ok ? "sent" : "failed"}.`);
     return { total, ok };
@@ -103,6 +115,7 @@ export async function sendDigest({ notifyPhone = true } = {}) {
               lead: "Open the reminders page to send each one. Sending from there marks it done.",
             })}
             ${button(dashboardUrl, "Open reminders")}
+            ${autoSentNote(autoSent)}
             ${section("Confirm pickup address", rem.addressCheck)}
             ${section("Delivery tomorrow", rem.delivery)}
             ${section("Pickup tomorrow", rem.pickupTomorrow)}
@@ -147,10 +160,17 @@ async function sendEmail(subject, html, attachments = []) {
   return resp.ok;
 }
 
+// "Emailed for you this morning": the automatic payment reminders
+function autoSentNote(autoSent) {
+  if (!autoSent.length) return "";
+  return `${sectionLabel(`Emailed for you this morning (${autoSent.length})`, { top: 22 })}
+            <p style="margin:0; font-size:14px; line-height:1.5; color:${C.ink};">Payment reminder${autoSent.length === 1 ? "" : "s"} with the pay link went to ${escapeHtml(autoSent.map((x) => x.name || "a customer").join(", "))}. Nothing to do unless they reply.</p>`;
+}
+
 // The "nothing due today" email: no texts to send, plus the stops coming up
 // today and the next QUIET_DAYS days so the morning still has a plan.
 const QUIET_DAYS = 3;
-export function quietDayEmail(rentals, today) {
+export function quietDayEmail(rentals, today, autoSent = []) {
   const shift = (d, n) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
   const last = shift(today, QUIET_DAYS);
   const mins = (t) => { const m = String(t || "").match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i); if (!m) return 9999; let h = +m[1]; if (m[3]) { const pm = /pm/i.test(m[3]); if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; } return h * 60 + +(m[2] || 0); };
@@ -180,6 +200,7 @@ export function quietDayEmail(rentals, today) {
               badge: pill(longToday, "gold"),
               lead: "No reminder texts, payment nudges or review asks are due. This email is just so you know the morning check ran.",
             })}
+            ${autoSentNote(autoSent)}
             ${sectionLabel(stops.length ? "Coming up" : "Coming up: nothing scheduled", { top: 22 })}
             ${stops.length ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${C.line}; border-radius:12px;">${rows}
       </table>` : `<p style="margin:0; font-size:14px; color:${C.steel};">No deliveries or pickups today or in the next ${QUIET_DAYS} days.</p>`}

@@ -84,9 +84,6 @@
   .warn{padding:7px 10px;border-radius:6px;background:var(--gold-bg);color:var(--gold-ink);font-size:13px;font-weight:600;line-height:1.4;}
   .warn.ok{background:var(--green-bg);color:var(--green-ink);}
 
-  /* "Sent to Hannah?" after tapping Text to confirm */
-  .ask{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;margin-top:12px;padding:10px 12px;background:var(--surface-2);border-radius:8px;font-size:14px;font-weight:600;}
-  .ask[hidden]{display:none;}
   .undo-line{display:flex;align-items:center;gap:12px;margin-top:12px;padding:9px 12px;border-radius:8px;background:var(--green-bg);color:var(--green-ink);font-size:14px;font-weight:600;}
   #deletedBar{margin:0 0 12px;}
   #deletedBar[hidden]{display:none;}
@@ -334,11 +331,6 @@
 
       <div class="req-actions" data-actions></div>
       ${LAST_MOVE && LAST_MOVE.key === r.key ? `<div class="undo-line"><span>${esc(LAST_MOVE.label)}</span><button type="button" class="linklike" data-undo>Undo</button></div>` : ''}
-      <div class="ask" data-ask${OPEN_ASKS.has(r.key) ? '' : ' hidden'}>
-        <span>Sent the confirm text to ${esc((r.name || 'them').split(' ')[0])}?</span>
-        <button type="button" data-ask-yes>Yes, sent</button>
-        <button type="button" class="linklike" data-ask-no>Not yet</button>
-      </div>
       <div class="decline-box" data-decline>
         <p>Why decline ${esc((r.name || 'this request').split(' ')[0])}?</p>
         <div class="reasons">
@@ -419,7 +411,6 @@
     return list.map(w => `<option value="${escAttr(w)}"${w === cur ? ' selected' : ''}>${esc(w)}</option>`).join('');
   }
 
-  const OPEN_ASKS = new Set();   // requests showing "Sent the confirm text?"; kept across re-renders
 
   // Undo for status changes. The latest change shows an Undo right in its
   // card; every open request also has a "Move back" link for later.
@@ -434,8 +425,9 @@
     act(r.key, action, 'Moved back to ' + (action === 'unconfirm' ? 'awaiting customer' : action === 'review' ? 'reviewed' : 'new') + '.');
   }
 
-  // Text to confirm: check stock first, open Messages, then ask whether it
-  // went out before moving the request to "Awaiting customer".
+  // Text to confirm: check stock first, then open Messages. Opening it counts
+  // as sent: the request moves to "Awaiting customer" right away, with Undo
+  // on the card if the text didn't go out.
   function textToConfirm(r, card) {
     const need = totesInPackageText(r.package);
     const needDollies = dolliesInPackageText(r.package);
@@ -449,11 +441,16 @@
     } else if (AVAIL_FAILED && !confirm('Couldn’t check stock right now. The text tells the customer their dates work. Text anyway?')) {
       return;
     }
-    if (!r.confirmToken) saveConfirmToken(r);
+    const fresh = !r.confirmToken;
+    if (fresh) r.confirmToken = newConfirmToken();
+    if (r.status === 'awaiting_confirmation') {
+      if (fresh) saveConfirmToken(r);   // a re-send; status is already right
+    } else {
+      // One save moves it along and stores the confirm-link code together,
+      // so the code can't be lost to a second save
+      act(r.key, 'send-confirmation', 'Marked awaiting the customer.', { confirmToken: r.confirmToken });
+    }
     window.open(smsLink(r.phone, confirmMessage(r)), '_blank');
-    if (r.status === 'awaiting_confirmation') return;   // a re-send; status is already right
-    OPEN_ASKS.add(r.key);
-    setTimeout(() => { const a = card.querySelector('[data-ask]'); if (a) a.hidden = false; }, 400);
   }
 
   function wireCard(r) {
@@ -496,15 +493,6 @@
       if (confirm(label + ' for ' + (r.name || 'this request') + '?')) moveBack(r, action);
     });
 
-    card.querySelector('[data-ask-yes]').addEventListener('click', () => {
-      OPEN_ASKS.delete(r.key);
-      // Re-send the confirm-link code with this save so it can't be lost
-      act(r.key, 'send-confirmation', 'Marked awaiting the customer.', r.confirmToken ? { confirmToken: r.confirmToken } : undefined);
-    });
-    card.querySelector('[data-ask-no]').addEventListener('click', () => {
-      OPEN_ASKS.delete(r.key);
-      card.querySelector('[data-ask]').hidden = true;
-    });
 
     card.querySelector('[data-save-edit]')?.addEventListener('click', () => {
       const fields = {};
@@ -659,7 +647,7 @@
     const prev = before && before.status;
     try {
       const resp = await fetch('/.netlify/functions/update-request', {
-        method: 'POST',
+        method: 'POST', keepalive: true,   // finishes even while Messages takes over the screen
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ secret, key, action, ...(extra || {}) }),
       });
@@ -767,9 +755,11 @@
   function confirmLink(r) {
     return 'readytoteokc.com/c/' + encodeURIComponent(r.confirmToken || '');
   }
-  function saveConfirmToken(r) {
+  function newConfirmToken() {
     const bytes = crypto.getRandomValues(new Uint8Array(12));
-    r.confirmToken = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function saveConfirmToken(r) {
     fetch('/.netlify/functions/update-request', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ secret: $('secret').value.trim(), key: r.key, confirmToken: r.confirmToken }),
