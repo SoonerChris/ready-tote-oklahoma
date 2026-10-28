@@ -38,6 +38,8 @@ export default async (request) => {
   const militaryIdKey = data.military_id_key || "";
   // Optional partner promo code; checked by hand before invoicing
   const promoCode = String(data.promo_code || "").trim().slice(0, 40);
+  // Optional "How did you hear about us?" answer (marketing attribution only)
+  const howHeard = String(data.how_heard || "").trim().slice(0, 60);
 
   // The booking form now collects one "Delivery Address" text box
   // (delivery_address). Submissions from before that change sent
@@ -85,6 +87,7 @@ export default async (request) => {
       serviceType: selfPickup ? "self" : "delivery",
       militaryIdKey,
       promoCode,
+      howHeard,
       status: "new",
       submittedAt: new Date().toISOString(),
     });
