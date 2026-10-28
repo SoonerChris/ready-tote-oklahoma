@@ -4,6 +4,8 @@
 // Shows any stored time as "2:30 PM", even older records saved as "14:30".
 // Who customer texts are from. Change it here (and TEXT_SIGNER in
 // admin-shared.js for the texts built in the browser) if someone else sends.
+import { addressLink } from "./lib-links.mjs";
+
 export const SIGNER = "Chris with Ready Tote Oklahoma";
 const PHONE = "580.399.3202";
 const hi = (first) => `Hi ${first}, it's ${SIGNER}!`;
@@ -121,7 +123,8 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
     // Extensions (see admin-shared.js): no pickup texts for a rental that
     // was extended, no delivery text for the extension itself
     const noPickup = !!r.extendedBy, noDelivery = !!r.extendsKey;
-    if (!self && !noPickup && !r.pickedUpAt && r.pickupDate && open(shiftDate(r.pickupDate, -5), shiftDate(r.pickupDate, -2))) {
+    // Not once the customer confirmed or changed it themselves (address.html)
+    if (!self && !noPickup && !r.pickedUpAt && !r.pickupAddressConfirmedAt && r.pickupDate && open(shiftDate(r.pickupDate, -5), shiftDate(r.pickupDate, -2))) {
       const flagId = "addressCheck:" + (r.key || r.phone + r.pickupDate);
       if (!sentFlags[flagId]) {
         const { message, sms } = pickupAddressRequestMessageFor(r, { withPickup: today === shiftDate(r.pickupDate, -2) });
@@ -180,9 +183,10 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
     }
 
     // Pickup reminder: pickup is in 2 days (the day-before text covers a miss)
-    // Skipped when the address check (still due, or sent today) carries it
+    // Skipped when the address check (still due, or sent today) carries it;
+    // not once the customer confirmed the address, since no check goes out
     const addrId = "addressCheck:" + (r.key || r.phone + r.pickupDate);
-    const carriedByAddressCheck = !self && (!sentFlags[addrId] || sentOn(addrId) === today);
+    const carriedByAddressCheck = !self && (sentOn(addrId) === today || (!sentFlags[addrId] && !r.pickupAddressConfirmedAt));
     if (r.pickupDate === shiftDate(today, 2) && !noPickup && !r.pickedUpAt && !carriedByAddressCheck) {
       const msg = self
         ? `${hi(first)} Friendly reminder to return your totes on ${friendlyDate(r.pickupDate)} around ${friendlyTime(r.pickupTime)}. Thanks!`
@@ -208,17 +212,20 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
 export function pickupAddressRequestMessageFor(rental, { withPickup = false } = {}) {
   const first = (rental.name || "there").split(" ")[0];
   const onFile = confirmedPickupAddressOf(rental);
+  // With the link they confirm or change it themselves (address.html)
+  const link = addressLink(rental.key);
+  const ask = link
+    ? (onFile ? `Is that still right? Tap to confirm or change it: ${link}` : `Tap to tell us where to pick them up: ${link}`)
+    : (onFile ? "Is that still right?" : "What address should we pick them up from? Please reply with the full street address, city, and zip.");
   // Two days out: one text covering the pickup reminder and the address
   if (withPickup) {
     const when = `${friendlyDate(rental.pickupDate)} around ${friendlyTime(rental.pickupTime)}`;
-    const msg = onFile
-      ? `${hi(first)} We'll pick up your totes on ${when}. We have your pickup address as ${onFile}. Is that still right? Please have the totes empty and accessible. Thanks!`
-      : `${hi(first)} We'll pick up your totes on ${when}. What address should we pick them up from? Please reply with the full street address, city, and zip. Thanks!`;
+    const msg = `${hi(first)} We'll pick up your totes on ${when}.${onFile ? ` We have your pickup address as ${onFile}.` : ""} ${ask} Please have the totes empty and accessible. Thanks!`;
     return { message: msg, sms: smsLink(rental.phone, msg) };
   }
   const msg = onFile
-    ? `${hi(first)} Quick check before we pick up your totes on ${friendlyDate(rental.pickupDate)}. We have your pickup address as ${onFile}. Let us know if that's still correct, or send us the right address if it's changed!`
-    : `${hi(first)} Quick check before we pick up your totes on ${friendlyDate(rental.pickupDate)}. What address should we pick them up from? Please reply with the full street address, city, and zip. Thanks!`;
+    ? `${hi(first)} Quick check before we pick up your totes on ${friendlyDate(rental.pickupDate)}. We have your pickup address as ${onFile}. ${ask}${link ? " Or just reply here." : " Let us know, or send us the right address if it's changed!"}`
+    : `${hi(first)} Quick check before we pick up your totes on ${friendlyDate(rental.pickupDate)}. ${ask}${link ? " Or just reply here." : " Thanks!"}`;
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
 
