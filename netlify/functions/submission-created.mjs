@@ -109,7 +109,7 @@ export default async (request) => {
   // ask for it here so it isn't a follow-up email later.
   const militaryBlock = !isMilitary ? "" : militaryIdKey
     ? callout("<strong>Military discount:</strong> We got your ID photo. Thank you for your service! We'll verify it and apply the discount to your invoice.", "plain")
-    : callout("<strong>Military discount:</strong> Looks like you qualify. Thank you for your service! To apply it, reply to this email with a photo of your military ID (active duty, veteran, or immediate family) and we'll take care of the rest.", "gold");
+    : callout("<strong>Military discount:</strong> Looks like you qualify. Thank you for your service! To apply it, add a photo of your military ID (active duty, veteran, or immediate family) on the confirm page we text you, or reply to this email with it. We'll take care of the rest.", "gold");
 
   const html = emailLayout({
     preheader: "We got your booking request and will confirm your dates shortly. No payment is due yet.",

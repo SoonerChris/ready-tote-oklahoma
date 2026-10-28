@@ -39,6 +39,14 @@
   .done{display:inline-block;background:var(--green-bg);color:var(--green);font-weight:700;font-size:0.85rem;padding:5px 10px;border-radius:999px;margin-bottom:12px;}
   a{color:var(--ink);font-weight:600;}
   [hidden]{display:none !important;}
+  /* Military discount: ID photo right on this page */
+  .idbox{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:0 0 18px;background:var(--cream);}
+  .idbox h2{font:700 1.05rem 'Barlow',sans-serif;margin:0 0 6px;}
+  .idbox p{font-size:0.95rem;margin:0 0 10px;}
+  .idbox label.pick{display:block;text-align:center;padding:12px;font:700 1rem 'Barlow',sans-serif;background:#fff;color:var(--ink);border:1px solid var(--ink);border-radius:10px;cursor:pointer;}
+  .idbox input[type=file]{position:absolute;opacity:0;width:1px;height:1px;}
+  .idbox .ok{color:var(--green);font-weight:700;}
+  .idbox .err{color:#831C1E;font-weight:600;}
 </style>
 </head>
 <body>
@@ -67,6 +75,13 @@
       </div>
     </div>
 
+    <div class="idbox" id="idBox" hidden>
+      <h2>Military discount</h2>
+      <p id="idText">Add a photo of your military ID (active duty, veteran, or immediate family) and we'll take 15% off your invoice.</p>
+      <label class="pick" id="idPick">Add ID photo<input type="file" id="idFile" accept="image/*"></label>
+      <p class="muted" id="idSay" style="margin:10px 0 0;" hidden></p>
+    </div>
+
     <div id="msg" hidden>
       <h1 id="msgTitle">We couldn't open this booking</h1>
       <p id="msgText"></p>
@@ -88,6 +103,48 @@
     return [['Package', b.package], [b.self ? 'Pick up' : 'Delivery', when(b.deliveryDate, b.deliveryTime)], [b.self ? 'Return' : 'Pickup', when(b.pickupDate, b.pickupTime)]]
       .filter(([, v]) => v).map(([k, v]) => `<div class="row"><span>${k}</span><b>${text(v)}</b></div>`).join('');
   }
+
+  // Military discount: the ID photo box sits above the button (or under the
+  // details once confirmed) until a photo is on file
+  function showId(b) {
+    const box = $('idBox');
+    box.hidden = !(b.military && b.state !== 'closed');
+    if (box.hidden) return;
+    if (b.state === 'open') $('confirmBtn').before(box); else $('doneDetails').after(box);
+    const has = b.military.hasPhoto;
+    $('idText').innerHTML = has
+      ? '<span class="ok">Got your ID photo.</span> Thank you for your service! We\'ll check it and take 15% off your invoice.'
+      : 'Add a photo of your military ID (active duty, veteran, or immediate family) and we\'ll take 15% off your invoice.';
+    $('idPick').firstChild.textContent = has ? 'Send a different photo' : 'Add ID photo';
+  }
+  // Phone photos are large: shrink to 1600px JPEG before sending
+  function shrink(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = () => {
+        let { width: w, height: h } = img; const k = Math.min(1, 1600 / Math.max(w, h));
+        const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.75).split(',')[1]);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('That file isn\'t a photo we can read.')); };
+      img.src = url;
+    });
+  }
+  $('idFile').addEventListener('change', async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const say = $('idSay'); say.hidden = false; say.className = 'muted'; say.textContent = 'Sending your photo…';
+    try {
+      const imageBase64 = await shrink(file);
+      const r = await fetch('/.netlify/functions/confirm-booking', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t, action: 'id-photo', imageBase64 }) });
+      const b = await r.json().catch(() => ({}));
+      if (!r.ok || b.error) throw new Error(b.error || 'Something went wrong.');
+      say.hidden = true; showId(b);
+    } catch (err) {
+      say.className = 'err'; say.textContent = (err.message || 'Something went wrong.') + ' You can also text the photo to 580.399.3202.';
+    }
+    e.target.value = '';
+  });
 
   function show(b) {
     $('loading').hidden = true;
@@ -118,6 +175,7 @@
       $('msgText').textContent = "These dates can't be confirmed online anymore. Give us a call or text and we'll sort it out.";
       $('msg').hidden = false;
     }
+    showId(b);
   }
 
   async function call(action) {
