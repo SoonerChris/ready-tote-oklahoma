@@ -12,7 +12,7 @@ import { autoPaymentReminders } from "./lib-payment-reminder.mjs";
 const OWNER_EMAIL = "readytoteok@gmail.com";
 // Always get the digest, on top of REMINDER_EMAILS (or the owner if unset).
 const ALWAYS_CC = ["shonanderson856@gmail.com"];
-const REMINDER_RECIPIENTS = [...new Set(
+export const REMINDER_RECIPIENTS = [...new Set(
   [...(process.env.REMINDER_EMAILS || OWNER_EMAIL).split(","), ...ALWAYS_CC]
     .map(e => e.trim().toLowerCase()).filter(Boolean)
 )];
@@ -141,7 +141,7 @@ export async function sendDigest({ notifyPhone = true } = {}) {
 }
 
 // Emails the digest recipients through Resend; false if Resend refused it.
-async function sendEmail(subject, html, attachments = []) {
+export async function sendEmail(subject, html, attachments = []) {
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
