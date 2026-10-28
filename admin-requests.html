@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Requests · Ready Tote Oklahoma admin</title>
 <link rel="stylesheet" href="admin-shared.css?v=20261026">
-<script src="admin-shared.js?v=20261114"></script>
+<script src="admin-shared.js?v=20261115"></script>
 <script src="admin-availability.js?v=20261027"></script>
 <style>
   :root{--col:820px;}
@@ -703,7 +703,11 @@
     const rushNote = isRushRequest(r)
       ? ` Since that's a rush request (under 24 hrs out), a $${RUSH_FEE} expedite fee applies, it'll show as its own line on your invoice.`
       : '';
-    return `Hi ${first}, it's ${TEXT_SIGNER}! Got your request for ${pkg}. Your dates, ${fmtReqDate(r.deliveryDate)} to ${fmtReqDate(r.pickupDate)}, work on our end.${rushNote} Tap here to confirm and we'll send your invoice:\n${confirmLink(r)}\n(or just reply YES)`;
+    // Dates and times both, so confirming agrees to the time too
+    const self = r.serviceType === 'self';
+    const when = `${self ? 'Pick up' : 'Delivery'}: ${fmtReqDate(r.deliveryDate)}, ${windowText(r.deliveryWindow)}\n`
+      + `${self ? 'Return' : 'Pickup'}: ${fmtReqDate(r.pickupDate)}, ${windowText(r.pickupWindow)}`;
+    return `Hi ${first}, it's ${TEXT_SIGNER}! Got your request for ${pkg}, and this works on our end:\n${when}\nNeed a different time? Just reply.${rushNote} Tap here to confirm and we'll send your invoice:\n${confirmLink(r)}\n(or just reply YES)`;
   }
 
   // One-tap confirm link: readytoteokc.com/c/CODE shows confirm.html (see
