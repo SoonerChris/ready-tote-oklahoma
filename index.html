@@ -490,6 +490,31 @@
   .avail-note{margin:10px 0 0; padding:10px 14px; border-radius:10px; font-size:0.88rem; font-weight:600; line-height:1.45;}
   .avail-note.ok{background:#E3F4E9; color:#14492F;}
   .avail-note.tight{background:#FBF0D6; color:#6B4C0C;}
+  /* Compact form: pickup date as a line, delivery/pickup choice, optional extras */
+  #bookingForm [hidden], #formSuccess [hidden]{display:none !important;}
+  .pickup-line{margin:10px 0 0; font-size:0.9rem; color:var(--steel);}
+  .pickup-line b{color:var(--ink); font-weight:600;}
+  .pickup-line .link-btn{margin-left:8px;}
+  .link-btn{all:unset; cursor:pointer; font-weight:600; color:var(--ink); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--yellow);}
+  .link-btn:focus-visible{outline:2px solid var(--yellow); outline-offset:2px;}
+  .rush-note{color:var(--steel); font-size:0.8rem; margin:8px 0 0;}
+  .seg{display:grid; grid-template-columns:1fr 1fr; gap:0; margin-top:18px; border:1px solid var(--line-dark); border-radius:var(--radius); overflow:hidden;}
+  .seg-opt{flex-direction:row; align-items:center; justify-content:center; gap:8px; padding:12px 10px; font-size:0.92rem; cursor:pointer; background:var(--cream); text-align:center;}
+  .seg-opt + .seg-opt{border-left:1px solid var(--line-dark);}
+  .seg-opt input{position:absolute; opacity:0; pointer-events:none;}
+  .seg-opt:has(input:checked){background:var(--ink); color:var(--white);}
+  .seg-opt:has(input:focus-visible){outline:2px solid var(--yellow); outline-offset:-3px;}
+  .form-more{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:16px; font-size:0.9rem;}
+  .more-box{margin-top:14px;}
+  label.check{flex-direction:row; align-items:center; gap:8px; font-weight:400; margin-top:14px; font-size:0.88rem; color:var(--steel);}
+  label.check input{width:auto;}
+  /* Thank-you screen: one-tap "how did you hear about us?" */
+  .heard{margin-top:20px; padding-top:18px; border-top:1px solid var(--line-dark);}
+  .heard-q{margin:0 0 10px; font-weight:600;}
+  .heard-chips{display:flex; flex-wrap:wrap; gap:8px;}
+  .heard-chips button{font-family:inherit; font-size:0.88rem; padding:8px 12px; border:1px solid var(--line-dark); border-radius:999px; background:var(--cream); color:var(--ink); cursor:pointer;}
+  .heard-chips button:hover{border-color:var(--ink);}
+  .heard-chips button[aria-pressed="true"]{background:var(--ink); color:var(--white); border-color:var(--ink);}
 
   /* Phones: a Reserve bar along the bottom once you're past the hero,
      hidden while the booking form is on screen. Takes over from the
@@ -935,18 +960,9 @@
       >
         <input type="hidden" name="form-name" value="booking">
         <input class="hp" type="text" name="hp_field" tabindex="-1" autocomplete="new-password" aria-hidden="true">
+        <!-- Only what's needed up front; pickup date, times and discounts
+             are one tap away (and fine to skip) -->
         <div class="form-grid two">
-          <label>Full Name*
-            <input type="text" name="name" autocomplete="name" required>
-          </label>
-          <label>Phone Number*
-            <input type="tel" name="phone" autocomplete="tel" required>
-          </label>
-        </div>
-        <div class="form-grid two" style="margin-top:18px;">
-          <label>Email Address*
-            <input type="email" name="email" autocomplete="email" required>
-          </label>
           <label>Rental Package*
             <select name="package" required>
               <option value="">Choose a package...</option>
@@ -956,19 +972,46 @@
               <option>Not sure yet — let's discuss</option>
             </select>
           </label>
-        </div>
-        <div class="form-grid two" style="margin-top:18px;">
-          <label>Estimated Delivery Date*
+          <label>Delivery Date*
             <input type="date" name="delivery_date" id="deliveryDate" required>
           </label>
-          <label>Estimated Pickup Date* <span style="font-weight:400; color:var(--steel);">(auto-set 2 weeks out, editable)</span>
-            <input type="date" name="pickup_date" id="pickupDate" required>
+        </div>
+        <p class="pickup-line" id="pickupLine">Pickup: <b id="pickupText">2 weeks after delivery</b> <button type="button" class="link-btn" id="pickupChange" aria-controls="pickupRow" aria-expanded="false">Change</button></p>
+        <div class="form-grid" id="pickupRow" hidden style="margin-top:12px;">
+          <label>Pickup Date
+            <input type="date" name="pickup_date" id="pickupDate">
           </label>
         </div>
         <p class="avail-note" id="availNote" role="status" hidden></p>
-        <p style="color:var(--steel); font-size:0.8rem; margin:8px 0 0;">Need delivery in under 24 hours? A $25 expedite fee applies, we'll confirm the total before sending your invoice.</p>
+        <p class="rush-note">Need delivery in under 24 hours? A $25 expedite fee applies, we'll confirm the total before sending your invoice.</p>
+        <div class="seg" role="radiogroup" aria-label="Delivery or pickup">
+          <label class="seg-opt"><input type="radio" name="self_pickup" value="" checked> Deliver to me</label>
+          <label class="seg-opt"><input type="radio" name="self_pickup" value="true" id="selfPickup"> I'll pick up and return</label>
+        </div>
+        <div class="form-grid" style="margin-top:14px;" id="addressRow">
+          <label>Delivery Address*
+            <input type="text" name="delivery_address" id="deliveryAddress" autocomplete="street-address" placeholder="Street address, city, state, zip" required>
+          </label>
+        </div>
         <div class="form-grid two" style="margin-top:18px;">
-          <label>Preferred Delivery Window
+          <label>Full Name*
+            <input type="text" name="name" autocomplete="name" required>
+          </label>
+          <label>Phone Number*
+            <input type="tel" name="phone" autocomplete="tel" required>
+          </label>
+        </div>
+        <div class="form-grid" style="margin-top:18px;">
+          <label>Email Address*
+            <input type="email" name="email" autocomplete="email" required>
+          </label>
+        </div>
+        <div class="form-more">
+          <button type="button" class="link-btn" data-open="timeBox" aria-controls="timeBox" aria-expanded="false">Pick a time of day (optional)</button>
+          <button type="button" class="link-btn" data-open="extraBox" aria-controls="extraBox" aria-expanded="false">Promo code or military discount?</button>
+        </div>
+        <div class="form-grid two more-box" id="timeBox" hidden>
+          <label>Delivery Time
             <select name="delivery_window">
               <option value="No preference">No preference</option>
               <option>Morning (8 AM – 12 PM)</option>
@@ -976,7 +1019,7 @@
               <option>Evening (5 – 8 PM)</option>
             </select>
           </label>
-          <label>Preferred Pickup Window
+          <label>Pickup Time
             <select name="pickup_window">
               <option value="No preference">No preference</option>
               <option>Morning (8 AM – 12 PM)</option>
@@ -985,42 +1028,36 @@
             </select>
           </label>
         </div>
-        <label style="flex-direction:row; align-items:center; gap:8px; font-weight:400; margin-top:18px; font-size:0.88rem; color:var(--steel);">
-          <input type="checkbox" name="self_pickup" id="selfPickup" value="true" style="width:auto;">
-          <span>I'll pick up and return the totes myself (no delivery needed)</span>
-        </label>
-        <div class="form-grid" style="margin-top:18px;" id="addressRow">
-          <label>Delivery Address*
-            <input type="text" name="delivery_address" id="deliveryAddress" placeholder="Street address, city, state, zip" required>
+        <div class="more-box" id="extraBox" hidden>
+          <div class="form-grid">
+            <label>Promo code
+              <input type="text" name="promo_code" maxlength="40" autocomplete="off" placeholder="From a partner, if you have one">
+            </label>
+          </div>
+          <label class="check">
+            <input type="checkbox" name="is_military" value="true">
+            <span>Military? Check here for 15% off (active duty, veteran or immediate family). We'll ask for a photo of your military ID.</span>
           </label>
         </div>
-        <div class="form-grid" style="margin-top:18px;">
-          <label>Promo code (optional)
-            <input type="text" name="promo_code" maxlength="40" autocomplete="off" placeholder="From a partner, if you have one">
-          </label>
-          <label>How did you hear about us? (optional)
-            <select name="how_heard">
-              <option value="">Select one</option>
-              <option>Facebook or Instagram</option>
-              <option>Google search</option>
-              <option>Friend or family</option>
-              <option>Realtor</option>
-              <option>Moving company</option>
-              <option>Apartment community</option>
-              <option>Other</option>
-            </select>
-          </label>
-        </div>
-        <label style="flex-direction:row; align-items:center; gap:8px; font-weight:400; margin-top:18px; font-size:0.88rem; color:var(--steel);">
-          <input type="checkbox" name="is_military" value="true" style="width:auto;">
-          <span>Military? Check here for 15% off (active duty, veteran or immediate family). We'll ask for a photo of your military ID.</span>
-        </label>
         <button type="submit" class="btn btn-primary form-submit">Request Booking</button>
         <p class="form-note">No payment due now. Check your email for a copy, then watch for a text from 580.399.3202 to confirm your dates.</p>
       </form>
       <div class="form-wrap form-success" id="formSuccess" style="display:none;" role="status" tabindex="-1">
         <h3 style="margin-bottom:10px;">Thanks, request received!</h3>
         <p style="color:var(--steel); margin:0;">Check your email for a copy. We'll text you from <strong>580.399.3202</strong> to confirm your dates, then send your invoice.</p>
+        <div class="heard" id="heardBox">
+          <p class="heard-q">One quick question: how did you hear about us?</p>
+          <div class="heard-chips" id="heardChips">
+            <button type="button">Facebook or Instagram</button>
+            <button type="button">Google search</button>
+            <button type="button">Friend or family</button>
+            <button type="button">Realtor</button>
+            <button type="button">Moving company</button>
+            <button type="button">Apartment community</button>
+            <button type="button">Other</button>
+          </div>
+          <p class="form-note" id="heardThanks" hidden>Thanks, that helps us a lot!</p>
+        </div>
       </div>
     </div>
   </section>
@@ -1302,31 +1339,74 @@
   const formSuccess = document.getElementById('formSuccess');
 
   // ---- Pickup date auto-fill ----
-  // Saves a second date-picker trip on mobile: picking a delivery date
-  // pre-fills pickup 14 days later (the standard rental). Pickup stays
-  // editable, and once the customer changes it by hand we stop overwriting.
+  // Picking a delivery date sets pickup 14 days later (the standard
+  // rental), shown as a line ("Pickup: Mon, Nov 16 · Change") instead of a
+  // second date box. Change opens the box; once the customer picks a date
+  // by hand we stop overwriting it.
   const deliveryDateEl = document.getElementById('deliveryDate');
   const pickupDateEl = document.getElementById('pickupDate');
+  const pickupText = document.getElementById('pickupText');
+  const pickupChange = document.getElementById('pickupChange');
+  const pickupRow = document.getElementById('pickupRow');
   const todayISO = new Date().toLocaleDateString('en-CA');
   let pickupEditedByHand = false;
   deliveryDateEl.min = todayISO;
   pickupDateEl.min = todayISO;
+  const plus14 = d => { const p = new Date(d + 'T12:00:00'); p.setDate(p.getDate() + 14); return p.toLocaleDateString('en-CA'); };
+  const niceDate = d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  function showPickup() {
+    const p = pickupDateEl.value, d = deliveryDateEl.value;
+    pickupText.textContent = !p ? '2 weeks after delivery'
+      : niceDate(p) + (d && p === plus14(d) ? ' (2 weeks)' : '');
+  }
   deliveryDateEl.addEventListener('change', () => {
     const d = deliveryDateEl.value;
     if (!d) return;
     pickupDateEl.min = d;
     if (!pickupEditedByHand || !pickupDateEl.value || pickupDateEl.value < d) {
-      const p = new Date(d + 'T12:00:00');
-      p.setDate(p.getDate() + 14);
-      pickupDateEl.value = p.toLocaleDateString('en-CA');
+      pickupDateEl.value = plus14(d);
+      pickupDateEl.dispatchEvent(new Event('change'));
+      pickupEditedByHand = false;
     }
+    showPickup();
   });
-  pickupDateEl.addEventListener('change', () => { pickupEditedByHand = true; });
+  pickupDateEl.addEventListener('change', (e) => { if (e.isTrusted) pickupEditedByHand = true; showPickup(); });
+  pickupChange.addEventListener('click', () => {
+    pickupRow.hidden = !pickupRow.hidden;
+    pickupChange.setAttribute('aria-expanded', String(!pickupRow.hidden));
+    pickupChange.textContent = pickupRow.hidden ? 'Change' : 'Done';
+    if (!pickupRow.hidden) pickupDateEl.focus();
+  });
+
+  // ---- Optional sections: time of day, promo / military ----
+  form.querySelectorAll('[data-open]').forEach(btn => btn.addEventListener('click', () => {
+    const box = document.getElementById(btn.dataset.open);
+    box.hidden = !box.hidden;
+    btn.setAttribute('aria-expanded', String(!box.hidden));
+  }));
 
   // Guards the Meta Pixel Lead event so it fires at most once per page load:
   // the success state is terminal (the form is hidden and never re-shown), so
   // one successful submission = one Lead event, never a duplicate.
   let leadTracked = false;
+  let SENT = null;   // who just sent the form, for the "how did you hear" answer
+
+  // ---- Thank-you screen: "How did you hear about us?" in one tap ----
+  // Saved on the request just sent (booking-source.mjs). The request is
+  // stored a moment after the form posts, so a not-found answer is retried.
+  document.getElementById('heardChips').addEventListener('click', async (e) => {
+    const b = e.target.closest('button'); if (!b || !SENT) return;
+    document.querySelectorAll('#heardChips button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    document.getElementById('heardThanks').hidden = false;
+    for (let i = 0; i < 5; i++) {
+      try {
+        const r = await fetch('/.netlify/functions/booking-source', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...SENT, howHeard: b.textContent.trim() }) });
+        if (r.status !== 404) return;
+      } catch {}
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  });
 
   function encodeForNetlify(formEl) {
     const data = new FormData(formEl);
@@ -1357,6 +1437,15 @@
     // rejects bots that fill it in and post directly.
     form.hp_field.value = '';
     formMsg('');
+    // Pickup is a line, not a required box: fill in the standard 2 weeks
+    // if it's somehow still empty
+    if (!pickupDateEl.value && deliveryDateEl.value) pickupDateEl.value = plus14(deliveryDateEl.value);
+    if (pickupDateEl.value && deliveryDateEl.value && pickupDateEl.value < deliveryDateEl.value) {
+      pickupRow.hidden = false; pickupChange.textContent = 'Done';
+      formMsg('Please check Pickup Date: it has to be after delivery.');
+      pickupDateEl.focus();
+      return;
+    }
 
     const submitBtn = form.querySelector('.form-submit');
     submitBtn.disabled = true;
@@ -1372,6 +1461,7 @@
         form.style.display = 'none';
         formSuccess.style.display = 'block';
         formSuccess.focus();
+        SENT = { email: form.email.value.trim(), phone: form.phone.value.trim() };
         if (!leadTracked) {
           leadTracked = true;
           if (typeof fbq !== 'undefined') {
@@ -1446,17 +1536,17 @@
     if (sel) { sel.value = a.dataset.pkg; sel.dispatchEvent(new Event('change')); }
   }));
 
-  // ---- Self pickup: no delivery address needed ----
+  // ---- Deliver to me / I'll pick up: no address needed for pickup ----
   (function () {
     const box = document.getElementById('selfPickup');
     const row = document.getElementById('addressRow');
     const addr = document.getElementById('deliveryAddress');
     if (!box || !row || !addr) return;
-    box.addEventListener('change', () => {
+    document.querySelectorAll('#bookingForm input[name="self_pickup"]').forEach(r => r.addEventListener('change', () => {
       row.style.display = box.checked ? "none" : "";
       addr.required = !box.checked;
-      if (box.checked) addr.value = '';
-    });
+      addr.disabled = box.checked;   // kept if they switch back, but not sent with a pickup
+    }));
   })();
 
   // ---- Are the chosen dates open? ----
