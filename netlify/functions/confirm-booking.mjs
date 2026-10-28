@@ -7,7 +7,7 @@
 // invoiced, the price and Stripe pay link.
 //
 // Body: { t, action }
-//   look    -> { first, package, deliveryDate, pickupDate, state, pay? }
+//   look    -> { first, package, deliveryDate, pickupDate, deliveryTime, pickupTime, self, state, pay? }
 //   confirm -> moves the request to "confirmed" and notifies the admin app.
 //              A standard booking (lib-invoice.mjs autoInvoicePlan) is then
 //              invoiced right away: invoice email out, rental logged, request
@@ -28,6 +28,14 @@ import { getSettings } from "./settings.mjs";
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
 const OPEN = ["new", "reviewed", "awaiting_confirmation"];
 const DONE = ["confirmed", "invoiced"];
+
+// "Morning (8 AM – 12 PM)" -> "morning (8 AM–12 PM)"; no preference is the
+// invoice's default time (same as windowText in admin-shared.js)
+const windowText = (w) => {
+  const s = String(w || "").trim();
+  if (!s || /no preference/i.test(s)) return "around 10 AM";
+  return s.charAt(0).toLowerCase() + s.slice(1).replace(/\s*[–-]\s*/g, "–");
+};
 
 const fmt = (iso) => (iso ? new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }) : "");
 
@@ -90,6 +98,9 @@ export default async (request, context) => {
         package: r.package || "",
         deliveryDate: r.deliveryDate || "",
         pickupDate: r.pickupDate || "",
+        deliveryTime: windowText(r.deliveryWindow),
+        pickupTime: windowText(r.pickupWindow),
+        self: r.serviceType === "self",
         state: state(r),
       };
       if (r.status === "invoiced" && r.payUrl) {

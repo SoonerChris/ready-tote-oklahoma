@@ -49,8 +49,9 @@
 
     <div id="ask" hidden>
       <h1 id="askTitle">Confirm your booking</h1>
-      <p>Tap below to confirm these dates. Your invoice comes right after.</p>
+      <p>Tap below to confirm these dates and times. Your invoice comes right after.</p>
       <div class="details" id="details"></div>
+      <p class="muted" style="margin:0 0 14px;">Need a different time? Text us at <a href="sms:+15803993202">580.399.3202</a> before confirming.</p>
       <button id="confirmBtn">Confirm my booking</button>
     </div>
 
@@ -82,7 +83,9 @@
   const text = (s) => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
 
   function details(b) {
-    return [['Package', b.package], ['Delivery', fmt(b.deliveryDate)], ['Pickup', fmt(b.pickupDate)]]
+    // Date and time together: confirming agrees to both
+    const when = (d, w) => fmt(d) + (d && w ? ', ' + w : '');
+    return [['Package', b.package], [b.self ? 'Pick up' : 'Delivery', when(b.deliveryDate, b.deliveryTime)], [b.self ? 'Return' : 'Pickup', when(b.pickupDate, b.pickupTime)]]
       .filter(([, v]) => v).map(([k, v]) => `<div class="row"><span>${k}</span><b>${text(v)}</b></div>`).join('');
   }
 

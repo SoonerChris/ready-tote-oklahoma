@@ -142,6 +142,16 @@ function findPendingConfirmed(requests, rentals) {
 // netlify/functions/lib-reminders.mjs).
 const TEXT_SIGNER = 'Chris with Ready Tote Oklahoma';
 
+// The time a request asked for, as the customer reads it: "Morning (8 AM –
+// 12 PM)" -> "morning (8 AM–12 PM)". No preference reads as "around 10 AM",
+// the time an invoice uses when none was asked for (DEFAULT_TIME in
+// netlify/functions/lib-invoice.mjs; keep in sync with confirm-booking.mjs).
+function windowText(w) {
+  const s = String(w || '').trim();
+  if (!s || /no preference/i.test(s)) return 'around 10 AM';
+  return s.charAt(0).toLowerCase() + s.slice(1).replace(/\s*[–-]\s*/g, '–');
+}
+
 // ---- One text per person ----
 // Reminders due the same day for the same phone number become one text:
 // the first message as written, then the others without their "Hi Dee,
