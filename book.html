@@ -159,6 +159,16 @@
 
   .loading{ text-align:center; color:var(--steel); padding:24px 0; font-size:0.9rem; }
 </style>
+
+<!-- Google Analytics 4 (replace G-XXXXXXXXXX with the real Measurement ID) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX');
+</script>
+<!-- End Google Analytics 4 -->
 </head>
 <body>
 
@@ -533,6 +543,9 @@
         status.textContent = 'Request received! Check your email — we\'ll confirm your dates and send an invoice shortly. No payment due now.';
         form.reset();
         btn.textContent = 'Request Booking';
+        if (typeof gtag !== 'undefined') {
+          gtag('event', 'booking_submit', { form_location: 'book_page' });
+        }
       })
       .catch(() => {
         status.className = 'form-status show err';
