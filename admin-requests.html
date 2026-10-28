@@ -320,6 +320,7 @@
         <div><span class="lbl">Phone</span>${r.phone ? `<a href="tel:${escAttr(phoneDigits)}">${esc(fmtPhone(r.phone))}</a>` : 'Not given'}</div>
         <div><span class="lbl">Email</span>${r.email ? `<a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : 'Not given'}</div>
         ${r.promoCode ? `<div><span class="lbl">Promo</span><b>${esc(r.promoCode)}</b> <span class="muted">check it's valid before invoicing</span></div>` : ''}
+        ${r.howHeard ? `<div><span class="lbl">Heard via</span>${esc(r.howHeard)}</div>` : ''}
         ${r.reviewNotes ? `<div><span class="lbl">Notes</span>${esc(r.reviewNotes)}</div>` : ''}
         ${r.status === 'declined' && r.declineReason ? `<div><span class="lbl">Declined</span>${esc(r.declineReason)}</div>` : ''}
       </div>
