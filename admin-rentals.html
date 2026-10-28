@@ -392,6 +392,7 @@
             <div><span class="k">Counts</span>${counts}</div>
             <div><span class="k">Times</span>out ${esc(whenText(r.dropoffDate, r.dropoffTime))}, back ${esc(whenText(r.pickupDate, r.pickupTime))}</div>
             <div><span class="k">Address</span>${addr}</div>
+            ${r.pickupAddressConfirmedAt ? `<div><span class="k">Pickup</span>${r.pickupAddressChangedFrom ? 'Customer changed the pickup address' : 'Customer confirmed the pickup address'} ${esc(fmtDate(r.pickupAddressConfirmedAt.slice(0, 10)))}${r.pickupAddressChangedFrom ? `<span style="display:block;color:var(--steel);">Was ${esc(r.pickupAddressChangedFrom)}</span>` : ''}</div>` : ''}
             <div><span class="k">Contact</span>${r.phone ? `<a href="tel:${escAttr(r.phone)}">${esc(fmtPhone(r.phone))}</a>` : '—'}${r.email ? ` · <a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : ''}</div>
             ${(r.stockLosses || []).length ? `<div><span class="k">Stock</span><span style="color:var(--red-ink);">${r.stockLosses.map(l => `${l.quantity} ${l.item === 'dolly' ? (l.quantity === 1 ? 'dolly' : 'dollies') : (l.quantity === 1 ? 'tote' : 'totes')} ${l.type === 'lost' ? 'not returned' : 'damaged'} (${esc(shortDate(l.date))})`).join(', ')}</span></div>` : ''}
             ${extensionFact(r)}
