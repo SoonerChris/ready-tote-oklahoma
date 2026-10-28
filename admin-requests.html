@@ -87,6 +87,9 @@
   .ask{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;margin-top:12px;padding:10px 12px;background:var(--surface-2);border-radius:8px;font-size:14px;font-weight:600;}
   .ask[hidden]{display:none;}
   .undo-line{display:flex;align-items:center;gap:12px;margin-top:12px;padding:9px 12px;border-radius:8px;background:var(--green-bg);color:var(--green-ink);font-size:14px;font-weight:600;}
+  #deletedBar{margin:0 0 12px;}
+  #deletedBar[hidden]{display:none;}
+  button.secondary.danger{color:var(--red); border-color:var(--red);}
   .undo-line button.linklike{all:unset;cursor:pointer;margin-left:auto;color:var(--ink);text-decoration:underline;text-underline-offset:3px;font-weight:600;}
   .ask button{width:auto;margin:0;padding:7px 14px;font-size:14px;}
   .ask button.linklike{background:none;border:none;color:var(--ink);text-decoration:underline;text-underline-offset:3px;padding:7px 4px;}
@@ -123,6 +126,7 @@
       <input type="search" id="search" placeholder="Search name, phone, email…">
       <span class="count-badge" id="countBadge"></span>
     </div>
+    <div class="undo-line" id="deletedBar" hidden></div>
     <div id="list"></div>
   </div>
 </div>
@@ -535,6 +539,7 @@
       addBtn('Decline', 'secondary', () => declineFlow(r.key));
     } else if (r.status === 'declined') {
       addBtn('Reopen', 'linklike', () => act(r.key, 'reopen', 'Reopened as new.'));
+      addBtn('Delete', 'secondary danger', () => deleteRequest(r));
     }
     // invoiced: no actions, read-only
 
@@ -670,6 +675,39 @@
       showErr('Update failed. Nothing was changed.');
     }
   }
+
+  // ---- Delete a declined request (test bookings, spam) ----
+  // Gone from Requests and, unless they have other rentals or requests,
+  // from Contacts. Undo puts it back with the same key.
+  let DELETED = null;   // { key, record } for Undo, until the next delete or reload
+  async function deleteRequest(r) {
+    if (!confirm(`Delete ${r.name || 'this'}'s declined request? It also leaves Contacts unless they have other rentals or requests.`)) return;
+    try {
+      const resp = await fetch('/.netlify/functions/update-request', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: $('secret').value.trim(), key: r.key, action: 'delete' }) });
+      if (!resp.ok) return showErr((await resp.text().catch(() => '')) || 'Delete failed (' + resp.status + ').');
+      DELETED = { key: r.key, record: (await resp.json()).deleted };
+      ALL = ALL.filter(x => x.key !== r.key);
+      showDeleted();
+      render();
+    } catch { showErr('Network error. Nothing was deleted.'); }
+  }
+  function showDeleted() {
+    const bar = $('deletedBar');
+    bar.hidden = !DELETED;
+    if (DELETED) bar.innerHTML = `<span>Deleted ${esc(DELETED.record.name || 'the')}'s request.</span><button type="button" class="linklike" id="undoDelete">Undo</button>`;
+  }
+  $('deletedBar').addEventListener('click', async (e) => {
+    if (!e.target.closest('#undoDelete') || !DELETED) return;
+    e.target.disabled = true;
+    try {
+      const resp = await fetch('/.netlify/functions/update-request', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: $('secret').value.trim(), key: DELETED.key, action: 'restore', record: DELETED.record }) });
+      if (!resp.ok) { e.target.disabled = false; return showErr('Couldn’t bring it back (' + resp.status + ').'); }
+      ALL.push((await resp.json()).request);
+      DELETED = null; showDeleted(); showOk('Request is back.'); render();
+    } catch { e.target.disabled = false; showErr('Network error. Try Undo again.'); }
+  });
 
   async function patch(key, fields, okMsg) {
     const secret = $('secret').value.trim();

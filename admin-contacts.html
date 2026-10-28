@@ -35,6 +35,13 @@
   .fchips .n{font-weight:500; opacity:.75; margin-left:4px;}
   .count-line{font-size:14px; color:var(--steel); margin:0 0 8px;}
   .count-line b{color:var(--ink);}
+  /* "How people found us": answers from the booking form's thank-you screen */
+  .found-line{font-size:14px; color:var(--steel); margin:0 0 10px;}
+  .found-line b{color:var(--ink); font-weight:600;}
+  .undo-line{display:flex; align-items:center; gap:12px; margin:0 0 12px; padding:9px 12px; border-radius:8px; background:var(--green-bg); color:var(--green-ink); font-size:14px; font-weight:600;}
+  .undo-line[hidden]{display:none;}
+  .undo-line button{all:unset; cursor:pointer; margin-left:auto; color:var(--ink); text-decoration:underline; text-underline-offset:3px; font-weight:600;}
+  .det-acts .hide-btn{all:unset; cursor:pointer; margin-left:auto; font-size:13px; font-weight:600; color:var(--steel); text-decoration:underline; text-underline-offset:3px;}
   table.people{width:100%; border-collapse:collapse; font-size:14px;}
   table.people th{font-size:12px; font-weight:500; color:var(--steel); text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap;}
   table.people td{padding:12px 10px; border-bottom:1px solid var(--rule-soft); vertical-align:top; font-variant-numeric:tabular-nums;}
@@ -103,7 +110,9 @@
       <button type="button" class="secondary" id="copyEmailsBtn">Copy emails</button>
       <button type="button" class="secondary" id="csvBtn">Download CSV</button>
     </div>
+    <p class="found-line" id="foundLine" hidden></p>
     <div class="fchips" id="chips" role="group" aria-label="Show"></div>
+    <div class="undo-line" id="hideBar" hidden></div>
     <p class="count-line" id="countLine"></p>
     <div id="peopleList"></div>
   </div>
@@ -116,6 +125,7 @@
   $('secret').value = adminSessionMarker();   // signed-in marker; the session cookie is what the server checks
 
   let PEOPLE = [], FILTER = 'all', PARTNERS = [];
+  let HIDDEN = {};   // personKey -> hiddenAt (hide-contact.mjs)
   const OPEN = new Set();   // people whose history is open
   wireTextAsks(document.getElementById('peopleList'));
   $('loadBtn').addEventListener('click', load);
@@ -129,7 +139,8 @@
     btn.disabled = true; btn.textContent = 'Refreshing…';
     try {
       const post = fn => fetch('/.netlify/functions/' + fn, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret }) });
-      const [rResp, qResp, oResp] = await Promise.all([post('get-rentals'), post('get-requests'), post('get-outreach')]);
+      const [rResp, qResp, oResp, hResp] = await Promise.all([post('get-rentals'), post('get-requests'), post('get-outreach'),
+        fetch('/.netlify/functions/hide-contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret, action: 'list' }) })]);
       if (rResp.status === 401 || qResp.status === 401) { showErr('Wrong admin secret.'); return; }
       if (!rResp.ok) { showErr('Load failed (' + rResp.status + ').'); return; }
       const rd = await rResp.json();
@@ -139,6 +150,7 @@
       // Requests find leads and partners name referrals; the page still works without them
       const requests = qResp.ok ? ((await qResp.json()).requests || []) : [];
       PARTNERS = oResp.ok ? ((await oResp.json()).entries || []).filter(e => e.promoCode) : [];
+      HIDDEN = hResp.ok ? ((await hResp.json()).hiddenContacts || {}) : {};
       PEOPLE = buildPeople(rentals, requests);
       render();
       $('results').style.display = 'block';
@@ -163,7 +175,7 @@
     const map = new Map();
     const get = (x) => {
       const k = personKey(x);
-      if (!map.has(k)) map.set(k, { key: k, name: '', phone: '', email: '', address: '', city: '', rentals: [], leads: [], latest: '' });
+      if (!map.has(k)) map.set(k, { key: k, name: '', phone: '', email: '', address: '', city: '', rentals: [], leads: [], latest: '', heard: '', lastAt: '' });
       return map.get(k);
     };
     // Newest first, so the latest name, email and address win
@@ -173,11 +185,17 @@
       p.name ||= r.name || ''; p.phone ||= r.phone || ''; p.email ||= r.email || '';
       if (!p.address) { p.address = dropoffAddressOf(r) || ''; p.city = r.dropoffAddressCity || ''; }
       if ((r.dropoffDate || '') > p.latest) p.latest = r.dropoffDate || '';
+      if ((r.invoicedAt || '') > p.lastAt) p.lastAt = r.invoicedAt;
     }
     // A request becomes a rental once invoiced; only the others are leads
     for (const q of [...requests].sort((a, b) => (b.submittedAt || '').localeCompare(a.submittedAt || ''))) {
+      // "How did you hear about us?" (newest answer wins), invoiced requests included
+      const known = map.get(personKey(q));
+      if (known && !known.heard && q.howHeard) known.heard = q.howHeard;
       if (q.status === 'invoiced') continue;
       const p = get(q);
+      p.heard ||= q.howHeard || '';
+      if ((q.submittedAt || '') > p.lastAt) p.lastAt = q.submittedAt;
       p.leads.push(q);
       p.name ||= q.name || ''; p.phone ||= q.phone || ''; p.email ||= q.email || '';
       if (!p.address) { p.address = deliveryAddressOf(q) || ''; p.city = q.deliveryAddressCity || ''; }
@@ -193,6 +211,8 @@
       code: [...p.rentals, ...p.leads].map(x => x.promoCode).find(Boolean) || '',
       kind: p.rentals.length > 1 ? 'repeat' : p.rentals.length ? 'customer' : 'lead',
       leadDate: p.leads.length ? (p.leads[0].submittedAt || '').slice(0, 10) : '',
+      // Hidden until they rent or ask again
+      hidden: !!HIDDEN[p.key] && !(p.lastAt > HIDDEN[p.key]),
     })).sort((a, b) => (b.latest || b.leadDate).localeCompare(a.latest || a.leadDate));
   }
 
@@ -204,6 +224,8 @@
     ['owes', 'Owes money', p => p.owes > 0],
     ['referred', 'Referred', p => !!p.partner],
   ];
+  // Hidden people only show under their own chip
+  const inFilter = (id, p) => id === 'hidden' ? p.hidden : !p.hidden && FILTERS.find(f => f[0] === id)[2](p);
   window.setFilter = f => { FILTER = f; render(); };
   function matches(p, q) {
     if (!q) return true;
@@ -213,14 +235,17 @@
   }
   function visible() {
     const q = $('search').value.trim().toLowerCase();
-    return PEOPLE.filter(p => matches(p, q)).filter(FILTERS.find(f => f[0] === FILTER)[2]);
+    return PEOPLE.filter(p => matches(p, q)).filter(p => inFilter(FILTER, p));
   }
 
   function render() {
     const q = $('search').value.trim().toLowerCase();
     const found = PEOPLE.filter(p => matches(p, q));
-    $('chips').innerHTML = FILTERS.map(([id, label, fn]) =>
-      `<button type="button" aria-pressed="${FILTER === id}" onclick="setFilter('${id}')">${label}<span class="n">${found.filter(fn).length}</span></button>`).join('');
+    const hiddenCount = PEOPLE.filter(p => p.hidden).length;
+    if (FILTER === 'hidden' && !hiddenCount) FILTER = 'all';
+    $('chips').innerHTML = [...FILTERS, ...(hiddenCount ? [['hidden', 'Hidden']] : [])].map(([id, label]) =>
+      `<button type="button" aria-pressed="${FILTER === id}" onclick="setFilter('${id}')">${label}<span class="n">${found.filter(p => inFilter(id, p)).length}</span></button>`).join('');
+    renderFound();
     const rows = visible();
     const spent = rows.reduce((t, p) => t + p.spent, 0);
     $('countLine').innerHTML = rows.length
@@ -240,7 +265,7 @@
           const last = p.rentals.length ? day(p.latest) + `<span class="minor">${esc(p.rentals[0].package ? p.rentals[0].package.split(/\s+—\s+/)[0] : '')}</span>`
             : `Asked ${day(p.leadDate)}<span class="minor">${esc(p.leads[0].status === 'declined' ? 'Declined' : 'Not booked yet')}${SENT_FLAGS['leadFollowup:' + p.key] ? ' · followed up ' + esc(day(String(SENT_FLAGS['leadFollowup:' + p.key]).slice(0, 10))) : ''}</span>`;
           return `<tr>
-            <td class="c-who who"><button type="button" class="who-btn" data-open="${escAttr(p.key)}" aria-expanded="${OPEN.has(p.key)}">${esc(p.name || 'No name')}</button> ${tag}${p.partner ? `<span class="minor">Referred by ${esc(p.partner.name)}</span>` : ''}</td>
+            <td class="c-who who"><button type="button" class="who-btn" data-open="${escAttr(p.key)}" aria-expanded="${OPEN.has(p.key)}">${esc(p.name || 'No name')}</button> ${tag}${p.partner ? `<span class="minor">Referred by ${esc(p.partner.name)}</span>` : ''}${p.heard ? `<span class="minor">Heard via ${esc(p.heard)}</span>` : ''}</td>
             <td class="c-contact">${p.phone ? `<a href="tel:${escAttr(digits)}">${esc(fmtPhone(p.phone))}</a>` : '—'}${p.email ? `<span class="minor"><a href="mailto:${escAttr(p.email)}">${esc(p.email)}</a></span>` : ''}</td>
             <td class="c-money r">${p.rentals.length ? `${p.rentals.length} ${p.rentals.length === 1 ? 'rental' : 'rentals'}${p.paid || !p.owes ? `<span class="minor">${money(p.paid)} paid</span>` : ''}${p.owes ? `<span class="minor owes">Owes ${money(p.owes)}</span>` : ''}` : '<span style="color:var(--steel)">—</span>'}</td>
             <td class="c-last">${last}</td>
@@ -284,7 +309,8 @@
         ${p.code ? `<h4 style="margin-top:12px;">Promo code</h4><div>${esc(p.code)}${p.partner ? ` · ${esc(p.partner.name)}` : ''}</div>` : ''}</div>
       <div class="det-acts">${review}${follow}
         ${p.rentals.length ? `<a class="link-btn" href="admin-rentals.html?q=${encodeURIComponent(p.name || '')}">Open in All rentals</a>` : ''}
-        ${p.leads.length ? `<a class="link-btn" href="admin-requests.html">Open Requests</a>` : ''}</div>
+        ${p.leads.length ? `<a class="link-btn" href="admin-requests.html">Open Requests</a>` : ''}
+        <button type="button" class="hide-btn" data-hide="${escAttr(p.key)}" data-unhide="${p.hidden ? '1' : ''}">${p.hidden ? 'Unhide' : 'Hide from Contacts'}</button></div>
     </div>`;
   }
   // Repeat customer: hand Send Invoice who they are and their latest drop-off
@@ -312,6 +338,51 @@
     b.setAttribute('aria-expanded', String(!row.hidden));
   });
 
+  // ---- Hide / unhide a person (history stays; they come back if they rent or ask again) ----
+  let LAST_HIDDEN = null;   // { key, name } for Undo
+  async function setHidden(key, hide) {
+    try {
+      const resp = await fetch('/.netlify/functions/hide-contact', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: $('secret').value.trim(), action: hide ? 'hide' : 'unhide', key }) });
+      if (!resp.ok) { showErr('Couldn’t save that (' + resp.status + ').'); return false; }
+      HIDDEN = (await resp.json()).hiddenContacts || {};
+      PEOPLE = PEOPLE.map(p => ({ ...p, hidden: !!HIDDEN[p.key] && !(p.lastAt > HIDDEN[p.key]) }));
+      return true;
+    } catch { showErr('Network error. Nothing was changed.'); return false; }
+  }
+  function showHideBar() {
+    const bar = $('hideBar');
+    bar.hidden = !LAST_HIDDEN;
+    if (LAST_HIDDEN) bar.innerHTML = `<span>Hid ${esc(LAST_HIDDEN.name || 'them')}. They come back if they rent or ask again.</span><button type="button" id="undoHide">Undo</button>`;
+  }
+  document.getElementById('peopleList').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-hide]'); if (!b) return;
+    const p = PEOPLE.find(x => x.key === b.dataset.hide); if (!p) return;
+    const hide = !b.dataset.unhide;
+    b.disabled = true;
+    if (!(await setHidden(p.key, hide))) { b.disabled = false; return; }
+    OPEN.delete(p.key);
+    LAST_HIDDEN = hide ? { key: p.key, name: p.name } : null;
+    showHideBar();
+    if (!hide) showOk(`${p.name || 'They'} ${p.name ? 'is' : 'are'} back in Contacts.`);
+    render();
+  });
+  $('hideBar').addEventListener('click', async (e) => {
+    if (!e.target.closest('#undoHide') || !LAST_HIDDEN) return;
+    if (await setHidden(LAST_HIDDEN.key, false)) { LAST_HIDDEN = null; showHideBar(); render(); }
+  });
+
+  // ---- How people found us: one answer per person, everyone counted ----
+  const SHORT_SOURCE = { 'Facebook or Instagram': 'Facebook/Instagram', 'Google search': 'Google', 'Friend or family': 'Friend',
+    'Moving company': 'Movers', 'Apartment community': 'Apartment' };
+  function renderFound() {
+    const counts = {};
+    for (const p of PEOPLE) if (p.heard) counts[p.heard] = (counts[p.heard] || 0) + 1;
+    const list = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    $('foundLine').hidden = !list.length;
+    $('foundLine').innerHTML = 'How people found us: ' + list.map(([k, n]) => `<b>${esc(SHORT_SOURCE[k] || k)} ${n}</b>`).join(' · ');
+  }
+
   // ---- Export: what's on screen (search and filter applied) ----
   $('copyEmailsBtn').addEventListener('click', async () => {
     const emails = [...new Set(visible().map(p => String(p.email || '').trim()).filter(Boolean))];
@@ -324,9 +395,9 @@
   $('csvBtn').addEventListener('click', () => {
     const rows = visible();
     if (!rows.length) return showErr('Nothing to export.');
-    const cols = ['name', 'type', 'phone', 'email', 'address', 'rentals', 'totalSpent', 'paid', 'owes', 'referredBy', 'lastRental', 'requested'];
+    const cols = ['name', 'type', 'phone', 'email', 'address', 'rentals', 'totalSpent', 'paid', 'owes', 'referredBy', 'heardVia', 'lastRental', 'requested'];
     const cell = v => '"' + String(v ?? '').replaceAll('"', '""') + '"';
-    const lines = [cols.join(',')].concat(rows.map(p => [p.name, p.kind, p.phone, p.email, p.address, p.rentals.length, p.spent.toFixed(2), p.paid.toFixed(2), p.owes.toFixed(2), p.partner ? p.partner.name : '', p.latest, p.leadDate].map(cell).join(',')));
+    const lines = [cols.join(',')].concat(rows.map(p => [p.name, p.kind, p.phone, p.email, p.address, p.rentals.length, p.spent.toFixed(2), p.paid.toFixed(2), p.owes.toFixed(2), p.partner ? p.partner.name : '', p.heard, p.latest, p.leadDate].map(cell).join(',')));
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([lines.join('\r\n')], { type: 'text/csv' }));
     a.download = 'ready-tote-contacts-' + new Date().toISOString().slice(0, 10) + '.csv';
