@@ -4,6 +4,11 @@
 //
 // Body: { secret, key, action, ...fields }
 // action one of: "review" | "send-confirmation" | "confirm" | "unconfirm" | "decline" | "reopen" | "invoice"
+//   | "delete" | "restore"
+// "delete" removes a declined request for good (test bookings, spam), so
+// the person drops off Contacts unless they have other rentals or
+// requests. It returns the record, and "restore" ({ key, record }) puts it
+// back for Undo. Only declined requests can be deleted or restored.
 // Any editable field present in the body is merged onto the stored record
 // regardless of action, so the same call that advances status can also fix
 // a typo'd address or add review notes.
@@ -20,7 +25,8 @@ const EDITABLE_FIELDS = [
   "confirmToken",   // one-tap confirm link in the confirm text (confirm-booking.mjs)
 ];
 
-const VALID_ACTIONS = new Set(["review", "send-confirmation", "confirm", "unconfirm", "decline", "reopen", "invoice"]);
+const VALID_ACTIONS = new Set(["review", "send-confirmation", "confirm", "unconfirm", "decline", "reopen", "invoice", "delete", "restore"]);
+const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
 
 export default async (request) => {
   if (request.method !== "POST") {
@@ -42,8 +48,20 @@ export default async (request) => {
     // copy back wipes the newer change. That lost confirm-link codes when
     // "Yes, sent" followed "Text to confirm" within seconds.
     const store = getStore({ name: "requests", consistency: "strong" });
+    if (body.action === "restore") {
+      const { key: _k, ...record } = body.record && typeof body.record === "object" ? body.record : {};
+      if (record.status !== "declined") return new Response("Only a deleted declined request can be restored", { status: 400 });
+      if (await store.get(body.key, { type: "json" })) return new Response("That request is already there", { status: 409 });
+      await store.setJSON(body.key, record);
+      return json({ ok: true, request: { key: body.key, ...record } });
+    }
     const existing = await store.get(body.key, { type: "json" });
     if (!existing) return new Response("Request not found", { status: 404 });
+    if (body.action === "delete") {
+      if (existing.status !== "declined") return new Response("Decline the request first; only declined requests can be deleted", { status: 400 });
+      await store.delete(body.key);
+      return json({ ok: true, deleted: { key: body.key, ...existing } });
+    }
 
     const now = new Date().toISOString();
     const updated = { ...existing };
