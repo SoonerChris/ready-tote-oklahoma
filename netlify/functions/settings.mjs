@@ -9,12 +9,14 @@
 //                 standard booking (lib-invoice.mjs). On unless turned off.
 //   autoMileage - log a delivery or pickup's round-trip miles on Finance
 //                 when it's marked done (lib-mileage.mjs). On unless off.
+//   autoPaymentEmail - email the payment reminder on the morning it comes
+//                 due (lib-payment-reminder.mjs). On unless off.
 
 import { getStore } from "@netlify/blobs";
 import { isAdmin } from "./lib-auth.mjs";
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
-export const DEFAULTS = { autoInvoice: true, autoMileage: true };
+export const DEFAULTS = { autoInvoice: true, autoMileage: true, autoPaymentEmail: true };
 
 export async function getSettings() {
   let saved = {};
