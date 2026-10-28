@@ -40,6 +40,7 @@
   .decline-box p{margin:0 0 8px;font-size:14px;font-weight:600;}
   .decline-box .reasons{display:flex;flex-wrap:wrap;gap:6px;}
   .decline-box .reasons button{width:auto;margin:0;padding:7px 12px;font-size:14px;background:var(--white);color:var(--ink);border:1px solid var(--control);}
+  .decline-box .reasons button.spam{color:var(--red); border-color:var(--red);}
   .decline-box .reasons button:hover{background:var(--white);border-color:var(--red);color:var(--red);}
   .decline-box .other{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
   .decline-box .other input{flex:1 1 220px;margin:0;height:36px;padding:6px 10px;font-size:14px;}
@@ -345,6 +346,7 @@
           <button type="button" data-reason="Outside our service area">Outside service area</button>
           <button type="button" data-reason="Customer cancelled">Customer cancelled</button>
           <button type="button" data-reason="No response from customer">No response</button>
+          <button type="button" class="spam" data-spam>Test or spam (delete)</button>
         </div>
         <div class="other">
           <input type="text" data-reason-other placeholder="Or type a reason" aria-label="Other reason">
@@ -547,6 +549,7 @@
     function declineFlow() { card.querySelector('[data-decline]').classList.toggle('shown'); }
     const decline = reason => act(r.key, 'decline', 'Declined' + (reason ? ': ' + reason.toLowerCase() : '') + '.', { declineReason: reason });
     card.querySelectorAll('[data-reason]').forEach(b => b.addEventListener('click', () => decline(b.dataset.reason)));
+    card.querySelector('[data-spam]').addEventListener('click', (e) => { e.target.disabled = true; spamDelete(r); });
     card.querySelector('[data-decline-other]').addEventListener('click', () => decline(card.querySelector('[data-reason-other]').value.trim()));
     card.querySelector('[data-reason-other]').addEventListener('keydown', e => { if (e.key === 'Enter') decline(e.target.value.trim()); });
     card.querySelector('[data-decline-cancel]').addEventListener('click', () => card.querySelector('[data-decline]').classList.remove('shown'));
@@ -680,8 +683,17 @@
   // Gone from Requests and, unless they have other rentals or requests,
   // from Contacts. Undo puts it back with the same key.
   let DELETED = null;   // { key, record } for Undo, until the next delete or reload
-  async function deleteRequest(r) {
-    if (!confirm(`Delete ${r.name || 'this'}'s declined request? It also leaves Contacts unless they have other rentals or requests.`)) return;
+  // "Test or spam" in the decline reasons: decline and delete in one tap (Undo still works)
+  async function spamDelete(r) {
+    try {
+      const resp = await fetch('/.netlify/functions/update-request', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: $('secret').value.trim(), key: r.key, action: 'decline', declineReason: 'Test or spam' }) });
+      if (!resp.ok) return showErr('Decline failed (' + resp.status + '). Nothing was deleted.');
+      await deleteRequest(r, false);
+    } catch { showErr('Network error. Nothing was deleted.'); }
+  }
+  async function deleteRequest(r, ask = true) {
+    if (ask && !confirm(`Delete ${r.name || 'this'}'s declined request? It also leaves Contacts unless they have other rentals or requests.`)) return;
     try {
       const resp = await fetch('/.netlify/functions/update-request', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ secret: $('secret').value.trim(), key: r.key, action: 'delete' }) });
