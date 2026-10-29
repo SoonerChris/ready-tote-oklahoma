@@ -12,10 +12,14 @@ import { autoPaymentReminders } from "./lib-payment-reminder.mjs";
 const OWNER_EMAIL = "readytoteok@gmail.com";
 // Always get the digest, on top of REMINDER_EMAILS (or the owner if unset).
 const ALWAYS_CC = ["shonanderson856@gmail.com"];
-const REMINDER_RECIPIENTS = [...new Set(
+export const REMINDER_RECIPIENTS = [...new Set(
   [...(process.env.REMINDER_EMAILS || OWNER_EMAIL).split(","), ...ALWAYS_CC]
     .map(e => e.trim().toLowerCase()).filter(Boolean)
 )];
+// The Monday summary (lib-weekly.mjs) has the money numbers: the same list
+// without the ALWAYS_CC helpers (Shon), even if REMINDER_EMAILS names them
+const summaryList = REMINDER_RECIPIENTS.filter(e => !ALWAYS_CC.includes(e));
+export const SUMMARY_RECIPIENTS = summaryList.length ? summaryList : [OWNER_EMAIL];
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 
 // Builds and emails today's digest. notifyPhone: also buzz the admin app
@@ -141,7 +145,7 @@ export async function sendDigest({ notifyPhone = true } = {}) {
 }
 
 // Emails the digest recipients through Resend; false if Resend refused it.
-async function sendEmail(subject, html, attachments = []) {
+export async function sendEmail(subject, html, attachments = [], to = REMINDER_RECIPIENTS) {
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -150,7 +154,7 @@ async function sendEmail(subject, html, attachments = []) {
     },
     body: JSON.stringify({
       from: process.env.RESEND_FROM || FROM_FALLBACK,
-      to: REMINDER_RECIPIENTS,
+      to,
       subject,
       html,
       attachments: attachments.length ? attachments : undefined,
