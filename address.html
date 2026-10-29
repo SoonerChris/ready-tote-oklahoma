@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Pickup address · Ready Tote Oklahoma</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Ready Tote Oklahoma">
+<meta property="og:title" content="Confirm your pickup address">
+<meta property="og:description" content="Tell us where to pick up your totes.">
+<meta property="og:image" content="https://www.readytoteokc.com/images/totes-hero-studio.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#1E1B18;--gold:#C99A32;--cream:#F5F1E7;--steel:#6B6259;--line:#E5DFD2;--green-bg:#E3F4E9;--green:#14492F;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Barlow',sans-serif;background:var(--cream);color:var(--ink);line-height:1.6;min-height:100vh;display:flex;flex-direction:column;}
+  header{background:var(--ink);padding:14px 24px;}
+  header img{height:56px;width:auto;display:block;}
+  main{flex:1;width:100%;max-width:520px;margin:0 auto;padding:40px 16px 64px;}
+  .sheet{background:#fff;border:1px solid var(--line);border-radius:14px;padding:28px 24px;}
+  h1{font-family:'Archivo Black',sans-serif;font-size:1.6rem;line-height:1.2;margin:0 0 10px;}
+  p{margin:0 0 14px;font-size:1.05rem;}
+  .muted{color:var(--steel);font-size:0.95rem;}
+  .details{border:1px solid var(--line);border-radius:10px;padding:4px 16px;margin:18px 0 22px;}
+  .row{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-top:1px solid var(--line);font-size:1rem;}
+  .row:first-child{border-top:none;}
+  .row span{color:var(--steel);}
+  .row b{text-align:right;font-weight:600;}
+  button{width:100%;padding:16px;font:700 1.1rem 'Barlow',sans-serif;background:var(--ink);color:#fff;border:0;border-radius:10px;cursor:pointer;}
+  button:disabled{opacity:0.6;cursor:wait;}
+  a.pay{display:block;text-align:center;padding:16px;font:700 1.1rem 'Barlow',sans-serif;background:var(--gold);color:var(--ink);border-radius:10px;text-decoration:none;}
+  .done{display:inline-block;background:var(--green-bg);color:var(--green);font-weight:700;font-size:0.85rem;padding:5px 10px;border-radius:999px;margin-bottom:12px;}
+  a{color:var(--ink);font-weight:600;}
+  [hidden]{display:none !important;}
+  .addr{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:16px 0 18px;font-size:1.1rem;font-weight:600;}
+  .addr span{display:block;font-size:0.9rem;font-weight:400;color:var(--steel);}
+  button.secondary{background:#fff;color:var(--ink);border:1px solid var(--ink);margin-top:10px;}
+  form{margin:6px 0 0;}
+  label{display:block;font-size:0.9rem;font-weight:600;margin:12px 0 4px;}
+  input{width:100%;font:inherit;font-size:1rem;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--cream);}
+  input:focus{outline:2px solid var(--gold);outline-offset:1px;}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:0 10px;}
+  .err{color:#831C1E;font-weight:600;margin:12px 0 0;}
+</style>
+</head>
+<body>
+<header><a href="/"><img src="/images/logo.png" alt="Ready Tote Oklahoma"></a></header>
+<main>
+  <div class="sheet">
+    <p class="muted" id="loading">Loading…</p>
+
+    <div id="ask" hidden>
+      <h1 id="askTitle">Where should we pick up your totes?</h1>
+      <p id="when"></p>
+      <div id="onFileBox">
+        <p style="margin:0;">We have your pickup address as:</p>
+        <div class="addr" id="onFile"></div>
+        <button type="button" id="yesBtn">Yes, that's right</button>
+        <button type="button" class="secondary" id="changeBtn">Use a different address</button>
+      </div>
+      <form id="form" hidden>
+        <label for="street">Street address</label>
+        <input id="street" autocomplete="address-line1" placeholder="123 Main St, Apt 4" required>
+        <label for="city">City</label>
+        <input id="city" autocomplete="address-level2" required>
+        <div class="two">
+          <div><label for="state">State</label><input id="state" autocomplete="address-level1" maxlength="2" value="OK" required></div>
+          <div><label for="zip">Zip</label><input id="zip" autocomplete="postal-code" inputmode="numeric" maxlength="10" required></div>
+        </div>
+        <button type="submit" style="margin-top:18px;" id="saveBtn">Save pickup address</button>
+        <button type="button" class="secondary" id="cancelBtn">Cancel</button>
+      </form>
+      <p class="err" id="err" hidden></p>
+    </div>
+
+    <div id="done" hidden>
+      <span class="done">Saved</span>
+      <h1 id="doneTitle">Thanks!</h1>
+      <p id="doneText"></p>
+      <div class="addr" id="doneAddr"></div>
+      <p class="muted" style="margin:0;">Need to change it again? <button type="button" class="linkish" id="againBtn" style="all:unset;cursor:pointer;font-weight:600;text-decoration:underline;">Edit the address</button></p>
+    </div>
+
+    <div id="msg" hidden>
+      <h1 id="msgTitle">We couldn't open this link</h1>
+      <p id="msgText"></p>
+    </div>
+
+    <p class="muted" style="margin:18px 0 0;">Questions? Call or text <a href="tel:+15803993202">580.399.3202</a>.</p>
+  </div>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  // The code comes from the short link (/a/CODE) or ?t=CODE
+  const t = (location.pathname.match(/^\/a\/([A-Za-z0-9_-]+)/) || [])[1] || new URLSearchParams(location.search).get('t') || '';
+  const day = (iso) => iso ? new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' }) : '';
+  let LAST = null, SAVED = false;
+
+  function show(b) {
+    LAST = b;
+    $('loading').hidden = true;
+    ['ask', 'done', 'msg'].forEach(id => $(id).hidden = true);
+    $('err').hidden = true;
+    if (b.error) {
+      $('msgText').textContent = b.error + ' You can also reply to our text with your pickup address.';
+      $('msg').hidden = false; return;
+    }
+    if (b.state === 'closed') {
+      $('msgTitle').textContent = 'This pickup is all set';
+      $('msgText').textContent = "There's nothing to change here anymore. Questions? Give us a call or text.";
+      $('msg').hidden = false; return;
+    }
+    const when = day(b.pickupDate) + (b.pickupTime ? ' around ' + b.pickupTime : '');
+    if (SAVED || (b.confirmedAt && !$('form').dataset.editing)) {
+      $('doneTitle').textContent = 'Thanks' + (b.first ? ', ' + b.first : '') + '!';
+      $('doneText').textContent = `We'll pick up your totes on ${when} at:`;
+      $('doneAddr').textContent = b.address;
+      $('done').hidden = false; return;
+    }
+    if (b.first) $('askTitle').textContent = b.first + ', where should we pick up your totes?';
+    $('when').textContent = 'Pickup is ' + when + '.';
+    const has = !!b.address;
+    $('onFileBox').hidden = !has || !$('form').hidden;
+    $('onFile').textContent = b.address || '';
+    if (!has) openForm();
+    $('ask').hidden = false;
+  }
+  function openForm() {
+    $('form').hidden = false; $('form').dataset.editing = '1'; $('onFileBox').hidden = true;
+    $('cancelBtn').hidden = !(LAST && LAST.address);
+    $('street').focus();
+  }
+  async function call(action, extra) {
+    try {
+      const r = await fetch('/.netlify/functions/pickup-address', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t, action, ...(extra || {}) }) });
+      return await r.json();
+    } catch { return { error: "We couldn't reach our server." , lost: true }; }
+  }
+  function fail(m) { $('err').textContent = m; $('err').hidden = false; }
+
+  $('yesBtn').addEventListener('click', async () => {
+    $('yesBtn').disabled = true; $('yesBtn').textContent = 'Saving…';
+    const b = await call('confirm');
+    $('yesBtn').disabled = false; $('yesBtn').textContent = "Yes, that's right";
+    if (b.error) return fail(b.error + ' Please try again, or reply to our text.');
+    SAVED = true; show(b);
+  });
+  $('changeBtn').addEventListener('click', openForm);
+  $('againBtn').addEventListener('click', () => { SAVED = false; $('done').hidden = true; $('ask').hidden = false; openForm(); });
+  $('cancelBtn').addEventListener('click', () => { $('form').hidden = true; delete $('form').dataset.editing; show(LAST); });
+  $('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('saveBtn').disabled = true; $('saveBtn').textContent = 'Saving…';
+    const address = { street: $('street').value, city: $('city').value, state: $('state').value, zip: $('zip').value };
+    const b = await call('change', { address });
+    $('saveBtn').disabled = false; $('saveBtn').textContent = 'Save pickup address';
+    if (b.error) return fail(b.error);
+    $('form').hidden = true; delete $('form').dataset.editing;
+    SAVED = true; show(b);
+  });
+
+  if (!t) show({ error: 'This link is missing its code.' });
+  else call('look').then(show);
+</script>
+</body>
+</html>

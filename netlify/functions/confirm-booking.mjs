@@ -13,8 +13,12 @@
 //              invoiced right away: invoice email out, rental logged, request
 //              "invoiced", and the page shows a Pay now button. Anything
 //              else waits on Requests as "Ready to invoice", with the reason.
+//   id-photo -> { imageBase64 } saves a photo of their military ID (military
+//              discount requests only; the same "<idKey>:military_id" photo
+//              the Requests page shows) and alerts the admin app.
 // state: "open" (can confirm) | "done" (already confirmed or invoiced) | "closed" (declined)
 // pay:   { url, price, paid } once it's been invoiced automatically
+// military: { hasPhoto } on military discount requests
 //
 // Confirming takes a button press, not just opening the link, because
 // Messages and other apps open links on their own to build previews.
@@ -27,6 +31,11 @@ import { getSettings } from "./settings.mjs";
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
 const OPEN = ["new", "reviewed", "awaiting_confirmation"];
+const MAX_ID_BYTES = 4 * 1024 * 1024;   // the page shrinks photos to well under this
+// JPEG, PNG or WebP, by their first bytes
+const isImage = (b) => (b[0] === 0xff && b[1] === 0xd8) || (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47)
+  || (b.slice(0, 4).toString() === "RIFF" && b.slice(8, 12).toString() === "WEBP");
+const mimeOf = (b) => (b[0] === 0xff ? "image/jpeg" : b[0] === 0x89 ? "image/png" : "image/webp");
 const DONE = ["confirmed", "invoiced"];
 
 // "Morning (8 AM – 12 PM)" -> "morning (8 AM–12 PM)"; no preference is the
@@ -103,6 +112,12 @@ export default async (request, context) => {
         self: r.serviceType === "self",
         state: state(r),
       };
+      if (r.isMilitary) {
+        let hasPhoto = false;
+        const photoKey = `${r.militaryIdKey || key}:military_id`;
+        try { hasPhoto = (await getStore({ name: "photos", consistency: "strong" }).list({ prefix: photoKey })).blobs.some((b) => b.key === photoKey); } catch {}
+        out.military = { hasPhoto };
+      }
       if (r.status === "invoiced" && r.payUrl) {
         let paid = false;
         try { paid = !!((await getStore({ name: "meta", consistency: "strong" }).get("paidFlags", { type: "json" })) || {})[r.invoiceRentalKey]; } catch {}
@@ -112,6 +127,23 @@ export default async (request, context) => {
     };
 
     if (body.action === "look") return json(await view(req));
+    if (body.action === "id-photo") {
+      if (!req.isMilitary) return json({ error: "This booking doesn't have the military discount." }, 400);
+      if (state(req) === "closed") return json({ error: "This booking is closed." }, 400);
+      let buf;
+      try { buf = Buffer.from(String(body.imageBase64 || ""), "base64"); } catch { buf = Buffer.alloc(0); }
+      if (!buf.length || !isImage(buf)) return json({ error: "That doesn't look like a photo. Try another one." }, 400);
+      if (buf.length > MAX_ID_BYTES) return json({ error: "That photo is too large. Try another one." }, 413);
+      const idKey = req.militaryIdKey || key;
+      await getStore({ name: "photos", consistency: "strong" }).set(`${idKey}:military_id`,
+        buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
+        { metadata: { mimeType: mimeOf(buf), uploadedAt: new Date().toISOString(), by: "customer" } });
+      await store.setJSON(key, { ...(await store.get(key, { type: "json" })), militaryIdKey: idKey, militaryIdUploadedAt: new Date().toISOString() });
+      const alert = notify("requests", { title: "Military ID photo added", body: `${req.name || "A customer"} added their ID. Check it on Requests, then invoice with the discount.`, url: "/admin-requests.html", tag: "military-" + key })
+        .catch((e) => console.error("ID alert failed:", e.message));
+      if (context && typeof context.waitUntil === "function") context.waitUntil(alert); else await alert;
+      return json(await view({ ...req, militaryIdKey: idKey }));
+    }
     if (body.action !== "confirm") return json({ error: "Unknown action" }, 400);
     if (state(req) !== "open") return json(await view(req));
 
