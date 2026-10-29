@@ -10,6 +10,7 @@
 //   RESEND_API_KEY        - Resend API key
 //   RESEND_FROM           - verified sender
 
+import { getRecipients } from "./lib-recipients.mjs";
 import { getStore } from "@netlify/blobs";
 import { emailLayout, heading, pill, steps, contactLine, detailsCard, goodToKnow, htmlToText } from "./lib-email.mjs";
 import { friendlyTime, dropoffAddressOf, pickupAddressOf, rentalToICSAttachments } from "./lib-reminders.mjs";
@@ -118,7 +119,7 @@ export default async (request) => {
     body: JSON.stringify({
       from,
       to: [email],
-      bcc: [OWNER_EMAIL],
+      bcc: await getRecipients("copies"),   // App & alerts → Who gets emails
       reply_to: OWNER_EMAIL,
       subject: "Payment received: your tote rental is confirmed",
       html,

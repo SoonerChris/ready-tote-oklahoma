@@ -9,9 +9,8 @@
 import { getStore } from "@netlify/blobs";
 import { emailLayout, heading, pill, detailsCard } from "./lib-email.mjs";
 
-const OWNER_EMAIL = "readytoteok@gmail.com";
-const NOTIFY_RECIPIENTS = (process.env.REMINDER_EMAILS || OWNER_EMAIL)
-  .split(",").map(e => e.trim()).filter(Boolean);
+import { getRecipients } from "./lib-recipients.mjs";
+// Who gets it: the Monday summary's list (App & alerts → Who gets emails)
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const SITE_URL = "https://readytoteokc.com";
 const FLAG_KEY = "reviewsLiveNotified";
@@ -73,7 +72,7 @@ export default async () => {
     },
     body: JSON.stringify({
       from: process.env.RESEND_FROM || FROM_FALLBACK,
-      to: NOTIFY_RECIPIENTS,
+      to: await getRecipients("weekly"),
       subject: "Your Google reviews are now live on the site",
       html,
     }),

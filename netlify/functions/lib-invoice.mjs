@@ -6,6 +6,7 @@
 // autoInvoicePlan(request, ...) decides whether a confirmed booking request
 // is simple enough to invoice without a person checking it first.
 
+import { getRecipients } from "./lib-recipients.mjs";
 import { getStore } from "@netlify/blobs";
 import { rentalToICSAttachments } from "./lib-reminders.mjs";
 import { emailLayout, heading, pill, detailsCard, button, contactLine, cleanLineItems, lineItemRows, callout, htmlToText, SITE_URL } from "./lib-email.mjs";
@@ -102,7 +103,7 @@ export async function sendInvoice(body) {
     body: JSON.stringify({
       from: process.env.RESEND_FROM || FROM_FALLBACK,
       to: [body.email],
-      bcc: [OWNER_EMAIL],
+      bcc: await getRecipients("copies"),   // App & alerts → Who gets emails
       reply_to: OWNER_EMAIL,
       subject: `Your Ready Tote invoice, ${String(body.name).split(" ")[0]} (${rawPrice.startsWith("$") ? rawPrice : "$" + rawPrice})`,
       html,

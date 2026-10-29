@@ -42,6 +42,17 @@
   [hidden]{display:none !important;}
   .kind .linkish{all:unset; cursor:pointer; display:inline-block; margin-top:4px; font-weight:600; color:var(--ink); text-decoration:underline; text-underline-offset:3px;}
   .kind .linkish:disabled{opacity:.6; cursor:wait;}
+  .mail-list{padding:12px 0; border-top:1px solid var(--rule-soft);}
+  .mail-list:first-of-type{border-top:none;}
+  .mail-list > b{display:block; color:var(--ink);}
+  .mail-list > span{display:block; font-size:14px; color:var(--steel); margin:2px 0 8px;}
+  .mail-list .chips{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;}
+  .mail-list .chip{display:inline-flex; align-items:center; gap:6px; padding:5px 6px 5px 12px; border:1px solid var(--control); border-radius:999px; font-size:14px; background:var(--white);}
+  .mail-list .chip button{all:unset; cursor:pointer; width:22px; height:22px; text-align:center; border-radius:999px; color:var(--steel); font-weight:700;}
+  .mail-list .chip button:hover, .mail-list .chip button:focus-visible{background:var(--surface-2); color:var(--ink);}
+  .mail-list form.add{display:flex; gap:8px; margin:0;}
+  .mail-list form.add input{flex:1; margin:0;}
+  .mail-list form.add button{width:auto; margin:0; padding:0 16px;}
 </style>
 </head>
 <body>
@@ -108,8 +119,19 @@
     <label class="kind"><input type="checkbox" id="autoMileage"><div><b>Log trip miles when you mark Delivered or Picked up</b><span>The round trip from home to the stop and back goes on Finance's mileage log, tied to the rental. Undo takes it back. Customer pick-ups and extension handovers are skipped. Chained stops on one drive? Edit the miles on Finance.</span></div></label>
     <label class="kind"><input type="checkbox" id="autoInvoice"><div><b>Email the invoice when a customer confirms</b><span>For standard bookings only: a regular package for 2 weeks, no rush fee, no military or promo discount, a full address, and totes free on those dates. The customer gets a Pay now button right on the confirm page. Anything else waits on Requests as Ready to invoice, with the reason.</span></div></label>
     <label class="kind"><input type="checkbox" id="autoPaymentEmail"><div><b>Email payment reminders when they come due</b><span>On the morning an unpaid invoice reaches its reminder day (5 days after invoicing, or 2 days after the follow-up text), the customer gets the reminder email with their pay link. The morning email and a phone alert tell you who got one. Older overdue invoices stay on Reminders for you to decide.</span></div></label>
-    <label class="kind"><input type="checkbox" id="weeklySummary"><div><b>Monday summary email</b><span>Every Monday at 7 AM: last week's money collected and invoiced, new requests and how they found you, deliveries, pickups, trip miles and review asks, plus this week's stops and who still owes. Sent to you only, not Shon. <button type="button" class="linkish" id="weeklyNow">Email it now</button></span></div></label>
+    <label class="kind"><input type="checkbox" id="weeklySummary"><div><b>Monday summary email</b><span>Every Monday at 7 AM: last week's money collected and invoiced, new requests and how they found you, deliveries, pickups, trip miles and review asks, plus this week's stops and who still owes. Goes to the Monday summary list under Who gets emails. <button type="button" class="linkish" id="weeklyNow">Email it now</button></span></div></label>
     <p class="note" id="autoSay" hidden></p>
+  </section>
+  <section class="panel" aria-labelledby="mailTitle">
+    <h2 id="mailTitle">Who gets emails</h2>
+    <p>Add or remove addresses for the emails the site sends to you. Customers' own emails aren't affected.</p>
+    <div class="mail-list" data-kind="morning"><b>Morning email</b><span>The 7 AM list of texts to send, payment nudges and stops.</span><div class="chips"></div>
+      <form class="add"><input type="email" placeholder="name@example.com" aria-label="Add an address to the morning email" required><button type="submit">Add</button></form></div>
+    <div class="mail-list" data-kind="weekly"><b>Monday summary</b><span>Money, bookings and miles for the week. Also gets the one-time "Google reviews are live" email.</span><div class="chips"></div>
+      <form class="add"><input type="email" placeholder="name@example.com" aria-label="Add an address to the Monday summary" required><button type="submit">Add</button></form></div>
+    <div class="mail-list" data-kind="copies"><b>Copies of customer emails</b><span>A hidden copy (BCC) of every invoice, payment reminder and payment receipt a customer gets.</span><div class="chips"></div>
+      <form class="add"><input type="email" placeholder="name@example.com" aria-label="Add an address for copies of customer emails" required><button type="submit">Add</button></form></div>
+    <p class="note" id="mailSay" hidden></p>
   </section>
   <section class="panel" aria-labelledby="teamTitle">
     <h2 id="teamTitle">3. Inventory-only login</h2>
@@ -324,6 +346,42 @@ $('weeklyNow').addEventListener('click', async (e) => {
   } catch { $('autoSay').textContent = "Couldn't reach the server. Try again."; }
   $('autoSay').hidden = false; b.disabled = false; b.textContent = 'Email it now';
 });
+// ---- Who gets emails (settings.mjs recipients / set-recipients) ----
+let MAIL = {};
+function renderMail() {
+  document.querySelectorAll('.mail-list').forEach(box => {
+    const list = MAIL[box.dataset.kind] || [];
+    box.querySelector('.chips').innerHTML = list.map(e => `<span class="chip">${esc(e)}<button type="button" data-remove="${escAttr(e)}" aria-label="Remove ${escAttr(e)}">×</button></span>`).join('');
+  });
+}
+async function saveMail(kind, emails, okText) {
+  const say = $('mailSay');
+  try {
+    const r = await fetch('/.netlify/functions/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'set-recipients', kind, emails }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || "Couldn't save that. Try again.");
+    MAIL = d.recipients || MAIL; renderMail();
+    say.textContent = okText; say.hidden = false; return true;
+  } catch (err) { say.textContent = err.message; say.hidden = false; return false; }
+}
+document.querySelectorAll('.mail-list').forEach(box => {
+  const kind = box.dataset.kind, label = { morning: 'the morning email', weekly: 'the Monday summary', copies: 'copies of customer emails' }[kind];
+  box.querySelector('form.add').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = e.target.querySelector('input'), email = input.value.trim().toLowerCase();
+    if (!email) return;
+    if ((MAIL[kind] || []).includes(email)) { $('mailSay').textContent = `${email} is already on ${label}.`; $('mailSay').hidden = false; input.value = ''; return; }
+    if (await saveMail(kind, [...(MAIL[kind] || []), email], `Added ${email} to ${label}.`)) input.value = '';
+  });
+  box.querySelector('.chips').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-remove]'); if (!b) return;
+    const email = b.dataset.remove;
+    saveMail(kind, (MAIL[kind] || []).filter(x => x !== email), `Removed ${email} from ${label}.`);
+  });
+});
+fetch('/.netlify/functions/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'recipients' }) })
+  .then(r => r.ok ? r.json() : {}).then(d => { MAIL = d.recipients || {}; renderMail(); }).catch(() => {});
+
 const AUTO_SAY = {
   autoInvoice: ['On. Standard bookings are invoiced as soon as the customer confirms.', 'Off. Every confirmed booking waits on Requests for you to invoice.'],
   autoMileage: ['On. Trips are logged on Finance when you mark Delivered or Picked up.', 'Off. Log trips yourself on Finance.'],
