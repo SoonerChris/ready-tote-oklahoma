@@ -7,19 +7,10 @@ import { getStore } from "@netlify/blobs";
 import { computeReminders, rentalToICSAttachments, todayInOklahoma, friendlyTime, dropoffAddressOf, pickupAddressOf } from "./lib-reminders.mjs";
 import { emailLayout, heading, sectionLabel, pill, button, escapeHtml, emailColors as C, SITE_URL } from "./lib-email.mjs";
 import { notify } from "./lib-push.mjs";
+import { getRecipients } from "./lib-recipients.mjs";
 import { autoPaymentReminders } from "./lib-payment-reminder.mjs";
 
-const OWNER_EMAIL = "readytoteok@gmail.com";
-// Always get the digest, on top of REMINDER_EMAILS (or the owner if unset).
-const ALWAYS_CC = ["shonanderson856@gmail.com"];
-export const REMINDER_RECIPIENTS = [...new Set(
-  [...(process.env.REMINDER_EMAILS || OWNER_EMAIL).split(","), ...ALWAYS_CC]
-    .map(e => e.trim().toLowerCase()).filter(Boolean)
-)];
-// The Monday summary (lib-weekly.mjs) has the money numbers: the same list
-// without the ALWAYS_CC helpers (Shon), even if REMINDER_EMAILS names them
-const summaryList = REMINDER_RECIPIENTS.filter(e => !ALWAYS_CC.includes(e));
-export const SUMMARY_RECIPIENTS = summaryList.length ? summaryList : [OWNER_EMAIL];
+// Who gets it: App & alerts → Who gets emails (lib-recipients.mjs, "morning")
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 
 // Builds and emails today's digest. notifyPhone: also buzz the admin app
@@ -145,7 +136,8 @@ export async function sendDigest({ notifyPhone = true } = {}) {
 }
 
 // Emails the digest recipients through Resend; false if Resend refused it.
-export async function sendEmail(subject, html, attachments = [], to = REMINDER_RECIPIENTS) {
+export async function sendEmail(subject, html, attachments = [], to = null) {
+  to = to || await getRecipients("morning");
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {

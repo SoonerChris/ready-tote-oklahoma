@@ -14,10 +14,13 @@
 //   weeklySummary - the Monday summary email (weekly-summary.mjs). On unless off.
 //
 // { action: "send-weekly" } emails the Monday summary right away (lib-weekly.mjs).
+// { action: "recipients" } -> { recipients: { morning, weekly, copies } }
+// { action: "set-recipients", kind, emails: [...] } saves one list (lib-recipients.mjs).
 
 import { getStore } from "@netlify/blobs";
 import { isAdmin } from "./lib-auth.mjs";
 import { sendWeeklySummary } from "./lib-weekly.mjs";
+import { getAllRecipients, setRecipients } from "./lib-recipients.mjs";
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
 export const DEFAULTS = { autoInvoice: true, autoMileage: true, autoPaymentEmail: true, weeklySummary: true };
@@ -36,6 +39,11 @@ export default async (request) => {
 
   const settings = await getSettings();
   if (body.action === "get") return json({ settings });
+  if (body.action === "recipients") return json({ recipients: await getAllRecipients() });
+  if (body.action === "set-recipients") {
+    const r = await setRecipients(body.kind, body.emails);
+    return r.ok ? json({ recipients: r.recipients }) : json({ error: r.error }, 400);
+  }
   if (body.action === "send-weekly") {
     const r = await sendWeeklySummary();
     return r.ok ? json({ ok: true, totals: r.totals }) : json({ error: "The email didn't send. Try again in a minute." }, 502);

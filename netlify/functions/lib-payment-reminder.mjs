@@ -6,6 +6,7 @@
 //
 // Env vars: RESEND_API_KEY, RESEND_FROM
 
+import { getRecipients } from "./lib-recipients.mjs";
 import { getStore } from "@netlify/blobs";
 import { friendlyTime, dropoffAddressOf, pickupAddressOf, computeReminders, todayInOklahoma } from "./lib-reminders.mjs";
 import { emailLayout, heading, pill, detailsCard, button, contactLine, cleanLineItems, lineItemRows, htmlToText } from "./lib-email.mjs";
@@ -76,7 +77,7 @@ export async function emailPaymentReminder(key, rental) {
     body: JSON.stringify({
       from,
       to: [rental.email],
-      bcc: [OWNER_EMAIL],
+      bcc: await getRecipients("copies"),   // App & alerts → Who gets emails
       reply_to: OWNER_EMAIL,
       subject: "Quick reminder: your tote rental invoice | Ready Tote Oklahoma",
       html,

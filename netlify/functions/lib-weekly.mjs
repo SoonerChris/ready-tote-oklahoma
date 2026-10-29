@@ -5,12 +5,13 @@
 //
 // buildWeeklySummary() only reads the data it's handed, so it can be
 // tested; sendWeeklySummary() loads everything and emails it to the
-// morning email's people except Shon (SUMMARY_RECIPIENTS in lib-digest.mjs).
+// "weekly" list (App & alerts → Who gets emails; you only by default).
 
 import { getStore } from "@netlify/blobs";
 import { emailLayout, heading, pill, sectionLabel, detailsCard, button, escapeHtml, emailColors as C, SITE_URL } from "./lib-email.mjs";
 import { friendlyTime, dropoffAddressOf, pickupAddressOf, todayInOklahoma } from "./lib-reminders.mjs";
-import { sendEmail, SUMMARY_RECIPIENTS } from "./lib-digest.mjs";
+import { sendEmail } from "./lib-digest.mjs";
+import { getRecipients } from "./lib-recipients.mjs";
 
 const shift = (d, n) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
 const okDate = (iso) => { const d = new Date(iso || ""); return isNaN(d) ? "" : d.toLocaleDateString("en-CA", { timeZone: "America/Chicago" }); };
@@ -129,6 +130,6 @@ export async function sendWeeklySummary() {
     all("rentals"), all("requests"), all("finance"), flag("paidFlags"), flag("sentFlags"), flag("skippedFlags")]);
   const mileage = finance.filter((x) => x.key.startsWith("mile_"));
   const s = buildWeeklySummary({ rentals, requests, paidFlags, sentFlags, skippedFlags, mileage }, todayInOklahoma());
-  const ok = await sendEmail(s.subject, s.html, [], SUMMARY_RECIPIENTS);
+  const ok = await sendEmail(s.subject, s.html, [], await getRecipients("weekly"));
   return { ok, totals: s.totals };
 }
