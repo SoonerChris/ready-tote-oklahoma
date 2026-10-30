@@ -121,6 +121,9 @@
     <input type="checkbox" id="isRush"> Rush fee ($25)
   </label>
   <p class="note" id="rushNote" hidden></p>
+  <label for="mileFee" style="margin-top:10px;">Mileage charge (optional)</label>
+  <input type="number" id="mileFee" min="0" step="1" inputmode="decimal" placeholder="0">
+  <p class="note" id="mileNote">Free within 30 driving miles of home (or 15 of Ada). Past that: $25 for 30 to 40 miles, $50 for 40 to 50, quote beyond.</p>
   <label class="check" style="margin-top:10px;">
     <input type="checkbox" id="isMilitary"> Military discount (15%)
   </label>
@@ -264,6 +267,7 @@
   let PREFILL_REQUEST_KEY = null;
   let PREFILL_MILITARY_ID_KEY = null;
   let PREFILL_SUBMITTED_AT = null;
+  let PREFILL_MILES = null;   // the request's distance from home, for the invoice line
   var PREFILL_PROMO = '';   // var: applyPrefill runs before later lets are initialized
   let PENDING_PREFILL = null;
   (function loadPrefill() {
@@ -279,6 +283,16 @@
     PREFILL_MILITARY_ID_KEY = r.militaryIdKey || null;
     PREFILL_SUBMITTED_AT = r.submittedAt || null;
     $('isMilitary').checked = !!r.isMilitary;
+    // Outside the free area (lib-distance.mjs): the band's fee, or a quote to fill in
+    const d = r.serviceType !== 'self' && r.distance;
+    PREFILL_MILES = d ? d.miles : null;
+    if (d && d.zone === 'outside') {
+      if (d.fee) $('mileFee').value = d.fee;
+      $('mileNote').textContent = `${d.miles} miles from home: ${d.fee ? `$${d.fee} mileage charge filled in.` : 'over 50 miles, type the charge you quoted.'}`;
+      $('mileNote').classList.add('bad');
+    } else if (d) {
+      $('mileNote').textContent = `${d.miles} miles from home: ${d.label.toLowerCase()}, no mileage charge.`;
+    }
     PREFILL_PROMO = r.promoCode || '';
     if (PREFILL_PROMO) {
       $('discName').value = 'Promo code ' + PREFILL_PROMO;
@@ -442,6 +456,12 @@
       notes.push(`\u2212$${discount.toFixed(2)} ${useOther ? name : 'military (15%)'}`);
       items.push({ label: discLabel, amount: -discount });
     }
+    const mile = money($('mileFee').value) || 0;
+    if (mile > 0) {
+      total = round2(total + mile);
+      notes.push(`+$${trimZeros(mile)} mileage`);
+      items.push({ label: PREFILL_MILES ? `Mileage charge (${PREFILL_MILES} mi)` : 'Mileage charge', amount: mile });
+    }
     if ($('isRush').checked) {
       total = round2(total + RUSH_FEE);
       notes.push(`+$${RUSH_FEE} rush`);
@@ -509,6 +529,7 @@
     stripeCheck();
   });
   $('isMilitary').addEventListener('change', autoPrice);
+  $('mileFee').addEventListener('input', autoPrice);
   $('discValue').addEventListener('input', autoPrice);
   $('discName').addEventListener('input', autoPrice);
   syncDiscRow();

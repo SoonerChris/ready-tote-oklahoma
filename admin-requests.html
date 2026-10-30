@@ -280,6 +280,11 @@
     if (!ACTIVE_STATUSES.includes(r.status)) return [];
     const out = [];
     // Confirmed by the customer, but held back from the automatic invoice
+    // Outside the free delivery area (lib-distance.mjs): the fee goes on the invoice
+    const d = r.serviceType !== 'self' && r.distance;
+    if (d && d.zone === 'outside') out.push(d.fee == null
+      ? `Outside the free delivery area: ${d.miles} miles from home. Quote the mileage charge before confirming, then add it on the invoice.`
+      : `Outside the free delivery area: ${d.miles} miles from home. Add the $${d.fee} mileage charge on the invoice.`);
     if (r.status === 'confirmed' && Array.isArray(r.autoInvoiceSkipped) && r.autoInvoiceSkipped.length)
       out.push(`Not invoiced automatically: ${r.autoInvoiceSkipped.join(', ')}. Check it and send the invoice.`);
     if (r.deliveryDate && r.pickupDate) {
@@ -318,6 +323,7 @@
         <div><span class="lbl">Delivery</span>${esc(fmtReqDate(r.deliveryDate))}${pref(r.deliveryWindow)}</div>
         <div><span class="lbl">Pickup</span>${esc(fmtReqDate(r.pickupDate))}${pref(r.pickupWindow)}</div>
         <div><span class="lbl">Address</span>${addr ? `<a href="${escAttr(mapsLink(addr))}" target="_blank" rel="noopener">${esc(addr)}</a>` : r.serviceType === 'self' ? 'Not needed, self pickup' : 'Not given'}</div>
+        ${r.serviceType !== 'self' && r.distance ? `<div><span class="lbl">Distance</span>${esc(r.distance.miles)} mi from home · ${r.distance.zone !== 'outside' ? 'free' : r.distance.fee ? '$' + esc(r.distance.fee) + ' charge' : 'quote it'}</div>` : ''}
         ${OPEN_STATUSES.includes(r.status) ? `<div class="avail-row"><span class="lbl">Stock</span><span class="avail-list">${requestAvailability(r)}</span></div>` : ''}
         <div><span class="lbl">Phone</span>${r.phone ? `<a href="tel:${escAttr(phoneDigits)}">${esc(fmtPhone(r.phone))}</a>` : 'Not given'}</div>
         <div><span class="lbl">Email</span>${r.email ? `<a href="mailto:${escAttr(r.email)}">${esc(r.email)}</a>` : 'Not given'}</div>
@@ -738,9 +744,12 @@
   function confirmMessage(r) {
     const first = (r.name || 'there').split(' ')[0];
     const pkg = r.package || 'your package';
-    const rushNote = isRushRequest(r)
+    // Outside the free area: say the charge before they confirm (a quote is texted separately)
+    const d = r.serviceType !== 'self' && r.distance;
+    const mileNote = d && d.zone === 'outside' && d.fee ? ` Your address is ${d.miles} miles out, past our free 30-mile area, so a $${d.fee} mileage charge applies.` : '';
+    const rushNote = mileNote + (isRushRequest(r)
       ? ` Since that's a rush request (under 24 hrs out), a $${RUSH_FEE} expedite fee applies, it'll show as its own line on your invoice.`
-      : '';
+      : '');
     // Dates and times both, so confirming agrees to the time too
     const self = r.serviceType === 'self';
     const when = `${self ? 'Pick up' : 'Delivery'}: ${fmtReqDate(r.deliveryDate)}, ${windowText(r.deliveryWindow)}\n`
