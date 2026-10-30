@@ -674,13 +674,18 @@
       /></noscript>
       <!-- End Meta Pixel Code -->
 
-      <!-- Google Analytics 4 -->
-      <script async src="https://www.googletagmanager.com/gtag/js?id=G-EZ74JZM39N"></script>
+      <!-- Google Analytics 4: loads only on the real site, not Netlify deploy previews or local testing -->
       <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-EZ74JZM39N');
+        if (location.hostname === 'readytoteokc.com' || location.hostname === 'www.readytoteokc.com') {
+          var gaTag = document.createElement('script');
+          gaTag.async = true;
+          gaTag.src = 'https://www.googletagmanager.com/gtag/js?id=G-EZ74JZM39N';
+          document.head.appendChild(gaTag);
+          window.dataLayer = window.dataLayer || [];
+          window.gtag = function () { dataLayer.push(arguments); };
+          gtag('js', new Date());
+          gtag('config', 'G-EZ74JZM39N');
+        }
       </script>
       <!-- End Google Analytics 4 -->
       </head>
