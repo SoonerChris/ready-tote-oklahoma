@@ -15,6 +15,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { isAdmin } from "./lib-auth.mjs";
+import { checkDistance } from "./lib-distance.mjs";
 
 const EDITABLE_FIELDS = [
   "name", "email", "phone", "package",
@@ -102,6 +103,14 @@ export default async (request) => {
         updated.invoicedAt = now;
         break;
       // no action = field-only patch (e.g. fixing a typo without changing status)
+    }
+
+    // A changed delivery address gets its distance checked again
+    const ADDRESS_FIELDS = ["deliveryAddress", "deliveryAddressStreet", "deliveryAddressCity", "deliveryAddressState", "deliveryAddressZip"];
+    if (ADDRESS_FIELDS.some((f) => body[f] !== undefined && body[f] !== existing[f]) && updated.serviceType !== "self") {
+      const line = [updated.deliveryAddressStreet, updated.deliveryAddressCity, [updated.deliveryAddressState, updated.deliveryAddressZip].filter(Boolean).join(" ")].filter(Boolean).join(", ") || updated.deliveryAddress;
+      const distance = await checkDistance(line);
+      if (distance) updated.distance = distance; else delete updated.distance;
     }
 
     await store.setJSON(body.key, updated);

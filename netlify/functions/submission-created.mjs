@@ -9,6 +9,7 @@
 import { getStore } from "@netlify/blobs";
 import { emailLayout, heading, pill, detailsCard, steps, callout, contactLine, htmlToText, PHONE_DISPLAY } from "./lib-email.mjs";
 import { notify } from "./lib-push.mjs";
+import { checkDistance } from "./lib-distance.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
@@ -61,6 +62,10 @@ export default async (request) => {
   // "No preference" isn't worth showing back to them
   const windowOf = (w) => (w && !/no preference/i.test(w) ? escapeHtml(w) : "");
 
+  // How far the delivery is (free area or a mileage charge, lib-distance.mjs).
+  // Never blocks the request: no answer just means it isn't flagged.
+  const distance = !selfPickup && addressLine ? await checkDistance(addressLine) : null;
+
   // Persist the request itself so it shows up in the Booking Requests admin
   // page, instead of only existing as a Netlify notification email. Never
   // let a storage hiccup block the customer auto-reply below.
@@ -88,6 +93,7 @@ export default async (request) => {
       militaryIdKey,
       promoCode,
       howHeard,
+      ...(distance ? { distance } : {}),
       status: "new",
       submittedAt: new Date().toISOString(),
     });
@@ -98,7 +104,8 @@ export default async (request) => {
   // Buzz the admin app (never blocks the customer's auto-reply)
   await notify("requests", {
     title: "New booking request",
-    body: [data.name || "Someone", data.package || "", selfPickup ? "self pickup" : "", data.delivery_date ? "delivery " + (formatDate(data.delivery_date) || data.delivery_date) : ""].filter(Boolean).join(" · "),
+    body: [data.name || "Someone", data.package || "", selfPickup ? "self pickup" : "", data.delivery_date ? "delivery " + (formatDate(data.delivery_date) || data.delivery_date) : "",
+      distance && distance.zone === "outside" ? `${distance.miles} mi, outside the free area` : ""].filter(Boolean).join(" · "),
     url: "/admin-requests.html",
     tag: "request-" + Date.now(),
   });
