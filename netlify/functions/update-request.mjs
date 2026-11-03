@@ -14,6 +14,7 @@
 // a typo'd address or add review notes.
 
 import { getStore } from "@netlify/blobs";
+import { logEdit, whoFrom } from "./lib-changes.mjs";
 import { isAdmin } from "./lib-auth.mjs";
 
 const EDITABLE_FIELDS = [
@@ -105,6 +106,7 @@ export default async (request) => {
     }
 
     await store.setJSON(body.key, updated);
+    await logEdit({ recordKey: body.key, kind: "request", before: existing, after: updated, by: whoFrom(request), source: "Requests" });
     return new Response(JSON.stringify({ ok: true, request: { key: body.key, ...updated } }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
