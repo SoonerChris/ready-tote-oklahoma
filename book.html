@@ -249,13 +249,14 @@
       <form name="booking" method="POST" data-netlify="true" netlify-honeypot="hp_field" id="bookingForm">
         <input type="hidden" name="form-name" value="booking">
         <input class="hp" type="text" name="hp_field" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <input type="hidden" name="fill_ms" value="">
 
         <div class="form-grid">
           <label>Full Name*
             <input type="text" name="name" autocomplete="name" required>
           </label>
           <label>Phone Number*
-            <input type="tel" name="phone" autocomplete="tel" required>
+            <input type="tel" name="phone" autocomplete="tel" inputmode="tel" required>
           </label>
         </div>
         <div class="form-grid">
@@ -544,8 +545,27 @@
     e.preventDefault();
     if (form.hp_field.value) return; // honeypot triggered, silently ignore
 
-    syncHiddenDates();
     const status = $('formStatus');
+    // Phone and address have to look real before anything is sent. Same
+    // rules as the server check (netlify/functions/lib-booking-check.mjs);
+    // keep the two in sync.
+    let phoneDigits = form.phone.value.replace(/\D/g, '');
+    if (phoneDigits.length === 11 && phoneDigits[0] === '1') phoneDigits = phoneDigits.slice(1);
+    if (phoneDigits.length !== 10 || !/^[2-9]/.test(phoneDigits)) {
+      status.className = 'form-status show err';
+      status.textContent = 'Please check your phone number: enter a 10-digit US number, like 405-555-0142.';
+      form.phone.focus();
+      return;
+    }
+    if (!/\b7[34]\d{3}\b/.test(form.delivery_address.value)) {
+      status.className = 'form-status show err';
+      status.textContent = 'Please check your delivery address: include your 5-digit Oklahoma zip code.';
+      form.delivery_address.focus();
+      return;
+    }
+    form.fill_ms.value = String(Math.round(performance.now()));
+
+    syncHiddenDates();
     const btn = $('submitBtn');
     btn.disabled = true;
     btn.textContent = 'Sending…';
