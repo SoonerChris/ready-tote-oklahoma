@@ -9,6 +9,7 @@
 import { getStore } from "@netlify/blobs";
 import { emailLayout, heading, pill, detailsCard, steps, callout, contactLine, htmlToText, PHONE_DISPLAY } from "./lib-email.mjs";
 import { notify } from "./lib-push.mjs";
+import { suspectReasons } from "./lib-booking-check.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
 const OWNER_EMAIL = "readytoteok@gmail.com";
@@ -61,6 +62,21 @@ export default async (request) => {
   // "No preference" isn't worth showing back to them
   const windowOf = (w) => (w && !/no preference/i.test(w) ? escapeHtml(w) : "");
 
+  // Junk check: non-US phone, no Oklahoma zip on a delivery, or a form sent
+  // faster than a person could fill it in. The booking form already stops
+  // real customers with a friendly message, so this mostly catches bots and
+  // anyone who skips the page. Flagged requests are saved as Declined (with
+  // the reason, so one tap on Reopen brings a real one back) and get no
+  // customer auto-reply and no admin alert.
+  const flagReasons = suspectReasons({
+    phone: data.phone,
+    addressText: addressLine,
+    selfPickup,
+    fillMs: data.fill_ms,
+  });
+  const flagged = flagReasons.length > 0;
+  const submittedAt = new Date().toISOString();
+
   // Persist the request itself so it shows up in the Booking Requests admin
   // page, instead of only existing as a Netlify notification email. Never
   // let a storage hiccup block the customer auto-reply below.
@@ -88,11 +104,19 @@ export default async (request) => {
       militaryIdKey,
       promoCode,
       howHeard,
-      status: "new",
-      submittedAt: new Date().toISOString(),
+      status: flagged ? "declined" : "new",
+      ...(flagged
+        ? { declinedAt: submittedAt, declineReason: "Auto-flagged as likely spam: " + flagReasons.join("; "), autoFlagged: true }
+        : {}),
+      submittedAt,
     });
   } catch (e) {
     console.error("Booking request log failed (auto-reply still sent):", e.message);
+  }
+
+  if (flagged) {
+    console.warn("Booking request auto-declined as likely spam:", flagReasons.join("; "));
+    return new Response("Flagged as likely spam, auto-declined", { status: 200 });
   }
 
   // Buzz the admin app (never blocks the customer's auto-reply)
