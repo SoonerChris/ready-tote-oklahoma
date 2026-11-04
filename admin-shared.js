@@ -526,3 +526,26 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js', { scope: '/admin' }).then(reg => reg.update()).catch(() => {});
   });
 }
+
+// ---- Change history (get-changes.mjs, logged by lib-changes.mjs) ----
+// Who changed what and when: edits in the app (by username) and what
+// customers did themselves. withName: show whose record it was (Recent
+// changes on Contacts).
+function historyHtml(list, { withName = false } = {}) {
+  if (!list || !list.length) return '<p class="history-empty">No changes logged yet. Changes show here from now on.</p>';
+  const when = iso => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' });
+  const who = by => by === 'customer' ? 'Customer' : by ? by.charAt(0).toUpperCase() + by.slice(1) : 'Admin';
+  return `<ul class="history">${list.map(e => `
+    <li><div class="h-meta"><b>${esc(who(e.by))}</b>${withName && e.name ? ` · ${esc(e.name)}` : ''} · ${esc(when(e.at))}${e.source ? ` · ${esc(e.source)}` : ''}</div>
+      ${e.event ? `<div class="h-line">${esc(e.event)}</div>` : ''}
+      ${(e.changes || []).map(c => `<div class="h-line"><span class="h-label">${esc(c.label)}:</span> ${c.from ? `<s>${esc(c.from)}</s> → ` : ''}${esc(c.to || '(blank)')}</div>`).join('')}
+    </li>`).join('')}</ul>`;
+}
+async function loadHistory(el, body) {
+  el.innerHTML = '<p class="history-empty">Loading…</p>';
+  try {
+    const r = await fetch('/.netlify/functions/get-changes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({}));
+    el.innerHTML = r.ok ? historyHtml(d.changes, { withName: !!body.recent }) : `<p class="history-empty">${esc(d.error || "Couldn't load the history.")}</p>`;
+  } catch { el.innerHTML = '<p class="history-empty">Couldn\'t reach the server. Try again.</p>'; }
+}

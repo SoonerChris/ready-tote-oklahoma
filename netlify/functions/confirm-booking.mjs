@@ -28,6 +28,7 @@ import { notify } from "./lib-push.mjs";
 import { sendInvoice, autoInvoicePlan, loadPackages } from "./lib-invoice.mjs";
 import { computeAvailability } from "./lib-stock.mjs";
 import { getSettings } from "./settings.mjs";
+import { logChange } from "./lib-changes.mjs";
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
 const OPEN = ["new", "reviewed", "awaiting_confirmation"];
@@ -139,6 +140,7 @@ export default async (request, context) => {
         buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
         { metadata: { mimeType: mimeOf(buf), uploadedAt: new Date().toISOString(), by: "customer" } });
       await store.setJSON(key, { ...(await store.get(key, { type: "json" })), militaryIdKey: idKey, militaryIdUploadedAt: new Date().toISOString() });
+      await logChange({ recordKey: key, kind: "request", record: req, by: "customer", source: "Confirm page", event: "Added a military ID photo" });
       const alert = notify("requests", { title: "Military ID photo added", body: `${req.name || "A customer"} added their ID. Check it on Requests, then invoice with the discount.`, url: "/admin-requests.html", tag: "military-" + key })
         .catch((e) => console.error("ID alert failed:", e.message));
       if (context && typeof context.waitUntil === "function") context.waitUntil(alert); else await alert;
@@ -149,6 +151,7 @@ export default async (request, context) => {
 
     const confirmed = { ...req, status: "confirmed", confirmedAt: new Date().toISOString(), confirmedBy: "customer" };
     await store.setJSON(key, confirmed);
+    await logChange({ recordKey: key, kind: "request", record: req, by: "customer", source: "Confirm page", event: "Confirmed the booking" });
 
     let auto = { invoiced: false, reasons: [] };
     try { auto = await tryAutoInvoice(store, key); }

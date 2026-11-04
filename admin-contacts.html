@@ -15,8 +15,8 @@
 <meta name="apple-mobile-web-app-title" content="Ready Tote">
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Contacts · Ready Tote Oklahoma admin</title>
-<link rel="stylesheet" href="admin-shared.css?v=20261026">
-<script src="admin-shared.js?v=20261115"></script>
+<link rel="stylesheet" href="admin-shared.css?v=20261103">
+<script src="admin-shared.js?v=20261116"></script>
 <script src="admin-rentals-shared.js?v=20261114"></script>
 <style>
   /* One row per person, built from every rental and booking request:
@@ -41,6 +41,8 @@
   .undo-line{display:flex; align-items:center; gap:12px; margin:0 0 12px; padding:9px 12px; border-radius:8px; background:var(--green-bg); color:var(--green-ink); font-size:14px; font-weight:600;}
   .undo-line[hidden]{display:none;}
   .undo-line button{all:unset; cursor:pointer; margin-left:auto; color:var(--ink); text-decoration:underline; text-underline-offset:3px; font-weight:600;}
+  #recentBtn{all:unset; cursor:pointer; font-size:14px; font-weight:600; color:var(--ink); text-decoration:underline; text-underline-offset:3px;}
+  #recentBtn:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
   .det-acts .hide-btn{all:unset; cursor:pointer; margin-left:auto; font-size:13px; font-weight:600; color:var(--steel); text-decoration:underline; text-underline-offset:3px;}
   table.people{width:100%; border-collapse:collapse; font-size:14px;}
   table.people th{font-size:12px; font-weight:500; color:var(--steel); text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap;}
@@ -111,6 +113,8 @@
       <button type="button" class="secondary" id="csvBtn">Download CSV</button>
     </div>
     <p class="found-line" id="foundLine" hidden></p>
+    <p class="found-line"><button type="button" id="recentBtn" aria-expanded="false">Recent changes to customer details</button></p>
+    <div id="recentBox" hidden style="margin:-4px 0 14px;"></div>
     <div class="fchips" id="chips" role="group" aria-label="Show"></div>
     <div class="undo-line" id="hideBar" hidden></div>
     <p class="count-line" id="countLine"></p>
@@ -370,6 +374,13 @@
   $('hideBar').addEventListener('click', async (e) => {
     if (!e.target.closest('#undoHide') || !LAST_HIDDEN) return;
     if (await setHidden(LAST_HIDDEN.key, false)) { LAST_HIDDEN = null; showHideBar(); render(); }
+  });
+
+  // ---- Recent changes: the latest edits and customer updates (get-changes.mjs) ----
+  $('recentBtn').addEventListener('click', () => {
+    const box = $('recentBox'), open = box.hidden;
+    box.hidden = !open; $('recentBtn').setAttribute('aria-expanded', String(open));
+    if (open) loadHistory(box, { recent: true });
   });
 
   // ---- How people found us: one answer per person, everyone counted ----
