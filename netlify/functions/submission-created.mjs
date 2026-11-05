@@ -9,6 +9,7 @@
 import { getStore } from "@netlify/blobs";
 import { emailLayout, heading, pill, detailsCard, steps, callout, contactLine, htmlToText, PHONE_DISPLAY } from "./lib-email.mjs";
 import { notify } from "./lib-push.mjs";
+import { checkDistance } from "./lib-distance.mjs";
 import { suspectReasons } from "./lib-booking-check.mjs";
 
 const FROM_FALLBACK = "Ready Tote Oklahoma <booking@readytoteokc.com>";
@@ -77,6 +78,11 @@ export default async (request) => {
   const flagged = flagReasons.length > 0;
   const submittedAt = new Date().toISOString();
 
+  // How far the delivery is (free area or a mileage charge, lib-distance.mjs).
+  // Never blocks the request: no answer just means it isn't flagged. Not
+  // looked up for requests already flagged as spam.
+  const distance = !flagged && !selfPickup && addressLine ? await checkDistance(addressLine) : null;
+
   // Persist the request itself so it shows up in the Booking Requests admin
   // page, instead of only existing as a Netlify notification email. Never
   // let a storage hiccup block the customer auto-reply below.
@@ -104,6 +110,7 @@ export default async (request) => {
       militaryIdKey,
       promoCode,
       howHeard,
+      ...(distance ? { distance } : {}),
       status: flagged ? "declined" : "new",
       ...(flagged
         ? { declinedAt: submittedAt, declineReason: "Auto-flagged as likely spam: " + flagReasons.join("; "), autoFlagged: true }
@@ -122,7 +129,8 @@ export default async (request) => {
   // Buzz the admin app (never blocks the customer's auto-reply)
   await notify("requests", {
     title: "New booking request",
-    body: [data.name || "Someone", data.package || "", selfPickup ? "self pickup" : "", data.delivery_date ? "delivery " + (formatDate(data.delivery_date) || data.delivery_date) : ""].filter(Boolean).join(" · "),
+    body: [data.name || "Someone", data.package || "", selfPickup ? "self pickup" : "", data.delivery_date ? "delivery " + (formatDate(data.delivery_date) || data.delivery_date) : "",
+      distance && distance.zone === "outside" ? `${distance.miles} mi, outside the free area` : ""].filter(Boolean).join(" · "),
     url: "/admin-requests.html",
     tag: "request-" + Date.now(),
   });

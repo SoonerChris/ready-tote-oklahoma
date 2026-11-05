@@ -247,6 +247,7 @@ export function autoInvoicePlan(req, packages, { availability = null, rentals = 
   if (req.deliveryDate && isRush(req.submittedAt, req.deliveryDate, dropoffTime)) reasons.push("rush fee applies");
   const street = req.deliveryAddressStreet, city = req.deliveryAddressCity, state = req.deliveryAddressState, zip = req.deliveryAddressZip;
   if (!self && !(street && city && state && zip)) reasons.push("address needs checking");
+  if (!self && req.distance && req.distance.zone === "outside") reasons.push(`outside the free delivery area (${req.distance.miles} mi): add the mileage charge`);
   if (availability && pkg && req.deliveryDate && req.pickupDate) {
     const days = (availability.days || []).filter((d) => d.date >= req.deliveryDate && d.date <= req.pickupDate);
     if (days.some((d) => d.available < 0)) reasons.push("not enough totes on those dates");
