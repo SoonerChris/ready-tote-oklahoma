@@ -278,3 +278,14 @@ body:has(.admin-nav){padding:8px 8px 8px 236px !important;}
   .admin-nav.open a{display:flex;}
   .admin-nav a.logout-link{margin-top:8px;}
 }
+
+/* Change history (historyHtml in admin-shared.js) */
+.history{list-style:none; margin:8px 0 0; padding:0; font-size:14px;}
+.history li{padding:8px 0; border-top:1px solid var(--rule-soft);}
+.history li:first-child{border-top:none;}
+.history .h-meta{font-size:13px; color:var(--steel);}
+.history .h-meta b{color:var(--ink);}
+.history .h-line{margin-top:2px; overflow-wrap:anywhere;}
+.history .h-label{color:var(--steel);}
+.history s{color:var(--steel);}
+.history-empty{font-size:14px; color:var(--steel); margin:8px 0 0;}

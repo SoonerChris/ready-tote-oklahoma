@@ -674,13 +674,18 @@
       /></noscript>
       <!-- End Meta Pixel Code -->
 
-      <!-- Google Analytics 4 -->
-      <script async src="https://www.googletagmanager.com/gtag/js?id=G-EZ74JZM39N"></script>
+      <!-- Google Analytics 4: loads only on the real site, not Netlify deploy previews or local testing -->
       <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-EZ74JZM39N');
+        if (location.hostname === 'readytoteokc.com' || location.hostname === 'www.readytoteokc.com') {
+          var gaTag = document.createElement('script');
+          gaTag.async = true;
+          gaTag.src = 'https://www.googletagmanager.com/gtag/js?id=G-EZ74JZM39N';
+          document.head.appendChild(gaTag);
+          window.dataLayer = window.dataLayer || [];
+          window.gtag = function () { dataLayer.push(arguments); };
+          gtag('js', new Date());
+          gtag('config', 'G-EZ74JZM39N');
+        }
       </script>
       <!-- End Google Analytics 4 -->
       </head>
@@ -960,6 +965,9 @@
       >
         <input type="hidden" name="form-name" value="booking">
         <input class="hp" type="text" name="hp_field" tabindex="-1" autocomplete="new-password" aria-hidden="true">
+        <!-- Filled in on send with how long the page was open (ms); the server
+             treats a send faster than a person could type as spam -->
+        <input type="hidden" name="fill_ms" value="">
         <!-- Only what's needed up front; pickup date, times and discounts
              are one tap away (and fine to skip) -->
         <div class="form-grid two">
@@ -999,7 +1007,7 @@
             <input type="text" name="name" autocomplete="name" required>
           </label>
           <label>Phone Number*
-            <input type="tel" name="phone" autocomplete="tel" required>
+            <input type="tel" name="phone" autocomplete="tel" inputmode="tel" required>
           </label>
         </div>
         <div class="form-grid" style="margin-top:18px;">
@@ -1438,6 +1446,22 @@
     // rejects bots that fill it in and post directly.
     form.hp_field.value = '';
     formMsg('');
+    // Phone and address have to look real before anything is sent. Same
+    // rules as the server check (netlify/functions/lib-booking-check.mjs);
+    // keep the two in sync.
+    let phoneDigits = form.phone.value.replace(/\D/g, '');
+    if (phoneDigits.length === 11 && phoneDigits[0] === '1') phoneDigits = phoneDigits.slice(1);
+    if (phoneDigits.length !== 10 || !/^[2-9]/.test(phoneDigits)) {
+      formMsg('Please check Phone Number: enter a 10-digit US number, like 405-555-0142.');
+      form.phone.focus();
+      return;
+    }
+    if (!document.getElementById('selfPickup').checked && !/\b7[34]\d{3}\b/.test(form.delivery_address.value)) {
+      formMsg('Please check Delivery Address: include your 5-digit Oklahoma zip code.');
+      form.delivery_address.focus();
+      return;
+    }
+    form.fill_ms.value = String(Math.round(performance.now()));
     // Pickup is a line, not a required box: fill in the standard 2 weeks
     // if it's somehow still empty
     if (!pickupDateEl.value && deliveryDateEl.value) pickupDateEl.value = plus14(deliveryDateEl.value);
@@ -1504,6 +1528,7 @@
   <select name="how_heard"><option value="">Select one</option></select>
   <input type="checkbox" name="self_pickup" value="true">
   <input type="text" name="hp_field">
+  <input type="hidden" name="fill_ms">
 </form>
 
 <a class="float-text" href="sms:+15803993202" aria-label="Questions? Text us">

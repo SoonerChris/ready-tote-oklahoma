@@ -15,8 +15,8 @@
 <meta name="apple-mobile-web-app-title" content="Ready Tote">
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>Requests · Ready Tote Oklahoma admin</title>
-<link rel="stylesheet" href="admin-shared.css?v=20261026">
-<script src="admin-shared.js?v=20261115"></script>
+<link rel="stylesheet" href="admin-shared.css?v=20261103">
+<script src="admin-shared.js?v=20261116"></script>
 <script src="admin-availability.js?v=20261027"></script>
 <style>
   :root{--col:820px;}
@@ -388,9 +388,11 @@
 
       ${STEP_BACK[r.status] ? `<button type="button" class="toggle-note" data-move-back>${STEP_BACK[r.status](r)[1]}</button>` : ''}
       <button type="button" class="toggle-note" data-toggle="note">${r.reviewNotes ? 'Edit note' : '+ Add note'}</button>
+      <button type="button" class="toggle-note" data-history-btn aria-expanded="false">History</button>
       <button type="button" class="toggle-note" data-toggle-military>${r.isMilitary ? 'Unmark military' : 'Mark military'}</button>
       ${r.hasMilitaryIdPhoto ? '<button type="button" class="toggle-note" data-view-id>View ID photo</button>' : ''}
       <button type="button" class="toggle-note" data-add-id>${r.hasMilitaryIdPhoto ? 'Replace ID photo' : 'Add ID photo'}</button>
+      <div data-history-box hidden></div>
       <div class="note-block" data-note>
         <textarea rows="2" data-note-text placeholder="e.g. gate code, dog on property, availability check…">${esc(r.reviewNotes || '')}</textarea>
         <button type="button" data-save-note>Save note</button>
@@ -470,6 +472,13 @@
         const block = card.querySelector(which);
         block.style.display = block.style.display === 'block' ? 'none' : 'block';
       });
+    });
+
+    // Change history: loaded when opened
+    card.querySelector('[data-history-btn]')?.addEventListener('click', (e) => {
+      const box = card.querySelector('[data-history-box]'), open = box.hidden;
+      box.hidden = !open; e.target.setAttribute('aria-expanded', String(open));
+      if (open) loadHistory(box, { key: r.key });
     });
 
     card.querySelector('[data-save-note]')?.addEventListener('click', () => {

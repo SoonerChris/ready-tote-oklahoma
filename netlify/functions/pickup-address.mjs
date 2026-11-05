@@ -17,6 +17,7 @@
 import { getStore } from "@netlify/blobs";
 import { notify } from "./lib-push.mjs";
 import { keyForAddressCode } from "./lib-links.mjs";
+import { logChange } from "./lib-changes.mjs";
 import { pickupAddressOf, formatAddress, todayInOklahoma, friendlyTime } from "./lib-reminders.mjs";
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
@@ -53,6 +54,7 @@ export default async (request, context) => {
     if (body.action === "confirm") {
       const saved = { ...r, pickupAddressConfirmedAt: now };
       await store.setJSON(key, saved);
+      await logChange({ recordKey: key, kind: "rental", record: r, by: "customer", source: "Pickup address page", event: `Confirmed the pickup address: ${pickupAddressOf(r)}` });
       return json(view(saved));
     }
 
@@ -68,6 +70,8 @@ export default async (request, context) => {
       const saved = { ...r, pickupAddressStreet: street, pickupAddressCity: city, pickupAddressState: state, pickupAddressZip: zip,
         pickupAddress: line, pickupAddressConfirmedAt: now, ...(before && before !== line ? { pickupAddressChangedFrom: before } : {}) };
       await store.setJSON(key, saved);
+      await logChange({ recordKey: key, kind: "rental", record: r, by: "customer", source: "Pickup address page",
+        ...(before !== line ? { changes: [{ label: "Pickup address", from: before, to: line }] } : { event: `Confirmed the pickup address: ${line}` }) });
       if (before !== line) {
         const day = new Date(r.pickupDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
         const alert = notify("requests", { title: "Pickup address changed", body: `${r.name || "A customer"} (pickup ${day}): ${line}${before ? `, was ${before}` : ""}.`, url: "/admin-rentals.html", tag: "pickup-address-" + key })

@@ -8,6 +8,7 @@ import { getStore } from "@netlify/blobs";
 import { accessLevel } from "./lib-auth.mjs";
 import { linkExtension, unlinkExtension } from "./lib-invoice.mjs";
 import { logTrip, unlogTrip } from "./lib-mileage.mjs";
+import { logEdit, whoFrom } from "./lib-changes.mjs";
 
 const EDITABLE_FIELDS = [
   "name", "email", "phone", "package", "price", "duration",
@@ -141,6 +142,7 @@ export default async (request, context) => {
     if (updated.price !== existing.price && updated.lineItems) delete updated.lineItems;
 
     await store.setJSON(body.key, updated);
+    await logEdit({ recordKey: body.key, kind: "rental", before: existing, after: updated, by: whoFrom(request), source: "All Rentals" });
 
     // Delivered / Picked up: log the trip's miles on Finance (lib-mileage.mjs);
     // Undo takes it back. Runs after the answer when the runtime allows it.

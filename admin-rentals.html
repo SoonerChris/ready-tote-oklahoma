@@ -15,8 +15,8 @@
 <meta name="apple-mobile-web-app-title" content="Ready Tote">
 <link rel="apple-touch-icon" href="/app-icon-180.png">
 <title>All rentals · Ready Tote Oklahoma admin</title>
-<link rel="stylesheet" href="admin-shared.css?v=20261026">
-<script src="admin-shared.js?v=20261115"></script>
+<link rel="stylesheet" href="admin-shared.css?v=20261103">
+<script src="admin-shared.js?v=20261116"></script>
 <script src="admin-rentals-shared.js?v=20261114"></script>
 <style>
   .rem .who{font-weight:600;font-size:16px;}
@@ -409,7 +409,7 @@
             ${otwPickup ? onTheWayBtn('pickup', r.key) : ''}
           </div>` : ''}
           <div class="tool-row">
-            ${tbtn('edit', 'Edit rental')}${tbtn('texts', 'Other texts')}${tbtn('photos', 'Photos')}${tbtn('more', 'More')}
+            ${tbtn('edit', 'Edit rental')}${tbtn('texts', 'Other texts')}${tbtn('photos', 'Photos')}${tbtn('history', 'History')}${tbtn('more', 'More')}
           </div>
           <div class="xpanel" id="texts-${k}">
             <div class="actions text-actions">
@@ -424,6 +424,7 @@
             <div class="actions">${photoBtn(r, 'delivery')}${photoBtn(r, 'pickup')}${photoBtn(r, 'military_id')}</div>
           </div>
           <div class="xpanel" id="edit-${k}">${editForm(r)}</div>
+          <div class="xpanel" id="history-${k}"><div data-history="${k}"></div></div>
           <div class="xpanel" id="more-${k}">
             <div class="actions">
               ${paid ? payBtn(r) : ''}
@@ -544,6 +545,8 @@
       const p = $(btn.dataset.panel), show = !p.classList.contains('shown');
       p.classList.toggle('shown', show);
       btn.setAttribute('aria-expanded', String(show));
+      const h = show && p.querySelector('[data-history]');
+      if (h) loadHistory(h, { key: h.dataset.history });
     }));
   }
   window.closePanel = (id) => {
@@ -556,7 +559,7 @@
   function captureUi() {
     return {
       open: [...document.querySelectorAll('#allRentals .rem.open')].map(e => e.dataset.key),
-      panels: [...document.querySelectorAll('#allRentals .xpanel.shown')].map(e => e.id).filter(id => !id.startsWith('edit-')),
+      panels: [...document.querySelectorAll('#allRentals .xpanel.shown')].map(e => e.id).filter(id => !id.startsWith('edit-') && !id.startsWith('history-')),
       y: window.scrollY,
     };
   }
