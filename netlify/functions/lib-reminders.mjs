@@ -99,14 +99,34 @@ function friendlyDate(isoDate) {
 // would both go to the same person, so that day the address check carries
 // the pickup reminder too and "pickup in 2 days" is skipped. Review texts
 // are skipped entirely while GOOGLE_REVIEW_LINK isn't set.
-export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags = {}) {
+// The 1-hour heads-up text on delivery day goes on the list this many
+// minutes before the delivery time (push-alerts.mjs buzzes the phone then)
+export const ARRIVAL_LEAD = 60;
+// "2:30 PM", "14:30" or "9 AM" -> minutes after midnight; null if no time
+export function minutesOf(t) {
+  const m = String(t || "").match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
+  if (!m || (!m[2] && !m[3])) return null;
+  let h = Number(m[1]); const min = Number(m[2] || 0);
+  if (m[3]) { const pm = m[3].toUpperCase() === "PM"; if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
+  return h < 24 && min < 60 ? h * 60 + min : null;
+}
+const minutesNow = (at) => { const [h, m] = at.toLocaleTimeString("en-GB", { timeZone: "America/Chicago", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).split(":").map(Number); return h * 60 + m; };
+
+export function arrivalMessageFor(rental) {
+  const first = (rental.name || "there").split(" ")[0];
+  const msg = `${hi(first)} Heads up: we'll be there in about an hour, around ${friendlyTime(rental.dropoffTime)}, to deliver your totes. See you soon!`;
+  return { message: msg, sms: smsLink(rental.phone, msg) };
+}
+
+export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags = {}, at = new Date()) {
   const today = todayInOklahoma();
+  const nowMin = minutesNow(at);
   // The Oklahoma date a flag was set ("" if never)
   const sentOn = (id) => {
     const v = sentFlags[id]; if (!v) return "";
     const d = new Date(v); return isNaN(d) ? "" : d.toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
   };
-  const out = { delivery: [], pickupTomorrow: [], pickup: [], review: [], followup: [], emailReminder: [], addressCheck: [] };
+  const out = { arrival: [], delivery: [], pickupTomorrow: [], pickup: [], review: [], followup: [], emailReminder: [], addressCheck: [] };
   const open = (due, last) => today >= due && today <= last;
   const timing = (due) => ({ dueDate: due, overdue: today > due });
 
@@ -160,9 +180,21 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
       }
     }
 
+    // 1-hour heads-up on delivery day (instead of "On the way" when you
+    // leave): on the list from an hour before the delivery time until it's
+    // marked delivered. Deliveries with a time only; customer pickups and
+    // extensions have no drive.
+    const dAt = minutesOf(r.dropoffTime);
+    const arrivalOpen = !self && !noDelivery && r.dropoffDate === today && dAt !== null && !r.deliveredAt && !r.pickedUpAt && nowMin >= dAt - ARRIVAL_LEAD;
+    if (arrivalOpen) {
+      const flagId = "arrival:" + (r.key || r.phone + r.dropoffDate);
+      if (!sentFlags[flagId]) out.arrival.push({ ...r, flagId, dueDate: today, overdue: nowMin > dAt, address: dropAddr, ...arrivalMessageFor(r) });
+    }
+
     // Delivery reminder: the day before drop-off, or on the day if missed.
-    // Not once it's marked delivered (or picked up) on the Dashboard.
-    if (r.dropoffDate && !noDelivery && !r.deliveredAt && !r.pickedUpAt && open(shiftDate(r.dropoffDate, -1), r.dropoffDate)) {
+    // Not once it's marked delivered (or picked up) on the Dashboard, and
+    // not on the day once the 1-hour text is due (it says the same, sooner).
+    if (r.dropoffDate && !noDelivery && !r.deliveredAt && !r.pickedUpAt && !arrivalOpen && open(shiftDate(r.dropoffDate, -1), r.dropoffDate)) {
       const when = r.dropoffDate === today ? "today" : "tomorrow";
       const msg = self
         ? `${hi(first)} Reminder: your totes are ready for pickup ${when} (${friendlyDate(r.dropoffDate)}) around ${friendlyTime(r.dropoffTime)}. If that time doesn't work, reply here and we'll adjust. See you then!`
