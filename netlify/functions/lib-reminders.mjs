@@ -99,7 +99,7 @@ function friendlyDate(isoDate) {
 // would both go to the same person, so that day the address check carries
 // the pickup reminder too and "pickup in 2 days" is skipped. Review texts
 // are skipped entirely while GOOGLE_REVIEW_LINK isn't set.
-// The 1-hour heads-up text on delivery day goes on the list this many
+// The 1-hour heads-up text on delivery or pickup day goes on the list this many
 // minutes before the delivery time (push-alerts.mjs buzzes the phone then)
 export const ARRIVAL_LEAD = 60;
 // "2:30 PM", "14:30" or "9 AM" -> minutes after midnight; null if no time
@@ -112,9 +112,11 @@ export function minutesOf(t) {
 }
 const minutesNow = (at) => { const [h, m] = at.toLocaleTimeString("en-GB", { timeZone: "America/Chicago", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).split(":").map(Number); return h * 60 + m; };
 
-export function arrivalMessageFor(rental) {
+export function arrivalMessageFor(rental, leg = "delivery") {
   const first = (rental.name || "there").split(" ")[0];
-  const msg = `${hi(first)} Heads up: we'll be there in about an hour, around ${friendlyTime(rental.dropoffTime)}, to deliver your totes. See you soon!`;
+  const msg = leg === "pickup"
+    ? `${hi(first)} Heads up: we'll be there in about an hour, around ${friendlyTime(rental.pickupTime)}, to pick up your totes. Please have them empty and accessible. See you soon!`
+    : `${hi(first)} Heads up: we'll be there in about an hour, around ${friendlyTime(rental.dropoffTime)}, to deliver your totes. See you soon!`;
   return { message: msg, sms: smsLink(rental.phone, msg) };
 }
 
@@ -188,7 +190,16 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
     const arrivalOpen = !self && !noDelivery && r.dropoffDate === today && dAt !== null && !r.deliveredAt && !r.pickedUpAt && nowMin >= dAt - ARRIVAL_LEAD;
     if (arrivalOpen) {
       const flagId = "arrival:" + (r.key || r.phone + r.dropoffDate);
-      if (!sentFlags[flagId]) out.arrival.push({ ...r, flagId, dueDate: today, overdue: nowMin > dAt, address: dropAddr, ...arrivalMessageFor(r) });
+      if (!sentFlags[flagId]) out.arrival.push({ ...r, flagId, leg: "delivery", dueDate: today, overdue: nowMin > dAt, address: dropAddr, ...arrivalMessageFor(r) });
+    }
+
+    // The same for pickups: from an hour before the pickup time until it's
+    // marked picked up (not for a rental that was extended: no pickup)
+    const pAt = minutesOf(r.pickupTime);
+    const pickupArrivalOpen = !self && !noPickup && r.pickupDate === today && pAt !== null && !r.pickedUpAt && nowMin >= pAt - ARRIVAL_LEAD;
+    if (pickupArrivalOpen) {
+      const flagId = "arrivalPickup:" + (r.key || r.phone + r.pickupDate);
+      if (!sentFlags[flagId]) out.arrival.push({ ...r, flagId, leg: "pickup", dueDate: today, overdue: nowMin > pAt, address: pickAddr, ...arrivalMessageFor(r, "pickup") });
     }
 
     // Delivery reminder: the day before drop-off, or on the day if missed.
@@ -204,8 +215,9 @@ export function computeReminders(rentals, reviewLink, sentFlags = {}, paidFlags 
     }
 
     // Pickup reminder: the day before pickup, or on the day if missed.
-    // Not once it's marked picked up (totes came back early).
-    if (r.pickupDate && !noPickup && !r.pickedUpAt && open(shiftDate(r.pickupDate, -1), r.pickupDate)) {
+    // Not once it's marked picked up (totes came back early), and not on
+    // the day once the 1-hour pickup text is due.
+    if (r.pickupDate && !noPickup && !r.pickedUpAt && !pickupArrivalOpen && open(shiftDate(r.pickupDate, -1), r.pickupDate)) {
       const when = r.pickupDate === today ? "today" : "tomorrow";
       const msg = self
         ? `${hi(first)} Reminder: please have your totes ready for return ${when} (${friendlyDate(r.pickupDate)}) around ${friendlyTime(r.pickupTime)}. If that time doesn't work, reply here and we'll adjust. Thanks!`

@@ -25,9 +25,9 @@ import { computeAvailability } from "./lib-stock.mjs";
 import { runDigestOnce } from "./lib-digest.mjs";
 
 const LEAD_MINUTES = 75;     // alert when a stop is this close or closer
-// Deliveries: the alert is the cue to send the 1-hour text (lib-reminders.mjs
-// ARRIVAL_LEAD), so it comes on the first run within the hour (runs are
-// every 15 minutes, so 50 to 65 minutes before)
+// Stops we drive to: the alert is the cue to send the 1-hour text
+// (lib-reminders.mjs ARRIVAL_LEAD), so it comes on the first run within the
+// hour (runs are every 15 minutes, so 50 to 65 minutes before)
 const DELIVERY_LEAD = 65;
 const LOW_TOTES = 20;        // matches "Under 20" on the Inventory page
 const STOCK_DAYS = 30;
@@ -66,8 +66,9 @@ export function timeToMinutes(t) {
 const totes = (n) => (n ? `${n} ${n === 1 ? "tote" : "totes"}` : "");
 const dollies = (n) => (n ? `${n} ${n === 1 ? "dolly" : "dollies"}` : "");
 
-// Stops starting within the next LEAD_MINUTES (deliveries: DELIVERY_LEAD,
-// with the cue to send the 1-hour text) that haven't been alerted yet.
+// Stops starting within the next LEAD_MINUTES (stops we drive to:
+// DELIVERY_LEAD, with the cue to send the 1-hour text) that haven't been
+// alerted yet.
 export function dueSoon(rentals, now, sent = {}) {
   const out = [];
   for (const r of rentals) {
@@ -83,15 +84,15 @@ export function dueSoon(rentals, now, sent = {}) {
       if (at === null) continue;
       const until = at - now.minutes;
       const id = `${kind.toLowerCase()}:${r.key}:${date}`;
-      // A delivery we drive to: the 1-hour text is due now
-      const textDue = kind === "Delivery" && r.serviceType !== "self";
+      // A stop we drive to: the 1-hour text (lib-reminders.mjs) is due now
+      const textDue = r.serviceType !== "self";
       if (until < 0 || until > (textDue ? DELIVERY_LEAD : LEAD_MINUTES) || sent[id]) continue;
       const what = kind === "Delivery" ? [totes(r.toteCount), dollies(r.dollyCount)].filter(Boolean).join(", ") : "";
       const first = String(r.name || "the customer").split(" ")[0];
       out.push({
         id,
         message: {
-          title: textDue ? `Text ${first}: delivery at ${friendlyTime(time)}` : `${kind} at ${friendlyTime(time)}: ${r.name || "customer"}`,
+          title: textDue ? `Text ${first}: ${kind.toLowerCase()} at ${friendlyTime(time)}` : `${kind} at ${friendlyTime(time)}: ${r.name || "customer"}`,
           body: [textDue ? "Send the 1-hour heads-up text now" : "", what, addr || "No address yet"].filter(Boolean).join(" · "),
           url: "/admin.html",
           tag: id,
