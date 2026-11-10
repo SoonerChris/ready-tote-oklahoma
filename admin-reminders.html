@@ -151,7 +151,7 @@
 
   // Most urgent first. "type" is the sent-flag type the server uses.
   const SECTIONS = [
-    { id: 'arrival',        title: 'Delivery in about an hour', short: '1-hour text',     note: 'an hour before the delivery time' },
+    { id: 'arrival',        title: 'Stops in about an hour', short: '1-hour text',        note: 'an hour before the delivery or pickup time' },
     { id: 'delivery',       title: 'Delivery reminders',     short: 'delivery reminder',  note: 'the day before drop-off' },
     { id: 'pickupTomorrow', title: 'Pickup tomorrow',        short: 'pickup tomorrow',    note: 'the day before pickup' },
     { id: 'pickup',         title: 'Pickup in 2 days',       short: 'pickup in 2 days',   note: '' },
@@ -177,6 +177,8 @@
   const shortDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const totesOf = r => typeof r.toteCount === 'number' ? r.toteCount : +((String(r.package || '').match(/(\d+)\s*totes?/i) || [0, 0])[1]);
   const first = r => String(r.name || '').split(' ')[0] || 'them';
+  // Any stored time ("14:30" or "2:30 PM") -> "2:30 PM"
+  const fmtTimeOf = t => { const m = String(t || '').trim().match(/^(\d{1,2}):(\d{2})$/); if (!m) return t || ''; const h = +m[1]; return (h % 12 || 12) + ':' + m[2] + ' ' + (h >= 12 ? 'PM' : 'AM'); };
 
   function renderDue() {
     // Everything due per rental, so each card can say what else that person has coming
@@ -225,7 +227,8 @@
   function textCard(type, r) {
     // r.flagId is "<type>:<key>" as computed by the server. Reuse its key
     // part so the sent flag set here matches the one the server checks.
-    const facts = [fmtPhone(r.phone), totesOf(r) ? totesOf(r) + ' totes' : '', r.address].filter(Boolean).map(esc).join(' · ');
+    const leg = type === 'arrival' ? (r.leg === 'pickup' ? `Pickup at ${fmtTimeOf(r.pickupTime)}` : `Delivery at ${fmtTimeOf(r.dropoffTime)}`) : '';
+    const facts = [leg, fmtPhone(r.phone), totesOf(r) ? totesOf(r) + ' totes' : '', r.address].filter(Boolean).map(esc).join(' · ');
     return `
       <div class="rem rcard">
         <div class="rtop">
@@ -261,7 +264,7 @@
 
   // ---- Sent today: what's done, with undo ----
   const SENT_LABEL = {
-    arrival: '1-hour text', delivery: 'Delivery reminder', pickupTomorrow: 'Pickup tomorrow', pickup: 'Pickup in 2 days', addressCheck: 'Confirm address',
+    arrival: '1-hour delivery text', arrivalPickup: '1-hour pickup text', delivery: 'Delivery reminder', pickupTomorrow: 'Pickup tomorrow', pickup: 'Pickup in 2 days', addressCheck: 'Confirm address',
     review: 'Review request', followup: 'Invoice follow-up', emailReminder: 'Payment email', textReminder: 'Payment text', invoiceSent: 'Invoice sent text',
   };
   function renderSentToday() {

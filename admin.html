@@ -436,7 +436,7 @@
 
     // ---- Texts to send ----
     const allTexts = [
-      ...(reminders.arrival || []).map(r => ({ ...r, why: 'Delivery in about an hour' })),
+      ...(reminders.arrival || []).map(r => ({ ...r, why: r.leg === 'pickup' ? 'Pickup in about an hour' : 'Delivery in about an hour' })),
       ...reminders.delivery.map(r => ({ ...r, why: r.dropoffDate === today ? 'Delivery today' : 'Delivery tomorrow' })),
       ...(reminders.pickupTomorrow || []).map(r => ({ ...r, why: r.pickupDate === today ? 'Pickup today' : 'Pickup tomorrow' })),
       ...reminders.pickup.map(r => ({ ...r, why: 'Pickup in 2 days' })),
@@ -494,7 +494,7 @@
           <div class="meta">${e.addr ? `<a href="${escAttr(mapsLink(e.addr))}" target="_blank" rel="noopener" title="Open in Maps">${esc(e.addr)}</a>` : 'At our place'}</div>
         </div>
         <div class="totes num">${e.totes || '—'} totes</div>
-        ${e.date === today ? `<div class="acts">${e.addr && e.phone && !e.marked && !(e.leg === 'delivery' && e.time) ? `<span class="otw" data-otw="${escAttr(e.key)}" data-leg="${e.leg}"><button type="button" class="btn ghost">On the way</button></span>` : ''}${markHtml(e)}</div>` : ''}
+        ${e.date === today ? `<div class="acts">${e.addr && e.phone && !e.marked && !e.time ? `<span class="otw" data-otw="${escAttr(e.key)}" data-leg="${e.leg}"><button type="button" class="btn ghost">On the way</button></span>` : ''}${markHtml(e)}</div>` : ''}
       </div>`;
     }).join('') : '<p class="empty-line">Nothing scheduled in the next 7 days.</p>';
 
