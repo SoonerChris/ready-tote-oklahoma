@@ -362,7 +362,8 @@
     const facts = [totes, `${shortDate(r.dropoffDate)} to ${shortDate(r.pickupDate)}`, city].filter(Boolean).join(' · ');
     const dOff = dropoffAddressOf(r), pOff = pickupAddressOf(r);
     // On the way texts only on the day of the stop (or a late pickup), like the Dashboard
-    const otwDelivery = !r.cancelled && r.serviceType !== 'self' && dOff && hasDeliveryLeg(r) && r.dropoffDate === TODAY && !r.deliveredAt;
+    // Deliveries with a time get the 1-hour text on Reminders instead
+    const otwDelivery = !r.cancelled && r.serviceType !== 'self' && dOff && hasDeliveryLeg(r) && r.dropoffDate === TODAY && !r.deliveredAt && !r.dropoffTime;
     const otwPickup = !r.cancelled && r.serviceType !== 'self' && pOff && hasPickupLeg(r) && !r.pickedUpAt && (r.pickupDate === TODAY || isLatePickup(r));
     const otwToday = otwDelivery || otwPickup;
     const addr = r.serviceType === 'self' ? 'Customer picks up and returns' : dOff && dOff === pOff ? esc(dOff) : [dOff ? 'Drop-off: ' + esc(dOff) : '', pOff ? 'Pickup: ' + esc(pOff) : ''].filter(Boolean).join('<br>') || '—';
