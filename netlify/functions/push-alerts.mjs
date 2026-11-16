@@ -5,7 +5,7 @@
 //           drop-off/pickup time; rentals with no time set, and stops
 //           already marked delivered or picked up, are skipped.
 //   stock - totes (or dollies) run low in the next 30 days. Checked once a
-//           day from 7 AM, and only sent when the picture has changed since
+//           day from 8 AM, and only sent when the picture has changed since
 //           the last alert, so the same shortage doesn't buzz every morning.
 //
 //   reminders (nudges) - at 9 AM, if any reminder texts are still unsent;
@@ -14,8 +14,8 @@
 //
 // What's already been sent is kept in the "meta" store under "pushAlerts".
 //
-// It also backs up the 7 AM reminders email (daily-reminders.mjs): Netlify's
-// scheduler sometimes skips a run, so from 7:20 AM on, if today's email
+// It also backs up the 8 AM reminders email (daily-reminders.mjs): Netlify's
+// scheduler sometimes skips a run, so from 8:20 AM on, if today's email
 // hasn't gone out yet, it's sent from here (runDigestOnce keeps it to one).
 
 import { getStore } from "@netlify/blobs";
@@ -31,8 +31,8 @@ const LEAD_MINUTES = 75;     // alert when a stop is this close or closer
 const DELIVERY_LEAD = 65;
 const LOW_TOTES = 20;        // matches "Under 20" on the Inventory page
 const STOCK_DAYS = 30;
-const STOCK_FROM_HOUR = 7;
-const DIGEST_CATCHUP = [7 * 60 + 20, 20 * 60];   // 7:20 AM to 8 PM
+const STOCK_FROM_HOUR = 8;
+const DIGEST_CATCHUP = [8 * 60 + 20, 20 * 60];   // 8:20 AM to 8 PM
 // Nudges: [from, until] in minutes since midnight. A run missed at 9:00
 // still nudges at 9:15; after "until" the day's nudge is skipped.
 const NUDGES = {

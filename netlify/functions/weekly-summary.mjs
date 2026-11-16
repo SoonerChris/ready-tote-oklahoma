@@ -1,7 +1,7 @@
-// Scheduled function: the Monday summary email (lib-weekly.mjs) at 7 AM
+// Scheduled function: the Monday summary email (lib-weekly.mjs) at 8 AM
 // Oklahoma time. Netlify schedules are in UTC and sometimes skip a run, so
-// it's tried every hour from 12:15 to 16:15 UTC on Mondays and sends on the
-// first try that's 7 AM or later in Oklahoma; "weeklyRun" in the meta store
+// it's tried every hour from 13:15 to 17:15 UTC on Mondays and sends on the
+// first try that's 8 AM or later in Oklahoma; "weeklyRun" in the meta store
 // ({ on: date, ok }) keeps it to one a week. Off with the Automation switch
 // (settings weeklySummary).
 
@@ -10,7 +10,7 @@ import { sendWeeklySummary } from "./lib-weekly.mjs";
 import { todayInOklahoma } from "./lib-reminders.mjs";
 import { getSettings } from "./settings.mjs";
 
-const SEND_HOUR = 7;
+const SEND_HOUR = 8;
 
 export default async () => {
   const now = new Date();
@@ -34,5 +34,5 @@ export default async () => {
 };
 
 export const config = {
-  schedule: "15 12-16 * * 1",
+  schedule: "15 13-17 * * 1",
 };

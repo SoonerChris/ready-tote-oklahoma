@@ -1,7 +1,7 @@
 // The morning reminders email: a summary of today's reminder texts with
 // tap-to-send links, sent to the owner (and Shon). Moved here from
 // daily-reminders.mjs so push-alerts.mjs can send it too when Netlify's
-// scheduler misses the 7 AM run.
+// scheduler misses the 8 AM run.
 
 import { getStore } from "@netlify/blobs";
 import { computeReminders, rentalToICSAttachments, todayInOklahoma, friendlyTime, dropoffAddressOf, pickupAddressOf } from "./lib-reminders.mjs";
@@ -205,7 +205,7 @@ export function quietDayEmail(rentals, today, autoSent = []) {
   return { subject: "Nothing due today | Ready Tote Oklahoma", html };
 }
 
-// Once a day, whoever gets there first: the 7 AM scheduled run
+// Once a day, whoever gets there first: the 8 AM scheduled run
 // (daily-reminders.mjs) or the 15-minute catch-up in push-alerts.mjs, for
 // mornings Netlify's scheduler skips a run. What happened is kept in the
 // "meta" store under "digestRun": { on: date, ok, tries }. A failed send is

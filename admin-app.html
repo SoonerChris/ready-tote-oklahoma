@@ -96,7 +96,7 @@
       <label class="kind"><input type="checkbox" data-kind="requests" checked><div><b>New booking requests</b><span>As soon as someone fills out the booking form.</span></div></label>
       <label class="kind"><input type="checkbox" data-kind="confirmed" checked><div><b>Customer confirmed</b><span>When a customer taps the confirm link in your text. Time to send the invoice.</span></div></label>
       <label class="kind"><input type="checkbox" data-kind="payments" checked><div><b>Payments</b><span>When a Stripe payment comes in.</span></div></label>
-      <label class="kind"><input type="checkbox" data-kind="reminders" checked><div><b>Morning reminders</b><span>7 AM: what's due today. 9 AM: a nudge if reminder texts are still unsent. 6 PM: a nudge if review asks are still unsent. Quiet when there's nothing to send.</span></div></label>
+      <label class="kind"><input type="checkbox" data-kind="reminders" checked><div><b>Morning reminders</b><span>8 AM: what's due today. 9 AM: a nudge if reminder texts are still unsent. 6 PM: a nudge if review asks are still unsent. Quiet when there's nothing to send.</span></div></label>
       <label class="kind"><input type="checkbox" data-kind="soon" checked><div><b>Delivery or pickup in an hour</b><span>About an hour before each stop that has a time set.</span></div></label>
       <label class="kind"><input type="checkbox" data-kind="stock" checked><div><b>Totes running low</b><span>When any day in the next 30 has fewer than 20 free totes, or is overbooked. Only when something changes.</span></div></label>
     </div>
@@ -119,13 +119,13 @@
     <label class="kind"><input type="checkbox" id="autoMileage"><div><b>Log trip miles when you mark Delivered or Picked up</b><span>The round trip from home to the stop and back goes on Finance's mileage log, tied to the rental. Undo takes it back. Customer pick-ups and extension handovers are skipped. Chained stops on one drive? Edit the miles on Finance.</span></div></label>
     <label class="kind"><input type="checkbox" id="autoInvoice"><div><b>Email the invoice when a customer confirms</b><span>For standard bookings only: a regular package for 2 weeks, no rush fee, no military or promo discount, a full address, and totes free on those dates. The customer gets a Pay now button right on the confirm page. Anything else waits on Requests as Ready to invoice, with the reason.</span></div></label>
     <label class="kind"><input type="checkbox" id="autoPaymentEmail"><div><b>Email payment reminders when they come due</b><span>On the morning an unpaid invoice reaches its reminder day (5 days after invoicing, or 2 days after the follow-up text), the customer gets the reminder email with their pay link. The morning email and a phone alert tell you who got one. Older overdue invoices stay on Reminders for you to decide.</span></div></label>
-    <label class="kind"><input type="checkbox" id="weeklySummary"><div><b>Monday summary email</b><span>Every Monday at 7 AM: last week's money collected and invoiced, new requests and how they found you, deliveries, pickups, trip miles and review asks, plus this week's stops and who still owes. Goes to the Monday summary list under Who gets emails. <button type="button" class="linkish" id="weeklyNow">Email it now</button></span></div></label>
+    <label class="kind"><input type="checkbox" id="weeklySummary"><div><b>Monday summary email</b><span>Every Monday at 8 AM: last week's money collected and invoiced, new requests and how they found you, deliveries, pickups, trip miles and review asks, plus this week's stops and who still owes. Goes to the Monday summary list under Who gets emails. <button type="button" class="linkish" id="weeklyNow">Email it now</button></span></div></label>
     <p class="note" id="autoSay" hidden></p>
   </section>
   <section class="panel" aria-labelledby="mailTitle">
     <h2 id="mailTitle">Who gets emails</h2>
     <p>Add or remove addresses for the emails the site sends to you. Customers' own emails aren't affected.</p>
-    <div class="mail-list" data-kind="morning"><b>Morning email</b><span>The 7 AM list of texts to send, payment nudges and stops.</span><div class="chips"></div>
+    <div class="mail-list" data-kind="morning"><b>Morning email</b><span>The 8 AM list of texts to send, payment nudges and stops.</span><div class="chips"></div>
       <form class="add"><input type="email" placeholder="name@example.com" aria-label="Add an address to the morning email" required><button type="submit">Add</button></form></div>
     <div class="mail-list" data-kind="weekly"><b>Monday summary</b><span>Money, bookings and miles for the week. Also gets the one-time "Google reviews are live" email.</span><div class="chips"></div>
       <form class="add"><input type="email" placeholder="name@example.com" aria-label="Add an address to the Monday summary" required><button type="submit">Add</button></form></div>
@@ -386,7 +386,7 @@ const AUTO_SAY = {
   autoInvoice: ['On. Standard bookings are invoiced as soon as the customer confirms.', 'Off. Every confirmed booking waits on Requests for you to invoice.'],
   autoMileage: ['On. Trips are logged on Finance when you mark Delivered or Picked up.', 'Off. Log trips yourself on Finance.'],
   autoPaymentEmail: ['On. Payment reminders are emailed the morning they come due.', 'Off. Send payment reminders yourself from Reminders.'],
-  weeklySummary: ['On. The summary comes every Monday at 7 AM.', 'Off. No Monday summary email.'],
+  weeklySummary: ['On. The summary comes every Monday at 8 AM.', 'Off. No Monday summary email.'],
 };
 for (const id of Object.keys(AUTO_SAY)) $(id).addEventListener('change', async (e) => {
   const on = e.target.checked;
