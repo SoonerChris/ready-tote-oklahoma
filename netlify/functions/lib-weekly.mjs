@@ -1,6 +1,6 @@
 // The Monday summary email: last week (Monday to Sunday) in numbers, plus
 // this week's stops and who still owes money. Sent by weekly-summary.mjs on
-// Monday at 7 AM Oklahoma time (Automation switch: settings weeklySummary),
+// Monday at 8 AM Oklahoma time (Automation switch: settings weeklySummary),
 // or right away from App & alerts ("Email it now").
 //
 // buildWeeklySummary() only reads the data it's handed, so it can be

@@ -3,7 +3,7 @@
 // "set-recipients"); kept in the "meta" store under "emailRecipients" as
 // { morning: [...], weekly: [...], copies: [...] }. A list that was never
 // saved uses the default, which is what the site did before:
-//   morning - the 7 AM reminders email (lib-digest.mjs): REMINDER_EMAILS (or
+//   morning - the 8 AM reminders email (lib-digest.mjs): REMINDER_EMAILS (or
 //             the owner) plus Shon
 //   weekly  - the Monday summary (lib-weekly.mjs) and the one-time "Google
 //             reviews are live" email (check-reviews-live.mjs): the same
