@@ -6,7 +6,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { accessLevel } from "./lib-auth.mjs";
-import { linkExtension, unlinkExtension } from "./lib-invoice.mjs";
+import { cleanExtendsKey, linkExtension, unlinkExtension } from "./lib-invoice.mjs";
 import { logTrip, unlogTrip } from "./lib-mileage.mjs";
 import { logEdit, whoFrom } from "./lib-changes.mjs";
 
@@ -108,6 +108,24 @@ export default async (request, context) => {
     if (body.unlinkExtension === true && updated.extendsKey) {
       await unlinkExtension(store, updated.extendsKey, body.key);
       delete updated.extendsKey;
+      changed = true;
+    }
+    // { linkExtensionTo: "<original rental key>" } puts a rental back as an
+    // extension of an earlier one (undoes "Not an extension"): this rental
+    // loses its delivery and the original loses its pickup.
+    if (body.linkExtensionTo !== undefined) {
+      const origKey = cleanExtendsKey(body.linkExtensionTo);
+      if (!origKey || origKey === body.key) return new Response("Bad original rental", { status: 400 });
+      if (updated.extendsKey) return new Response("Already an extension", { status: 409 });
+      if (updated.cancelled) return new Response("Restore this rental first", { status: 409 });
+      const original = await store.get(origKey, { type: "json" });
+      if (!original || original.cancelled) return new Response("Original rental not found", { status: 404 });
+      if (original.extendedBy && original.extendedBy !== body.key) {
+        const current = await store.get(original.extendedBy, { type: "json" });
+        if (current && !current.cancelled) return new Response("That rental already has an extension", { status: 409 });
+      }
+      updated.extendsKey = origKey;
+      await linkExtension(store, origKey, body.key, updated.dropoffDate);
       changed = true;
     }
     // Delivered / Picked up / Clean buttons: { mark: "delivered" | "pickedUp"

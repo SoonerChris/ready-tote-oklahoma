@@ -3,6 +3,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { isAdmin } from "./lib-auth.mjs";
+import { unlinkExtension } from "./lib-invoice.mjs";
 
 export default async (request) => {
   if (request.method !== "POST") {
@@ -17,6 +18,9 @@ export default async (request) => {
 
   try {
     const store = getStore({ name: "rentals", consistency: "strong" });
+    // Deleting an extension hands the pickup back to the original rental
+    const existing = await store.get(body.key, { type: "json" });
+    if (existing && existing.extendsKey) await unlinkExtension(store, existing.extendsKey, body.key);
     await store.delete(body.key);
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (e) {
